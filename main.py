@@ -5,9 +5,17 @@ import uuid
 import PyPDF2
 import io
 
+import pinecone
+import os
+
 app = FastAPI()
 pdf_store = {}
 
+pinecone.init(
+    api_key=os.getenv("PINECONE_API_KEY"),
+    environment=os.getenv("PINECONE_ENVIRONMENT")
+)
+index = pinecone.Index("MBTI-knowledge")
 @app.get("/test-connection")
 def test_connection():
     return {"status": "ok"}
@@ -33,5 +41,5 @@ async def query_pdf(document_id: str, question: str):
 
 if __name__ == "__main__":
     import os
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
