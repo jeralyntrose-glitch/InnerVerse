@@ -5,17 +5,25 @@ import uuid
 import PyPDF2
 import io
 
-import pinecone
 import os
+from pinecone import Pinecone
+from openai import OpenAI
 
 app = FastAPI()
 pdf_store = {}
 
-pinecone.init(
-    api_key=os.getenv("PINECONE_API_KEY"),
-    environment=os.getenv("PINECONE_ENVIRONMENT")
-)
-index = pinecone.Index("MBTI-knowledge")
+def get_pinecone_client():
+    api_key = os.getenv("PINECONE_API_KEY")
+    if api_key:
+        pc = Pinecone(api_key=api_key)
+        return pc.Index("MBTI-knowledge")
+    return None
+
+def get_openai_client():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        return OpenAI(api_key=api_key)
+    return None
 @app.get("/test-connection")
 def test_connection():
     return {"status": "ok"}
@@ -40,6 +48,5 @@ async def query_pdf(document_id: str, question: str):
         return {"answer": "No direct match found, but GPT can interpret it."}
 
 if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 5000))
     uvicorn.run(app, host="0.0.0.0", port=port)
