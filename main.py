@@ -109,12 +109,15 @@ async def query_pdf(document_id: str, question: str):
         context_text = "\n\n".join(contexts)
         prompt = f"Answer the question based on the context below.\n\nContext:\n{context_text}\n\nQuestion: {question}\nAnswer:"
 
+        print(f"\n🔍 Sending this context to GPT:\n{context_text}\n")
+        
         completion = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            timeout=15
         )
 
         answer = completion.choices[0].message.content
