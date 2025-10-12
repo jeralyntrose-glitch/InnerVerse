@@ -66,7 +66,10 @@ class Base64Upload(BaseModel):
 @app.post("/upload-base64")
 async def upload_pdf_base64(data: Base64Upload):
     try:
+        # Log the raw incoming JSON structure
+        print(f"📥 Raw JSON received: {data.model_dump()}")
         print(f"🛬 Received base64 file: {data.filename}")
+        print(f"📊 Base64 length: {len(data.pdf_base64)} characters")
         
         # Decode base64 to bytes
         pdf_bytes = base64.b64decode(data.pdf_base64)
