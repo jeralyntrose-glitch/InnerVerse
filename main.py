@@ -1,58 +1,54 @@
+import os
+import uuid
+import io
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
-import uvicorn
-import uuid
-import PyPDF2
-import io
-import os
-
-from pinecone import Pinecone
-from openai import OpenAI, OpenAIError
+from PyPDF2 import PdfReader
+from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+import openai
+import pinecone
 
-app = FastAPI()
-pdf_store = {}
+# Load environment variables
+load_dotenv()
 
-# === Helper: Pinecone client ===
-def get_pinecone_client():
-    api_key = os.getenv("PINECONE_API_KEY")
-    if api_key:
-        pc = Pinecone(api_key=api_key)
-        return pc.Index("mbti-knowledge")
-    return None
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
+PINECONE_INDEX = os.getenv("PINECONE_INDEX")
 
-# === Helper: OpenAI client ===
+# Initialize clients
 def get_openai_client():
-    api_key = os.getenv("OPENAI_API_KEY")
-    if api_key:
-        return OpenAI(api_key=api_key)
-    return None
+    openai.api_key = OPENAI_API_KEY
+    return openai
 
-# === Health check ===
-@app.get("/test-connection")
-def test_connection():
-    return {"status": "ok"}
+def get_pinecone_client():
+    pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
+    return pinecone.Index(PINECONE_INDEX)
 
+# Split PDF text into chunks
 def chunk_text(text, chunk_size=1000, chunk_overlap=200):
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap
-        )
-        chunks = splitter.split_text(text)
-        return chunks
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
+    )
+    chunks = splitter.split_text(text)
+    return chunks
+
+# Create FastAPI app
+app = FastAPI()
 
 # === Upload PDF and store chunks ===
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
     try:
         contents = await file.read()
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(contents))
+        pdf_reader = PdfReader(io.BytesIO(contents))
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
         chunks = chunk_text(text)
-        
-        print(f"Uploading {len(chunks)} chunks to Pinecone")
-        doc_id = str(uuid.uuid4())
+        print(f"📄 Uploading {len(chunks)} chunks to Pinecone")
 
+        doc_id = str(uuid.uuid4())
         openai_client = get_openai_client()
         pinecone_index = get_pinecone_client()
 
@@ -65,16 +61,13 @@ async def upload_pdf(file: UploadFile = File(...)):
                 model="text-embedding-ada-002"
             )
             vector = response.data[0].embedding
-            pinecone_index.upsert(vectors=[{
-                "id": f"{doc_id}-{i}",
-                "values": vector,
-                "metadata": {"text": chunk, "doc_id": doc_id}
-            }])
 
-        return {"document_id": doc_id}
+            pinecone_index.upsert([
+                (f"{doc_id}-{i}", vector, {"text": chunk, "doc_id": doc_id})
+            ])
 
-    except OpenAIError as e:
-        return JSONResponse(status_code=500, content={"error": f"OpenAI error: {str(e)}"})
+        return {"message": "PDF uploaded and indexed", "document_id": doc_id}
+
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
@@ -100,26 +93,25 @@ async def query_pdf(document_id: str, question: str):
             include_metadata=True,
             filter={"doc_id": document_id}
         )
+
         matches = query_response.get("matches", [])
         contexts = [m["metadata"]["text"] for m in matches if "metadata" in m and "text" in m["metadata"]]
-        contexts = [match["metadata"]["text"] for match in query_response["matches"]]
 
         if not contexts:
             return {"answer": "No relevant information found in the document."}
 
         context_text = "\n\n".join(contexts)
+        print(f"\n🔍 Sending this context to GPT:\n{context_text}\n")
+
         prompt = f"Answer the question based on the context below.\n\nContext:\n{context_text}\n\nQuestion: {question}\nAnswer:"
 
-print(f"\n🔍 Sending this context to GPT:\n{context_text}\n")
- completion = openai_client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[
-       {"role": "system", "content": "You are a helpful assistant."},
-       {"role": "user", "content": prompt}
-    ],
-    timeout=15  # Add this line to prevent it from hanging forever
-)
-            ]
+        completion = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            timeout=15  # Prevents hanging
         )
 
         answer = completion.choices[0].message.content
@@ -130,5 +122,6 @@ print(f"\n🔍 Sending this context to GPT:\n{context_text}\n")
 
 # === Run the app ===
 if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", 5000))
     uvicorn.run(app, host="0.0.0.0", port=port)
