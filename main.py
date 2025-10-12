@@ -33,7 +33,7 @@ def get_openai_client():
 def test_connection():
     return {"status": "ok"}
 
- def chunk_text(text, chunk_size=1000, chunk_overlap=200):
+def chunk_text(text, chunk_size=1000, chunk_overlap=200):
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap
