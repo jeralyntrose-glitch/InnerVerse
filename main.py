@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import openai
-import pinecone
+from pinecone import Pinecone
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -19,8 +19,10 @@ def get_openai_client():
     return openai
 
 def get_pinecone_client():
-    pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
-    return pinecone.Index(PINECONE_INDEX)
+    if not PINECONE_API_KEY or not PINECONE_INDEX:
+        return None
+    pc = Pinecone(api_key=PINECONE_API_KEY)
+    return pc.Index(PINECONE_INDEX)
 
 # Split PDF text into chunks
 def chunk_text(text, chunk_size=1000, chunk_overlap=200):
