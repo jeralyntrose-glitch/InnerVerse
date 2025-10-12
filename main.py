@@ -71,8 +71,15 @@ async def upload_pdf_base64(data: Base64Upload):
         print(f"🛬 Received base64 file: {data.filename}")
         print(f"📊 Base64 length: {len(data.pdf_base64)} characters")
         
+        # Fix base64 padding if needed
+        base64_str = data.pdf_base64
+        missing_padding = len(base64_str) % 4
+        if missing_padding:
+            base64_str += '=' * (4 - missing_padding)
+            print(f"🔧 Added {4 - missing_padding} padding characters")
+        
         # Decode base64 to bytes
-        pdf_bytes = base64.b64decode(data.pdf_base64)
+        pdf_bytes = base64.b64decode(base64_str)
         pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
         chunks = chunk_text(text)
