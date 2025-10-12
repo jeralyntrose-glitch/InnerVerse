@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+PyPDF2
+langchain
+openai
+pinecone-client
+python-multipart
