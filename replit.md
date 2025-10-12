@@ -1,6 +1,16 @@
 # Overview
 
-This is a FastAPI-based PDF knowledge management system that processes uploaded PDF documents, chunks their content, and stores embeddings in Pinecone vector database for retrieval. The system uses OpenAI for generating embeddings and LangChain for intelligent text splitting. It's designed to build a knowledge base from PDF documents that can be queried later (likely for RAG-based applications).
+This is a FastAPI-based PDF Q&A application that allows users to upload PDF documents, processes them into chunks, stores them in Pinecone vector database, and enables querying the documents using OpenAI's GPT for intelligent answers based on document content. The app is fully functional and ready for deployment on Replit with 24/7 uptime.
+
+# Recent Changes (October 12, 2025)
+
+- ✅ Migrated to new Pinecone API (Pinecone class instead of deprecated pinecone.init())
+- ✅ Optimized upload performance with batch Pinecone upserts (prevents timeouts)
+- ✅ Added CORS middleware for cross-origin access
+- ✅ Using FastAPI's built-in /docs and /openapi.json endpoints
+- ✅ Added comprehensive debug logging (🛬 file receipt, ❌ errors, ✅ success)
+- ✅ All dependencies confirmed in requirements.txt
+- ✅ Server configured to run on port 5000
 
 # User Preferences
 
@@ -24,18 +34,22 @@ Preferred communication style: Simple, everyday language.
 - **Design Choice**: Cloud-hosted vector DB chosen for scalability and managed infrastructure
 
 ## Embedding Generation
-- **Provider**: OpenAI API for creating text embeddings
+- **Provider**: OpenAI API (text-embedding-ada-002 model)
 - **Integration**: Direct OpenAI client usage (not through LangChain)
-- **Note**: The upload endpoint appears incomplete - embedding generation and Pinecone upsert logic is not yet implemented
+- **Performance**: Batch processing all embeddings before upserting to Pinecone
 
 ## API Structure
-- **Health Check**: `GET /test-connection` - Simple status endpoint
-- **Upload**: `POST /upload` - Accepts PDF files via multipart/form-data
+- **Upload**: `POST /upload` - Accepts PDF files, chunks text, generates embeddings, stores in Pinecone
+- **Query**: `POST /query` - Accepts document_id and question, retrieves relevant chunks, generates GPT answer
+- **Docs**: `GET /docs` - Built-in FastAPI Swagger UI documentation
+- **OpenAPI**: `GET /openapi.json` - API schema
 - **Response Format**: JSONResponse for standardized API responses
+- **CORS**: Enabled for all origins
 
 ## Configuration Management
-- **Environment Variables**: API keys stored in environment (PINECONE_API_KEY, OPENAI_API_KEY)
+- **Environment Variables**: Replit Secrets for API keys (OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX)
 - **Client Initialization**: Lazy initialization pattern with helper functions that check for API keys before creating clients
+- **Port**: 5000 (configurable via PORT env var)
 
 # External Dependencies
 
@@ -45,9 +59,9 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: API key-based
 
 ## AI/ML Services
-- **OpenAI API**: Text embedding generation (model not specified in code)
-- **Authentication**: API key-based
-- **Error Handling**: OpenAIError exception imported but not yet implemented
+- **OpenAI API**: Text embedding (text-embedding-ada-002) and GPT-3.5-turbo for Q&A
+- **Authentication**: API key-based via Replit Secrets
+- **Error Handling**: Comprehensive try/catch blocks with debug logging
 
 ## Document Processing
 - **PyPDF2**: PDF parsing and text extraction
@@ -57,6 +71,9 @@ Preferred communication style: Simple, everyday language.
 - **FastAPI**: Async web framework for REST API
 - **Uvicorn**: ASGI server for running the application
 
-## Testing Infrastructure
-- **Deployment Target**: Replit hosting platform (evidenced by test_upload.py URL)
-- **Test Client**: Simple requests-based uploader for manual testing
+## Deployment
+- **Platform**: Replit with 24/7 uptime capability
+- **Run Command**: `python main.py`
+- **Port**: 5000
+- **Secrets Required**: OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX
+- **URL**: https://mbti-pdf-api--jeralynfrose.replit.app
