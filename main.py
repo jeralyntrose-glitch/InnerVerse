@@ -8,6 +8,7 @@ import os
 
 from pinecone import Pinecone
 from openai import OpenAI, OpenAIError
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 app = FastAPI()
 pdf_store = {}
@@ -17,7 +18,7 @@ def get_pinecone_client():
     api_key = os.getenv("PINECONE_API_KEY")
     if api_key:
         pc = Pinecone(api_key=api_key)
-        return pc.Index("MBTI-knowledge")
+        return pc.Index("mbti-knowledge")
     return None
 
 # === Helper: OpenAI client ===
@@ -32,14 +33,13 @@ def get_openai_client():
 def test_connection():
     return {"status": "ok"}
 
-# === Helper: Chunk text ===
-def chunk_text(text, chunk_size=500, overlap=50):
-    words = text.split()
-    chunks = []
-    for i in range(0, len(words), chunk_size - overlap):
-        chunk = " ".join(words[i:i + chunk_size])
-        chunks.append(chunk)
-    return chunks
+ def chunk_text(text, chunk_size=1000, chunk_overlap=200):
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap
+        )
+        chunks = splitter.split_text(text)
+        return chunks
 
 # === Upload PDF and store chunks ===
 @app.post("/upload")
