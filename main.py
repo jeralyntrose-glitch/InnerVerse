@@ -49,7 +49,8 @@ async def upload_pdf(file: UploadFile = File(...)):
         pdf_reader = PyPDF2.PdfReader(io.BytesIO(contents))
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
         chunks = chunk_text(text)
-
+        
+        print(f"Uploading {len(chunks)} chunks to Pinecone")
         doc_id = str(uuid.uuid4())
 
         openai_client = get_openai_client()
@@ -99,7 +100,8 @@ async def query_pdf(document_id: str, question: str):
             include_metadata=True,
             filter={"doc_id": document_id}
         )
-
+        matches = query_response.get("matches", [])
+        contexts = [m["metadata"]["text"] for m in matches if "metadata" in m and "text" in m["metadata"]]
         contexts = [match["metadata"]["text"] for match in query_response["matches"]]
 
         if not contexts:
