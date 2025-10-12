@@ -4,13 +4,9 @@ import io
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
 from PyPDF2 import PdfReader
-from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import openai
 import pinecone
-
-# Load environment variables
-load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
