@@ -102,6 +102,7 @@ async def query_pdf(document_id: str, question: str):
         )
         matches = query_response.get("matches", [])
         contexts = [m["metadata"]["text"] for m in matches if "metadata" in m and "text" in m["metadata"]]
+        contexts = [match["metadata"]["text"] for match in query_response["matches"]]
 
         if not contexts:
             return {"answer": "No relevant information found in the document."}
@@ -109,15 +110,16 @@ async def query_pdf(document_id: str, question: str):
         context_text = "\n\n".join(contexts)
         prompt = f"Answer the question based on the context below.\n\nContext:\n{context_text}\n\nQuestion: {question}\nAnswer:"
 
-        print(f"\n🔍 Sending this context to GPT:\n{context_text}\n")
-        
-        completion = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            timeout=15
+print(f"\n🔍 Sending this context to GPT:\n{context_text}\n")
+ completion = openai_client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+       {"role": "system", "content": "You are a helpful assistant."},
+       {"role": "user", "content": prompt}
+    ],
+    timeout=15  # Add this line to prevent it from hanging forever
+)
+            ]
         )
 
         answer = completion.choices[0].message.content
