@@ -40,6 +40,9 @@ app = FastAPI()
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
     try:
+        # ✅ Debug log — confirms if file is even received
+        print(f"🛬 Received file: {file.filename}")
+
         contents = await file.read()
         pdf_reader = PdfReader(io.BytesIO(contents))
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
@@ -53,9 +56,8 @@ async def upload_pdf(file: UploadFile = File(...)):
         if not openai_client or not pinecone_index:
             return JSONResponse(status_code=500, content={"error": "OpenAI or Pinecone client not initialized"})
 
-        # Batch process embeddings and upserts for better performance
+        # Batch embedding + upsert
         vectors_to_upsert = []
-        
         for i, chunk in enumerate(chunks):
             response = openai_client.embeddings.create(
                 input=chunk,
@@ -64,15 +66,19 @@ async def upload_pdf(file: UploadFile = File(...)):
             )
             vector = response.data[0].embedding
             vectors_to_upsert.append((f"{doc_id}-{i}", vector, {"text": chunk, "doc_id": doc_id}))
-        
-        # Batch upsert all vectors at once
+
         if vectors_to_upsert:
             pinecone_index.upsert(vectors=vectors_to_upsert)
             print(f"✅ Successfully uploaded {len(vectors_to_upsert)} chunks")
 
-        return {"message": "PDF uploaded and indexed", "document_id": doc_id, "chunks_count": len(chunks)}
+        return {
+            "message": "PDF uploaded and indexed",
+            "document_id": doc_id,
+            "chunks_count": len(chunks)
+        }
 
     except Exception as e:
+        print(f"❌ Upload error: {str(e)}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 # === Query PDF for an answer ===
