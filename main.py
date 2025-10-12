@@ -102,7 +102,6 @@ async def query_pdf(document_id: str, question: str):
         )
         matches = query_response.get("matches", [])
         contexts = [m["metadata"]["text"] for m in matches if "metadata" in m and "text" in m["metadata"]]
-        contexts = [match["metadata"]["text"] for match in query_response["matches"]]
 
         if not contexts:
             return {"answer": "No relevant information found in the document."}
