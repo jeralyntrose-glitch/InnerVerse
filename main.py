@@ -80,6 +80,11 @@ async def upload_pdf_base64(data: Base64Upload):
         
         # Decode base64 to bytes
         pdf_bytes = base64.b64decode(base64_str)
+        
+        # Check for PDF EOF marker
+        if not pdf_bytes.endswith(b'%%EOF'):
+            print("⚠️ PDF may be corrupted or incomplete (EOF not found)")
+        
         pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
         chunks = chunk_text(text)
