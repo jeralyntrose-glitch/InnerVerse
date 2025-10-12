@@ -1,10 +1,12 @@
 import os
 import uuid
 import io
+import base64
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
+from pydantic import BaseModel
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import openai
@@ -54,7 +56,61 @@ async def custom_swagger_ui():
     return get_swagger_ui_html(openapi_url="/openapi.json", title="Axis of Mind API Docs")
 
 
-# === Upload PDF and store chunks ===
+# Pydantic model for base64 upload
+class Base64Upload(BaseModel):
+    pdf_base64: str
+    filename: str = "document.pdf"
+
+
+# === Upload PDF (Base64 for ChatGPT) ===
+@app.post("/upload-base64")
+async def upload_pdf_base64(data: Base64Upload):
+    try:
+        print(f"🛬 Received base64 file: {data.filename}")
+        
+        # Decode base64 to bytes
+        pdf_bytes = base64.b64decode(data.pdf_base64)
+        pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
+        text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
+        chunks = chunk_text(text)
+        print(f"📄 Uploading {len(chunks)} chunks to Pinecone")
+
+        doc_id = str(uuid.uuid4())
+        openai_client = get_openai_client()
+        pinecone_index = get_pinecone_client()
+
+        if not openai_client or not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "OpenAI or Pinecone client not initialized"})
+
+        # Batch embedding + upsert
+        vectors_to_upsert = []
+        for i, chunk in enumerate(chunks):
+            response = openai_client.embeddings.create(
+                input=chunk, model="text-embedding-ada-002", timeout=30)
+            vector = response.data[0].embedding
+            vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
+                "text": chunk,
+                "doc_id": doc_id
+            }))
+
+        if vectors_to_upsert:
+            pinecone_index.upsert(vectors=vectors_to_upsert)
+            print(f"✅ Successfully uploaded {len(vectors_to_upsert)} chunks")
+
+        return {
+            "message": "PDF uploaded and indexed",
+            "document_id": doc_id,
+            "chunks_count": len(chunks)
+        }
+
+    except Exception as e:
+        print(f"❌ Upload error: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# === Upload PDF (File for regular clients) ===
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
     try:
