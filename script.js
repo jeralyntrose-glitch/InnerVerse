@@ -55,38 +55,51 @@ function renderSummaryBubble(filename, id, chunks_count) {
   bubble.classList.add("chat-bubble");
   bubble.innerHTML = `
     <strong>📄 ${filename}</strong><br>
-    🧩 Document ID: ${id} <span class="copied">✅</span>
+    🧩 Document ID: ${id} <spa<span class="copied"><i class="fas fa-clipboard-check"></i></span>n class="copied">✅</span>
     <hr>
     <p>✅ Uploaded ${chunks_count} chunks to Pinecone</p>
   `;
   chat.appendChild(bubble);
 }
 
-function addRegistryEntry(name, status) {
-  const entry = document.createElement("div");
-  entry.classList.add("registry-entry");
-  entry.dataset.status = status;
-  entry.id = name;
-  entry.innerHTML = formatRegistryText(name, status);
-  registry.appendChild(entry);
+  function addRegistryEntry(name, status) {
+    const entry = document.createElement("div");
+    entry.classList.add("registry-entry", "pending");
+    entry.id = name;
+    entry.innerHTML = `
+      <span class="icon"><i class="fas fa-hourglass-half"></i></span>
+      <span class="filename">${name}</span> — 
+      <span class="status">${status}</span>
+    `;
+    registry.appendChild(entry);
+  }
 }
 
-function updateRegistryEntry(name, status, id = "") {
-  const entry = document.getElementById(name);
-  if (!entry) return;
+  function updateRegistryEntry(name, status, id) {
+    const entry = document.getElementById(name);
+    if (!entry) return;
 
-  entry.dataset.status = status;
-  entry.innerHTML = formatRegistryText(name, status, id);
+    const iconSpan = entry.querySelector(".icon");
+    const statusSpan = entry.querySelector(".status");
 
-  if (status.includes("Failed") && failedUploads.has(name)) {
-    const retryBtn = document.createElement("button");
-    retryBtn.textContent = "🔁 Retry";
-    retryBtn.classList.add("retry-button");
-    retryBtn.onclick = () => {
-      const file = failedUploads.get(name);
-      if (file) uploadPDF(file);
-    };
-    entry.appendChild(retryBtn);
+    entry.classList.remove("pending", "failed", "complete");
+
+    if (status.toLowerCase().includes("complete")) {
+      entry.classList.add("complete");
+      iconSpan.innerHTML = '<i class="fas fa-check-circle"></i>';
+    } else if (status.toLowerCase().includes("fail")) {
+      entry.classList.add("failed");
+      iconSpan.innerHTML = '<i class="fas fa-times-circle"></i>';
+    }
+
+    statusSpan.innerText = status;
+
+    if (id && !entry.querySelector(".doc-id")) {
+      const idTag = document.createElement("span");
+      idTag.classList.add("doc-id");
+      idTag.innerHTML = `<i class="fas fa-clipboard"></i> ${id}`;
+      entry.appendChild(idTag);
+    }
   }
 
   entry.classList.add("glow");

@@ -53,3 +53,22 @@ body {
 .retry-button:hover {
   background-color: #ffe5e5;
 }
+
+.registry-entry .icon i {
+  color: #888;
+  font-size: 16px;
+}
+
+.registry-entry.complete .icon i {
+  color: #28a745; /* green */
+}
+
+.registry-entry.failed .icon i {
+  color: #c1121f; /* red */
+}
+
+.registry-entry .doc-id {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #666;
+}

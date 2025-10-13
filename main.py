@@ -231,10 +231,11 @@ async def query_pdf(document_id: str, question: str):
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-# Serve index.html at the root path
-@app.get("/", include_in_schema=False)
+app.mount("/static", StaticFiles(directory="."), name="static")
+
+@app.get("/")
 def serve_frontend():
-    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse("index.html")
 
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="."), name="static")
