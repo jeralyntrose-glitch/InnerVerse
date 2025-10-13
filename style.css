@@ -1,0 +1,55 @@
+body {
+  font-family: sans-serif;
+  background: #f8f8ff;
+  padding: 30px;
+}
+
+#upload-box {
+  border: 2px dashed #aaa;
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background-color: #fff;
+}
+
+.registry-entry {
+  font-family: monospace;
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  transition: background-color 0.4s ease, box-shadow 0.4s ease;
+  background-color: #f4f4f4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.registry-entry[data-status*="Uploading"] {
+  background-color: #fff9c4;
+}
+
+.registry-entry[data-status*="Complete"] {
+  background-color: #e0f7fa;
+}
+
+.registry-entry[data-status*="Failed"] {
+  background-color: #ffebee;
+}
+
+.glow {
+  box-shadow: 0 0 8px rgba(0, 150, 136, 0.5);
+}
+
+.retry-button {
+  margin-left: 10px;
+  background: #fff0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+.retry-button:hover {
+  background-color: #ffe5e5;
+}

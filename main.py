@@ -227,6 +227,19 @@ async def query_pdf(document_id: str, question: str):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# === Serve Frontend ===
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# Serve index.html at the root path
+@app.get("/", include_in_schema=False)
+def serve_frontend():
+    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+# Mount static files (CSS, JS)
+app.mount("/static", StaticFiles(directory="."), name="static")
+
+
 # === Run the app ===
 if __name__ == "__main__":
     import uvicorn
