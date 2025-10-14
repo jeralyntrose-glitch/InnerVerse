@@ -136,7 +136,7 @@ input[type="file"] {
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 .chat-header {

@@ -19,6 +19,11 @@ const archiveModal = document.getElementById('archive-modal');
 const closeArchiveBtn = document.getElementById('archive-close');
 const archiveList = document.getElementById('archive-list');
 
+// Ensure modal starts hidden
+if (archiveModal) {
+  archiveModal.classList.add('hidden');
+}
+
 let currentDocumentId = null;
 
 // === Persistent Storage ===
@@ -257,16 +262,24 @@ viewArchiveBtn.addEventListener('click', () => {
   renderArchive();
 });
 
-closeArchiveBtn.addEventListener('click', () => {
-  archiveModal.classList.add('hidden');
-});
+if (closeArchiveBtn) {
+  closeArchiveBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Close button clicked');
+    archiveModal.classList.add('hidden');
+  });
+}
 
 // Close modal when clicking outside the content
-archiveModal.addEventListener('click', (e) => {
-  if (e.target === archiveModal) {
-    archiveModal.classList.add('hidden');
-  }
-});
+if (archiveModal) {
+  archiveModal.addEventListener('click', (e) => {
+    if (e.target === archiveModal) {
+      console.log('Outside clicked');
+      archiveModal.classList.add('hidden');
+    }
+  });
+}
 
 function renderArchive() {
   archiveList.innerHTML = '';
