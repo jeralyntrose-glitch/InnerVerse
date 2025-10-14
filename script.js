@@ -321,6 +321,10 @@ gdriveBtn.addEventListener('click', async () => {
     googleApiKey = apiKeyData.api_key;
     accessToken = tokenData.access_token;
 
+    console.log('🔑 API Key present:', !!googleApiKey);
+    console.log('🎫 Access Token present:', !!accessToken);
+    console.log('🌐 Origin:', window.location.protocol + '//' + window.location.host);
+
     // Create and show the picker
     const picker = new google.picker.PickerBuilder()
       .addView(
@@ -336,6 +340,7 @@ gdriveBtn.addEventListener('click', async () => {
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .build();
 
+    console.log('✅ Picker built, showing now...');
     picker.setVisible(true);
   } catch (error) {
     console.error('Picker error:', error);
