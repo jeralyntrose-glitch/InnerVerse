@@ -606,8 +606,18 @@ function updateDropdown() {
         </div>
       </div>
       <div class="doc-actions">
-        <button class="copy-btn" data-id="${fullId}">Copy</button>
-        <button class="delete-btn" data-id="${fullId}">Delete</button>
+        <button class="copy-btn" data-id="${fullId}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
+        <button class="delete-btn" data-id="${fullId}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
       </div>
     `;
     docList.appendChild(li);

@@ -114,24 +114,24 @@ body {
 }
 
 .brand-title {
-  font-size: 56px;
+  font-size: 42px;
   font-weight: 700;
   letter-spacing: -1px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   color: var(--text-primary);
 }
 
 .tagline {
-  font-size: 18px;
+  font-size: 16px;
   color: var(--text-secondary);
-  margin-bottom: 30px;
+  margin-bottom: 25px;
   font-weight: 400;
 }
 
 /* Drop Area */
 .drop-area {
   border: 2px dashed var(--drop-area-border);
-  padding: 50px 40px;
+  padding: 35px 30px;
   border-radius: 16px;
   background: var(--drop-area-bg);
   transition: all 0.3s ease;
@@ -146,8 +146,8 @@ body {
 }
 
 .drop-text {
-  font-size: 20px;
-  margin-bottom: 15px;
+  font-size: 18px;
+  margin-bottom: 12px;
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -362,6 +362,7 @@ input[type="file"] {
   width: 420px;
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   z-index: 1000;
 }
@@ -383,7 +384,6 @@ input[type="file"] {
   align-items: center;
   transition: background 0.2s;
   gap: 12px;
-  overflow-x: auto;
 }
 
 .doc-item:hover {
@@ -392,9 +392,8 @@ input[type="file"] {
 
 .doc-info {
   flex: 1;
-  min-width: 200px;
+  min-width: 0;
   text-align: left;
-  white-space: nowrap;
 }
 
 .doc-name {
@@ -413,46 +412,37 @@ input[type="file"] {
 
 .doc-actions {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   flex-shrink: 0;
-  white-space: nowrap;
+  align-items: center;
 }
 
 .doc-actions button {
-  padding: 6px 12px;
+  padding: 8px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  width: 32px;
+  height: 32px;
 }
 
-.use-doc-btn {
-  background: var(--btn-primary-bg);
-  color: white;
+.doc-actions button:hover {
+  background: var(--drop-area-bg);
+  transform: scale(1.1);
 }
 
-.use-doc-btn:hover {
-  background: var(--btn-primary-hover);
-}
-
-.copy-doc-btn {
-  background: var(--btn-secondary-bg);
+.copy-btn {
   color: var(--text-primary);
 }
 
-.copy-doc-btn:hover {
-  background: var(--btn-secondary-hover);
-}
-
-.delete-doc-btn {
-  background: #ef4444;
-  color: white;
-}
-
-.delete-doc-btn:hover {
-  background: #dc2626;
+.delete-btn {
+  color: #ef4444;
 }
 
 .dropdown-footer {
