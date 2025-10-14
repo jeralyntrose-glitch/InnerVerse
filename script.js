@@ -65,8 +65,10 @@ const uploadList = document.getElementById('upload-list');
 const countUploaded = document.getElementById('count-uploaded');
 const countCompleted = document.getElementById('count-completed');
 const countErrors = document.getElementById('count-errors');
+const cancelUploadBtn = document.getElementById('cancel-upload-btn');
 
 let uploadStats = { uploaded: 0, completed: 0, errors: 0 };
+let activeUploads = []; // Track active uploads for cancellation
 
 ['dragenter', 'dragover'].forEach(event => {
   dropArea.addEventListener(event, e => {
@@ -102,10 +104,12 @@ function handleFiles(files) {
 
   // Reset stats and show upload section
   uploadStats = { uploaded: pdfFiles.length, completed: 0, errors: 0 };
+  activeUploads = []; // Clear previous uploads
   updateStats();
   uploadStatusSection.classList.remove('hidden');
   uploadList.innerHTML = '';
   status.textContent = '';
+  cancelUploadBtn.classList.remove('hidden'); // Show cancel button
 
   // Process each file
   pdfFiles.forEach(file => {
@@ -135,6 +139,10 @@ function processFile(file) {
 
   const progressBar = uploadItem.querySelector('.progress-bar');
 
+  // Create AbortController for this upload
+  const abortController = new AbortController();
+  activeUploads.push({ itemId, abortController, progressBar, uploadItem });
+
   // Simulate progress while reading file
   let progress = 0;
   const progressInterval = setInterval(() => {
@@ -153,6 +161,9 @@ function processFile(file) {
       progressBar.style.width = '100%';
       uploadStats.errors++;
       updateStats();
+      // Remove from active uploads
+      activeUploads = activeUploads.filter(u => u.itemId !== itemId);
+      checkUploadComplete();
       return;
     }
   }
@@ -169,7 +180,8 @@ function processFile(file) {
       const res = await fetch('/upload-base64', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: abortController.signal
       });
 
       progressBar.style.width = '80%';
@@ -202,15 +214,50 @@ function processFile(file) {
         throw new Error(result.error || 'Upload failed.');
       }
     } catch (err) {
-      progressBar.style.width = '100%';
-      uploadItem.classList.add('error');
-      uploadStats.errors++;
-      updateStats();
+      if (err.name === 'AbortError') {
+        // Upload was cancelled
+        uploadItem.classList.add('error');
+        uploadItem.querySelector('.upload-filename').textContent = `${file.name} (Cancelled)`;
+      } else {
+        progressBar.style.width = '100%';
+        uploadItem.classList.add('error');
+        uploadStats.errors++;
+        updateStats();
+      }
+    } finally {
+      // Remove from active uploads
+      activeUploads = activeUploads.filter(u => u.itemId !== itemId);
+      checkUploadComplete();
     }
   };
 
   reader.readAsDataURL(file);
 }
+
+// Check if all uploads are complete and hide cancel button
+function checkUploadComplete() {
+  if (activeUploads.length === 0) {
+    cancelUploadBtn.classList.add('hidden');
+  }
+}
+
+// Cancel all active uploads
+function cancelAllUploads() {
+  activeUploads.forEach(upload => {
+    upload.abortController.abort();
+    upload.uploadItem.classList.add('error');
+    upload.progressBar.style.width = '100%';
+  });
+  activeUploads = [];
+  cancelUploadBtn.classList.add('hidden');
+}
+
+// Cancel button event listener
+cancelUploadBtn.addEventListener('click', () => {
+  if (confirm('Cancel all ongoing uploads?')) {
+    cancelAllUploads();
+  }
+});
 
 // === Google Drive Integration ===
 gdriveBtn.addEventListener('click', () => {
@@ -231,10 +278,12 @@ window.addEventListener('message', async (event) => {
     
     // Setup upload tracking
     uploadStats = { uploaded: files.length, completed: 0, errors: 0 };
+    activeUploads = []; // Clear previous uploads
     updateStats();
     uploadStatusSection.classList.remove('hidden');
     uploadList.innerHTML = '';
     status.textContent = '';
+    cancelUploadBtn.classList.remove('hidden'); // Show cancel button
     
     // Download and process each file
     for (const file of files) {
@@ -245,8 +294,10 @@ window.addEventListener('message', async (event) => {
 
 async function downloadAndProcessGDriveFile(fileId, fileName) {
   // Create upload item for tracking
+  const itemId = `gdrive-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const uploadItem = document.createElement('div');
   uploadItem.className = 'upload-item';
+  uploadItem.id = itemId;
   uploadItem.innerHTML = `
     <div class="upload-filename">${fileName}</div>
     <div class="progress-bar-container">
@@ -258,9 +309,15 @@ async function downloadAndProcessGDriveFile(fileId, fileName) {
   const progressBar = uploadItem.querySelector('.progress-bar');
   progressBar.style.width = '30%';
   
+  // Create AbortController for this upload
+  const abortController = new AbortController();
+  activeUploads.push({ itemId, abortController, progressBar, uploadItem });
+  
   try {
     // Download from Google Drive
-    const response = await fetch(`/api/gdrive-download/${fileId}`);
+    const response = await fetch(`/api/gdrive-download/${fileId}`, {
+      signal: abortController.signal
+    });
     progressBar.style.width = '60%';
     
     const data = await response.json();
@@ -274,7 +331,8 @@ async function downloadAndProcessGDriveFile(fileId, fileName) {
     const uploadResponse = await fetch('/upload-base64', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: abortController.signal
     });
     
     progressBar.style.width = '80%';
@@ -305,11 +363,21 @@ async function downloadAndProcessGDriveFile(fileId, fileName) {
       throw new Error(result.error || 'Upload failed');
     }
   } catch (error) {
-    console.error('GDrive file error:', error);
-    progressBar.style.width = '100%';
-    uploadItem.classList.add('error');
-    uploadStats.errors++;
-    updateStats();
+    if (error.name === 'AbortError') {
+      // Upload was cancelled
+      uploadItem.classList.add('error');
+      uploadItem.querySelector('.upload-filename').textContent = `${fileName} (Cancelled)`;
+    } else {
+      console.error('GDrive file error:', error);
+      progressBar.style.width = '100%';
+      uploadItem.classList.add('error');
+      uploadStats.errors++;
+      updateStats();
+    }
+  } finally {
+    // Remove from active uploads
+    activeUploads = activeUploads.filter(u => u.itemId !== itemId);
+    checkUploadComplete();
   }
 }
 
