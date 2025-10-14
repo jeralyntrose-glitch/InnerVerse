@@ -1,5 +1,6 @@
 const dropArea = document.getElementById('drop-area');
 const fileInput = document.getElementById('fileElem');
+const gdriveBtn = document.getElementById('gdrive-btn');
 const status = document.getElementById('status');
 const chatToggle = document.getElementById('chat-toggle');
 const chatContainer = document.getElementById('chat-container');
@@ -212,90 +213,21 @@ function processFile(file) {
 }
 
 // === Google Drive Integration ===
-let pickerApiLoaded = false;
-let accessToken = null;
+gdriveBtn.addEventListener('click', () => {
+  // Open picker in a popup window
+  const pickerWindow = window.open(
+    '/gdrive-picker',
+    'Google Drive Picker',
+    'width=900,height=700,scrollbars=yes,resizable=yes'
+  );
+});
 
-// Initialize gapi when available
-function initializeGapi() {
-  if (typeof gapi !== 'undefined') {
-    gapi.load('picker', {
-      callback: () => {
-        pickerApiLoaded = true;
-        console.log('✅ Google Picker API loaded successfully');
-      },
-      onerror: () => {
-        console.error('❌ Failed to load Google Picker API');
-      }
-    });
-  } else {
-    console.error('❌ gapi not available');
-  }
-}
-
-// Try to load when gapi is ready
-if (typeof gapi !== 'undefined') {
-  initializeGapi();
-} else {
-  // Wait for script to load
-  window.addEventListener('load', () => {
-    setTimeout(initializeGapi, 500);
-  });
-}
-
-async function openGoogleDrivePicker() {
-  try {
-    console.log('Opening Google Drive picker...');
+// Listen for selected files from picker
+window.addEventListener('message', async (event) => {
+  if (event.data.type === 'gdrive-files-selected') {
+    const files = event.data.files;
     
-    // Check if picker API is loaded
-    if (!pickerApiLoaded) {
-      alert('⏳ Google Drive is still loading. Please wait a moment and try again.');
-      initializeGapi(); // Try to load it again
-      return;
-    }
-    
-    // Get access token from backend
-    const tokenResponse = await fetch('/api/gdrive-token');
-    const tokenData = await tokenResponse.json();
-    
-    if (!tokenData.access_token) {
-      alert('❌ Google Drive not connected. Please contact support.');
-      return;
-    }
-    
-    accessToken = tokenData.access_token;
-    console.log('✅ Access token retrieved');
-    
-    // Create picker
-    if (typeof google === 'undefined' || !google.picker) {
-      throw new Error('Google Picker library not loaded');
-    }
-    
-    const picker = new google.picker.PickerBuilder()
-      .addView(new google.picker.DocsView()
-        .setIncludeFolders(true)
-        .setMimeTypes('application/pdf'))
-      .setOAuthToken(accessToken)
-      .setCallback(pickerCallback)
-      .setTitle('Select PDF files from Google Drive')
-      .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .build();
-    
-    console.log('✅ Picker created, showing...');
-    picker.setVisible(true);
-  } catch (error) {
-    console.error('Picker error:', error);
-    alert('❌ Failed to open Google Drive picker: ' + error.message);
-  }
-}
-
-async function pickerCallback(data) {
-  if (data.action === google.picker.Action.PICKED) {
-    const files = data.docs.filter(doc => doc.mimeType === 'application/pdf');
-    
-    if (files.length === 0) {
-      alert('❌ Please select PDF files only.');
-      return;
-    }
+    if (files.length === 0) return;
     
     // Setup upload tracking
     uploadStats = { uploaded: files.length, completed: 0, errors: 0 };
@@ -309,7 +241,7 @@ async function pickerCallback(data) {
       await downloadAndProcessGDriveFile(file.id, file.name);
     }
   }
-}
+});
 
 async function downloadAndProcessGDriveFile(fileId, fileName) {
   // Create upload item for tracking

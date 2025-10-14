@@ -266,13 +266,36 @@ async def get_gdrive_access_token():
         print(f"❌ Google Drive token error: {e}")
         return None
 
-@app.get("/api/gdrive-token")
-async def get_gdrive_token():
-    """Get Google Drive access token for frontend"""
-    token = await get_gdrive_access_token()
-    if token:
-        return {"access_token": token}
-    return JSONResponse(status_code=500, content={"error": "Google Drive not connected"})
+@app.get("/api/gdrive-list-pdfs")
+async def list_gdrive_pdfs():
+    """List all PDF files from Google Drive"""
+    try:
+        token = await get_gdrive_access_token()
+        if not token:
+            return JSONResponse(status_code=401, content={"error": "Google Drive not connected"})
+        
+        async with httpx.AsyncClient() as client:
+            # List PDF files from Google Drive
+            response = await client.get(
+                "https://www.googleapis.com/drive/v3/files",
+                headers={"Authorization": f"Bearer {token}"},
+                params={
+                    "q": "mimeType='application/pdf' and trashed=false",
+                    "fields": "files(id,name,size,modifiedTime)",
+                    "orderBy": "modifiedTime desc",
+                    "pageSize": 100
+                }
+            )
+            
+            if response.status_code != 200:
+                return JSONResponse(status_code=response.status_code, content={"error": "Failed to list files"})
+            
+            data = response.json()
+            return {"files": data.get("files", [])}
+            
+    except Exception as e:
+        print(f"❌ Google Drive list error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/gdrive-download/{file_id}")
 async def download_gdrive_file(file_id: str):
@@ -286,7 +309,8 @@ async def download_gdrive_file(file_id: str):
             # Download file from Google Drive
             response = await client.get(
                 f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media",
-                headers={"Authorization": f"Bearer {token}"}
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=30.0
             )
             
             if response.status_code != 200:
@@ -309,6 +333,10 @@ from fastapi.responses import FileResponse
 @app.get("/", include_in_schema=False)
 def serve_frontend():
     return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+@app.get("/gdrive-picker", include_in_schema=False)
+def serve_gdrive_picker():
+    return FileResponse("gdrive-picker.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="."), name="static")

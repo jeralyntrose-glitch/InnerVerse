@@ -4,10 +4,14 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 
 # Recent Changes (October 14, 2025)
 
-## Google Drive Integration (Removed)
-- ❌ Removed Google Drive picker button (required additional API key configuration)
-- Note: Google Picker API requires both OAuth token AND Google API key for display
-- Backend endpoints remain available but button removed from UI
+## Google Drive Integration (Custom Picker)
+- ✅ Built custom Google Drive file picker (no Google Cloud Console setup required)
+- ✅ Blue "📁 Google Drive" button opens popup window with your Drive PDF files
+- ✅ Multi-select support - choose multiple PDFs at once
+- ✅ Shows file names and sizes in clean, searchable list
+- ✅ Automatic download and processing with same progress tracking
+- ✅ Backend endpoints: /api/gdrive-list-pdfs, /api/gdrive-download/{file_id}
+- ✅ Uses Replit Google Drive connector for seamless OAuth authentication
 
 ## UI Fixes & Enhancements
 - ✅ Fixed dropdown bug: now closes when clicking outside or toggling again
