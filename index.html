@@ -1,18 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="/static/script.js" defer></script>
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Axis Mind Uploader</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
 <body>
-  <h1>🧠 Axis Mind — Upload a PDF</h1>
+  <div class="page-wrapper">
+    <div class="branding">
+      <h1 class="brand-title">🧠 AXIS MIND</h1>
+      <p class="tagline">The mind decoded. Start uploading.</p>
+    </div>
 
-  <div id="upload-box">📤 Drag & drop your PDF here</div>
+    <div id="drop-area" class="drop-area">
+      <p class="drop-text">Drag and drop your PDF here</p>
+      <span class="or-text">or</span>
+      <label for="fileElem" class="custom-file-upload">Browse files</label>
+      <input type="file" id="fileElem" accept="application/pdf" />
+    </div>
 
-  <div id="registry"></div>
-  <div id="chat"></div>
+    <div id="status" class="status"></div>
+  </div>
 
-  <script src="script.js"></script>
+  <script src="/static/script.js"></script>
 </body>
 </html>
