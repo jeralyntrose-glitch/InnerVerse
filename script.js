@@ -216,14 +216,44 @@ function processFile(file) {
 let pickerApiLoaded = false;
 let accessToken = null;
 
-function loadPickerApi() {
-  gapi.load('picker', () => {
-    pickerApiLoaded = true;
+// Initialize gapi when available
+function initializeGapi() {
+  if (typeof gapi !== 'undefined') {
+    gapi.load('picker', {
+      callback: () => {
+        pickerApiLoaded = true;
+        console.log('✅ Google Picker API loaded successfully');
+      },
+      onerror: () => {
+        console.error('❌ Failed to load Google Picker API');
+      }
+    });
+  } else {
+    console.error('❌ gapi not available');
+  }
+}
+
+// Try to load when gapi is ready
+if (typeof gapi !== 'undefined') {
+  initializeGapi();
+} else {
+  // Wait for script to load
+  window.addEventListener('load', () => {
+    setTimeout(initializeGapi, 500);
   });
 }
 
 async function openGoogleDrivePicker() {
   try {
+    console.log('Opening Google Drive picker...');
+    
+    // Check if picker API is loaded
+    if (!pickerApiLoaded) {
+      alert('⏳ Google Drive is still loading. Please wait a moment and try again.');
+      initializeGapi(); // Try to load it again
+      return;
+    }
+    
     // Get access token from backend
     const tokenResponse = await fetch('/api/gdrive-token');
     const tokenData = await tokenResponse.json();
@@ -234,16 +264,13 @@ async function openGoogleDrivePicker() {
     }
     
     accessToken = tokenData.access_token;
-    
-    // Wait for picker API to load
-    if (!pickerApiLoaded) {
-      if (typeof gapi !== 'undefined') {
-        loadPickerApi();
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
+    console.log('✅ Access token retrieved');
     
     // Create picker
+    if (typeof google === 'undefined' || !google.picker) {
+      throw new Error('Google Picker library not loaded');
+    }
+    
     const picker = new google.picker.PickerBuilder()
       .addView(new google.picker.DocsView()
         .setIncludeFolders(true)
@@ -254,6 +281,7 @@ async function openGoogleDrivePicker() {
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .build();
     
+    console.log('✅ Picker created, showing...');
     picker.setVisible(true);
   } catch (error) {
     console.error('Picker error:', error);
@@ -352,13 +380,6 @@ async function downloadAndProcessGDriveFile(fileId, fileName) {
     uploadStats.errors++;
     updateStats();
   }
-}
-
-// Load picker API when gapi is ready
-if (typeof gapi !== 'undefined') {
-  gapi.load('picker', () => {
-    pickerApiLoaded = true;
-  });
 }
 
 // Attach event listener to Google Drive button
