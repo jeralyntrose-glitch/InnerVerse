@@ -392,8 +392,8 @@ input[type="file"] {
 }
 
 .doc-checkbox {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
   flex-shrink: 0;
   margin: 0;
@@ -918,8 +918,8 @@ label,
   }
 
   .doc-checkbox {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
   }
 
   .doc-name {
