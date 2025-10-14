@@ -23,10 +23,32 @@
     <div id="status" class="status"></div>
   </div>
 
-  <!-- Floating Chat Button -->
+  <!-- 📄 Document Dropdown (Top-Right Corner) -->
+  <div id="doc-dropdown" class="doc-dropdown">
+    <button id="dropdown-toggle" class="dropdown-toggle">📁 Docs ▾</button>
+    <div id="dropdown-menu" class="dropdown-menu hidden">
+      <ul id="doc-list" class="doc-list"></ul>
+      <div class="dropdown-footer">
+        <button id="view-archive-btn">🗂️ View Archive</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🗂️ Archive Modal -->
+  <div id="archive-modal" class="archive-modal hidden">
+    <div class="archive-content">
+      <div class="archive-header">
+        <h3>Archived Documents</h3>
+        <button id="archive-close">×</button>
+      </div>
+      <ul id="archive-list" class="archive-list"></ul>
+    </div>
+  </div>
+
+  <!-- 💬 Floating Chat Button -->
   <div id="chat-toggle" class="chat-toggle">💬</div>
 
-  <!-- Chat Window (starts hidden) -->
+  <!-- 💬 Chat Window -->
   <div id="chat-container" class="chat-container hidden">
     <div class="chat-header">
       <span>Axis Mind Chat</span>

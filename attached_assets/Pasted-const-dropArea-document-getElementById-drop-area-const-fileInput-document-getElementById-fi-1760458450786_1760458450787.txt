@@ -16,7 +16,7 @@ const viewArchiveBtn = document.getElementById('view-archive-btn');
 
 // Archive modal
 const archiveModal = document.getElementById('archive-modal');
-const closeArchiveBtn = document.getElementById('archive-close');
+const closeArchiveBtn = document.getElementById('close-archive-btn');
 const archiveList = document.getElementById('archive-list');
 
 let currentDocumentId = null;
