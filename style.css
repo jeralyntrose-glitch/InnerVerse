@@ -343,6 +343,8 @@ input[type="file"] {
   font-weight: 600;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px var(--shadow-color);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
 }
 
 .dropdown-toggle:hover {
@@ -838,11 +840,25 @@ button,
   min-width: 44px;
   min-height: 44px;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
 .doc-actions button {
   min-width: 44px;
   min-height: 44px;
+  touch-action: manipulation;
+}
+
+/* Ensure buttons are touchable */
+label,
+.btn-primary,
+.btn-secondary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(99, 102, 241, 0.2);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Responsive Design */
@@ -879,21 +895,21 @@ button,
   /* Dropdown on mobile */
   .doc-dropdown {
     top: 10px;
-    right: 10px;
+    right: 60px;
   }
 
   .dropdown-toggle {
-    padding: 10px 16px;
-    font-size: 14px;
+    padding: 10px 14px;
+    font-size: 13px;
+    min-width: 44px;
   }
 
   .dropdown-menu {
-    width: calc(100vw - 20px);
+    width: calc(100vw - 80px);
     max-width: 100%;
     right: 0;
-    left: 0;
-    margin: 0 10px;
-    max-height: 60vh;
+    top: 50px;
+    max-height: 70vh;
   }
 
   .doc-item {
@@ -965,7 +981,10 @@ button,
   .btn-secondary {
     width: 100%;
     padding: 14px 24px;
-    font-size: 15px;
+    font-size: 16px;
+    min-height: 48px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
   }
 
   /* Theme toggle */
