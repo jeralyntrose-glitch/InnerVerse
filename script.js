@@ -268,47 +268,112 @@ cancelUploadBtn.addEventListener('click', () => {
 });
 
 // === Google Drive Integration ===
-gdriveBtn.addEventListener('click', () => {
-  // Open picker in a popup window
-  const pickerWindow = window.open(
-    '/gdrive-picker',
-    'Google Drive Picker',
-    'width=900,height=700,scrollbars=yes,resizable=yes'
-  );
+let pickerApiLoaded = false;
+let googleApiKey = null;
+let accessToken = null;
+
+// Load Google Picker API
+function loadPickerApi() {
+  gapi.load('picker', {
+    callback: () => {
+      pickerApiLoaded = true;
+      console.log('✅ Google Picker API loaded');
+    },
+    onerror: () => {
+      console.error('❌ Failed to load Google Picker API');
+    }
+  });
+}
+
+// Initialize on page load
+if (typeof gapi !== 'undefined') {
+  loadPickerApi();
+} else {
+  window.addEventListener('load', () => {
+    setTimeout(loadPickerApi, 500);
+  });
+}
+
+// Open Google Drive Picker
+gdriveBtn.addEventListener('click', async () => {
+  try {
+    // Check if Picker API is loaded
+    if (!pickerApiLoaded) {
+      alert('⏳ Google Drive is still loading. Please wait a moment and try again.');
+      loadPickerApi();
+      return;
+    }
+
+    // Get API key and access token
+    const [apiKeyResponse, tokenResponse] = await Promise.all([
+      fetch('/api/google-api-key'),
+      fetch('/api/gdrive-token')
+    ]);
+
+    const apiKeyData = await apiKeyResponse.json();
+    const tokenData = await tokenResponse.json();
+
+    if (!apiKeyData.api_key || !tokenData.access_token) {
+      alert('❌ Google Drive not properly configured. Please contact support.');
+      return;
+    }
+
+    googleApiKey = apiKeyData.api_key;
+    accessToken = tokenData.access_token;
+
+    // Create and show the picker
+    const picker = new google.picker.PickerBuilder()
+      .addView(
+        new google.picker.DocsView(google.picker.ViewId.DOCS)
+          .setMimeTypes('application/pdf')
+          .setIncludeFolders(true)
+      )
+      .setOAuthToken(accessToken)
+      .setDeveloperKey(googleApiKey)
+      .setCallback(pickerCallback)
+      .setTitle('Select PDF files from Google Drive')
+      .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+      .build();
+
+    picker.setVisible(true);
+  } catch (error) {
+    console.error('Picker error:', error);
+    alert('❌ Failed to open Google Drive picker: ' + error.message);
+  }
 });
 
-// Listen for selected files from picker
-window.addEventListener('message', async (event) => {
-  if (event.data.type === 'gdrive-files-selected') {
-    const files = event.data.files;
+// Handle picker selection
+async function pickerCallback(data) {
+  if (data.action === google.picker.Action.PICKED) {
+    const files = data.docs.filter(doc => doc.mimeType === 'application/pdf');
     
-    if (files.length === 0) return;
-    
+    if (files.length === 0) {
+      alert('❌ Please select PDF files only.');
+      return;
+    }
+
     // Setup upload tracking
     uploadStats = { uploaded: files.length, completed: 0, errors: 0 };
-    activeUploads = []; // Clear previous uploads
-    uploadsCancelled = false; // Reset cancellation flag
+    activeUploads = [];
+    uploadsCancelled = false;
     updateStats();
     uploadStatusSection.classList.remove('hidden');
     uploadList.innerHTML = '';
     status.textContent = '';
-    cancelUploadBtn.classList.remove('hidden'); // Show cancel button
-    
+    cancelUploadBtn.classList.remove('hidden');
+
     // Download and process each file
     for (const file of files) {
-      // Check if uploads were cancelled
-      if (uploadsCancelled) {
-        break; // Stop processing remaining files
-      }
+      if (uploadsCancelled) break;
       await downloadAndProcessGDriveFile(file.id, file.name);
     }
-    
-    // If all done and not cancelled, hide the button
+
+    // Hide cancel button if all done
     if (activeUploads.length === 0 && !uploadsCancelled) {
       cancelUploadBtn.classList.add('hidden');
     }
   }
-});
+}
 
 async function downloadAndProcessGDriveFile(fileId, fileName) {
   // Create upload item for tracking

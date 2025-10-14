@@ -270,6 +270,22 @@ async def get_gdrive_access_token():
         print(f"❌ Google Drive token error: {e}")
         return None
 
+@app.get("/api/google-api-key")
+async def get_google_api_key():
+    """Return Google API key for Picker"""
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return JSONResponse(status_code=500, content={"error": "Google API key not configured"})
+    return {"api_key": api_key}
+
+@app.get("/api/gdrive-token")
+async def get_gdrive_token():
+    """Get Google Drive OAuth access token"""
+    token = await get_gdrive_access_token()
+    if not token:
+        return JSONResponse(status_code=401, content={"error": "Google Drive not connected"})
+    return {"access_token": token}
+
 @app.get("/api/gdrive-list-pdfs")
 async def list_gdrive_pdfs():
     """List all PDF files from Google Drive"""
@@ -337,10 +353,6 @@ from fastapi.responses import FileResponse
 @app.get("/", include_in_schema=False)
 def serve_frontend():
     return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
-
-@app.get("/gdrive-picker", include_in_schema=False)
-def serve_gdrive_picker():
-    return FileResponse("gdrive-picker.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="."), name="static")
