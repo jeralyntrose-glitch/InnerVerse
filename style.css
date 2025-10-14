@@ -810,39 +810,213 @@ input[type="file"] {
   background: var(--btn-primary-hover);
 }
 
+/* iOS & Mobile Optimizations */
+body {
+  -webkit-overflow-scrolling: touch;
+}
+
+.dropdown-menu,
+.chat-log,
+.upload-list,
+.archive-list {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Prevent zoom on input focus for iOS */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* Touch-friendly tap targets (minimum 44x44px for iOS) */
+button,
+.dropdown-toggle,
+.chat-toggle,
+.doc-checkbox {
+  min-width: 44px;
+  min-height: 44px;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+.doc-actions button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
   .brand-title {
-    font-size: 36px;
+    font-size: 32px;
+  }
+
+  .tagline {
+    font-size: 14px;
   }
 
   .brain-icon {
-    width: 140px;
-    height: 140px;
+    width: 100px;
+    height: 100px;
+  }
+
+  .page-wrapper {
+    margin-top: -30px;
   }
 
   .drop-area {
-    padding: 40px 30px;
+    padding: 30px 20px;
+  }
+
+  .drop-text {
+    font-size: 16px;
+  }
+
+  /* Dropdown on mobile */
+  .doc-dropdown {
+    top: 10px;
+    right: 10px;
+  }
+
+  .dropdown-toggle {
+    padding: 10px 16px;
+    font-size: 14px;
   }
 
   .dropdown-menu {
-    width: 90vw;
-    max-width: 360px;
+    width: calc(100vw - 20px);
+    max-width: 100%;
+    right: 0;
+    left: 0;
+    margin: 0 10px;
+    max-height: 60vh;
+  }
+
+  .doc-item {
+    padding: 14px 10px;
+    gap: 10px;
+  }
+
+  .doc-checkbox {
+    width: 20px;
+    height: 20px;
+  }
+
+  .doc-name {
+    font-size: 14px;
+  }
+
+  .doc-id,
+  .doc-date {
+    font-size: 12px;
+  }
+
+  /* Chat on mobile */
+  .chat-toggle {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+    right: 15px;
+    bottom: 15px;
   }
 
   .chat-container {
-    width: calc(100vw - 40px);
-    right: 20px;
-    bottom: 90px;
+    width: calc(100vw - 20px);
+    height: 70vh;
+    max-height: 500px;
+    right: 10px;
+    bottom: 80px;
+    left: 10px;
   }
 
+  .chat-header {
+    padding: 14px;
+    font-size: 16px;
+  }
+
+  .chat-log {
+    padding: 12px;
+  }
+
+  .chat-input-area {
+    padding: 12px;
+  }
+
+  .chat-input-area input {
+    padding: 12px;
+  }
+
+  .chat-input-area button {
+    padding: 12px 20px;
+  }
+
+  /* Upload buttons */
   .upload-buttons {
     flex-direction: column;
     width: 100%;
+    gap: 12px;
   }
 
   .btn-primary,
   .btn-secondary {
     width: 100%;
+    padding: 14px 24px;
+    font-size: 15px;
+  }
+
+  /* Theme toggle */
+  .theme-toggle {
+    top: 10px;
+    right: 10px;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Archive modal */
+  .archive-content {
+    width: calc(100vw - 40px);
+    max-height: 80vh;
+  }
+
+  /* Upload status */
+  .upload-status-section {
+    padding: 12px;
+  }
+
+  .status-summary {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .summary-item {
+    min-width: 80px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .brand-title {
+    font-size: 28px;
+  }
+
+  .brain-icon {
+    width: 80px;
+    height: 80px;
+  }
+
+  .dropdown-menu {
+    font-size: 13px;
+  }
+
+  .doc-info {
+    gap: 8px;
+  }
+
+  .chat-container {
+    max-height: 400px;
   }
 }
