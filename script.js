@@ -598,6 +598,7 @@ function updateDropdown() {
     const fullId = file.id || 'unknown';
     
     li.innerHTML = `
+      <input type="checkbox" class="doc-checkbox" data-id="${fullId}">
       <div class="doc-info">
         <div class="doc-name" title="${file.name}">${file.name}</div>
         <div class="doc-meta">
@@ -606,13 +607,13 @@ function updateDropdown() {
         </div>
       </div>
       <div class="doc-actions">
-        <button class="copy-btn" data-id="${fullId}">
+        <button class="copy-btn" data-id="${fullId}" title="Copy">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
         </button>
-        <button class="delete-btn" data-id="${fullId}">
+        <button class="delete-btn" data-id="${fullId}" title="Delete">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -665,6 +666,32 @@ function updateDropdown() {
     });
   });
 }
+
+// === Copy Selected Button ===
+const copySelectedBtn = document.getElementById('copy-selected-btn');
+copySelectedBtn.addEventListener('click', () => {
+  const checkboxes = document.querySelectorAll('.doc-checkbox:checked');
+  
+  if (checkboxes.length === 0) {
+    alert('No documents selected! Please check the boxes next to the files you want to copy.');
+    return;
+  }
+  
+  const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.id);
+  const selectedFiles = uploadedFiles.filter(file => selectedIds.includes(file.id));
+  
+  const tsvData = selectedFiles
+    .map(file => {
+      const date = file.timestamp ? new Date(file.timestamp).toLocaleString() : 'N/A';
+      return `${file.name}\t${file.id}\t${date}`;
+    })
+    .join('\n');
+  
+  if (tsvData) {
+    navigator.clipboard.writeText(tsvData);
+    alert(`📋 Copied ${selectedFiles.length} selected document(s)! (Filename, ID, date)\nPaste into Google Sheets - each part will go into a separate column.`);
+  }
+});
 
 // === Copy All Button ===
 copyAllBtn.addEventListener('click', () => {
