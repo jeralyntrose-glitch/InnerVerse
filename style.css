@@ -359,7 +359,7 @@ input[type="file"] {
   z-index: 1002;
   max-height: 400px;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   font-size: 12px;
 }
 

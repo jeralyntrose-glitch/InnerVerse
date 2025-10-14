@@ -202,7 +202,11 @@ async def query_pdf(request: QueryRequest):
                                               include_metadata=True,
                                               filter={"doc_id": document_id})
 
-        matches = query_response.get("matches", [])
+        try:
+            matches = query_response.matches  # type: ignore
+        except AttributeError:
+            matches = query_response.get("matches", [])  # type: ignore
+        
         contexts = [
             m["metadata"]["text"] for m in matches
             if "metadata" in m and "text" in m["metadata"]
