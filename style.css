@@ -163,7 +163,7 @@ input[type="file"] {
   padding: 10px;
   overflow-y: auto;
   background-color: #f4f4f4;
-  font-size: 12px;
+  font-size: 12px; /* iPhone style, smaller font */
 }
 
 .chat-message {
