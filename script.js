@@ -69,6 +69,7 @@ const cancelUploadBtn = document.getElementById('cancel-upload-btn');
 
 let uploadStats = { uploaded: 0, completed: 0, errors: 0 };
 let activeUploads = []; // Track active uploads for cancellation
+let uploadsCancelled = false; // Global flag to stop upload loops
 
 ['dragenter', 'dragover'].forEach(event => {
   dropArea.addEventListener(event, e => {
@@ -105,6 +106,7 @@ function handleFiles(files) {
   // Reset stats and show upload section
   uploadStats = { uploaded: pdfFiles.length, completed: 0, errors: 0 };
   activeUploads = []; // Clear previous uploads
+  uploadsCancelled = false; // Reset cancellation flag
   updateStats();
   uploadStatusSection.classList.remove('hidden');
   uploadList.innerHTML = '';
@@ -142,6 +144,11 @@ function processFile(file) {
   // Create AbortController for this upload
   const abortController = new AbortController();
   activeUploads.push({ itemId, abortController, progressBar, uploadItem });
+  
+  // Ensure cancel button is visible when there are active uploads
+  if (activeUploads.length > 0) {
+    cancelUploadBtn.classList.remove('hidden');
+  }
 
   // Simulate progress while reading file
   let progress = 0;
@@ -243,6 +250,7 @@ function checkUploadComplete() {
 
 // Cancel all active uploads
 function cancelAllUploads() {
+  uploadsCancelled = true; // Set flag to stop upload loops
   activeUploads.forEach(upload => {
     upload.abortController.abort();
     upload.uploadItem.classList.add('error');
@@ -279,6 +287,7 @@ window.addEventListener('message', async (event) => {
     // Setup upload tracking
     uploadStats = { uploaded: files.length, completed: 0, errors: 0 };
     activeUploads = []; // Clear previous uploads
+    uploadsCancelled = false; // Reset cancellation flag
     updateStats();
     uploadStatusSection.classList.remove('hidden');
     uploadList.innerHTML = '';
@@ -287,7 +296,16 @@ window.addEventListener('message', async (event) => {
     
     // Download and process each file
     for (const file of files) {
+      // Check if uploads were cancelled
+      if (uploadsCancelled) {
+        break; // Stop processing remaining files
+      }
       await downloadAndProcessGDriveFile(file.id, file.name);
+    }
+    
+    // If all done and not cancelled, hide the button
+    if (activeUploads.length === 0 && !uploadsCancelled) {
+      cancelUploadBtn.classList.add('hidden');
     }
   }
 });
@@ -312,6 +330,11 @@ async function downloadAndProcessGDriveFile(fileId, fileName) {
   // Create AbortController for this upload
   const abortController = new AbortController();
   activeUploads.push({ itemId, abortController, progressBar, uploadItem });
+  
+  // Ensure cancel button is visible when there are active uploads
+  if (activeUploads.length > 0) {
+    cancelUploadBtn.classList.remove('hidden');
+  }
   
   try {
     // Download from Google Drive

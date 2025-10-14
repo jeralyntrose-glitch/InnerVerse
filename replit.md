@@ -20,6 +20,10 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 - ✅ Enhanced copy buttons to include Filename, Document ID, and Timestamp in tab-separated format
 - ✅ "Copy" button copies in order: PDF Title → Document ID → Timestamp (for Google Sheets columns)
 - ✅ "Copy All IDs" button copies all documents with filename, ID, and date (each in separate columns)
+- ✅ Added cancel upload feature with red "✕ Cancel" button that appears during uploads
+- ✅ Cancel button aborts all ongoing fetch requests using AbortController API
+- ✅ Cancelled uploads are marked with "(Cancelled)" label and error styling
+- ✅ Works for both local file uploads and Google Drive uploads
 
 ## Previous Features (Earlier October 14, 2025)
 - ✅ Added scrollable upload status box showing up to 10 files with individual progress bars
