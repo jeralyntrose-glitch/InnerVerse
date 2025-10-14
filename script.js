@@ -1,6 +1,5 @@
 const dropArea = document.getElementById('drop-area');
 const fileInput = document.getElementById('fileElem');
-const gdriveBtn = document.getElementById('gdrive-btn');
 const status = document.getElementById('status');
 const chatToggle = document.getElementById('chat-toggle');
 const chatContainer = document.getElementById('chat-container');
@@ -381,9 +380,6 @@ async function downloadAndProcessGDriveFile(fileId, fileName) {
     updateStats();
   }
 }
-
-// Attach event listener to Google Drive button
-gdriveBtn.addEventListener('click', openGoogleDrivePicker);
 
 // === Chat ===
 chatToggle.addEventListener('click', () => {
