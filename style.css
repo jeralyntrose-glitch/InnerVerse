@@ -385,6 +385,7 @@ input[type="file"] {
   transition: background 0.2s;
   gap: 12px;
   overflow-x: auto;
+  white-space: nowrap;
 }
 
 .doc-checkbox {
@@ -404,24 +405,32 @@ input[type="file"] {
   min-width: 0;
   text-align: left;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
 }
 
 .doc-name {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.2;
+  flex-shrink: 0;
 }
 
-.doc-meta {
+.doc-id {
   font-size: 11px;
   color: var(--text-secondary);
-  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.doc-date {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .doc-actions {

@@ -605,11 +605,9 @@ function updateDropdown() {
     li.innerHTML = `
       <input type="checkbox" class="doc-checkbox" data-id="${fullId}">
       <div class="doc-info">
-        <div class="doc-name" title="${file.name}">${file.name}</div>
-        <div class="doc-meta">
-          <span class="doc-id" title="${fullId}">ID: ${shortId}</span>
-          <span class="doc-date">${date}</span>
-        </div>
+        <span class="doc-name" title="${file.name}">${file.name}</span>
+        <span class="doc-id" title="${fullId}">ID: ${shortId}</span>
+        <span class="doc-date">${date}</span>
       </div>
       <div class="doc-actions">
         <button class="copy-btn" data-id="${fullId}" title="Copy">
