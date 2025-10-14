@@ -10,8 +10,8 @@
   --btn-primary-hover: #7a69a7;
   --btn-secondary-bg: rgba(255, 255, 255, 0.8);
   --btn-secondary-hover: rgba(255, 255, 255, 1);
-  --brain-stroke: #7fffaa;
-  --brain-glow: #4169e1;
+  --brain-stroke: #9d8bc9;
+  --brain-glow: #8b7ab8;
   --card-bg: rgba(255, 255, 255, 0.5);
   --border-color: rgba(147, 112, 219, 0.2);
   --theme-toggle-bg: rgba(255, 255, 255, 0.3);
@@ -28,8 +28,8 @@
   --btn-primary-hover: #9d8bc9;
   --btn-secondary-bg: rgba(60, 60, 80, 0.8);
   --btn-secondary-hover: rgba(70, 70, 90, 1);
-  --brain-stroke: #7fffaa;
-  --brain-glow: #4169e1;
+  --brain-stroke: #c8b6ff;
+  --brain-glow: #9d8bc9;
   --card-bg: rgba(30, 30, 45, 0.5);
   --border-color: rgba(147, 112, 219, 0.3);
   --theme-toggle-bg: rgba(30, 30, 45, 0.5);
@@ -59,7 +59,7 @@ body {
 .theme-toggle {
   position: fixed;
   top: 20px;
-  right: 20px;
+  right: 80px;
   width: 45px;
   height: 45px;
   border-radius: 50%;
@@ -88,6 +88,7 @@ body {
   max-width: 650px;
   width: 100%;
   z-index: 1;
+  margin-top: -60px;
 }
 
 /* Branding with Brain Icon */
@@ -330,7 +331,7 @@ input[type="file"] {
 .doc-dropdown {
   position: fixed;
   top: 20px;
-  left: 20px;
+  right: 20px;
   z-index: 999;
 }
 
