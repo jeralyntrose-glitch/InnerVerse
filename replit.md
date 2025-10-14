@@ -16,9 +16,9 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 ## UI Fixes & Enhancements
 - ✅ Fixed dropdown bug: now closes when clicking outside or toggling again
 - ✅ Added click-outside-to-close functionality for document dropdown
-- ✅ Enhanced copy buttons to include Document ID, Filename, and Timestamp in tab-separated format
-- ✅ "Copy" button now copies all three fields for easy pasting into Google Sheets
-- ✅ "Copy All IDs" button copies all documents with ID, filename, and date (each in separate columns)
+- ✅ Enhanced copy buttons to include Filename, Document ID, and Timestamp in tab-separated format
+- ✅ "Copy" button copies in order: PDF Title → Document ID → Timestamp (for Google Sheets columns)
+- ✅ "Copy All IDs" button copies all documents with filename, ID, and date (each in separate columns)
 
 ## Previous Features (Earlier October 14, 2025)
 - ✅ Added scrollable upload status box showing up to 10 files with individual progress bars
