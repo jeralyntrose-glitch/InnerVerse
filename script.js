@@ -577,8 +577,13 @@ function removeLastBotMessage() {
 // === Dropdown & Archive ===
 dropdownToggle.addEventListener('click', (e) => {
   e.stopPropagation(); // Prevent document click from firing
-  dropdownMenu.classList.toggle('hidden');
-  updateDropdown();
+  const isHidden = dropdownMenu.classList.contains('hidden');
+  if (isHidden) {
+    dropdownMenu.classList.remove('hidden');
+    updateDropdown();
+  } else {
+    dropdownMenu.classList.add('hidden');
+  }
 });
 
 // Close dropdown when clicking outside
@@ -623,8 +628,6 @@ function updateDropdown() {
     `;
     docList.appendChild(li);
   });
-
-  dropdownMenu.classList.remove('hidden');
 
   docList.querySelectorAll('.copy-btn').forEach(btn => {
     btn.addEventListener('click', () => {
