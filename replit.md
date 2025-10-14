@@ -4,6 +4,13 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 
 # Recent Changes (October 14, 2025)
 
+## Dropdown Multi-Select & UI Fixes (Latest)
+- ✅ **Checkbox multi-select** - Added checkboxes to dropdown for selecting multiple files
+- ✅ **Copy Selected button** - New button copies only checked files in tab-separated format
+- ✅ **Dropdown footer redesign** - Updated with "📋 Copy Selected", "📋 Copy All", "🗂️ Archive" buttons
+- ✅ **Cancel button positioning fix** - Moved cancel button to right side (120px padding) to prevent overlap with error messages
+- ✅ **Cache refresh** - Updated to v=5 to force browser reload of new CSS and JavaScript
+
 ## UI/UX Redesign - Modern Purple Theme
 - ✅ **Complete visual redesign** with purple/lavender gradient backgrounds
 - ✅ **Glowing brain circuit icon** - Animated SVG with neon green glow effect
