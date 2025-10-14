@@ -1,236 +1,179 @@
-/* Reset */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+const dropArea = document.getElementById('drop-area');
+const fileInput = document.getElementById('fileElem');
+const status = document.getElementById('status');
+const chatToggle = document.getElementById('chat-toggle');
+const chatContainer = document.getElementById('chat-container');
+const chatClose = document.getElementById('chat-close');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const chatLog = document.getElementById('chat-log');
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #f9fafb;
-  color: #1a1a1a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 20px;
-  position: relative;
-}
+let currentDocumentId = null;
+let uploadedFiles = new Set(); // Tracks uploaded file names (session-only)
 
-.page-wrapper {
-  text-align: center;
-  max-width: 500px;
-  width: 100%;
-}
+// Drag Events
+['dragenter', 'dragover'].forEach(event => {
+  dropArea.addEventListener(event, e => {
+    e.preventDefault();
+    dropArea.classList.add('dragover');
+  });
+});
 
-.branding {
-  margin-bottom: 20px;
-}
+['dragleave', 'drop'].forEach(event => {
+  dropArea.addEventListener(event, e => {
+    e.preventDefault();
+    dropArea.classList.remove('dragover');
+  });
+});
 
-.brand-title {
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  margin-bottom: 5px;
-}
+// Handle Drop
+dropArea.addEventListener('drop', e => {
+  const files = e.dataTransfer.files;
+  handleFiles(files);
+});
 
-.tagline {
-  font-size: 14px;
-  color: #555;
-  margin-bottom: 25px;
-}
+// Handle Browse
+fileInput.addEventListener('change', e => {
+  const files = e.target.files;
+  handleFiles(files);
+});
 
-.drop-area {
-  border: 2px dashed #ccc;
-  padding: 30px 20px;
-  border-radius: 12px;
-  background-color: #fff;
-  transition: border-color 0.3s ease;
-}
-
-.drop-area.dragover {
-  border-color: #4f46e5;
-  background-color: #eef2ff;
-}
-
-.drop-text {
-  font-size: 16px;
-  margin-bottom: 10px;
-}
-
-.or-text {
-  display: block;
-  font-size: 13px;
-  color: #888;
-  margin-bottom: 10px;
-}
-
-.custom-file-upload {
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  padding: 8px 18px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  display: inline-block;
-  transition: background-color 0.2s ease;
-}
-
-.custom-file-upload:hover {
-  background-color: #e0e0e0;
-}
-
-input[type="file"] {
-  display: none;
-}
-
-.status {
-  margin-top: 20px;
-  font-size: 14px;
-  color: #444;
-  line-height: 1.6;
-}
-
-.status code {
-  background: #e5e7eb;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: monospace;
-  font-size: 13px;
-}
-
-/* Floating Chat Button */
-.chat-toggle {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #4f46e5;
-  color: white;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  z-index: 1000;
-}
-
-/* Chat Container */
-.chat-container {
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  width: 300px;
-  max-height: 400px;
-  background-color: #ffffff;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 1001;
-}
-
-.hidden {
-  display: none;
-}
-
-.chat-header {
-  background-color: #4f46e5;
-  color: white;
-  padding: 10px;
-  font-weight: bold;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.chat-header button {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-/* Chat Log */
-.chat-log {
-  flex: 1;
-  padding: 10px;
-  overflow-y: auto;
-  background-color: #f4f4f4;
-  font-size: 12px;
-}
-
-.chat-message {
-  margin-bottom: 10px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  max-width: 80%;
-  clear: both;
-  word-wrap: break-word;
-  line-height: 1.4;
-}
-
-.chat-message.user {
-  background-color: #d1e7ff;
-  align-self: flex-end;
-  float: right;
-}
-
-.chat-message.bot {
-  background-color: #e5e5ea;
-  align-self: flex-start;
-  float: left;
-}
-
-/* Chat input area */
-.chat-input-area {
-  display: flex;
-  padding: 8px;
-  border-top: 1px solid #ccc;
-  background-color: #fff;
-}
-
-.chat-input-area input {
-  flex: 1;
-  padding: 8px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
-
-.chat-input-area button {
-  margin-left: 6px;
-  padding: 8px 12px;
-  background-color: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.chat-input-area button:hover {
-  background-color: #4338ca;
-}
-
-/* Mobile responsive tweaks */
-@media (max-width: 480px) {
-  .chat-container {
-    right: 10px;
-    width: 95%;
+// Upload Logic
+function handleFiles(files) {
+  const file = files[0];
+  if (!file || file.type !== 'application/pdf') {
+    status.textContent = '❌ Please upload a valid PDF file.';
+    return;
   }
 
-  .chat-toggle {
-    right: 10px;
-    bottom: 10px;
+  // Duplicate check (by filename only)
+  if (uploadedFiles.has(file.name)) {
+    const replace = confirm(`You've already uploaded "${file.name}". Do you want to replace it?`);
+    if (!replace) {
+      status.textContent = '❌ Upload canceled.';
+      return;
+    }
   }
 
-  .chat-message {
-    font-size: 12px;
+  status.textContent = `⏳ Uploading ${file.name}...`;
+
+  const reader = new FileReader();
+  reader.onload = async function () {
+    const base64Data = reader.result.split(',')[1];
+
+    const payload = {
+      filename: file.name,
+      pdf_base64: base64Data
+    };
+
+    try {
+      const res = await fetch('/upload-base64', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        currentDocumentId = result.document_id;
+        uploadedFiles.add(file.name);
+
+        status.innerHTML = `
+          ✅ <strong>${file.name}</strong> uploaded successfully.<br>
+          🆔 Document ID: <code>${result.document_id}</code><br>
+          📦 Chunks stored: ${result.chunks_count}
+        `;
+
+        navigator.clipboard.writeText(result.document_id).then(() => {
+          status.innerHTML += '<br>📋 Document ID copied to clipboard!';
+        });
+      } else {
+        throw new Error(result.error || 'Upload failed.');
+      }
+    } catch (err) {
+      status.textContent = `❌ Upload failed: ${err.message}`;
+    }
+  };
+
+  reader.readAsDataURL(file);
+}
+
+// Chat Toggle
+chatToggle.addEventListener('click', () => {
+  chatContainer.classList.toggle('hidden');
+});
+
+chatClose.addEventListener('click', () => {
+  chatContainer.classList.add('hidden');
+});
+
+// Send Chat Message
+sendBtn.addEventListener('click', sendMessage);
+chatInput.addEventListener('keypress', e => {
+  if (e.key === 'Enter') {
+    sendMessage();
+  }
+});
+
+async function sendMessage() {
+  const question = chatInput.value.trim();
+  if (!question) return;
+
+  if (!currentDocumentId) {
+    appendMessage('bot', '⚠️ Please upload a PDF first.');
+    return;
+  }
+
+  appendMessage('user', question);
+  appendMessage('bot', '🧠 Thinking...');
+
+  sendBtn.disabled = true;
+
+  try {
+    const res = await fetch('/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        document_id: currentDocumentId,
+        question: question
+      })
+    });
+
+    const data = await res.json();
+
+    // Remove "Thinking..." message
+    removeLastBotMessage();
+
+    if (res.ok) {
+      appendMessage('bot', data.answer || 'No response.');
+    } else {
+      appendMessage('bot', `❌ Error: ${data.error || 'Query failed.'}`);
+    }
+  } catch (err) {
+    removeLastBotMessage();
+    appendMessage('bot', `❌ Error: ${err.message}`);
+  }
+
+  sendBtn.disabled = false;
+  chatInput.value = '';
+}
+
+// Append chat message
+function appendMessage(sender, text) {
+  const message = document.createElement('div');
+  message.classList.add('chat-message', sender);
+  message.textContent = text;
+  chatLog.appendChild(message);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+// Remove "Thinking..." placeholder
+function removeLastBotMessage() {
+  const messages = chatLog.querySelectorAll('.chat-message.bot');
+  if (messages.length > 0) {
+    messages[messages.length - 1].remove();
   }
 }
