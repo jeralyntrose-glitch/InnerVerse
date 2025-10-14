@@ -104,7 +104,7 @@ body {
   50% { transform: translateY(-10px); }
 }
 
-.brain-paths {
+.brain-network {
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -354,15 +354,15 @@ input[type="file"] {
 .dropdown-menu {
   position: absolute;
   top: 55px;
-  left: 0;
+  right: 0;
   background: var(--card-bg);
+  backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   width: 420px;
   max-height: 400px;
   overflow-y: auto;
-  overflow-x: auto;
-  box-shadow: 0 10px 25px var(--shadow-color);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   z-index: 1000;
 }
 
@@ -382,7 +382,8 @@ input[type="file"] {
   justify-content: space-between;
   align-items: center;
   transition: background 0.2s;
-  min-width: 380px;
+  gap: 12px;
+  overflow-x: auto;
 }
 
 .doc-item:hover {
@@ -391,8 +392,9 @@ input[type="file"] {
 
 .doc-info {
   flex: 1;
-  min-width: 0;
+  min-width: 200px;
   text-align: left;
+  white-space: nowrap;
 }
 
 .doc-name {
@@ -400,6 +402,8 @@ input[type="file"] {
   color: var(--text-primary);
   font-size: 13px;
   margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .doc-meta {
@@ -411,6 +415,7 @@ input[type="file"] {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .doc-actions button {

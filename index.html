@@ -27,28 +27,38 @@
 
   <div class="page-wrapper">
     <div class="branding">
-      <!-- Simple Modern Brain Icon -->
-      <svg class="brain-icon" width="160" height="160" viewBox="0 0 120 120">
+      <!-- Neural Network Brain Icon -->
+      <svg class="brain-icon" width="160" height="160" viewBox="0 0 200 200">
         <defs>
           <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+            <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
           </linearGradient>
         </defs>
         
-        <!-- Clean brain shape with flowing lines -->
-        <g class="brain-paths" stroke="url(#brainGradient)" stroke-width="3" fill="none" stroke-linecap="round">
-          <!-- Top flowing lines -->
-          <path d="M30,35 Q40,25 50,30 Q60,20 70,28 Q80,22 90,35"/>
-          <path d="M35,45 Q45,38 55,42 Q65,36 75,44 Q82,40 88,48"/>
+        <!-- Neural network nodes and connections -->
+        <g class="brain-network">
+          <!-- Connections -->
+          <line x1="60" y1="50" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+          <line x1="140" y1="50" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+          <line x1="60" y1="50" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+          <line x1="140" y1="50" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+          <line x1="40" y1="100" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+          <line x1="160" y1="100" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+          <line x1="40" y1="100" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+          <line x1="160" y1="100" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+          <line x1="60" y1="150" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+          <line x1="140" y1="150" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
           
-          <!-- Middle brain curves -->
-          <path d="M28,55 Q35,48 45,52 Q55,48 65,54 Q75,50 85,58 Q90,54 92,62"/>
-          <path d="M26,65 Q32,58 42,63 Q52,59 62,65 Q72,61 82,68 Q88,65 92,72"/>
-          
-          <!-- Bottom curves -->
-          <path d="M30,75 Q38,70 48,74 Q58,70 68,76 Q78,72 86,80"/>
-          <path d="M35,85 Q43,81 52,84 Q62,81 72,86 Q80,83 86,90"/>
+          <!-- Nodes -->
+          <circle cx="60" cy="50" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+          <circle cx="140" cy="50" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+          <circle cx="40" cy="100" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+          <circle cx="100" cy="80" r="10" fill="url(#brainGradient)"/>
+          <circle cx="100" cy="120" r="10" fill="url(#brainGradient)"/>
+          <circle cx="160" cy="100" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+          <circle cx="60" cy="150" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+          <circle cx="140" cy="150" r="8" fill="url(#brainGradient)" opacity="0.9"/>
         </g>
       </svg>
 
