@@ -471,8 +471,22 @@ function updateDropdown() {
 
   docList.querySelectorAll('.copy-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      navigator.clipboard.writeText(btn.dataset.id);
-      alert('📋 Document ID copied!');
+      const id = btn.dataset.id;
+      const file = uploadedFiles.find(f => f.id === id);
+      if (!file) {
+        navigator.clipboard.writeText(id);
+        alert('📋 Document ID copied!');
+        return;
+      }
+      
+      // Format timestamp as readable date/time
+      const date = file.timestamp ? new Date(file.timestamp).toLocaleString() : 'N/A';
+      
+      // Tab-separated format for Google Sheets: ID\tFilename\tTimestamp
+      const tsvData = `${file.id}\t${file.name}\t${date}`;
+      
+      navigator.clipboard.writeText(tsvData);
+      alert('📋 Document info copied! (ID, filename, date)');
     });
   });
 
@@ -503,16 +517,20 @@ copyAllBtn.addEventListener('click', () => {
     return;
   }
   
-  const allIds = uploadedFiles
-    .map(file => file.id)
-    .filter(id => id && id !== 'unknown')
+  // Create tab-separated rows: ID\tFilename\tTimestamp (one per line)
+  const tsvData = uploadedFiles
+    .filter(file => file.id && file.id !== 'unknown')
+    .map(file => {
+      const date = file.timestamp ? new Date(file.timestamp).toLocaleString() : 'N/A';
+      return `${file.id}\t${file.name}\t${date}`;
+    })
     .join('\n');
   
-  if (allIds) {
-    navigator.clipboard.writeText(allIds);
-    alert(`📋 Copied ${uploadedFiles.length} document ID(s)!`);
+  if (tsvData) {
+    navigator.clipboard.writeText(tsvData);
+    alert(`📋 Copied ${uploadedFiles.length} document(s)! (ID, filename, date)\nPaste into Google Sheets - each part will go into a separate column.`);
   } else {
-    alert('No valid IDs to copy!');
+    alert('No valid documents to copy!');
   }
 });
 
