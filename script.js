@@ -3,11 +3,11 @@ const fileInput = document.getElementById('fileElem');
 const status = document.getElementById('status');
 const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
-const chatResponse = document.getElementById('chatResponse');
+const chatMessages = document.getElementById('chat-messages');
 
 let currentDocumentId = null;
 
-// Drag events for file upload
+// === Upload Logic ===
 ['dragenter', 'dragover'].forEach(event => {
   dropArea.addEventListener(event, e => {
     e.preventDefault();
@@ -22,7 +22,6 @@ let currentDocumentId = null;
   });
 });
 
-// Drop handler
 dropArea.addEventListener('drop', e => {
   const files = e.dataTransfer.files;
   handleFiles(files);
@@ -69,8 +68,6 @@ function handleFiles(files) {
           🆔 Document ID: <code>${result.document_id}</code><br>
           📦 Chunks stored: ${result.chunks_count}
         `;
-        
-        // Copy document ID to clipboard
         navigator.clipboard.writeText(result.document_id).then(() => {
           status.innerHTML += '<br>📋 Document ID copied to clipboard!';
         });
@@ -85,50 +82,67 @@ function handleFiles(files) {
   reader.readAsDataURL(file);
 }
 
-// Chat functionality
-sendBtn.addEventListener('click', askQuestion);
+// === Floating Chat Logic ===
+const chatToggle = document.getElementById("chat-toggle");
+const chatWindow = document.getElementById("chat-float");
+const closeChat = document.getElementById("close-chat");
 
-chatInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    askQuestion();
-  }
+chatToggle.addEventListener("click", () => {
+  chatWindow.classList.toggle("hidden");
 });
 
-async function askQuestion() {
+closeChat.addEventListener("click", () => {
+  chatWindow.classList.add("hidden");
+});
+
+sendBtn.addEventListener("click", sendChat);
+chatInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendChat();
+});
+
+function appendMessage(text, sender = "user") {
+  const div = document.createElement("div");
+  div.className = sender === "user" ? "user-msg" : "bot-msg";
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function sendChat() {
   const question = chatInput.value.trim();
   if (!question) return;
 
   if (!currentDocumentId) {
-    chatResponse.textContent = '⚠️ Please upload a PDF first before asking questions.';
+    appendMessage('⚠️ Please upload a PDF first.', 'bot');
+    chatInput.value = '';
     return;
   }
 
-  chatResponse.textContent = '🧠 Thinking...';
-  sendBtn.disabled = true;
+  appendMessage(question, "user");
+  appendMessage("🧠 Thinking...", "bot");
 
   try {
-    const res = await fetch('/query', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+    const res = await fetch("/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         document_id: currentDocumentId,
-        question: question 
+        question 
       })
     });
 
     const data = await res.json();
-    
-    if (res.ok) {
-      chatResponse.textContent = `🧠 Axis Mind says:\n\n${data.answer || 'No response.'}`;
-    } else {
-      throw new Error(data.error || 'Query failed');
-    }
+    const answer = data.answer || "No response.";
+
+    const botMessages = document.querySelectorAll(".bot-msg");
+    const lastBotMsg = botMessages[botMessages.length - 1];
+    lastBotMsg.textContent = answer;
+
   } catch (err) {
-    chatResponse.textContent = '❌ Error: ' + err.message;
+    const botMessages = document.querySelectorAll(".bot-msg");
+    const lastBotMsg = botMessages[botMessages.length - 1];
+    lastBotMsg.textContent = "❌ Error: " + err.message;
   }
 
-  sendBtn.disabled = false;
   chatInput.value = '';
 }
