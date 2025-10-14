@@ -16,7 +16,10 @@
     <div id="drop-area" class="drop-area">
       <p class="drop-text">Drag and drop your PDF here</p>
       <span class="or-text">or</span>
-      <label for="fileElem" class="custom-file-upload">Browse files</label>
+      <div class="upload-buttons">
+        <label for="fileElem" class="custom-file-upload">Browse files</label>
+        <button id="gdrive-btn" class="custom-file-upload gdrive-btn">📁 Google Drive</button>
+      </div>
       <input type="file" id="fileElem" accept="application/pdf" multiple />
     </div>
 
@@ -81,6 +84,8 @@
     </div>
   </div>
 
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
   <script src="/static/script.js"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 const dropArea = document.getElementById('drop-area');
 const fileInput = document.getElementById('fileElem');
+const gdriveBtn = document.getElementById('gdrive-btn');
 const status = document.getElementById('status');
 const chatToggle = document.getElementById('chat-toggle');
 const chatContainer = document.getElementById('chat-container');
@@ -210,6 +211,158 @@ function processFile(file) {
 
   reader.readAsDataURL(file);
 }
+
+// === Google Drive Integration ===
+let pickerApiLoaded = false;
+let accessToken = null;
+
+function loadPickerApi() {
+  gapi.load('picker', () => {
+    pickerApiLoaded = true;
+  });
+}
+
+async function openGoogleDrivePicker() {
+  try {
+    // Get access token from backend
+    const tokenResponse = await fetch('/api/gdrive-token');
+    const tokenData = await tokenResponse.json();
+    
+    if (!tokenData.access_token) {
+      alert('❌ Google Drive not connected. Please contact support.');
+      return;
+    }
+    
+    accessToken = tokenData.access_token;
+    
+    // Wait for picker API to load
+    if (!pickerApiLoaded) {
+      if (typeof gapi !== 'undefined') {
+        loadPickerApi();
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    // Create picker
+    const picker = new google.picker.PickerBuilder()
+      .addView(new google.picker.DocsView()
+        .setIncludeFolders(true)
+        .setMimeTypes('application/pdf'))
+      .setOAuthToken(accessToken)
+      .setCallback(pickerCallback)
+      .setTitle('Select PDF files from Google Drive')
+      .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+      .build();
+    
+    picker.setVisible(true);
+  } catch (error) {
+    console.error('Picker error:', error);
+    alert('❌ Failed to open Google Drive picker: ' + error.message);
+  }
+}
+
+async function pickerCallback(data) {
+  if (data.action === google.picker.Action.PICKED) {
+    const files = data.docs.filter(doc => doc.mimeType === 'application/pdf');
+    
+    if (files.length === 0) {
+      alert('❌ Please select PDF files only.');
+      return;
+    }
+    
+    // Setup upload tracking
+    uploadStats = { uploaded: files.length, completed: 0, errors: 0 };
+    updateStats();
+    uploadStatusSection.classList.remove('hidden');
+    uploadList.innerHTML = '';
+    status.textContent = '';
+    
+    // Download and process each file
+    for (const file of files) {
+      await downloadAndProcessGDriveFile(file.id, file.name);
+    }
+  }
+}
+
+async function downloadAndProcessGDriveFile(fileId, fileName) {
+  // Create upload item for tracking
+  const uploadItem = document.createElement('div');
+  uploadItem.className = 'upload-item';
+  uploadItem.innerHTML = `
+    <div class="upload-filename">${fileName}</div>
+    <div class="progress-bar-container">
+      <div class="progress-bar"></div>
+    </div>
+  `;
+  uploadList.appendChild(uploadItem);
+  
+  const progressBar = uploadItem.querySelector('.progress-bar');
+  progressBar.style.width = '30%';
+  
+  try {
+    // Download from Google Drive
+    const response = await fetch(`/api/gdrive-download/${fileId}`);
+    progressBar.style.width = '60%';
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Download failed');
+    }
+    
+    // Upload to backend
+    const payload = { filename: fileName, pdf_base64: data.pdf_base64 };
+    const uploadResponse = await fetch('/upload-base64', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    progressBar.style.width = '80%';
+    const result = await uploadResponse.json();
+    
+    if (uploadResponse.ok) {
+      currentDocumentId = result.document_id;
+      
+      uploadedFiles = uploadedFiles.filter(f => f.name !== fileName);
+      uploadedFiles.push({ 
+        name: fileName, 
+        id: result.document_id,
+        timestamp: Date.now()
+      });
+      saveUploadedFiles(uploadedFiles);
+      updateDropdown();
+      
+      // Success
+      progressBar.style.width = '100%';
+      uploadItem.classList.add('success');
+      uploadStats.completed++;
+      updateStats();
+      
+      if (uploadStats.completed === 1) {
+        navigator.clipboard.writeText(result.document_id);
+      }
+    } else {
+      throw new Error(result.error || 'Upload failed');
+    }
+  } catch (error) {
+    console.error('GDrive file error:', error);
+    progressBar.style.width = '100%';
+    uploadItem.classList.add('error');
+    uploadStats.errors++;
+    updateStats();
+  }
+}
+
+// Load picker API when gapi is ready
+if (typeof gapi !== 'undefined') {
+  gapi.load('picker', () => {
+    pickerApiLoaded = true;
+  });
+}
+
+// Attach event listener to Google Drive button
+gdriveBtn.addEventListener('click', openGoogleDrivePicker);
 
 // === Chat ===
 chatToggle.addEventListener('click', () => {

@@ -5,3 +5,6 @@ langchain
 openai
 pinecone-client
 python-multipart
+pinecone
+pydantic
+httpx

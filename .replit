@@ -3,7 +3,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["bash"]
+packages = ["bash", "libxcrypt"]
 
 [unitTest]
 language = "python3"
@@ -17,6 +17,7 @@ deploymentTarget = "gce"
 
 [agent]
 expertMode = true
+integrations = ["google-drive:1.0.0"]
 
 [workflows]
 runButton = "Project"
@@ -45,3 +46,7 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 41013
+externalPort = 3000

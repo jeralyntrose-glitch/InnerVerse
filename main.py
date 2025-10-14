@@ -2,6 +2,8 @@ import os
 import uuid
 import io
 import base64
+import json
+import httpx
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -232,6 +234,73 @@ async def query_pdf(request: QueryRequest):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+
+# === Google Drive Integration ===
+async def get_gdrive_access_token():
+    """Get Google Drive access token from Replit Connector"""
+    try:
+        hostname = os.getenv("REPLIT_CONNECTORS_HOSTNAME")
+        x_replit_token = (
+            f"repl {os.getenv('REPL_IDENTITY')}" if os.getenv('REPL_IDENTITY')
+            else f"depl {os.getenv('WEB_REPL_RENEWAL')}" if os.getenv('WEB_REPL_RENEWAL')
+            else None
+        )
+        
+        if not x_replit_token or not hostname:
+            return None
+            
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://{hostname}/api/v2/connection?include_secrets=true&connector_names=google-drive",
+                headers={
+                    "Accept": "application/json",
+                    "X_REPLIT_TOKEN": x_replit_token
+                }
+            )
+            data = response.json()
+            if data.get("items") and len(data["items"]) > 0:
+                settings = data["items"][0].get("settings", {})
+                return settings.get("access_token") or settings.get("oauth", {}).get("credentials", {}).get("access_token")
+        return None
+    except Exception as e:
+        print(f"❌ Google Drive token error: {e}")
+        return None
+
+@app.get("/api/gdrive-token")
+async def get_gdrive_token():
+    """Get Google Drive access token for frontend"""
+    token = await get_gdrive_access_token()
+    if token:
+        return {"access_token": token}
+    return JSONResponse(status_code=500, content={"error": "Google Drive not connected"})
+
+@app.get("/api/gdrive-download/{file_id}")
+async def download_gdrive_file(file_id: str):
+    """Download a file from Google Drive and return as base64"""
+    try:
+        token = await get_gdrive_access_token()
+        if not token:
+            return JSONResponse(status_code=401, content={"error": "Google Drive not connected"})
+        
+        async with httpx.AsyncClient() as client:
+            # Download file from Google Drive
+            response = await client.get(
+                f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            
+            if response.status_code != 200:
+                return JSONResponse(status_code=response.status_code, content={"error": "Failed to download file"})
+            
+            # Convert to base64
+            pdf_bytes = response.content
+            pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+            
+            return {"pdf_base64": pdf_base64}
+            
+    except Exception as e:
+        print(f"❌ Google Drive download error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 # === Serve Frontend ===
 from fastapi.staticfiles import StaticFiles

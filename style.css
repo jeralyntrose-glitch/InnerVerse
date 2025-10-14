@@ -65,6 +65,13 @@ body {
   margin-bottom: 10px;
 }
 
+.upload-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
 .custom-file-upload {
   background-color: #f0f0f0;
   border: 1px solid #ccc;
@@ -78,6 +85,16 @@ body {
 
 .custom-file-upload:hover {
   background-color: #e0e0e0;
+}
+
+.gdrive-btn {
+  background-color: #4285f4;
+  color: white;
+  border-color: #4285f4;
+}
+
+.gdrive-btn:hover {
+  background-color: #357ae8;
 }
 
 input[type="file"] {
