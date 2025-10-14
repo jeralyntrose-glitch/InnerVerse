@@ -380,10 +380,11 @@ input[type="file"] {
   padding: 12px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
-  justify-content: space-between;
   align-items: center;
   transition: background 0.2s;
   gap: 12px;
+  overflow-x: auto;
+  min-width: 380px;
 }
 
 .doc-item:hover {
@@ -412,10 +413,11 @@ input[type="file"] {
 
 .doc-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 6px;
   flex-shrink: 0;
   align-items: center;
+  margin-left: auto;
 }
 
 .doc-actions button {
