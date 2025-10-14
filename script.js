@@ -222,19 +222,20 @@ function updateDropdown() {
   uploadedFiles.forEach(file => {
     const li = document.createElement('li');
     const date = file.timestamp ? new Date(file.timestamp).toLocaleString() : 'Unknown';
-    const shortId = file.id.substring(0, 8) + '...';
+    const shortId = file.id ? (file.id.substring(0, 8) + '...') : 'No ID';
+    const fullId = file.id || 'unknown';
     
     li.innerHTML = `
       <div class="doc-info">
         <div class="doc-name" title="${file.name}">${file.name}</div>
         <div class="doc-meta">
-          <span class="doc-id" title="${file.id}">ID: ${shortId}</span>
+          <span class="doc-id" title="${fullId}">ID: ${shortId}</span>
           <span class="doc-date">${date}</span>
         </div>
       </div>
       <div class="doc-actions">
-        <button class="copy-btn" data-id="${file.id}">Copy</button>
-        <button class="delete-btn" data-id="${file.id}">Delete</button>
+        <button class="copy-btn" data-id="${fullId}">Copy</button>
+        <button class="delete-btn" data-id="${fullId}">Delete</button>
       </div>
     `;
     docList.appendChild(li);
