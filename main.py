@@ -174,8 +174,14 @@ async def upload_pdf(file: UploadFile = File(...)):
 
 
 # === Query PDF for an answer ===
+class QueryRequest(BaseModel):
+    document_id: str
+    question: str
+
 @app.post("/query")
-async def query_pdf(document_id: str, question: str):
+async def query_pdf(request: QueryRequest):
+    document_id = request.document_id
+    question = request.question
     openai_client = get_openai_client()
     pinecone_index = get_pinecone_client()
 
@@ -231,11 +237,9 @@ async def query_pdf(document_id: str, question: str):
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-app.mount("/static", StaticFiles(directory="."), name="static")
-
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def serve_frontend():
-    return FileResponse("index.html")
+    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="."), name="static")

@@ -1,16 +1,16 @@
 # Overview
 
-This is a FastAPI-based PDF Q&A application that allows users to upload PDF documents, processes them into chunks, stores them in Pinecone vector database, and enables querying the documents using OpenAI's GPT for intelligent answers based on document content. The app is fully functional and ready for deployment on Replit with 24/7 uptime.
+This is a FastAPI-based PDF Q&A application with a modern web interface that allows users to upload PDF documents, processes them into chunks, stores them in Pinecone vector database, and enables querying the documents using OpenAI's GPT for intelligent answers based on document content. The app features both a drag-and-drop upload interface and an integrated chat system for asking questions about uploaded documents.
 
-# Recent Changes (October 12, 2025)
+# Recent Changes (October 14, 2025)
 
-- ✅ Migrated to new Pinecone API (Pinecone class instead of deprecated pinecone.init())
-- ✅ Optimized upload performance with batch Pinecone upserts (prevents timeouts)
-- ✅ Added CORS middleware for cross-origin access
-- ✅ Using FastAPI's built-in /docs and /openapi.json endpoints
-- ✅ Added comprehensive debug logging (🛬 file receipt, ❌ errors, ✅ success)
-- ✅ All dependencies confirmed in requirements.txt
-- ✅ Server configured to run on port 5000
+- ✅ Complete frontend rebuild with modern drag-and-drop UI (index.html, style.css, script.js)
+- ✅ Fixed /query endpoint to accept JSON body (QueryRequest model with document_id and question)
+- ✅ Integrated chat interface that tracks uploaded document_id and enables Q&A
+- ✅ Added clipboard auto-copy for document IDs after upload
+- ✅ Fixed static file serving with proper /static/ mount paths
+- ✅ Added cache control headers to prevent browser caching issues
+- ✅ Removed duplicate Pydantic import and cleaned up code structure
 
 # User Preferences
 
@@ -18,10 +18,17 @@ Preferred communication style: Simple, everyday language.
 
 # System Architecture
 
+## Frontend Architecture
+- **Interface**: Single-page application with drag-and-drop PDF upload
+- **Design**: Clean, modern UI with brain emoji branding (🧠 AXIS MIND)
+- **Upload Flow**: Converts PDF to base64 → sends to /upload-base64 → displays document_id and chunk count
+- **Chat Flow**: Stores document_id → sends questions with document_id to /query → displays GPT answers
+- **Features**: Auto-clipboard copy, Enter key support, disabled button during processing
+
 ## Backend Architecture
 - **Framework**: FastAPI with async/await patterns for handling file uploads
 - **Runtime**: Python with uvicorn ASGI server
-- **Design Pattern**: Stateless API with in-memory temporary storage (`pdf_store` dict) for tracking uploaded PDFs
+- **Design Pattern**: Stateless API - frontend tracks document_id, backend queries Pinecone
 
 ## Document Processing Pipeline
 - **PDF Parsing**: PyPDF2 library extracts text from uploaded PDF files
@@ -32,6 +39,7 @@ Preferred communication style: Simple, everyday language.
 - **Database**: Pinecone vector database (index: "mbti-knowledge")
 - **Purpose**: Stores document embeddings for semantic search and retrieval
 - **Design Choice**: Cloud-hosted vector DB chosen for scalability and managed infrastructure
+- **Query Strategy**: Filters by doc_id to retrieve only chunks from specified document
 
 ## Embedding Generation
 - **Provider**: OpenAI API (text-embedding-ada-002 model)
@@ -39,10 +47,12 @@ Preferred communication style: Simple, everyday language.
 - **Performance**: Batch processing all embeddings before upserting to Pinecone
 
 ## API Structure
-- **Upload**: `POST /upload` - Accepts PDF files, chunks text, generates embeddings, stores in Pinecone
-- **Query**: `POST /query` - Accepts document_id and question, retrieves relevant chunks, generates GPT answer
+- **Upload Binary**: `POST /upload` - Accepts multipart/form-data PDF files
+- **Upload Base64**: `POST /upload-base64` - Accepts JSON with pdf_base64 and filename (for ChatGPT integration)
+- **Query**: `POST /query` - Accepts JSON with document_id and question (Pydantic QueryRequest model)
+- **Frontend**: `GET /` - Serves index.html with cache control headers
+- **Static Files**: `/static/*` - Serves CSS, JS, and other static assets
 - **Docs**: `GET /docs` - Built-in FastAPI Swagger UI documentation
-- **OpenAPI**: `GET /openapi.json` - API schema
 - **Response Format**: JSONResponse for standardized API responses
 - **CORS**: Enabled for all origins
 
@@ -50,6 +60,18 @@ Preferred communication style: Simple, everyday language.
 - **Environment Variables**: Replit Secrets for API keys (OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX)
 - **Client Initialization**: Lazy initialization pattern with helper functions that check for API keys before creating clients
 - **Port**: 5000 (configurable via PORT env var)
+
+# File Structure
+
+```
+/
+├── main.py              # FastAPI backend with all endpoints
+├── index.html           # Frontend HTML with upload and chat UI
+├── style.css            # Complete styling (base + upload + chat)
+├── script.js            # Upload + chat functionality with document_id tracking
+├── requirements.txt     # Python dependencies
+└── replit.md           # This documentation file
+```
 
 # External Dependencies
 
@@ -70,10 +92,11 @@ Preferred communication style: Simple, everyday language.
 ## Web Framework
 - **FastAPI**: Async web framework for REST API
 - **Uvicorn**: ASGI server for running the application
+- **Pydantic**: Data validation with QueryRequest model
 
 ## Deployment
 - **Platform**: Replit with 24/7 uptime capability
 - **Run Command**: `python main.py`
 - **Port**: 5000
 - **Secrets Required**: OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX
-- **URL**: https://mbti-pdf-api--jeralynfrose.replit.app
+- **Production URL**: https://axis-of-mind.replit.app

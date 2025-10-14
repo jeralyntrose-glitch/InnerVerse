@@ -1,8 +1,13 @@
 const dropArea = document.getElementById('drop-area');
 const fileInput = document.getElementById('fileElem');
 const status = document.getElementById('status');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const chatResponse = document.getElementById('chatResponse');
 
-// Drag events
+let currentDocumentId = null;
+
+// Drag events for file upload
 ['dragenter', 'dragover'].forEach(event => {
   dropArea.addEventListener(event, e => {
     e.preventDefault();
@@ -35,7 +40,7 @@ function handleFiles(files) {
     return;
   }
 
-  status.textContent = `Uploading ${file.name}...`;
+  status.textContent = `⏳ Uploading ${file.name}...`;
 
   const reader = new FileReader();
   reader.onload = async function () {
@@ -58,6 +63,7 @@ function handleFiles(files) {
       const result = await res.json();
 
       if (res.ok) {
+        currentDocumentId = result.document_id;
         status.innerHTML = `
           ✅ <strong>${file.name}</strong> uploaded successfully.<br>
           🆔 Document ID: <code>${result.document_id}</code><br>
@@ -77,4 +83,52 @@ function handleFiles(files) {
   };
 
   reader.readAsDataURL(file);
+}
+
+// Chat functionality
+sendBtn.addEventListener('click', askQuestion);
+
+chatInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    askQuestion();
+  }
+});
+
+async function askQuestion() {
+  const question = chatInput.value.trim();
+  if (!question) return;
+
+  if (!currentDocumentId) {
+    chatResponse.textContent = '⚠️ Please upload a PDF first before asking questions.';
+    return;
+  }
+
+  chatResponse.textContent = '🧠 Thinking...';
+  sendBtn.disabled = true;
+
+  try {
+    const res = await fetch('/query', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        document_id: currentDocumentId,
+        question: question 
+      })
+    });
+
+    const data = await res.json();
+    
+    if (res.ok) {
+      chatResponse.textContent = `🧠 Axis Mind says:\n\n${data.answer || 'No response.'}`;
+    } else {
+      throw new Error(data.error || 'Query failed');
+    }
+  } catch (err) {
+    chatResponse.textContent = '❌ Error: ' + err.message;
+  }
+
+  sendBtn.disabled = false;
+  chatInput.value = '';
 }
