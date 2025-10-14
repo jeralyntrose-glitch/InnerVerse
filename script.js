@@ -9,7 +9,23 @@ const sendBtn = document.getElementById('sendBtn');
 const chatLog = document.getElementById('chat-log');
 
 let currentDocumentId = null;
-let uploadedFiles = new Set(); // Tracks uploaded file names (session-only)
+
+// === PERSISTENT STORAGE ===
+const STORAGE_KEY = 'axis_mind_uploads';
+
+// Load uploaded files from localStorage
+function loadUploadedFiles() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored ? new Set(JSON.parse(stored)) : new Set();
+}
+
+// Save uploaded files to localStorage
+function saveUploadedFiles(uploadedFiles) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...uploadedFiles]));
+}
+
+// Initialize with stored files
+let uploadedFiles = loadUploadedFiles();
 
 // Drag Events
 ['dragenter', 'dragover'].forEach(event => {
@@ -46,9 +62,9 @@ function handleFiles(files) {
     return;
   }
 
-  // Duplicate check (by filename only)
+  // Duplicate check (persistent across sessions)
   if (uploadedFiles.has(file.name)) {
-    const replace = confirm(`You've already uploaded "${file.name}". Do you want to replace it?`);
+    const replace = confirm(`You've already uploaded "${file.name}" before. Do you want to replace it?`);
     if (!replace) {
       status.textContent = '❌ Upload canceled.';
       return;
@@ -79,7 +95,10 @@ function handleFiles(files) {
 
       if (res.ok) {
         currentDocumentId = result.document_id;
+        
+        // Save to persistent storage
         uploadedFiles.add(file.name);
+        saveUploadedFiles(uploadedFiles);
 
         status.innerHTML = `
           ✅ <strong>${file.name}</strong> uploaded successfully.<br>
