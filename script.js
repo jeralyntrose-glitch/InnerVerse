@@ -331,6 +331,7 @@ gdriveBtn.addEventListener('click', async () => {
       .setOAuthToken(accessToken)
       .setDeveloperKey(googleApiKey)
       .setCallback(pickerCallback)
+      .setOrigin(window.location.protocol + '//' + window.location.host)
       .setTitle('Select PDF files from Google Drive')
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .build();
