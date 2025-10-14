@@ -336,7 +336,8 @@ gdriveBtn.addEventListener('click', async () => {
           .setIncludeFolders(true)
       )
       .setOAuthToken(accessToken)
-      .setDeveloperKey(googleApiKey)
+      // Try without API key first - often works better
+      // .setDeveloperKey(googleApiKey)
       .setCallback(pickerCallback)
       .setOrigin(pickerOrigin)
       .setTitle('Select PDF files from Google Drive')
