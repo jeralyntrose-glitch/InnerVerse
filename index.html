@@ -17,7 +17,26 @@
       <p class="drop-text">Drag and drop your PDF here</p>
       <span class="or-text">or</span>
       <label for="fileElem" class="custom-file-upload">Browse files</label>
-      <input type="file" id="fileElem" accept="application/pdf" />
+      <input type="file" id="fileElem" accept="application/pdf" multiple />
+    </div>
+
+    <!-- 📊 Upload Status Section -->
+    <div id="upload-status-section" class="upload-status-section hidden">
+      <div class="status-summary">
+        <div class="summary-item">
+          <span class="summary-label">Uploaded</span>
+          <span id="count-uploaded" class="summary-count">0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Completed</span>
+          <span id="count-completed" class="summary-count">0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Errors</span>
+          <span id="count-errors" class="summary-count">0</span>
+        </div>
+      </div>
+      <div id="upload-list" class="upload-list"></div>
     </div>
 
     <div id="status" class="status"></div>

@@ -59,6 +59,13 @@ function cleanExpiredArchive() {
 
 // === Upload ===
 let uploadedFiles = loadUploadedFiles();
+const uploadStatusSection = document.getElementById('upload-status-section');
+const uploadList = document.getElementById('upload-list');
+const countUploaded = document.getElementById('count-uploaded');
+const countCompleted = document.getElementById('count-completed');
+const countErrors = document.getElementById('count-errors');
+
+let uploadStats = { uploaded: 0, completed: 0, errors: 0 };
 
 ['dragenter', 'dragover'].forEach(event => {
   dropArea.addEventListener(event, e => {
@@ -75,34 +82,85 @@ let uploadedFiles = loadUploadedFiles();
 });
 
 dropArea.addEventListener('drop', e => {
-  const files = e.dataTransfer.files;
+  const files = Array.from(e.dataTransfer.files);
   handleFiles(files);
 });
 
 fileInput.addEventListener('change', e => {
-  const files = e.target.files;
+  const files = Array.from(e.target.files);
   handleFiles(files);
 });
 
 function handleFiles(files) {
-  const file = files[0];
-  if (!file || file.type !== 'application/pdf') {
-    status.textContent = '❌ Please upload a valid PDF file.';
+  const pdfFiles = files.filter(f => f.type === 'application/pdf');
+  
+  if (pdfFiles.length === 0) {
+    status.textContent = '❌ Please upload valid PDF file(s).';
     return;
   }
 
+  // Reset stats and show upload section
+  uploadStats = { uploaded: pdfFiles.length, completed: 0, errors: 0 };
+  updateStats();
+  uploadStatusSection.classList.remove('hidden');
+  uploadList.innerHTML = '';
+  status.textContent = '';
+
+  // Process each file
+  pdfFiles.forEach(file => {
+    processFile(file);
+  });
+}
+
+function updateStats() {
+  countUploaded.textContent = uploadStats.uploaded;
+  countCompleted.textContent = uploadStats.completed;
+  countErrors.textContent = uploadStats.errors;
+}
+
+function processFile(file) {
+  // Create upload item
+  const itemId = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const uploadItem = document.createElement('div');
+  uploadItem.className = 'upload-item';
+  uploadItem.id = itemId;
+  uploadItem.innerHTML = `
+    <div class="upload-filename">${file.name}</div>
+    <div class="progress-bar-container">
+      <div class="progress-bar"></div>
+    </div>
+  `;
+  uploadList.appendChild(uploadItem);
+
+  const progressBar = uploadItem.querySelector('.progress-bar');
+
+  // Simulate progress while reading file
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    progress += 10;
+    if (progress <= 50) {
+      progressBar.style.width = `${progress}%`;
+    }
+  }, 100);
+
+  // Check for duplicates
   if (uploadedFiles.find(f => f.name === file.name)) {
     const replace = confirm(`"${file.name}" already uploaded. Replace it?`);
     if (!replace) {
-      status.textContent = '❌ Upload canceled.';
+      clearInterval(progressInterval);
+      uploadItem.classList.add('error');
+      progressBar.style.width = '100%';
+      uploadStats.errors++;
+      updateStats();
       return;
     }
   }
 
-  status.textContent = `⏳ Uploading ${file.name}...`;
-
   const reader = new FileReader();
   reader.onload = async () => {
+    clearInterval(progressInterval);
+    progressBar.style.width = '60%';
+
     const base64Data = reader.result.split(',')[1];
     const payload = { filename: file.name, pdf_base64: base64Data };
 
@@ -113,12 +171,14 @@ function handleFiles(files) {
         body: JSON.stringify(payload)
       });
 
+      progressBar.style.width = '80%';
+
       const result = await res.json();
 
       if (res.ok) {
         currentDocumentId = result.document_id;
 
-        uploadedFiles = uploadedFiles.filter(f => f.name !== file.name); // remove if exists
+        uploadedFiles = uploadedFiles.filter(f => f.name !== file.name);
         uploadedFiles.push({ 
           name: file.name, 
           id: result.document_id,
@@ -127,20 +187,24 @@ function handleFiles(files) {
         saveUploadedFiles(uploadedFiles);
         updateDropdown();
 
-        status.innerHTML = `
-          ✅ <strong>${file.name}</strong> uploaded successfully.<br>
-          🆔 Document ID: <code>${result.document_id}</code><br>
-          📦 Chunks stored: ${result.chunks_count}
-        `;
+        // Success
+        progressBar.style.width = '100%';
+        uploadItem.classList.add('success');
+        uploadStats.completed++;
+        updateStats();
 
-        navigator.clipboard.writeText(result.document_id).then(() => {
-          status.innerHTML += '<br>📋 Document ID copied to clipboard!';
-        });
+        // Copy first successful document ID
+        if (uploadStats.completed === 1) {
+          navigator.clipboard.writeText(result.document_id);
+        }
       } else {
         throw new Error(result.error || 'Upload failed.');
       }
     } catch (err) {
-      status.textContent = `❌ Upload failed: ${err.message}`;
+      progressBar.style.width = '100%';
+      uploadItem.classList.add('error');
+      uploadStats.errors++;
+      updateStats();
     }
   };
 

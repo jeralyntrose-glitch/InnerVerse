@@ -4,6 +4,12 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 
 # Recent Changes (October 14, 2025)
 
+- ✅ Added scrollable upload status box showing up to 10 files with individual progress bars
+- ✅ Implemented multi-file upload support (drag & drop or browse multiple PDFs)
+- ✅ Created real-time progress tracking with thin loading bars that fill during processing
+- ✅ Added visual status indicators: light green background/green border for success, light red/red border for errors
+- ✅ Built static summary bar showing uploaded/completed/error counts
+- ✅ Display filename for each file being processed
 - ✅ Added "Copy All IDs" button to dropdown for bulk document ID copying
 - ✅ Enhanced dropdown to display filename, document ID (shortened), and upload timestamp
 - ✅ Increased dropdown width to 420px to prevent horizontal scrolling
