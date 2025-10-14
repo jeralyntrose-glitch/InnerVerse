@@ -118,7 +118,11 @@ function handleFiles(files) {
         currentDocumentId = result.document_id;
 
         uploadedFiles = uploadedFiles.filter(f => f.name !== file.name); // remove if exists
-        uploadedFiles.push({ name: file.name, id: result.document_id });
+        uploadedFiles.push({ 
+          name: file.name, 
+          id: result.document_id,
+          timestamp: Date.now()
+        });
         saveUploadedFiles(uploadedFiles);
         updateDropdown();
 
@@ -217,9 +221,18 @@ function updateDropdown() {
 
   uploadedFiles.forEach(file => {
     const li = document.createElement('li');
+    const date = file.timestamp ? new Date(file.timestamp).toLocaleString() : 'Unknown';
+    const shortId = file.id.substring(0, 8) + '...';
+    
     li.innerHTML = `
-      <span title="${file.name}">${file.name}</span>
-      <div>
+      <div class="doc-info">
+        <div class="doc-name" title="${file.name}">${file.name}</div>
+        <div class="doc-meta">
+          <span class="doc-id" title="${file.id}">ID: ${shortId}</span>
+          <span class="doc-date">${date}</span>
+        </div>
+      </div>
+      <div class="doc-actions">
         <button class="copy-btn" data-id="${file.id}">Copy</button>
         <button class="delete-btn" data-id="${file.id}">Delete</button>
       </div>

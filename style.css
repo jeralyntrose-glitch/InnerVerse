@@ -235,7 +235,7 @@ input[type="file"] {
 
 .dropdown-menu {
   margin-top: 6px;
-  width: 250px;
+  width: 320px;
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 6px;
@@ -244,7 +244,7 @@ input[type="file"] {
   right: 0;
   top: 35px;
   z-index: 1002;
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
   font-size: 12px;
 }
@@ -258,9 +258,49 @@ input[type="file"] {
 .doc-list li {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 6px 10px;
+  align-items: flex-start;
+  padding: 10px;
   border-bottom: 1px solid #eee;
+}
+
+.doc-info {
+  flex: 1;
+  margin-right: 8px;
+}
+
+.doc-name {
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: #666;
+}
+
+.doc-id {
+  font-family: monospace;
+  background: #f3f4f6;
+  padding: 1px 4px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.doc-date {
+  color: #888;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .doc-list button {
