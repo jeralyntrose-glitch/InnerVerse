@@ -3,7 +3,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["bash", "libxcrypt"]
+packages = ["bash"]
 
 [unitTest]
 language = "python3"
@@ -48,5 +48,5 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 41013
+localPort = 39365
 externalPort = 3000

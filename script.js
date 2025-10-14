@@ -429,9 +429,17 @@ function removeLastBotMessage() {
 }
 
 // === Dropdown & Archive ===
-dropdownToggle.addEventListener('click', () => {
+dropdownToggle.addEventListener('click', (e) => {
+  e.stopPropagation(); // Prevent document click from firing
   dropdownMenu.classList.toggle('hidden');
   updateDropdown();
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (!dropdownMenu.contains(e.target) && !dropdownToggle.contains(e.target)) {
+    dropdownMenu.classList.add('hidden');
+  }
 });
 
 function updateDropdown() {
