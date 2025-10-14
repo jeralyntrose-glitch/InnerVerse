@@ -26,15 +26,13 @@
   <!-- Floating Chat Button -->
   <div id="chat-toggle" class="chat-toggle">💬</div>
 
-  <!-- Floating Chat Window -->
-  <div id="chat-float" class="chat-float hidden">
+  <!-- Chat Window (starts hidden) -->
+  <div id="chat-container" class="chat-container hidden">
     <div class="chat-header">
       <span>Axis Mind Chat</span>
-      <button id="close-chat">✕</button>
+      <button id="chat-close">×</button>
     </div>
-
-    <div id="chat-messages" class="chat-messages"></div>
-
+    <div id="chat-log" class="chat-log"></div>
     <div class="chat-input-area">
       <input type="text" id="chatInput" placeholder="Ask a question..." />
       <button id="sendBtn">Send</button>
@@ -44,4 +42,3 @@
   <script src="/static/script.js"></script>
 </body>
 </html>
-
