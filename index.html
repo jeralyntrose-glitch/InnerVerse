@@ -7,18 +7,52 @@
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
+  <!-- Theme Toggle -->
+  <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+    <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+    <svg class="moon-icon hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+
   <div class="page-wrapper">
     <div class="branding">
-      <h1 class="brand-title">🧠 AXIS MIND</h1>
-      <p class="tagline">The mind decoded. Start uploading.</p>
+      <!-- Glowing Brain Icon -->
+      <svg class="brain-icon" width="180" height="180" viewBox="0 0 200 200">
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        <!-- Brain outline with circuit pattern -->
+        <path class="brain-path" filter="url(#glow)" d="M100,40 Q120,35 130,50 Q145,45 150,60 Q160,55 165,70 Q170,75 170,90 Q175,100 170,115 Q168,130 155,138 Q150,145 140,145 Q135,155 125,158 Q115,160 105,155 Q95,160 85,158 Q75,155 70,145 Q60,145 55,138 Q42,130 40,115 Q35,100 40,90 Q40,75 45,70 Q50,55 60,60 Q65,45 80,50 Q90,35 100,40 Z M100,60 L100,140 M80,70 Q90,75 100,70 M120,70 Q110,75 100,70 M70,90 Q80,95 90,90 M110,90 Q120,95 130,90 M75,110 Q85,115 95,110 M105,110 Q115,115 125,110 M85,130 Q95,125 100,130 M100,130 Q105,125 115,130" 
+        stroke-width="3" fill="none"/>
+      </svg>
+
+      <h1 class="brand-title">AXIS MIND</h1>
+      <p class="tagline">Where cognition becomes code.</p>
     </div>
 
     <div id="drop-area" class="drop-area">
-      <p class="drop-text">Drag and drop your PDF here</p>
+      <p class="drop-text">Drag & drop your PDF here</p>
       <span class="or-text">or</span>
       <div class="upload-buttons">
-        <label for="fileElem" class="custom-file-upload">Browse files</label>
-        <button id="gdrive-btn" class="custom-file-upload gdrive-btn">📁 Google Drive</button>
+        <label for="fileElem" class="btn-primary">Start uploading</label>
+        <button id="gdrive-btn" class="btn-secondary">📁 Google Drive</button>
       </div>
       <input type="file" id="fileElem" accept="application/pdf" multiple />
     </div>
