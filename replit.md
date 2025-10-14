@@ -4,6 +4,18 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 
 # Recent Changes (October 14, 2025)
 
+## UI/UX Redesign - Modern Purple Theme
+- ✅ **Complete visual redesign** with purple/lavender gradient backgrounds
+- ✅ **Glowing brain circuit icon** - Animated SVG with neon green glow effect
+- ✅ **Light/Dark mode toggle** - Persistent theme switcher with sun/moon icons in top-right
+- ✅ Updated typography: "AXIS MIND" bold title + "Where cognition becomes code." tagline
+- ✅ Redesigned buttons: Purple "Start uploading" primary button + white Google Drive button
+- ✅ Modern glassmorphism effects with backdrop blur on all UI elements
+- ✅ Enhanced upload area with larger rounded corners and semi-transparent background
+- ✅ Consistent color theming across all components (dropdowns, modals, chat)
+- ✅ Smooth animations: floating brain icon, theme transitions, hover effects
+- ✅ Improved responsive design for mobile and tablet devices
+
 ## Google Drive Integration (Official Google Picker API)
 - ✅ **Official Google Drive Picker** - Real Google Drive interface for browsing and selecting files
 - ✅ Blue "📁 Google Drive" button opens the native Google Drive file picker
@@ -59,10 +71,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Frontend Architecture
 - **Interface**: Single-page application with drag-and-drop PDF upload
-- **Design**: Clean, modern UI with brain emoji branding (🧠 AXIS MIND)
+- **Design**: Modern glassmorphic UI with animated SVG brain icon and purple gradient theme
+- **Theme System**: Light/Dark mode toggle with persistent localStorage, CSS custom properties for dynamic theming
 - **Upload Flow**: Converts PDF to base64 → sends to /upload-base64 → displays document_id and chunk count
 - **Chat Flow**: Stores document_id → sends questions with document_id to /query → displays GPT answers
-- **Features**: Auto-clipboard copy, Enter key support, disabled button during processing
+- **Features**: Auto-clipboard copy, Enter key support, disabled button during processing, animated brain icon, theme switcher
 
 ## Backend Architecture
 - **Framework**: FastAPI with async/await patterns for handling file uploads
