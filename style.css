@@ -360,6 +360,7 @@ input[type="file"] {
   border: 1px solid var(--border-color);
   border-radius: 12px;
   width: 420px;
+  max-width: 90vw;
   max-height: 400px;
   overflow-y: auto;
   overflow-x: auto;
@@ -374,6 +375,7 @@ input[type="file"] {
 .doc-list {
   list-style: none;
   padding: 8px;
+  min-width: max-content;
 }
 
 .doc-item {
@@ -384,7 +386,6 @@ input[type="file"] {
   align-items: center;
   transition: background 0.2s;
   gap: 12px;
-  overflow-x: auto;
   white-space: nowrap;
 }
 
@@ -402,13 +403,11 @@ input[type="file"] {
 
 .doc-info {
   flex: 1;
-  min-width: 0;
   text-align: left;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  overflow-x: auto;
 }
 
 .doc-name {
