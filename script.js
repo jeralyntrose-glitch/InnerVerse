@@ -321,9 +321,12 @@ gdriveBtn.addEventListener('click', async () => {
     googleApiKey = apiKeyData.api_key;
     accessToken = tokenData.access_token;
 
+    // Replit runs in an iframe, so we need to use the parent origin
+    const pickerOrigin = 'https://replit.com';
+    
     console.log('🔑 API Key present:', !!googleApiKey);
     console.log('🎫 Access Token present:', !!accessToken);
-    console.log('🌐 Origin:', window.location.protocol + '//' + window.location.host);
+    console.log('🌐 Picker origin:', pickerOrigin);
 
     // Create and show the picker
     const picker = new google.picker.PickerBuilder()
@@ -335,7 +338,7 @@ gdriveBtn.addEventListener('click', async () => {
       .setOAuthToken(accessToken)
       .setDeveloperKey(googleApiKey)
       .setCallback(pickerCallback)
-      .setOrigin(window.location.protocol + '//' + window.location.host)
+      .setOrigin(pickerOrigin)
       .setTitle('Select PDF files from Google Drive')
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .build();

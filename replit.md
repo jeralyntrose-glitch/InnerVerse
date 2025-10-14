@@ -14,7 +14,8 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 - ✅ Backend endpoints: /api/google-api-key, /api/gdrive-token, /api/gdrive-download/{file_id}
 - ✅ Uses Replit Google Drive connector for OAuth + Google API key for Picker
 - ✅ Secure: API key stored in Replit Secrets (GOOGLE_API_KEY)
-- ✅ Fixed white square issue by adding setOrigin() to picker configuration
+- ✅ Fixed white square issue by setting origin to 'https://replit.com' (required for iframe environment)
+- ⚠️ **Important**: Add `https://replit.com` to Authorized JavaScript origins in Google Cloud Console
 
 ## UI Fixes & Enhancements
 - ✅ Fixed dropdown bug: now closes when clicking outside or toggling again
