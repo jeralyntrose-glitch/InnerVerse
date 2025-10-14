@@ -261,6 +261,13 @@ closeArchiveBtn.addEventListener('click', () => {
   archiveModal.classList.add('hidden');
 });
 
+// Close modal when clicking outside the content
+archiveModal.addEventListener('click', (e) => {
+  if (e.target === archiveModal) {
+    archiveModal.classList.add('hidden');
+  }
+});
+
 function renderArchive() {
   archiveList.innerHTML = '';
   const archive = cleanExpiredArchive();
