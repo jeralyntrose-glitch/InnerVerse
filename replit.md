@@ -4,6 +4,13 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 
 # Recent Changes (October 14, 2025)
 
+- ✅ Added "Copy All IDs" button to dropdown for bulk document ID copying
+- ✅ Enhanced dropdown to display filename, document ID (shortened), and upload timestamp
+- ✅ Increased dropdown width to 420px to prevent horizontal scrolling
+- ✅ Fixed error handling for legacy files in localStorage missing ID/timestamp fields
+- ✅ Fixed critical JavaScript ID mismatch bug (archive-close button) that crashed the app
+- ✅ Fixed CSS specificity issue preventing archive modal from closing
+- ✅ Implemented persistent duplicate detection using localStorage (survives page refreshes)
 - ✅ Complete frontend rebuild with modern drag-and-drop UI (index.html, style.css, script.js)
 - ✅ Fixed /query endpoint to accept JSON body (QueryRequest model with document_id and question)
 - ✅ Integrated chat interface that tracks uploaded document_id and enables Q&A

@@ -12,6 +12,7 @@ const chatLog = document.getElementById('chat-log');
 const dropdownToggle = document.getElementById('dropdown-toggle');
 const dropdownMenu = document.getElementById('dropdown-menu');
 const docList = document.getElementById('doc-list');
+const copyAllBtn = document.getElementById('copy-all-btn');
 const viewArchiveBtn = document.getElementById('view-archive-btn');
 
 // Archive modal
@@ -269,6 +270,26 @@ function updateDropdown() {
     });
   });
 }
+
+// === Copy All Button ===
+copyAllBtn.addEventListener('click', () => {
+  if (uploadedFiles.length === 0) {
+    alert('No documents to copy!');
+    return;
+  }
+  
+  const allIds = uploadedFiles
+    .map(file => file.id)
+    .filter(id => id && id !== 'unknown')
+    .join('\n');
+  
+  if (allIds) {
+    navigator.clipboard.writeText(allIds);
+    alert(`📋 Copied ${uploadedFiles.length} document ID(s)!`);
+  } else {
+    alert('No valid IDs to copy!');
+  }
+});
 
 // === Archive Modal ===
 viewArchiveBtn.addEventListener('click', () => {
