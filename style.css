@@ -864,32 +864,47 @@ label,
 /* Responsive Design */
 @media (max-width: 768px) {
   body {
-    padding: 10px;
+    padding: 8px;
   }
 
   .brand-title {
-    font-size: 26px;
+    font-size: 20px;
+    margin-bottom: 4px;
   }
 
   .tagline {
-    font-size: 14px;
+    font-size: 11px;
   }
 
   .brain-icon {
-    width: 100px;
-    height: 100px;
+    width: 60px;
+    height: 60px;
   }
 
   .page-wrapper {
-    margin-top: -30px;
+    margin-top: -50px;
+  }
+
+  .branding {
+    margin-bottom: 15px;
   }
 
   .drop-area {
-    padding: 30px 20px;
+    padding: 18px 12px;
   }
 
   .drop-text {
-    font-size: 16px;
+    font-size: 13px;
+  }
+
+  .or-text {
+    font-size: 11px;
+    margin: 8px 0;
+  }
+
+  .btn-primary, .btn-secondary {
+    padding: 9px 16px;
+    font-size: 12px;
   }
 
   /* Report buttons on mobile */
@@ -914,56 +929,58 @@ label,
 
   /* Chat on mobile */
   .chat-toggle {
-    width: 56px;
-    height: 56px;
-    font-size: 28px;
-    right: 15px;
-    bottom: 15px;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    right: 12px;
+    bottom: 12px;
   }
 
   .chat-container {
-    width: calc(100vw - 20px);
-    height: 70vh;
-    max-height: 500px;
-    right: 10px;
-    bottom: 80px;
-    left: 10px;
+    width: calc(100vw - 16px);
+    height: 65vh;
+    max-height: 450px;
+    right: 8px;
+    bottom: 70px;
+    left: 8px;
   }
 
   .chat-header {
-    padding: 14px;
-    font-size: 16px;
+    padding: 12px;
+    font-size: 14px;
   }
 
   .chat-log {
-    padding: 12px;
+    padding: 10px;
   }
 
   .chat-input-area {
-    padding: 12px;
+    padding: 10px;
   }
 
   .chat-input-area input {
-    padding: 12px;
+    padding: 10px;
+    font-size: 13px;
   }
 
   .chat-input-area button {
-    padding: 12px 20px;
+    padding: 10px 16px;
+    font-size: 13px;
   }
 
   /* Upload buttons */
   .upload-buttons {
     flex-direction: column;
     width: 100%;
-    gap: 12px;
+    gap: 10px;
   }
 
-  .btn-primary,
-  .btn-secondary {
+  .upload-buttons .btn-primary,
+  .upload-buttons .btn-secondary {
     width: 100%;
-    padding: 14px 24px;
-    font-size: 16px;
-    min-height: 48px;
+    padding: 11px 20px;
+    font-size: 13px;
+    min-height: 44px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
   }
@@ -978,28 +995,77 @@ label,
 
   /* Upload status */
   .upload-status-section {
-    padding: 12px;
+    padding: 10px;
   }
 
   .status-summary {
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
+    font-size: 12px;
   }
 
   .summary-item {
-    min-width: 80px;
+    min-width: 70px;
+    font-size: 12px;
+  }
+
+  .upload-item {
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .upload-filename {
+    font-size: 12px;
+  }
+}
+
+/* YouTube section mobile */
+@media (max-width: 768px) {
+  .youtube-section {
+    padding: 16px;
+    margin: 15px 0;
+  }
+
+  .youtube-section h2 {
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+
+  .youtube-section p {
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+
+  .youtube-input-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .youtube-input-group input {
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  .youtube-input-group button {
+    font-size: 13px;
+    padding: 10px 20px;
+    min-height: 44px;
   }
 }
 
 /* Small mobile devices */
 @media (max-width: 480px) {
   .brand-title {
-    font-size: 24px;
+    font-size: 18px;
+  }
+
+  .tagline {
+    font-size: 10px;
   }
 
   .brain-icon {
-    width: 80px;
-    height: 80px;
+    width: 50px;
+    height: 50px;
   }
 
   .chat-container {

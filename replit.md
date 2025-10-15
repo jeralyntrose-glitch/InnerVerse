@@ -4,7 +4,21 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 
 # Recent Changes (October 15, 2025)
 
-## YouTube Transcription Feature (Latest)
+## Comprehensive Mobile UI Optimization (Latest)
+- ✅ **Compact Design** - Significantly reduced all font sizes and spacing for mobile devices
+- ✅ **Title Size** - Brand title reduced from 26px → 20px on tablets, 18px on small phones
+- ✅ **Tagline** - Reduced from 14px → 11px on tablets, 10px on phones
+- ✅ **Brain Icon** - Shrunk from 100px → 60px on tablets, 50px on phones
+- ✅ **Upload Area** - Reduced padding from 30px → 18px, tighter spacing
+- ✅ **Buttons** - Smaller text (13px) and padding (11px vs 14px)
+- ✅ **YouTube Section** - Compact heading (15px), smaller input fields
+- ✅ **Chat Interface** - Reduced toggle button (50px), smaller input fields (13px text)
+- ✅ **Upload Status** - Smaller filename text (12px), reduced padding (10px)
+- ✅ **Progress Bars** - Enhanced visibility: 10px height, purple border, smoother animation
+- ✅ **No Overflow** - All elements properly sized to prevent horizontal scrolling
+- ✅ **Mobile-First** - Optimized specifically for iPhone usage with touch-friendly sizing
+
+## YouTube Transcription Feature
 - ✅ **YouTube to PDF Transcription** - New feature to transcribe YouTube videos and download as formatted PDF
 - ✅ **Backend Endpoint** - `/transcribe-youtube` POST endpoint handles full workflow
 - ✅ **Audio Download** - Uses yt-dlp to extract audio from YouTube videos
