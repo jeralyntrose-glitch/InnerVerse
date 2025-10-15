@@ -122,7 +122,7 @@ Preferred communication style: Simple, everyday language.
 - **Upload Base64**: `POST /upload-base64` - Accepts JSON with pdf_base64 and filename, stores filename in metadata
 - **Query**: `POST /query` - Accepts JSON with document_id and question (Pydantic QueryRequest model)
 - **Document Report**: `GET /documents/report` - Generates CSV report of all uploaded documents with IDs and filenames
-- **Delete Document**: `DELETE /documents/{document_id}` - Deletes all Pinecone vectors associated with a document ID
+- **Delete Document**: `DELETE /documents/{document_id}` - Deletes all Pinecone vectors associated with a specific document ID (accessible via Swagger UI at /docs)
 - **Frontend**: `GET /` - Serves index.html with cache control headers
 - **Static Files**: `/static/*` - Serves CSS, JS, and other static assets
 - **Docs**: `GET /docs` - Built-in FastAPI Swagger UI documentation
