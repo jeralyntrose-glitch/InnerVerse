@@ -331,6 +331,11 @@ class QueryRequest(BaseModel):
 class YouTubeTranscribeRequest(BaseModel):
     youtube_url: str
 
+# === Text to PDF Request ===
+class TextToPDFRequest(BaseModel):
+    text: str
+    title: str = "Document"
+
 @app.post("/query")
 async def query_pdf(request: QueryRequest):
     document_id = request.document_id
@@ -823,6 +828,118 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
         print(f"❌ YouTube transcription error: {str(e)}")
         return JSONResponse(status_code=500, content={
             "error": "Something went wrong. Please try again or use a different video."
+        })
+
+
+# === Text to PDF with Punctuation Fixing ===
+@app.post("/text-to-pdf")
+async def text_to_pdf(request: TextToPDFRequest):
+    """Convert text to PDF with AI-powered punctuation and grammar fixes"""
+    try:
+        openai_client = get_openai_client()
+        if not openai_client:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "OpenAI client not initialized"})
+        
+        print(f"📝 Processing text for PDF generation...")
+        
+        # Use GPT to fix punctuation and grammar
+        print("🔧 Fixing punctuation and grammar with AI...")
+        try:
+            completion = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a professional editor. Fix all punctuation, grammar, and formatting errors in the text. Preserve the original meaning and tone. Add proper paragraph breaks where appropriate. Return only the corrected text, no explanations or comments."
+                    },
+                    {
+                        "role": "user",
+                        "content": request.text
+                    }
+                ],
+                temperature=0.3
+            )
+            
+            cleaned_text = completion.choices[0].message.content.strip()
+            print("✅ Text cleaned and formatted")
+            
+        except Exception as e:
+            print(f"⚠️ Punctuation fix failed: {str(e)}, using original text")
+            cleaned_text = request.text
+        
+        # Generate PDF
+        print("📄 Generating PDF...")
+        try:
+            pdf_filename = f"document_{uuid.uuid4().hex[:8]}.pdf"
+            pdf_path = os.path.join("/tmp", pdf_filename)
+            
+            # Create PDF
+            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            
+            # Custom styles
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                textColor='#5B21B6',
+                spaceAfter=12
+            )
+            
+            body_style = ParagraphStyle(
+                'CustomBody',
+                parent=styles['BodyText'],
+                fontSize=11,
+                leading=16,
+                alignment=TA_LEFT
+            )
+            
+            # Build PDF content
+            story = []
+            
+            # Title
+            story.append(Paragraph(f"<b>{request.title}</b>", title_style))
+            story.append(Spacer(1, 0.2*inch))
+            
+            # Metadata
+            metadata_style = ParagraphStyle('Metadata', parent=styles['Normal'], fontSize=9, textColor='gray')
+            story.append(Paragraph(f"Created on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", metadata_style))
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Text content - split into paragraphs
+            paragraphs = cleaned_text.split('\n')
+            for para in paragraphs:
+                if para.strip():
+                    story.append(Paragraph(para.strip(), body_style))
+                    story.append(Spacer(1, 0.15*inch))
+            
+            # Build PDF
+            doc.build(story)
+            print(f"✅ PDF created: {pdf_path}")
+            
+            # Return the PDF as a download
+            safe_filename = request.title[:50].replace('/', '-').replace('\\', '-')
+            return FileResponse(
+                pdf_path,
+                media_type="application/pdf",
+                filename=f"{safe_filename}.pdf",
+                headers={
+                    "Content-Disposition": f"attachment; filename=\"{safe_filename}.pdf\""
+                }
+            )
+            
+        except Exception as e:
+            print(f"❌ PDF generation error: {str(e)}")
+            return JSONResponse(status_code=500, content={
+                "error": "Failed to create PDF. Please try again with different text."
+            })
+        
+    except Exception as e:
+        print(f"❌ Text to PDF error: {str(e)}")
+        return JSONResponse(status_code=500, content={
+            "error": "Something went wrong. Please try again."
         })
 
 
