@@ -356,24 +356,75 @@ input[type="file"] {
 
 .youtube-cancel-btn {
   position: absolute;
-  right: -50px;
+  right: -70px;
   top: 50%;
   transform: translateY(-50%);
   background: #ef4444;
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .youtube-cancel-btn:hover {
   background: #dc2626;
   transform: translateY(-50%) scale(1.05);
+}
+
+/* Mobile optimizations for YouTube section */
+@media (max-width: 768px) {
+  .youtube-section {
+    padding: 20px;
+  }
+  
+  .youtube-input-group {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  #youtube-url {
+    width: 100%;
+  }
+  
+  .btn-transcribe {
+    width: 100%;
+    padding: 14px 24px;
+  }
+  
+  .youtube-progress-bar {
+    height: 44px;
+  }
+  
+  .youtube-progress-text {
+    font-size: 11px;
+    right: 8px;
+  }
+  
+  .youtube-cancel-btn {
+    position: static;
+    transform: none;
+    margin-top: 12px;
+    width: 100%;
+  }
+  
+  .youtube-cancel-btn:hover {
+    transform: scale(1.02);
+  }
+  
+  .youtube-progress-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 .youtube-download-link {
