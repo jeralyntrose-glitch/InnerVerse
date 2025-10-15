@@ -4,12 +4,13 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 15, 2025)
 
-## Notification System & Progress Improvements (Latest)
-- ✅ **Notification sound** - Delicate iPhone-style "ting" plays when YouTube transcription or text-to-PDF completes (1200Hz, 0.2s duration)
-- ✅ **Text-to-PDF progress bar** - Green-themed progress bar with status stages (Analyzing → Fixing → Generating → Complete)
+## Upload Optimization & Large File Support (Latest)
+- ✅ **Efficient binary uploads** - Switched from base64 to multipart/form-data (33% smaller, faster, uses less memory)
 - ✅ **Large file support** - Warning for files >20MB, increased embedding timeout to 60s, progress tracking every 50 chunks
 - ✅ **Better error messages** - File read errors and network failures now show specific error messages to user
 - ✅ **File size display** - Large uploads (>10MB) show file size in upload UI
+- ✅ **Notification sound** - Delicate iPhone-style "ting" plays when YouTube transcription or text-to-PDF completes (1200Hz, 0.2s duration)
+- ✅ **Text-to-PDF progress bar** - Green-themed progress bar with status stages (Analyzing → Fixing → Generating → Complete)
 
 ## Text to PDF Feature
 - ✅ **New text-to-PDF converter** - Convert text to formatted PDFs with automatic punctuation and grammar fixes using GPT-3.5

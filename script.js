@@ -208,31 +208,20 @@ function processFile(file) {
     }
   }
 
-  const reader = new FileReader();
-  
-  reader.onerror = () => {
-    clearInterval(progressInterval);
-    progressBar.style.width = '100%';
-    uploadItem.classList.add('error');
-    uploadItem.querySelector('.upload-filename').textContent = `${file.name} - File read error`;
-    uploadStats.errors++;
-    updateStats();
-    activeUploads = activeUploads.filter(u => u.itemId !== itemId);
-    checkUploadComplete();
-  };
-  
-  reader.onload = async () => {
-    clearInterval(progressInterval);
-    progressBar.style.width = '60%';
-
-    const base64Data = reader.result.split(',')[1];
-    const payload = { filename: file.name, pdf_base64: base64Data };
-
+  // Upload directly without base64 conversion (more efficient!)
+  (async () => {
     try {
-      const res = await fetch('/upload-base64', {
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for UX
+      clearInterval(progressInterval);
+      progressBar.style.width = '60%';
+
+      // Use FormData for efficient binary upload (no base64 bloat!)
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: formData,
         signal: abortController.signal
       });
 
@@ -265,6 +254,7 @@ function processFile(file) {
         throw new Error(result.error || 'Upload failed.');
       }
     } catch (err) {
+      clearInterval(progressInterval);
       if (err.name === 'AbortError') {
         // Upload was cancelled
         uploadItem.classList.add('error');
@@ -281,9 +271,7 @@ function processFile(file) {
       activeUploads = activeUploads.filter(u => u.itemId !== itemId);
       checkUploadComplete();
     }
-  };
-
-  reader.readAsDataURL(file);
+  })();
 }
 
 // Check if all uploads are complete and hide cancel button
