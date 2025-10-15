@@ -500,6 +500,14 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
         # Step 1: Download audio using yt-dlp
         print("📥 Downloading audio from YouTube...")
         try:
+            # Check if yt-dlp is available
+            try:
+                yt_dlp_check = subprocess.run(["yt-dlp", "--version"], capture_output=True, text=True, timeout=5)
+                if yt_dlp_check.returncode != 0:
+                    raise Exception("yt-dlp is not installed or not working")
+            except FileNotFoundError:
+                raise Exception("yt-dlp is not installed. Please contact support.")
+            
             # Get video info first
             info_command = [
                 "yt-dlp",
@@ -520,12 +528,14 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             # Try to find ffmpeg location
             ffmpeg_location = None
             try:
-                ffmpeg_result = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True)
-                if ffmpeg_result.returncode == 0:
+                ffmpeg_result = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True, timeout=5)
+                if ffmpeg_result.returncode == 0 and ffmpeg_result.stdout.strip():
                     ffmpeg_location = ffmpeg_result.stdout.strip()
                     print(f"✅ Found ffmpeg at: {ffmpeg_location}")
-            except:
-                pass
+                else:
+                    print("⚠️ ffmpeg not found in PATH")
+            except Exception as e:
+                print(f"⚠️ Could not check for ffmpeg: {e}")
             
             # Download audio with compression (32kbps mono for Whisper)
             # This keeps files under 25MB for videos up to ~90 minutes
@@ -539,7 +549,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             ]
             
             # Add ffmpeg location if found
-            if ffmpeg_location:
+            if ffmpeg_location and os.path.dirname(ffmpeg_location):
                 download_command.insert(1, "--ffmpeg-location")
                 download_command.insert(2, os.path.dirname(ffmpeg_location))
             
