@@ -4,7 +4,8 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 15, 2025)
 
-## Bug Fixes (Latest)
+## UI Enhancements (Latest)
+- ✅ **iPhone-style chat bubbles** - Updated chat interface with rounded bubbles, purple gradient for user messages, smooth animations
 - ✅ **Fixed Delete All button** - Reordered API routes so `/documents/all` is matched before `/documents/{document_id}`
 
 ## YouTube Transcription Fixes
