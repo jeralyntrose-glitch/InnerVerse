@@ -215,21 +215,26 @@ function processFile(file) {
       clearInterval(progressInterval);
       progressBar.style.width = '60%';
 
+      console.log('📤 Starting upload for:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+
       // Use FormData for efficient binary upload (no base64 bloat!)
       const formData = new FormData();
       formData.append('file', file);
 
+      console.log('📡 Sending fetch request to /upload');
+
       const res = await fetch('/upload', {
         method: 'POST',
         body: formData,
-        signal: abortController.signal,
-        // Add keepalive for mobile Safari
-        keepalive: true
+        signal: abortController.signal
       });
+
+      console.log('✅ Got response:', res.status, res.statusText);
 
       progressBar.style.width = '80%';
 
       const result = await res.json();
+      console.log('📦 Response data:', result);
 
       if (!res.ok) {
         throw new Error(result.error || `Upload failed with status ${res.status}`);
@@ -257,6 +262,7 @@ function processFile(file) {
       }
     } catch (err) {
       clearInterval(progressInterval);
+      console.error('❌ Upload error:', err);
       if (err.name === 'AbortError') {
         // Upload was cancelled
         uploadItem.classList.add('error');
