@@ -478,6 +478,32 @@ input[type="file"] {
   transform: none;
 }
 
+.btn-delete-all {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+  min-height: auto;
+}
+
+.btn-delete-all:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+.btn-delete-all:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Upload Status Section */
 .upload-status-section {
   margin-top: 25px;

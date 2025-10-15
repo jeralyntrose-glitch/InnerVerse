@@ -537,6 +537,43 @@ function removeLastBotMessage() {
   if (messages.length > 0) messages[messages.length - 1].remove();
 }
 
+// === Delete All Documents (Temporary) ===
+const deleteAllBtn = document.getElementById('delete-all-btn');
+
+deleteAllBtn.addEventListener('click', async () => {
+  if (!confirm('⚠️ Are you sure you want to delete ALL uploaded documents? This cannot be undone!')) {
+    return;
+  }
+  
+  try {
+    deleteAllBtn.disabled = true;
+    deleteAllBtn.textContent = '⏳ Deleting...';
+    
+    const response = await fetch('/documents/all', {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete documents');
+    }
+    
+    const data = await response.json();
+    alert('✅ All documents deleted successfully!');
+    
+    // Clear localStorage
+    localStorage.removeItem('uploadedDocuments');
+    
+    // Reload page to reset UI
+    window.location.reload();
+    
+  } catch (error) {
+    console.error('Delete all error:', error);
+    alert('❌ Error deleting documents: ' + error.message);
+    deleteAllBtn.textContent = '🗑️ Delete All Files';
+    deleteAllBtn.disabled = false;
+  }
+});
+
 // === Download Document Report ===
 const downloadReportBtn = document.getElementById('download-report-btn');
 
