@@ -745,12 +745,27 @@ function showYoutubeStatus(message, type) {
 }
 
 function showYoutubeProgress(percent, statusText) {
+  const youtubeSection = document.querySelector('.youtube-section');
+  
+  // Remove existing cancel button if present
+  const existingCancel = youtubeSection.querySelector('.youtube-cancel-btn');
+  if (existingCancel) {
+    existingCancel.remove();
+  }
+  
+  // Add cancel button to YouTube section (top right corner)
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'youtube-cancel-btn';
+  cancelBtn.innerHTML = '✕ Cancel';
+  cancelBtn.onclick = cancelYoutubeTranscription;
+  youtubeSection.appendChild(cancelBtn);
+  
+  // Show progress bar without cancel button inside
   youtubeStatus.innerHTML = `
     <div class="youtube-progress-container">
       <div class="youtube-progress-bar">
         <div class="youtube-progress-fill" style="width: ${percent}%"></div>
         <span class="youtube-progress-text">${percent}% - ${statusText}</span>
-        <button class="youtube-cancel-btn" onclick="cancelYoutubeTranscription()">✕ Cancel</button>
       </div>
     </div>
   `;
@@ -770,12 +785,26 @@ function updateYoutubeProgress(percent, statusText = 'Processing...') {
 
 function hideYoutubeProgress() {
   youtubeStatus.classList.add('hidden');
+  
+  // Remove cancel button when hiding progress
+  const youtubeSection = document.querySelector('.youtube-section');
+  const cancelBtn = youtubeSection.querySelector('.youtube-cancel-btn');
+  if (cancelBtn) {
+    cancelBtn.remove();
+  }
 }
 
 function cancelYoutubeTranscription() {
   if (youtubeAbortController) {
     youtubeAbortController.abort();
     clearInterval(youtubeProgressInterval);
+    
+    // Remove cancel button
+    const youtubeSection = document.querySelector('.youtube-section');
+    const cancelBtn = youtubeSection.querySelector('.youtube-cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.remove();
+    }
   }
 }
 
