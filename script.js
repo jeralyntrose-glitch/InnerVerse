@@ -576,3 +576,94 @@ downloadReportBtn.addEventListener('click', async () => {
   }
 });
 
+// === YouTube Transcription ===
+const youtubeUrl = document.getElementById('youtube-url');
+const transcribeBtn = document.getElementById('transcribe-btn');
+const youtubeStatus = document.getElementById('youtube-status');
+
+transcribeBtn.addEventListener('click', async () => {
+  const url = youtubeUrl.value.trim();
+  
+  if (!url) {
+    showYoutubeStatus('Please enter a YouTube URL', 'error');
+    return;
+  }
+  
+  // Validate YouTube URL
+  const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)/;
+  if (!youtubeRegex.test(url)) {
+    showYoutubeStatus('Please enter a valid YouTube URL', 'error');
+    return;
+  }
+  
+  try {
+    transcribeBtn.disabled = true;
+    transcribeBtn.textContent = '⏳ Processing...';
+    showYoutubeStatus('🎬 Downloading audio from YouTube...', 'processing');
+    
+    const response = await fetch('/transcribe-youtube', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ youtube_url: url })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Transcription failed');
+    }
+    
+    // Download the PDF
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    
+    // Extract filename from Content-Disposition header or use default
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'youtube_transcript.pdf';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(a);
+    
+    showYoutubeStatus('✅ PDF downloaded! You can now upload it to Axis Mind.', 'success');
+    youtubeUrl.value = '';
+    
+    transcribeBtn.textContent = 'Transcribe';
+    transcribeBtn.disabled = false;
+    
+  } catch (error) {
+    console.error('YouTube transcription error:', error);
+    showYoutubeStatus('❌ ' + error.message, 'error');
+    transcribeBtn.textContent = 'Transcribe';
+    transcribeBtn.disabled = false;
+  }
+});
+
+// Enter key support for YouTube input
+youtubeUrl.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter' && !transcribeBtn.disabled) {
+    transcribeBtn.click();
+  }
+});
+
+function showYoutubeStatus(message, type) {
+  youtubeStatus.textContent = message;
+  youtubeStatus.className = 'youtube-status ' + type;
+  youtubeStatus.classList.remove('hidden');
+  
+  if (type === 'error') {
+    setTimeout(() => {
+      youtubeStatus.classList.add('hidden');
+    }, 5000);
+  }
+}
+
