@@ -537,3 +537,42 @@ function removeLastBotMessage() {
   if (messages.length > 0) messages[messages.length - 1].remove();
 }
 
+// === Download Document Report ===
+const downloadReportBtn = document.getElementById('download-report-btn');
+
+downloadReportBtn.addEventListener('click', async () => {
+  try {
+    downloadReportBtn.disabled = true;
+    downloadReportBtn.textContent = '⏳ Generating report...';
+    
+    const response = await fetch('/documents/report');
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to generate report');
+    }
+    
+    // Download the CSV file
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'document_report.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    downloadReportBtn.textContent = '✅ Downloaded!';
+    setTimeout(() => {
+      downloadReportBtn.textContent = '📄 Download Document Report';
+      downloadReportBtn.disabled = false;
+    }, 2000);
+  } catch (error) {
+    console.error('Report download error:', error);
+    alert('❌ Failed to download report: ' + error.message);
+    downloadReportBtn.textContent = '📄 Download Document Report';
+    downloadReportBtn.disabled = false;
+  }
+});
+

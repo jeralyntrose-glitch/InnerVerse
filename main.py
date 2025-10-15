@@ -203,9 +203,9 @@ async def get_documents_report():
         # Extract unique documents
         documents = {}
         try:
-            matches = query_response.matches
+            matches = query_response.matches  # type: ignore
         except AttributeError:
-            matches = query_response.get("matches", [])
+            matches = query_response.get("matches", [])  # type: ignore
         
         for match in matches:
             if "metadata" in match:
