@@ -3,7 +3,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["bash", "ffmpeg", "ffmpeg-full", "freetype", "glibcLocales", "libxcrypt"]
+packages = ["bash", "ffmpeg", "freetype", "glibcLocales", "libxcrypt"]
 
 [unitTest]
 language = "python3"
@@ -50,6 +50,10 @@ externalPort = 80
 [[ports]]
 localPort = 34989
 externalPort = 3000
+
+[[ports]]
+localPort = 40719
+externalPort = 3002
 
 [[ports]]
 localPort = 41785
