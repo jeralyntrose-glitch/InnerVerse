@@ -222,36 +222,38 @@ function processFile(file) {
       const res = await fetch('/upload', {
         method: 'POST',
         body: formData,
-        signal: abortController.signal
+        signal: abortController.signal,
+        // Add keepalive for mobile Safari
+        keepalive: true
       });
 
       progressBar.style.width = '80%';
 
       const result = await res.json();
 
-      if (res.ok) {
-        currentDocumentId = result.document_id;
+      if (!res.ok) {
+        throw new Error(result.error || `Upload failed with status ${res.status}`);
+      }
 
-        uploadedFiles = uploadedFiles.filter(f => f.name !== file.name);
-        uploadedFiles.push({ 
-          name: file.name, 
-          id: result.document_id,
-          timestamp: Date.now()
-        });
-        saveUploadedFiles(uploadedFiles);
+      // Success
+      currentDocumentId = result.document_id;
 
-        // Success
-        progressBar.style.width = '100%';
-        uploadItem.classList.add('success');
-        uploadStats.completed++;
-        updateStats();
+      uploadedFiles = uploadedFiles.filter(f => f.name !== file.name);
+      uploadedFiles.push({ 
+        name: file.name, 
+        id: result.document_id,
+        timestamp: Date.now()
+      });
+      saveUploadedFiles(uploadedFiles);
 
-        // Copy first successful document ID
-        if (uploadStats.completed === 1) {
-          navigator.clipboard.writeText(result.document_id);
-        }
-      } else {
-        throw new Error(result.error || 'Upload failed.');
+      progressBar.style.width = '100%';
+      uploadItem.classList.add('success');
+      uploadStats.completed++;
+      updateStats();
+
+      // Copy first successful document ID
+      if (uploadStats.completed === 1) {
+        navigator.clipboard.writeText(result.document_id);
       }
     } catch (err) {
       clearInterval(progressInterval);
