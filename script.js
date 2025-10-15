@@ -525,15 +525,20 @@ async function sendMessage() {
 }
 
 function appendMessage(sender, text) {
-  const message = document.createElement('div');
-  message.classList.add('chat-message', sender);
-  message.textContent = text;
-  chatLog.appendChild(message);
+  const messageContainer = document.createElement('div');
+  messageContainer.classList.add('message', sender);
+  
+  const bubble = document.createElement('div');
+  bubble.classList.add('message-bubble');
+  bubble.textContent = text;
+  
+  messageContainer.appendChild(bubble);
+  chatLog.appendChild(messageContainer);
   chatLog.scrollTop = chatLog.scrollHeight;
 }
 
 function removeLastBotMessage() {
-  const messages = chatLog.querySelectorAll('.chat-message.bot');
+  const messages = chatLog.querySelectorAll('.message.bot');
   if (messages.length > 0) messages[messages.length - 1].remove();
 }
 
