@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="format-detection" content="telephone=no" />
   <title>Axis Mind - Upload & Chat</title>
-  <link rel="stylesheet" href="/static/style.css?v=19" />
+  <link rel="stylesheet" href="/static/style.css?v=20" />
 </head>
 <body>
   <!-- Theme Toggle -->
@@ -79,12 +79,6 @@
       <input type="file" id="fileElem" accept="application/pdf" multiple />
     </div>
 
-    <!-- 📊 Download Report Button -->
-    <div class="report-section">
-      <button id="download-report-btn" class="btn-report">📄 Download Document Report</button>
-      <button id="delete-all-btn" class="btn-delete-all" style="margin-left: 10px;">🗑️ Delete All Files</button>
-    </div>
-
     <!-- 📊 Upload Status Section -->
     <div id="upload-status-section" class="upload-status-section hidden">
       <div class="status-summary">
@@ -121,6 +115,12 @@
         <button id="transcribe-btn" class="btn-transcribe">Transcribe</button>
       </div>
       <div id="youtube-status" class="youtube-status hidden"></div>
+    </div>
+
+    <!-- 📊 Buttons at Bottom -->
+    <div class="report-section">
+      <button id="download-report-btn" class="btn-report">📄 Download Document Report</button>
+      <button id="delete-all-btn" class="btn-delete-all" style="margin-left: 10px;">🗑️ Delete All Files</button>
     </div>
   </div>
 
