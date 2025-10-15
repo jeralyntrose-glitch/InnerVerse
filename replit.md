@@ -4,7 +4,13 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 15, 2025)
 
-## UI Enhancements (Latest)
+## Error Handling Improvements (Latest)
+- ✅ **Better YouTube error messages** - User-friendly error messages for blocked videos, expired cookies, region locks, private videos, and download failures
+- ✅ **Whisper API error handling** - Clear messages for rate limits, API key issues, and transcription timeouts
+- ✅ **PDF generation errors** - Helpful feedback when PDF creation fails
+- ✅ **Actionable guidance** - Error messages suggest next steps (refresh cookies, try different video, wait for rate limit, etc.)
+
+## UI Enhancements
 - ✅ **iPhone-style chat bubbles** - Updated chat interface with rounded bubbles, purple gradient for user messages, smooth animations
 - ✅ **Fixed Delete All button** - Reordered API routes so `/documents/all` is matched before `/documents/{document_id}`
 

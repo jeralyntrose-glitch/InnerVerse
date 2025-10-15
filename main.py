@@ -506,7 +506,9 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                 if yt_dlp_check.returncode != 0:
                     raise Exception("yt-dlp is not installed or not working")
             except FileNotFoundError:
-                raise Exception("yt-dlp is not installed. Please contact support.")
+                return JSONResponse(status_code=500, content={
+                    "error": "System error: transcription service unavailable. Please try again later."
+                })
             
             # Get video info first
             info_command = [
@@ -517,7 +519,29 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             info_result = subprocess.run(info_command, capture_output=True, text=True, timeout=30)
             
             if info_result.returncode != 0:
-                raise Exception(f"Failed to get video info: {info_result.stderr}")
+                # Parse error to provide helpful message
+                error_msg = info_result.stderr.lower()
+                
+                if "private video" in error_msg or "members-only" in error_msg:
+                    return JSONResponse(status_code=403, content={
+                        "error": "This video is private or members-only. Try a different video."
+                    })
+                elif "age-restricted" in error_msg or "sign in to confirm your age" in error_msg:
+                    return JSONResponse(status_code=403, content={
+                        "error": "Age-restricted video. Your cookies may have expired. Refresh them in Secrets."
+                    })
+                elif "video unavailable" in error_msg or "removed" in error_msg:
+                    return JSONResponse(status_code=404, content={
+                        "error": "Video unavailable or removed. Try a different video."
+                    })
+                elif "region" in error_msg or "not available in your country" in error_msg:
+                    return JSONResponse(status_code=403, content={
+                        "error": "Video blocked in this region. Try a different video."
+                    })
+                else:
+                    return JSONResponse(status_code=400, content={
+                        "error": "Unable to access video. Check the URL or try a different video."
+                    })
             
             info_parts = info_result.stdout.strip().split("|||")
             video_title = info_parts[0] if len(info_parts) > 0 else "YouTube Video"
@@ -570,19 +594,49 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             result = subprocess.run(download_command, capture_output=True, text=True, timeout=1800)
             
             if result.returncode != 0:
-                raise Exception(f"yt-dlp failed: {result.stderr}")
+                # Parse download error
+                error_msg = result.stderr.lower()
+                
+                if "http error 403" in error_msg or "forbidden" in error_msg:
+                    return JSONResponse(status_code=403, content={
+                        "error": "Video blocked. Your cookies may have expired. Refresh them in Secrets."
+                    })
+                elif "http error 404" in error_msg:
+                    return JSONResponse(status_code=404, content={
+                        "error": "Video not found. Check the URL and try again."
+                    })
+                elif "sign in" in error_msg or "login" in error_msg:
+                    return JSONResponse(status_code=401, content={
+                        "error": "Login required. Add YOUTUBE_COOKIES in Secrets to access this video."
+                    })
+                else:
+                    return JSONResponse(status_code=500, content={
+                        "error": "Download failed. Try a different video or refresh your cookies."
+                    })
             
             # Check if file was created
             if not os.path.exists(audio_path):
-                raise Exception("Audio file was not created")
+                return JSONResponse(status_code=500, content={
+                    "error": "Audio extraction failed. Try a different video."
+                })
                 
             file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
             print(f"✅ Audio downloaded: {file_size_mb:.1f}MB")
             
         except subprocess.TimeoutExpired:
-            return JSONResponse(status_code=500, content={"error": "Download timed out. Video may be too long."})
+            return JSONResponse(status_code=408, content={
+                "error": "Download timed out. This video may be too long (90+ min limit)."
+            })
         except Exception as e:
-            return JSONResponse(status_code=500, content={"error": f"Download failed: {str(e)}"})
+            error_str = str(e).lower()
+            if "cookie" in error_str:
+                return JSONResponse(status_code=401, content={
+                    "error": "Cookie error. Check your YOUTUBE_COOKIES in Secrets."
+                })
+            else:
+                return JSONResponse(status_code=500, content={
+                    "error": f"Unable to process video. Try a different one."
+                })
         
         # Step 2: Transcribe with OpenAI Whisper
         print("🎤 Transcribing with Whisper...")
@@ -647,7 +701,24 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             print(f"✅ Transcription complete: {len(transcript)} characters")
             
         except Exception as e:
-            return JSONResponse(status_code=500, content={"error": f"Transcription failed: {str(e)}"})
+            error_str = str(e).lower()
+            
+            if "quota" in error_str or "rate limit" in error_str:
+                return JSONResponse(status_code=429, content={
+                    "error": "OpenAI rate limit reached. Wait a few minutes and try again."
+                })
+            elif "api key" in error_str or "unauthorized" in error_str:
+                return JSONResponse(status_code=401, content={
+                    "error": "OpenAI API key error. Check your OPENAI_API_KEY in Secrets."
+                })
+            elif "timeout" in error_str:
+                return JSONResponse(status_code=408, content={
+                    "error": "Transcription timed out. Try a shorter video."
+                })
+            else:
+                return JSONResponse(status_code=500, content={
+                    "error": "Transcription failed. The audio may be corrupted or too complex."
+                })
         finally:
             # Clean up audio file
             try:
@@ -720,11 +791,15 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             )
             
         except Exception as e:
-            return JSONResponse(status_code=500, content={"error": f"PDF generation failed: {str(e)}"})
+            return JSONResponse(status_code=500, content={
+                "error": "Failed to create PDF. The transcription may contain special characters."
+            })
         
     except Exception as e:
         print(f"❌ YouTube transcription error: {str(e)}")
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        return JSONResponse(status_code=500, content={
+            "error": "Something went wrong. Please try again or use a different video."
+        })
 
 
 # === Serve Frontend ===
