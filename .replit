@@ -13,7 +13,7 @@ requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
 run = ["python3", "main.py"]
-deploymentTarget = "autoscale"
+deploymentTarget = "vm"
 
 [agent]
 expertMode = true
@@ -54,7 +54,3 @@ externalPort = 3000
 [[ports]]
 localPort = 41785
 externalPort = 3001
-
-[[ports]]
-localPort = 45409
-externalPort = 3002
