@@ -4,8 +4,9 @@ import io
 import base64
 import json
 import httpx
+import csv
 from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from pydantic import BaseModel
@@ -174,6 +175,69 @@ async def upload_pdf(file: UploadFile = File(...)):
 
     except Exception as e:
         print(f"❌ Upload error: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# === Generate Document Report ===
+@app.get("/documents/report")
+async def get_documents_report():
+    """Generate a CSV report of all uploaded documents"""
+    try:
+        pinecone_index = get_pinecone_client()
+        
+        if not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Pinecone client not initialized"})
+        
+        # Query Pinecone to get documents
+        # We'll use a dummy vector query with high top_k to get many results
+        dummy_vector = [0.0] * 1536  # OpenAI ada-002 has 1536 dimensions
+        
+        query_response = pinecone_index.query(
+            vector=dummy_vector,
+            top_k=10000,  # Get up to 10k results
+            include_metadata=True
+        )
+        
+        # Extract unique documents
+        documents = {}
+        try:
+            matches = query_response.matches
+        except AttributeError:
+            matches = query_response.get("matches", [])
+        
+        for match in matches:
+            if "metadata" in match:
+                metadata = match["metadata"]
+                doc_id = metadata.get("doc_id")
+                filename = metadata.get("filename", "Unknown")
+                
+                if doc_id and doc_id not in documents:
+                    documents[doc_id] = filename
+        
+        # Generate CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["document_id", "title"])
+        
+        for doc_id, filename in sorted(documents.items()):
+            writer.writerow([doc_id, filename])
+        
+        # Return as downloadable file
+        csv_content = output.getvalue()
+        output.close()
+        
+        return StreamingResponse(
+            io.StringIO(csv_content),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": "attachment; filename=document_report.csv"
+            }
+        )
+        
+    except Exception as e:
+        print(f"❌ Report generation error: {str(e)}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
