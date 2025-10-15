@@ -528,7 +528,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                     })
                 elif "age-restricted" in error_msg or "sign in to confirm your age" in error_msg:
                     return JSONResponse(status_code=403, content={
-                        "error": "Age-restricted video. Your cookies may have expired. Refresh them in Secrets."
+                        "error": "Age-restricted video. Your cookies may have expired. Update youtube_cookies.txt file."
                     })
                 elif "video unavailable" in error_msg or "removed" in error_msg:
                     return JSONResponse(status_code=404, content={
@@ -561,14 +561,25 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             except Exception as e:
                 print(f"⚠️ Could not check for ffmpeg: {e}")
             
-            # Check for YouTube cookies
-            cookies_content = os.getenv("YOUTUBE_COOKIES")
+            # Check for YouTube cookies file
             cookies_path = None
-            if cookies_content:
-                cookies_path = os.path.join(temp_dir, "cookies.txt")
-                with open(cookies_path, "w") as f:
-                    f.write(cookies_content)
-                print(f"✅ Using YouTube cookies for authentication")
+            cookies_file = "youtube_cookies.txt"
+            
+            if os.path.exists(cookies_file):
+                # Read cookies from file
+                with open(cookies_file, "r") as f:
+                    cookies_content = f.read().strip()
+                
+                # Only use if file has actual cookies (not just comments)
+                if cookies_content and not cookies_content.startswith("# Paste your"):
+                    cookies_path = os.path.join(temp_dir, "cookies.txt")
+                    with open(cookies_path, "w") as f:
+                        f.write(cookies_content)
+                    print(f"✅ Using YouTube cookies from file for authentication")
+                else:
+                    print(f"⚠️ youtube_cookies.txt exists but is empty or not configured")
+            else:
+                print(f"⚠️ youtube_cookies.txt not found - some videos may be restricted")
             
             # Download audio with compression (32kbps mono for Whisper)
             # This keeps files under 25MB for videos up to ~90 minutes
@@ -599,7 +610,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                 
                 if "http error 403" in error_msg or "forbidden" in error_msg:
                     return JSONResponse(status_code=403, content={
-                        "error": "Video blocked. Your cookies may have expired. Refresh them in Secrets."
+                        "error": "Video blocked. Your cookies may have expired. Update youtube_cookies.txt file."
                     })
                 elif "http error 404" in error_msg:
                     return JSONResponse(status_code=404, content={
@@ -607,7 +618,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                     })
                 elif "sign in" in error_msg or "login" in error_msg:
                     return JSONResponse(status_code=401, content={
-                        "error": "Login required. Add YOUTUBE_COOKIES in Secrets to access this video."
+                        "error": "Login required. Add your cookies to youtube_cookies.txt file to access this video."
                     })
                 else:
                     return JSONResponse(status_code=500, content={
@@ -631,7 +642,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             error_str = str(e).lower()
             if "cookie" in error_str:
                 return JSONResponse(status_code=401, content={
-                    "error": "Cookie error. Check your YOUTUBE_COOKIES in Secrets."
+                    "error": "Cookie error. Check your youtube_cookies.txt file."
                 })
             else:
                 return JSONResponse(status_code=500, content={
