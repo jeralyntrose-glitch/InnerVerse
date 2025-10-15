@@ -109,7 +109,8 @@ async def upload_pdf_base64(data: Base64Upload):
             vector = response.data[0].embedding
             vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
                 "text": chunk,
-                "doc_id": doc_id
+                "doc_id": doc_id,
+                "filename": data.filename
             }))
 
         if vectors_to_upsert:
@@ -157,7 +158,8 @@ async def upload_pdf(file: UploadFile = File(...)):
             vector = response.data[0].embedding
             vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
                 "text": chunk,
-                "doc_id": doc_id
+                "doc_id": doc_id,
+                "filename": file.filename
             }))
 
         if vectors_to_upsert:
