@@ -329,7 +329,7 @@ input[type="file"] {
   height: 32px;
   background: rgba(99, 102, 241, 0.1);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
@@ -338,25 +338,20 @@ input[type="file"] {
   height: 100%;
   background: linear-gradient(135deg, #6366f1, #4f46e5);
   transition: width 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
+  border-radius: 7px;
 }
 
 .youtube-progress-text {
   position: absolute;
-  width: 100%;
-  text-align: center;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary);
-  z-index: 2;
-  line-height: 32px;
-}
-
-.youtube-progress-fill .youtube-progress-text {
   color: white;
+  z-index: 2;
+  white-space: nowrap;
 }
 
 .youtube-download-link {

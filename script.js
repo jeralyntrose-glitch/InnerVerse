@@ -695,10 +695,8 @@ function showYoutubeProgress(percent, statusText) {
   youtubeStatus.innerHTML = `
     <div class="youtube-progress-container">
       <div class="youtube-progress-bar">
-        <div class="youtube-progress-fill" style="width: ${percent}%">
-          <span class="youtube-progress-text">${percent}% - ${statusText}</span>
-        </div>
-        ${percent === 0 ? `<span class="youtube-progress-text">${percent}% - ${statusText}</span>` : ''}
+        <div class="youtube-progress-fill" style="width: ${percent}%"></div>
+        <span class="youtube-progress-text">${percent}% - ${statusText}</span>
       </div>
     </div>
   `;
@@ -708,13 +706,11 @@ function showYoutubeProgress(percent, statusText) {
 
 function updateYoutubeProgress(percent, statusText = 'Processing...') {
   const fill = youtubeStatus.querySelector('.youtube-progress-fill');
-  const texts = youtubeStatus.querySelectorAll('.youtube-progress-text');
+  const text = youtubeStatus.querySelector('.youtube-progress-text');
   
-  if (fill) {
+  if (fill && text) {
     fill.style.width = percent + '%';
-    texts.forEach(text => {
-      text.textContent = `${percent}% - ${statusText}`;
-    });
+    text.textContent = `${percent}% - ${statusText}`;
   }
 }
 
