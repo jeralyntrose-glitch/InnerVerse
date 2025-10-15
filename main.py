@@ -862,7 +862,8 @@ async def text_to_pdf(request: TextToPDFRequest):
                 temperature=0.3
             )
             
-            cleaned_text = completion.choices[0].message.content.strip()
+            content = completion.choices[0].message.content
+            cleaned_text = content.strip() if content else request.text
             print("✅ Text cleaned and formatted")
             
         except Exception as e:

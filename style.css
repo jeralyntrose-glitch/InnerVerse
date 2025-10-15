@@ -384,6 +384,132 @@ input[type="file"] {
   transform: scale(1.05);
 }
 
+/* === Text to PDF Section === */
+.text-to-pdf-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 30px;
+  text-align: left;
+  box-shadow: 0 4px 6px var(--shadow-color);
+  transition: all 0.3s ease;
+}
+
+.text-pdf-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.text-pdf-header svg {
+  color: #10b981;
+}
+
+.text-pdf-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.text-pdf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pdf-title-input {
+  padding: 12px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--drop-area-bg);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.pdf-title-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+#pdf-text {
+  padding: 12px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--drop-area-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 150px;
+  transition: all 0.2s ease;
+}
+
+#pdf-text:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.btn-create-pdf {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.btn-create-pdf:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-create-pdf:active {
+  transform: translateY(0);
+}
+
+.btn-create-pdf:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.text-pdf-status {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-top: 12px;
+  animation: fadeIn 0.3s ease;
+}
+
+.text-pdf-status.processing {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.text-pdf-status.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.text-pdf-status.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
 /* Mobile optimizations for YouTube section */
 @media (max-width: 768px) {
   .youtube-section {
@@ -428,6 +554,15 @@ input[type="file"] {
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+  
+  .text-to-pdf-section {
+    padding: 20px;
+  }
+  
+  .btn-create-pdf {
+    width: 100%;
+    padding: 14px 24px;
   }
 }
 

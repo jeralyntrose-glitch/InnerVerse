@@ -808,3 +808,94 @@ function cancelYoutubeTranscription() {
   }
 }
 
+// === Text to PDF Feature ===
+const pdfTitle = document.getElementById('pdf-title');
+const pdfText = document.getElementById('pdf-text');
+const createPdfBtn = document.getElementById('create-pdf-btn');
+const textPdfStatus = document.getElementById('text-pdf-status');
+
+createPdfBtn.addEventListener('click', async () => {
+  const title = pdfTitle.value.trim() || 'Document';
+  const text = pdfText.value.trim();
+  
+  if (!text) {
+    showTextPdfStatus('Please enter some text to convert to PDF', 'error');
+    return;
+  }
+  
+  if (text.length < 10) {
+    showTextPdfStatus('Text is too short. Please add more content.', 'error');
+    return;
+  }
+  
+  try {
+    createPdfBtn.disabled = true;
+    createPdfBtn.textContent = '⏳ Processing...';
+    showTextPdfStatus('✨ Fixing punctuation and creating PDF...', 'processing');
+    
+    const response = await fetch('/text-to-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        text: text,
+        title: title 
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'PDF creation failed');
+    }
+    
+    // Download the PDF
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    
+    // Extract filename from Content-Disposition header or use default
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'document.pdf';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(a);
+    
+    showTextPdfStatus('✅ PDF created successfully! Download started.', 'success');
+    
+    // Clear inputs after success
+    setTimeout(() => {
+      pdfTitle.value = '';
+      pdfText.value = '';
+      textPdfStatus.classList.add('hidden');
+    }, 3000);
+    
+  } catch (error) {
+    console.error('Text to PDF error:', error);
+    showTextPdfStatus(`❌ ${error.message}`, 'error');
+  } finally {
+    createPdfBtn.disabled = false;
+    createPdfBtn.textContent = '✨ Create PDF';
+  }
+});
+
+function showTextPdfStatus(message, type) {
+  textPdfStatus.innerHTML = message;
+  textPdfStatus.className = 'text-pdf-status ' + type;
+  textPdfStatus.classList.remove('hidden');
+  
+  if (type === 'error') {
+    setTimeout(() => {
+      textPdfStatus.classList.add('hidden');
+    }, 5000);
+  }
+}
+
