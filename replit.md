@@ -4,7 +4,13 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 15, 2025)
 
-## Document Report Enhancements (Latest)
+## Text to PDF Feature (Latest)
+- ✅ **New text-to-PDF converter** - Convert text to formatted PDFs with automatic punctuation and grammar fixes using GPT-3.5
+- ✅ **Smart formatting** - AI cleans up text before converting to professional PDF document
+- ✅ **Green-themed UI** - Distinct design from YouTube section for easy identification
+- ✅ **Mobile optimized** - Works smoothly on iPhone with proper input sizing
+
+## Document Report Enhancements
 - ✅ **Upload timestamps** - CSV report now includes "uploaded_at" column showing when each document was added (formatted as "YYYY-MM-DD HH:MM AM/PM")
 
 ## Cookie Storage System
@@ -69,6 +75,7 @@ Preferred communication style: Simple, everyday language.
 - **Upload**: `POST /upload` (multipart/form-data) and `POST /upload-base64` (JSON) for PDF uploads.
 - **Query**: `POST /query` for document-specific Q&A.
 - **YouTube Transcription**: `POST /transcribe-youtube` for converting YouTube videos to searchable PDFs.
+- **Text to PDF**: `POST /text-to-pdf` for converting text to formatted PDFs with AI-powered punctuation fixes.
 - **Document Report**: `GET /documents/report` for CSV export of uploaded documents.
 - **Delete Document**: `DELETE /documents/{document_id}` for removing document data from Pinecone.
 - **Static Files**: Serves frontend assets and documentation (`/docs` for Swagger UI).
