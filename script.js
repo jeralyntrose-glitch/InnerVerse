@@ -40,28 +40,10 @@ themeToggle.addEventListener('click', () => {
   }
 });
 
-// Dropdown elements
-const dropdownToggle = document.getElementById('dropdown-toggle');
-const dropdownMenu = document.getElementById('dropdown-menu');
-const docList = document.getElementById('doc-list');
-const copyAllBtn = document.getElementById('copy-all-btn');
-const viewArchiveBtn = document.getElementById('view-archive-btn');
-
-// Archive modal
-const archiveModal = document.getElementById('archive-modal');
-const closeArchiveBtn = document.getElementById('archive-close');
-const archiveList = document.getElementById('archive-list');
-
-// Ensure modal starts hidden
-if (archiveModal) {
-  archiveModal.classList.add('hidden');
-}
-
 let currentDocumentId = null;
 
 // === Persistent Storage ===
 const STORAGE_KEY = 'axis_mind_uploads';
-const ARCHIVE_KEY = 'axis_mind_archive';
 
 function loadUploadedFiles() {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -70,23 +52,6 @@ function loadUploadedFiles() {
 
 function saveUploadedFiles(files) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(files));
-}
-
-function loadArchive() {
-  const stored = localStorage.getItem(ARCHIVE_KEY);
-  return stored ? JSON.parse(stored) : [];
-}
-
-function saveArchive(files) {
-  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(files));
-}
-
-function cleanExpiredArchive() {
-  const archive = loadArchive();
-  const now = Date.now();
-  const filtered = archive.filter(entry => (now - entry.timestamp) < 30 * 24 * 60 * 60 * 1000);
-  saveArchive(filtered);
-  return filtered;
 }
 
 // === Upload ===
@@ -236,7 +201,6 @@ function processFile(file) {
           timestamp: Date.now()
         });
         saveUploadedFiles(uploadedFiles);
-        updateDropdown();
 
         // Success
         progressBar.style.width = '100%';
@@ -477,7 +441,6 @@ async function downloadAndProcessGDriveFile(fileId, fileName) {
         timestamp: Date.now()
       });
       saveUploadedFiles(uploadedFiles);
-      updateDropdown();
       
       // Success
       progressBar.style.width = '100%';
@@ -574,205 +537,3 @@ function removeLastBotMessage() {
   if (messages.length > 0) messages[messages.length - 1].remove();
 }
 
-// === Dropdown & Archive ===
-dropdownToggle.addEventListener('click', (e) => {
-  e.stopPropagation(); // Prevent document click from firing
-  const isHidden = dropdownMenu.classList.contains('hidden');
-  if (isHidden) {
-    dropdownMenu.classList.remove('hidden');
-    updateDropdown();
-  } else {
-    dropdownMenu.classList.add('hidden');
-  }
-});
-
-// Close dropdown when clicking outside
-document.addEventListener('click', (e) => {
-  if (!dropdownMenu.contains(e.target) && !dropdownToggle.contains(e.target)) {
-    dropdownMenu.classList.add('hidden');
-  }
-});
-
-function updateDropdown() {
-  docList.innerHTML = '';
-
-  uploadedFiles.forEach(file => {
-    const li = document.createElement('li');
-    const date = file.timestamp ? new Date(file.timestamp).toLocaleString() : 'Unknown';
-    const shortId = file.id ? (file.id.substring(0, 8) + '...') : 'No ID';
-    const fullId = file.id || 'unknown';
-    
-    li.innerHTML = `
-      <input type="checkbox" class="doc-checkbox" data-id="${fullId}">
-      <div class="doc-info">
-        <span class="doc-name" title="${file.name}">${file.name}</span>
-        <span class="doc-id" title="${fullId}">ID: ${shortId}</span>
-        <span class="doc-date">${date}</span>
-      </div>
-      <div class="doc-actions">
-        <button class="copy-btn" data-id="${fullId}" title="Copy">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-          </svg>
-        </button>
-        <button class="delete-btn" data-id="${fullId}" title="Delete">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-        </button>
-      </div>
-    `;
-    docList.appendChild(li);
-  });
-
-  docList.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const file = uploadedFiles.find(f => f.id === id);
-      if (!file) {
-        navigator.clipboard.writeText(id);
-        alert('📋 Document ID copied!');
-        return;
-      }
-      
-      // Format timestamp as readable date/time
-      const date = file.timestamp ? new Date(file.timestamp).toLocaleString() : 'N/A';
-      
-      // Tab-separated format for Google Sheets: Filename\tID\tTimestamp
-      const tsvData = `${file.name}\t${file.id}\t${date}`;
-      
-      navigator.clipboard.writeText(tsvData);
-      alert('📋 Document info copied! (Filename, ID, date)');
-    });
-  });
-
-  docList.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const file = uploadedFiles.find(f => f.id === id);
-      if (!file) return;
-
-      const confirmed = confirm(`Archive "${file.name}" for 30 days?`);
-      if (confirmed) {
-        uploadedFiles = uploadedFiles.filter(f => f.id !== id);
-        saveUploadedFiles(uploadedFiles);
-
-        const archive = cleanExpiredArchive();
-        archive.push({ name: file.name, id: file.id, timestamp: Date.now() });
-        saveArchive(archive);
-        updateDropdown();
-      }
-    });
-  });
-}
-
-// === Copy Selected Button ===
-const copySelectedBtn = document.getElementById('copy-selected-btn');
-copySelectedBtn.addEventListener('click', () => {
-  const checkboxes = document.querySelectorAll('.doc-checkbox:checked');
-  
-  if (checkboxes.length === 0) {
-    alert('No documents selected! Please check the boxes next to the files you want to copy.');
-    return;
-  }
-  
-  const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.id);
-  const selectedFiles = uploadedFiles.filter(file => selectedIds.includes(file.id));
-  
-  const tsvData = selectedFiles
-    .map(file => {
-      const date = file.timestamp ? new Date(file.timestamp).toLocaleString() : 'N/A';
-      return `${file.name}\t${file.id}\t${date}`;
-    })
-    .join('\n');
-  
-  if (tsvData) {
-    navigator.clipboard.writeText(tsvData);
-    alert(`📋 Copied ${selectedFiles.length} selected document(s)! (Filename, ID, date)\nPaste into Google Sheets - each part will go into a separate column.`);
-  }
-});
-
-// === Copy All Button ===
-copyAllBtn.addEventListener('click', () => {
-  if (uploadedFiles.length === 0) {
-    alert('No documents to copy!');
-    return;
-  }
-  
-  // Create tab-separated rows: Filename\tID\tTimestamp (one per line)
-  const tsvData = uploadedFiles
-    .filter(file => file.id && file.id !== 'unknown')
-    .map(file => {
-      const date = file.timestamp ? new Date(file.timestamp).toLocaleString() : 'N/A';
-      return `${file.name}\t${file.id}\t${date}`;
-    })
-    .join('\n');
-  
-  if (tsvData) {
-    navigator.clipboard.writeText(tsvData);
-    alert(`📋 Copied ${uploadedFiles.length} document(s)! (Filename, ID, date)\nPaste into Google Sheets - each part will go into a separate column.`);
-  } else {
-    alert('No valid documents to copy!');
-  }
-});
-
-// === Archive Modal ===
-viewArchiveBtn.addEventListener('click', () => {
-  archiveModal.classList.remove('hidden');
-  renderArchive();
-});
-
-if (closeArchiveBtn) {
-  closeArchiveBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Close button clicked');
-    archiveModal.classList.add('hidden');
-  });
-}
-
-// Close modal when clicking outside the content
-if (archiveModal) {
-  archiveModal.addEventListener('click', (e) => {
-    if (e.target === archiveModal) {
-      console.log('Outside clicked');
-      archiveModal.classList.add('hidden');
-    }
-  });
-}
-
-function renderArchive() {
-  archiveList.innerHTML = '';
-  const archive = cleanExpiredArchive();
-
-  if (archive.length === 0) {
-    archiveList.innerHTML = '<li>No archived files.</li>';
-    return;
-  }
-
-  archive.forEach(file => {
-    const li = document.createElement('li');
-    li.innerHTML = `
-      <span title="${file.name}">${file.name}</span>
-      <button data-id="${file.id}" data-name="${file.name}">Restore</button>
-    `;
-    archiveList.appendChild(li);
-  });
-
-  archiveList.querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const name = btn.dataset.name;
-
-      const archive = cleanExpiredArchive().filter(f => f.id !== id);
-      saveArchive(archive);
-
-      uploadedFiles.push({ name, id });
-      saveUploadedFiles(uploadedFiles);
-      renderArchive();
-      updateDropdown();
-    });
-  });
-}
