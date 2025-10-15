@@ -2,9 +2,21 @@
 
 This is a FastAPI-based PDF Q&A application with a modern web interface that allows users to upload PDF documents, processes them into chunks, stores them in Pinecone vector database, and enables querying the documents using OpenAI's GPT for intelligent answers based on document content. The app features both a drag-and-drop upload interface and an integrated chat system for asking questions about uploaded documents.
 
+# Recent Changes (October 15, 2025)
+
+## Document Report Export Feature (Latest)
+- ✅ **CSV Export Endpoint** - New `/documents/report` GET endpoint generates downloadable CSV reports
+- ✅ **Download Report Button** - Green "📄 Download Document Report" button in main UI for easy access
+- ✅ **Filename Storage** - Upload endpoints now store filename in Pinecone metadata alongside chunks
+- ✅ **Report Format** - CSV file with columns: document_id, title (filename)
+- ✅ **Offline Record Keeping** - Users can download and maintain an offline spreadsheet of all uploaded documents
+- ✅ **Duplicate Management** - CSV export helps track and identify duplicate documents
+- ✅ **Robust Metadata Access** - Backend uses getattr() with fallback for handling Pinecone ScoredVector objects
+- ✅ **Mobile-Friendly** - Report button styled with touch-friendly 44px minimum height for iOS compatibility
+
 # Recent Changes (October 14, 2025)
 
-## Dropdown Multi-Select & UI Fixes (Latest)
+## Dropdown Multi-Select & UI Fixes
 - ✅ **Checkbox multi-select** - Added checkboxes to dropdown for selecting multiple files
 - ✅ **Copy Selected button** - New button copies only checked files in tab-separated format
 - ✅ **Dropdown footer redesign** - Updated with "📋 Copy Selected", "📋 Copy All", "🗂️ Archive" buttons
@@ -106,9 +118,10 @@ Preferred communication style: Simple, everyday language.
 - **Performance**: Batch processing all embeddings before upserting to Pinecone
 
 ## API Structure
-- **Upload Binary**: `POST /upload` - Accepts multipart/form-data PDF files
-- **Upload Base64**: `POST /upload-base64` - Accepts JSON with pdf_base64 and filename (for ChatGPT integration)
+- **Upload Binary**: `POST /upload` - Accepts multipart/form-data PDF files, stores filename in metadata
+- **Upload Base64**: `POST /upload-base64` - Accepts JSON with pdf_base64 and filename, stores filename in metadata
 - **Query**: `POST /query` - Accepts JSON with document_id and question (Pydantic QueryRequest model)
+- **Document Report**: `GET /documents/report` - Generates CSV report of all uploaded documents with IDs and filenames
 - **Frontend**: `GET /` - Serves index.html with cache control headers
 - **Static Files**: `/static/*` - Serves CSS, JS, and other static assets
 - **Docs**: `GET /docs` - Built-in FastAPI Swagger UI documentation
