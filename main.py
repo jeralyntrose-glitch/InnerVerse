@@ -488,21 +488,22 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             video_title = info_parts[0] if len(info_parts) > 0 else "YouTube Video"
             video_duration = int(info_parts[1]) if len(info_parts) > 1 and info_parts[1].isdigit() else 0
             
-            # Check duration (limit to 2 hours = 7200 seconds)
-            if video_duration > 7200:
+            # Check duration (limit to 90 minutes = 5400 seconds due to 25MB Whisper limit)
+            if video_duration > 5400:
                 return JSONResponse(
                     status_code=400,
-                    content={"error": f"Video is too long ({video_duration//60} minutes). Please use videos under 2 hours."}
+                    content={"error": f"Video is too long ({video_duration//60} minutes). Please use videos under 90 minutes."}
                 )
             
             print(f"📺 Video: {video_title} ({video_duration}s)")
             
-            # Download audio
+            # Download audio with compression (32kbps mono for Whisper)
+            # This keeps files under 25MB for videos up to ~90 minutes
             download_command = [
                 "yt-dlp",
                 "-x",  # Extract audio
                 "--audio-format", "mp3",
-                "--audio-quality", "0",  # Best quality
+                "--postprocessor-args", "ffmpeg:-ac 1 -ar 16000 -b:a 32k",  # Mono, 16kHz, 32kbps
                 "-o", audio_path,
                 youtube_url
             ]
@@ -516,7 +517,8 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             if not os.path.exists(audio_path):
                 raise Exception("Audio file was not created")
                 
-            print(f"✅ Audio downloaded: {os.path.getsize(audio_path)} bytes")
+            file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+            print(f"✅ Audio downloaded: {file_size_mb:.1f}MB")
             
         except subprocess.TimeoutExpired:
             return JSONResponse(status_code=500, content={"error": "Download timed out. Video may be too long."})
