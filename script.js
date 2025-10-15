@@ -108,7 +108,6 @@ function handleFiles(files) {
   uploadList.innerHTML = '';
   status.textContent = '';
   cancelUploadBtn.classList.remove('hidden'); // Show cancel button
-  document.querySelector('.report-section').classList.add('hidden'); // Hide report button during uploads
 
   // Process each file
   pdfFiles.forEach(file => {
@@ -241,7 +240,6 @@ function processFile(file) {
 function checkUploadComplete() {
   if (activeUploads.length === 0) {
     cancelUploadBtn.classList.add('hidden');
-    document.querySelector('.report-section').classList.remove('hidden'); // Show report button when done
   }
 }
 
@@ -368,7 +366,6 @@ async function pickerCallback(data) {
     uploadList.innerHTML = '';
     status.textContent = '';
     cancelUploadBtn.classList.remove('hidden');
-    document.querySelector('.report-section').classList.add('hidden'); // Hide report button during uploads
 
     // Download and process each file
     for (const file of files) {
@@ -379,7 +376,6 @@ async function pickerCallback(data) {
     // Hide cancel button if all done
     if (activeUploads.length === 0 && !uploadsCancelled) {
       cancelUploadBtn.classList.add('hidden');
-      document.querySelector('.report-section').classList.remove('hidden'); // Show report button when done
     }
   }
 }
