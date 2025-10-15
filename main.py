@@ -517,6 +517,16 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             
             print(f"📺 Video: {video_title} ({video_duration}s / {video_duration//60} min)")
             
+            # Try to find ffmpeg location
+            ffmpeg_location = None
+            try:
+                ffmpeg_result = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True)
+                if ffmpeg_result.returncode == 0:
+                    ffmpeg_location = ffmpeg_result.stdout.strip()
+                    print(f"✅ Found ffmpeg at: {ffmpeg_location}")
+            except:
+                pass
+            
             # Download audio with compression (32kbps mono for Whisper)
             # This keeps files under 25MB for videos up to ~90 minutes
             download_command = [
@@ -527,6 +537,11 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                 "-o", audio_path,
                 youtube_url
             ]
+            
+            # Add ffmpeg location if found
+            if ffmpeg_location:
+                download_command.insert(1, "--ffmpeg-location")
+                download_command.insert(2, os.path.dirname(ffmpeg_location))
             
             result = subprocess.run(download_command, capture_output=True, text=True, timeout=120)
             
