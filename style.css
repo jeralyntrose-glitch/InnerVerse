@@ -90,6 +90,7 @@ body {
 
 /* Branding with Brain Icon */
 .branding {
+  margin-top: 50px;
   margin-bottom: 40px;
 }
 
@@ -1227,6 +1228,10 @@ label,
 
 /* Small mobile devices */
 @media (max-width: 480px) {
+  .branding {
+    margin-top: 60px;
+  }
+
   .brand-title {
     font-size: 22px;
   }
