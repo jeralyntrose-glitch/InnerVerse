@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="format-detection" content="telephone=no" />
   <title>Axis Mind - Upload & Chat</title>
-  <link rel="stylesheet" href="/static/style.css?v=31" />
+  <link rel="stylesheet" href="/static/style.css?v=32" />
 </head>
 <body>
   <!-- Theme Toggle -->
@@ -135,7 +135,12 @@
         <textarea id="pdf-text" placeholder="Paste your text here... (AI will fix punctuation and grammar automatically)" rows="8"></textarea>
         <button id="create-pdf-btn" class="btn-create-pdf">✨ Create PDF</button>
       </div>
-      <div id="text-pdf-status" class="text-pdf-status hidden"></div>
+      <div id="text-pdf-progress" class="text-pdf-progress hidden">
+        <div class="text-pdf-status-text"></div>
+        <div class="text-pdf-progress-bar-container">
+          <div class="text-pdf-progress-bar"></div>
+        </div>
+      </div>
     </div>
 
     <!-- 📊 Buttons at Bottom -->
@@ -162,6 +167,6 @@
   </div>
 
   <script src="https://apis.google.com/js/api.js"></script>
-  <script src="/static/script.js?v=22"></script>
+  <script src="/static/script.js?v=23"></script>
 </body>
 </html>

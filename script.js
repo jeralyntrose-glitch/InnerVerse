@@ -812,26 +812,33 @@ function cancelYoutubeTranscription() {
 const pdfTitle = document.getElementById('pdf-title');
 const pdfText = document.getElementById('pdf-text');
 const createPdfBtn = document.getElementById('create-pdf-btn');
-const textPdfStatus = document.getElementById('text-pdf-status');
+const textPdfProgress = document.getElementById('text-pdf-progress');
 
 createPdfBtn.addEventListener('click', async () => {
   const title = pdfTitle.value.trim() || 'Document';
   const text = pdfText.value.trim();
   
   if (!text) {
-    showTextPdfStatus('Please enter some text to convert to PDF', 'error');
+    showTextPdfError('Please enter some text to convert to PDF');
     return;
   }
   
   if (text.length < 10) {
-    showTextPdfStatus('Text is too short. Please add more content.', 'error');
+    showTextPdfError('Text is too short. Please add more content.');
     return;
   }
   
   try {
     createPdfBtn.disabled = true;
     createPdfBtn.textContent = '⏳ Processing...';
-    showTextPdfStatus('✨ Fixing punctuation and creating PDF...', 'processing');
+    
+    // Show progress bar
+    textPdfProgress.classList.remove('hidden');
+    updateTextPdfProgress('✨ Analyzing text...', 20);
+    
+    // Small delay for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 300));
+    updateTextPdfProgress('🔧 Fixing punctuation and grammar...', 50);
     
     const response = await fetch('/text-to-pdf', {
       method: 'POST',
@@ -846,6 +853,8 @@ createPdfBtn.addEventListener('click', async () => {
       const error = await response.json();
       throw new Error(error.error || 'PDF creation failed');
     }
+    
+    updateTextPdfProgress('📄 Generating PDF...', 80);
     
     // Download the PDF
     const blob = await response.blob();
@@ -869,33 +878,49 @@ createPdfBtn.addEventListener('click', async () => {
     window.URL.revokeObjectURL(downloadUrl);
     document.body.removeChild(a);
     
-    showTextPdfStatus('✅ PDF created successfully! Download started.', 'success');
+    updateTextPdfProgress('✅ PDF created successfully!', 100);
     
     // Clear inputs after success
     setTimeout(() => {
       pdfTitle.value = '';
       pdfText.value = '';
-      textPdfStatus.classList.add('hidden');
+      textPdfProgress.classList.add('hidden');
     }, 3000);
     
   } catch (error) {
     console.error('Text to PDF error:', error);
-    showTextPdfStatus(`❌ ${error.message}`, 'error');
+    showTextPdfError(`❌ ${error.message}`);
   } finally {
     createPdfBtn.disabled = false;
     createPdfBtn.textContent = '✨ Create PDF';
   }
 });
 
-function showTextPdfStatus(message, type) {
-  textPdfStatus.innerHTML = message;
-  textPdfStatus.className = 'text-pdf-status ' + type;
-  textPdfStatus.classList.remove('hidden');
+function updateTextPdfProgress(message, percentage) {
+  const statusText = textPdfProgress.querySelector('.text-pdf-status-text');
+  const progressBar = textPdfProgress.querySelector('.text-pdf-progress-bar');
   
-  if (type === 'error') {
-    setTimeout(() => {
-      textPdfStatus.classList.add('hidden');
-    }, 5000);
+  statusText.textContent = message;
+  progressBar.style.width = percentage + '%';
+}
+
+function showTextPdfError(message) {
+  textPdfProgress.classList.add('hidden');
+  
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'text-pdf-status error';
+  errorDiv.textContent = message;
+  
+  const form = document.querySelector('.text-pdf-form');
+  const existingError = form.nextElementSibling;
+  if (existingError && existingError.classList.contains('text-pdf-status')) {
+    existingError.remove();
   }
+  
+  form.after(errorDiv);
+  
+  setTimeout(() => {
+    errorDiv.remove();
+  }, 5000);
 }
 
