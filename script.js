@@ -9,6 +9,31 @@ const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const chatLog = document.getElementById('chat-log');
 
+// === Notification Sound ===
+function playNotificationSound() {
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Pleasant "ding" sound
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    
+    // Fade out
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
+  } catch (error) {
+    console.log('Notification sound not available:', error);
+  }
+}
+
 // Theme toggle
 const themeToggle = document.getElementById('theme-toggle');
 const sunIcon = themeToggle.querySelector('.sun-icon');
@@ -703,6 +728,7 @@ transcribeBtn.addEventListener('click', async () => {
     setTimeout(() => {
       hideYoutubeProgress();
       showYoutubeStatus('✅ PDF downloaded! You can now upload it to Axis Mind.', 'success');
+      playNotificationSound(); // Play notification ping
     }, 500);
     
     youtubeUrl.value = '';
@@ -879,6 +905,7 @@ createPdfBtn.addEventListener('click', async () => {
     document.body.removeChild(a);
     
     updateTextPdfProgress('✅ PDF created successfully!', 100);
+    playNotificationSound(); // Play notification ping
     
     // Clear inputs after success
     setTimeout(() => {
