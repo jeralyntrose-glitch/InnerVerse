@@ -537,6 +537,15 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             except Exception as e:
                 print(f"⚠️ Could not check for ffmpeg: {e}")
             
+            # Check for YouTube cookies
+            cookies_content = os.getenv("YOUTUBE_COOKIES")
+            cookies_path = None
+            if cookies_content:
+                cookies_path = os.path.join(temp_dir, "cookies.txt")
+                with open(cookies_path, "w") as f:
+                    f.write(cookies_content)
+                print(f"✅ Using YouTube cookies for authentication")
+            
             # Download audio with compression (32kbps mono for Whisper)
             # This keeps files under 25MB for videos up to ~90 minutes
             download_command = [
@@ -547,6 +556,11 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                 "-o", audio_path,
                 youtube_url
             ]
+            
+            # Add cookies if available
+            if cookies_path:
+                download_command.insert(1, "--cookies")
+                download_command.insert(2, cookies_path)
             
             # Add ffmpeg location if found
             if ffmpeg_location and os.path.dirname(ffmpeg_location):
