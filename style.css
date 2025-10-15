@@ -357,15 +357,15 @@ input[type="file"] {
 
 .youtube-cancel-btn {
   position: absolute;
-  right: -70px;
+  right: -60px;
   top: 50%;
   transform: translateY(-50%);
   background: #ef4444;
   color: white;
   border: none;
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 10px;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 9px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -374,6 +374,7 @@ input[type="file"] {
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
 }
 
 .youtube-cancel-btn:hover {
@@ -413,15 +414,17 @@ input[type="file"] {
   .youtube-cancel-btn {
     position: static;
     transform: none;
-    margin-top: 8px;
-    width: 100%;
-    padding: 6px 12px;
-    font-size: 11px;
-    min-height: 36px;
+    margin-top: 10px;
+    width: auto;
+    padding: 3px 8px;
+    font-size: 9px;
+    min-height: auto;
+    line-height: 1.2;
+    align-self: flex-start;
   }
   
   .youtube-cancel-btn:hover {
-    transform: scale(1.02);
+    transform: scale(1.05);
   }
   
   .youtube-progress-container {

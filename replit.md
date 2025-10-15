@@ -9,12 +9,13 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 - ✅ **Fixed ffmpeg missing in production** - Changed deployment from Autoscale to VM to include Nix packages
 - ✅ **VM deployment includes system packages** - VM deployments include all Nix system packages (ffmpeg) in production
 - ✅ **Added ffmpeg detection** - Backend automatically finds and specifies ffmpeg location to yt-dlp
+- ✅ **Minimized cancel button** - Made very small (9px font, 2px/6px padding) to prevent overlap
 
 ## Mobile UI Enhancements
 - ✅ **Compact branding** - Adjusted brain icon (70px), title (24px), and tagline (13px) sizes for mobile
 - ✅ **Thinner progress bars** - Reduced to 6px height on mobile for cleaner look
 - ✅ **Fixed chat bubble** - Proper width constraints and positioning for mobile devices
-- ✅ **Cancel button improvements** - Reduced to half size, moved down to prevent overlap It features a modern web interface with drag-and-drop upload capabilities, processes documents by chunking and embedding their content, stores these embeddings in Pinecone, and leverages OpenAI's GPT models for answering user queries based on the document content. The application aims to offer an intuitive user experience for document interaction and knowledge retrieval, including the ability to transcribe YouTube videos into searchable PDFs and generate document reports.
+- ✅ **Cancel button improvements** - Ultra-compact on mobile (9px font, auto width, no min-height) It features a modern web interface with drag-and-drop upload capabilities, processes documents by chunking and embedding their content, stores these embeddings in Pinecone, and leverages OpenAI's GPT models for answering user queries based on the document content. The application aims to offer an intuitive user experience for document interaction and knowledge retrieval, including the ability to transcribe YouTube videos into searchable PDFs and generate document reports.
 
 # User Preferences
 
