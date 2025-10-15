@@ -8,3 +8,5 @@ python-multipart
 pinecone
 pydantic
 httpx
+reportlab
+yt-dlp
