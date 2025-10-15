@@ -208,10 +208,16 @@ async def get_documents_report():
             matches = query_response.get("matches", [])  # type: ignore
         
         for match in matches:
-            if "metadata" in match:
-                metadata = match["metadata"]
-                doc_id = metadata.get("doc_id")
-                filename = metadata.get("filename", "Unknown")
+            metadata = getattr(match, "metadata", None)
+            if not metadata:
+                try:
+                    metadata = match.get("metadata", {})
+                except (AttributeError, TypeError):
+                    metadata = {}
+            
+            if metadata:
+                doc_id = metadata.get("doc_id") if hasattr(metadata, "get") else getattr(metadata, "doc_id", None)
+                filename = metadata.get("filename", "Unknown") if hasattr(metadata, "get") else getattr(metadata, "filename", "Unknown")
                 
                 if doc_id and doc_id not in documents:
                     documents[doc_id] = filename
