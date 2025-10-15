@@ -582,6 +582,7 @@ const transcribeBtn = document.getElementById('transcribe-btn');
 const youtubeStatus = document.getElementById('youtube-status');
 
 let youtubeProgressInterval = null;
+let youtubeAbortController = null;
 
 transcribeBtn.addEventListener('click', async () => {
   const url = youtubeUrl.value.trim();
@@ -602,6 +603,9 @@ transcribeBtn.addEventListener('click', async () => {
     transcribeBtn.disabled = true;
     transcribeBtn.textContent = '⏳ Processing...';
     
+    // Create abort controller
+    youtubeAbortController = new AbortController();
+    
     // Show progress bar
     showYoutubeProgress(0, 'Downloading audio...');
     
@@ -617,7 +621,8 @@ transcribeBtn.addEventListener('click', async () => {
     const response = await fetch('/transcribe-youtube', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ youtube_url: url })
+      body: JSON.stringify({ youtube_url: url }),
+      signal: youtubeAbortController.signal
     });
     
     // Clear progress interval
@@ -665,8 +670,14 @@ transcribeBtn.addEventListener('click', async () => {
   } catch (error) {
     clearInterval(youtubeProgressInterval);
     hideYoutubeProgress();
-    console.error('YouTube transcription error:', error);
-    showYoutubeStatus('❌ ' + error.message, 'error');
+    
+    if (error.name === 'AbortError') {
+      showYoutubeStatus('⚠️ Transcription cancelled', 'error');
+    } else {
+      console.error('YouTube transcription error:', error);
+      showYoutubeStatus('❌ ' + error.message, 'error');
+    }
+    
     transcribeBtn.textContent = 'Transcribe';
     transcribeBtn.disabled = false;
   }
@@ -697,6 +708,7 @@ function showYoutubeProgress(percent, statusText) {
       <div class="youtube-progress-bar">
         <div class="youtube-progress-fill" style="width: ${percent}%"></div>
         <span class="youtube-progress-text">${percent}% - ${statusText}</span>
+        <button class="youtube-cancel-btn" onclick="cancelYoutubeTranscription()">✕ Cancel</button>
       </div>
     </div>
   `;
@@ -716,5 +728,12 @@ function updateYoutubeProgress(percent, statusText = 'Processing...') {
 
 function hideYoutubeProgress() {
   youtubeStatus.classList.add('hidden');
+}
+
+function cancelYoutubeTranscription() {
+  if (youtubeAbortController) {
+    youtubeAbortController.abort();
+    clearInterval(youtubeProgressInterval);
+  }
 }
 
