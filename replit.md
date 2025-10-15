@@ -4,7 +4,12 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 15, 2025)
 
-## Upload Optimization & Large File Support (Latest)
+## Pinecone Batch Upload Fix (Latest)
+- ✅ **Fixed large PDF uploads** - Now batches vector uploads in groups of 50 to avoid Pinecone's 4MB request limit
+- ✅ **Supports books up to 1000+ pages** - Can handle very large documents by splitting uploads into safe batch sizes
+- ✅ **Progress logging** - Shows batch upload progress in server logs (e.g., "Uploaded batch 3/8")
+
+## Upload Optimization & Large File Support
 - ✅ **Efficient binary uploads** - Switched from base64 to multipart/form-data (33% smaller, faster, uses less memory)
 - ✅ **Large file support** - Warning for files >20MB, increased embedding timeout to 60s, progress tracking every 50 chunks
 - ✅ **Better error messages** - File read errors and network failures now show specific error messages to user

@@ -128,9 +128,18 @@ async def upload_pdf_base64(data: Base64Upload):
                 "upload_timestamp": datetime.now().isoformat()
             }))
 
+        # Upload in batches to avoid Pinecone's 4MB request limit
         if vectors_to_upsert:
-            pinecone_index.upsert(vectors=vectors_to_upsert)
-            print(f"✅ Successfully uploaded {len(vectors_to_upsert)} chunks")
+            batch_size = 50  # Safe batch size to stay under 4MB
+            total_batches = (len(vectors_to_upsert) + batch_size - 1) // batch_size
+            
+            for batch_num in range(0, len(vectors_to_upsert), batch_size):
+                batch = vectors_to_upsert[batch_num:batch_num + batch_size]
+                pinecone_index.upsert(vectors=batch)
+                current_batch = (batch_num // batch_size) + 1
+                print(f"📤 Uploaded batch {current_batch}/{total_batches} ({len(batch)} vectors)")
+            
+            print(f"✅ Successfully uploaded {len(vectors_to_upsert)} total chunks")
 
         return {
             "message": "PDF uploaded and indexed",
@@ -182,9 +191,18 @@ async def upload_pdf(file: UploadFile = File(...)):
                 "upload_timestamp": datetime.now().isoformat()
             }))
 
+        # Upload in batches to avoid Pinecone's 4MB request limit
         if vectors_to_upsert:
-            pinecone_index.upsert(vectors=vectors_to_upsert)
-            print(f"✅ Successfully uploaded {len(vectors_to_upsert)} chunks")
+            batch_size = 50  # Safe batch size to stay under 4MB
+            total_batches = (len(vectors_to_upsert) + batch_size - 1) // batch_size
+            
+            for batch_num in range(0, len(vectors_to_upsert), batch_size):
+                batch = vectors_to_upsert[batch_num:batch_num + batch_size]
+                pinecone_index.upsert(vectors=batch)
+                current_batch = (batch_num // batch_size) + 1
+                print(f"📤 Uploaded batch {current_batch}/{total_batches} ({len(batch)} vectors)")
+            
+            print(f"✅ Successfully uploaded {len(vectors_to_upsert)} total chunks")
 
         return {
             "message": "PDF uploaded and indexed",
