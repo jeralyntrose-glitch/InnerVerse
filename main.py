@@ -214,6 +214,32 @@ async def delete_document(document_id: str):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# === Delete ALL Documents ===
+@app.delete("/documents/all")
+async def delete_all_documents():
+    """Delete ALL vectors from Pinecone index"""
+    try:
+        pinecone_index = get_pinecone_client()
+        
+        if not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Pinecone client not initialized"})
+        
+        # Delete all vectors (delete_all is faster than filtering)
+        pinecone_index.delete(delete_all=True)
+        
+        print(f"✅ Deleted ALL vectors from Pinecone index")
+        
+        return {
+            "message": "All documents deleted successfully"
+        }
+        
+    except Exception as e:
+        print(f"❌ Delete all error: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 # === Generate Document Report ===
 @app.get("/documents/report")
 async def get_documents_report():
