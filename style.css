@@ -894,16 +894,20 @@ label,
   .report-section {
     margin-top: 20px;
     margin-bottom: 20px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
   }
 
   .btn-report,
   .btn-delete-all {
-    padding: 8px 14px;
-    font-size: 11px;
-    min-height: 40px;
-    display: block;
-    width: 100%;
-    margin: 8px 0;
+    padding: 5px 10px;
+    font-size: 9px;
+    min-height: auto;
+    display: inline-block;
+    width: auto;
+    margin: 0;
   }
 
   /* Chat on mobile */
