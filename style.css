@@ -363,14 +363,14 @@ input[type="file"] {
   background: #ef4444;
   color: white;
   border: none;
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-size: 12px;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  min-height: 44px;
+  min-height: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -413,8 +413,11 @@ input[type="file"] {
   .youtube-cancel-btn {
     position: static;
     transform: none;
-    margin-top: 12px;
+    margin-top: 8px;
     width: 100%;
+    padding: 6px 12px;
+    font-size: 11px;
+    min-height: 36px;
   }
   
   .youtube-cancel-btn:hover {
