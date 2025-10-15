@@ -152,8 +152,19 @@ function processFile(file) {
   const uploadItem = document.createElement('div');
   uploadItem.className = 'upload-item';
   uploadItem.id = itemId;
+  // Check file size and warn for very large files
+  const fileSizeMB = file.size / (1024 * 1024);
+  if (fileSizeMB > 20) {
+    const proceed = confirm(`⚠️ This file is ${fileSizeMB.toFixed(1)}MB. Large files may take several minutes to process. Continue?`);
+    if (!proceed) {
+      uploadStats.errors++;
+      updateStats();
+      return;
+    }
+  }
+
   uploadItem.innerHTML = `
-    <div class="upload-filename">${file.name}</div>
+    <div class="upload-filename">${file.name}${fileSizeMB > 10 ? ` (${fileSizeMB.toFixed(1)}MB)` : ''}</div>
     <div class="progress-bar-container">
       <div class="progress-bar"></div>
     </div>
@@ -171,14 +182,15 @@ function processFile(file) {
     cancelUploadBtn.classList.remove('hidden');
   }
 
-  // Simulate progress while reading file
+  // Simulate progress while reading file (slower for large files)
   let progress = 0;
+  const progressSpeed = fileSizeMB > 10 ? 200 : 100;
   const progressInterval = setInterval(() => {
     progress += 10;
     if (progress <= 50) {
       progressBar.style.width = `${progress}%`;
     }
-  }, 100);
+  }, progressSpeed);
 
   // Check for duplicates
   if (uploadedFiles.find(f => f.name === file.name)) {
@@ -197,6 +209,18 @@ function processFile(file) {
   }
 
   const reader = new FileReader();
+  
+  reader.onerror = () => {
+    clearInterval(progressInterval);
+    progressBar.style.width = '100%';
+    uploadItem.classList.add('error');
+    uploadItem.querySelector('.upload-filename').textContent = `${file.name} - File read error`;
+    uploadStats.errors++;
+    updateStats();
+    activeUploads = activeUploads.filter(u => u.itemId !== itemId);
+    checkUploadComplete();
+  };
+  
   reader.onload = async () => {
     clearInterval(progressInterval);
     progressBar.style.width = '60%';
@@ -248,6 +272,7 @@ function processFile(file) {
       } else {
         progressBar.style.width = '100%';
         uploadItem.classList.add('error');
+        uploadItem.querySelector('.upload-filename').textContent = `${file.name} - ${err.message || 'Upload failed'}`;
         uploadStats.errors++;
         updateStats();
       }

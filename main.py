@@ -114,8 +114,12 @@ async def upload_pdf_base64(data: Base64Upload):
         # Batch embedding + upsert
         vectors_to_upsert = []
         for i, chunk in enumerate(chunks):
+            # Show progress for large documents
+            if i % 50 == 0 and i > 0:
+                print(f"📊 Processing chunk {i}/{len(chunks)}...")
+            
             response = openai_client.embeddings.create(
-                input=chunk, model="text-embedding-ada-002", timeout=30)
+                input=chunk, model="text-embedding-ada-002", timeout=60)
             vector = response.data[0].embedding
             vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
                 "text": chunk,
@@ -164,8 +168,12 @@ async def upload_pdf(file: UploadFile = File(...)):
         # Batch embedding + upsert
         vectors_to_upsert = []
         for i, chunk in enumerate(chunks):
+            # Show progress for large documents
+            if i % 50 == 0 and i > 0:
+                print(f"📊 Processing chunk {i}/{len(chunks)}...")
+            
             response = openai_client.embeddings.create(
-                input=chunk, model="text-embedding-ada-002", timeout=30)
+                input=chunk, model="text-embedding-ada-002", timeout=60)
             vector = response.data[0].embedding
             vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
                 "text": chunk,
