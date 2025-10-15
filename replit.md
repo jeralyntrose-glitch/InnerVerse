@@ -12,9 +12,10 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 - ✅ **Upload Area** - Reduced padding from 30px → 18px, tighter spacing
 - ✅ **Buttons** - Smaller text (13px) and padding (11px vs 14px)
 - ✅ **YouTube Section** - Compact heading (15px), smaller input fields
-- ✅ **Chat Interface** - Reduced toggle button (50px), smaller input fields (13px text)
+- ✅ **Chat Interface** - Reduced toggle button (50px), smaller input fields (13px text), fixed positioning and sizing for mobile
 - ✅ **Upload Status** - Smaller filename text (12px), reduced padding (10px)
-- ✅ **Progress Bars** - Enhanced visibility: 10px height, purple border, smoother animation
+- ✅ **Progress Bars** - Thinner on mobile (6px height), purple border, smoother animation
+- ✅ **Chat Bubble** - Fixed mobile layout with proper width constraints (calc(100% - 20px)), rounded corners (12px), 60vh max-height
 - ✅ **No Overflow** - All elements properly sized to prevent horizontal scrolling
 - ✅ **Mobile-First** - Optimized specifically for iPhone usage with touch-friendly sizing
 
