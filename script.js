@@ -581,6 +581,8 @@ const youtubeUrl = document.getElementById('youtube-url');
 const transcribeBtn = document.getElementById('transcribe-btn');
 const youtubeStatus = document.getElementById('youtube-status');
 
+let youtubeProgressInterval = null;
+
 transcribeBtn.addEventListener('click', async () => {
   const url = youtubeUrl.value.trim();
   
@@ -599,7 +601,18 @@ transcribeBtn.addEventListener('click', async () => {
   try {
     transcribeBtn.disabled = true;
     transcribeBtn.textContent = '⏳ Processing...';
-    showYoutubeStatus('🎬 Downloading audio from YouTube...', 'processing');
+    
+    // Show progress bar
+    showYoutubeProgress(0, 'Downloading audio...');
+    
+    // Simulate progress stages
+    let progress = 0;
+    youtubeProgressInterval = setInterval(() => {
+      if (progress < 20) progress += 1; // Slow start for download
+      else if (progress < 60) progress += 2; // Faster for transcription
+      else if (progress < 90) progress += 1; // Slow down near end
+      updateYoutubeProgress(progress);
+    }, 300);
     
     const response = await fetch('/transcribe-youtube', {
       method: 'POST',
@@ -607,10 +620,16 @@ transcribeBtn.addEventListener('click', async () => {
       body: JSON.stringify({ youtube_url: url })
     });
     
+    // Clear progress interval
+    clearInterval(youtubeProgressInterval);
+    
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Transcription failed');
     }
+    
+    // Show completion
+    updateYoutubeProgress(100, 'Complete!');
     
     // Download the PDF
     const blob = await response.blob();
@@ -634,13 +653,18 @@ transcribeBtn.addEventListener('click', async () => {
     window.URL.revokeObjectURL(downloadUrl);
     document.body.removeChild(a);
     
-    showYoutubeStatus('✅ PDF downloaded! You can now upload it to Axis Mind.', 'success');
-    youtubeUrl.value = '';
+    setTimeout(() => {
+      hideYoutubeProgress();
+      showYoutubeStatus('✅ PDF downloaded! You can now upload it to Axis Mind.', 'success');
+    }, 500);
     
+    youtubeUrl.value = '';
     transcribeBtn.textContent = 'Transcribe';
     transcribeBtn.disabled = false;
     
   } catch (error) {
+    clearInterval(youtubeProgressInterval);
+    hideYoutubeProgress();
     console.error('YouTube transcription error:', error);
     showYoutubeStatus('❌ ' + error.message, 'error');
     transcribeBtn.textContent = 'Transcribe';
@@ -656,7 +680,7 @@ youtubeUrl.addEventListener('keypress', (e) => {
 });
 
 function showYoutubeStatus(message, type) {
-  youtubeStatus.textContent = message;
+  youtubeStatus.innerHTML = message;
   youtubeStatus.className = 'youtube-status ' + type;
   youtubeStatus.classList.remove('hidden');
   
@@ -665,5 +689,36 @@ function showYoutubeStatus(message, type) {
       youtubeStatus.classList.add('hidden');
     }, 5000);
   }
+}
+
+function showYoutubeProgress(percent, statusText) {
+  youtubeStatus.innerHTML = `
+    <div class="youtube-progress-container">
+      <div class="youtube-progress-bar">
+        <div class="youtube-progress-fill" style="width: ${percent}%">
+          <span class="youtube-progress-text">${percent}% - ${statusText}</span>
+        </div>
+        ${percent === 0 ? `<span class="youtube-progress-text">${percent}% - ${statusText}</span>` : ''}
+      </div>
+    </div>
+  `;
+  youtubeStatus.className = 'youtube-status processing';
+  youtubeStatus.classList.remove('hidden');
+}
+
+function updateYoutubeProgress(percent, statusText = 'Processing...') {
+  const fill = youtubeStatus.querySelector('.youtube-progress-fill');
+  const texts = youtubeStatus.querySelectorAll('.youtube-progress-text');
+  
+  if (fill) {
+    fill.style.width = percent + '%';
+    texts.forEach(text => {
+      text.textContent = `${percent}% - ${statusText}`;
+    });
+  }
+}
+
+function hideYoutubeProgress() {
+  youtubeStatus.classList.add('hidden');
 }
 
