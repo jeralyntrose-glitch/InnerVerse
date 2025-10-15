@@ -1,0 +1,161 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AXIS MIND - AI Document Intelligence",
+    "version": "1.0.0",
+    "description": "Query uploaded PDF documents, transcribe YouTube videos, and manage your knowledge base using AI-powered semantic search. All answers are grounded in actual document content for maximum accuracy."
+  },
+  "servers": [
+    {
+      "url": "https://axis-of-mind.replit.app"
+    }
+  ],
+  "paths": {
+    "/query": {
+      "post": {
+        "summary": "Ask questions about uploaded documents",
+        "description": "Retrieve factual answers from a specific document using semantic search. The answer is generated from the actual document content, not from general knowledge. Always cite the document_id when sharing answers.",
+        "operationId": "query_document",
+        "x-openai-isConsequential": false,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "document_id": {
+                    "type": "string",
+                    "description": "The unique ID of the uploaded document (obtained from upload response or document report)"
+                  },
+                  "question": {
+                    "type": "string",
+                    "description": "The specific question to ask about the document. Be clear and specific for best results."
+                  }
+                },
+                "required": ["document_id", "question"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Answer generated successfully from document content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "answer": {
+                      "type": "string",
+                      "description": "AI-generated answer based exclusively on the document's content. This is factual information extracted from the source material."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transcribe-youtube": {
+      "post": {
+        "summary": "Transcribe YouTube video to searchable PDF",
+        "description": "Download audio from a YouTube video, transcribe it using OpenAI Whisper, and generate a formatted PDF document. The transcription is then available for querying. Returns a downloadable PDF.",
+        "operationId": "transcribe_youtube",
+        "x-openai-isConsequential": false,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "youtube_url": {
+                    "type": "string",
+                    "description": "Full YouTube video URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID)"
+                  }
+                },
+                "required": ["youtube_url"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transcription completed successfully",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary",
+                  "description": "PDF file containing the complete video transcription with formatting"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/report": {
+      "get": {
+        "summary": "Get list of all uploaded documents",
+        "description": "Retrieve a CSV report of all documents in the knowledge base, including document IDs, titles, and upload timestamps. Use this to find document_id values for querying.",
+        "operationId": "get_document_report",
+        "x-openai-isConsequential": false,
+        "responses": {
+          "200": {
+            "description": "Document report generated successfully",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "CSV file with columns: document_id, title, uploaded_at. Each row represents one document in the knowledge base."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{document_id}": {
+      "delete": {
+        "summary": "Delete a document from the knowledge base",
+        "description": "Permanently remove a document and all its associated data from the vector database. This action cannot be undone.",
+        "operationId": "delete_document",
+        "x-openai-isConsequential": true,
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique ID of the document to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "document_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
