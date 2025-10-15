@@ -178,7 +178,34 @@ async def upload_pdf(file: UploadFile = File(...)):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-# === Delete Document ===
+# === Delete All Documents ===
+@app.delete("/documents")
+async def delete_all_documents():
+    """Delete ALL vectors from the index"""
+    try:
+        pinecone_index = get_pinecone_client()
+        
+        if not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Pinecone client not initialized"})
+        
+        # Delete all vectors in the index
+        pinecone_index.delete(delete_all=True)
+        
+        print(f"✅ Deleted ALL documents from Pinecone index")
+        
+        return {
+            "message": "All documents deleted successfully",
+            "status": "success"
+        }
+        
+    except Exception as e:
+        print(f"❌ Delete all error: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# === Delete Single Document ===
 @app.delete("/documents/{document_id}")
 async def delete_document(document_id: str):
     """Delete all vectors associated with a document ID"""
