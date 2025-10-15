@@ -25,13 +25,13 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 
 ## Document Report Export Feature
 - ✅ **CSV Export Endpoint** - New `/documents/report` GET endpoint generates downloadable CSV reports
-- ✅ **Download Report Button** - Green "📄 Download Document Report" button in main UI for easy access
+- ✅ **Download Report Button** - Compact green "📄 Download Document Report" button (bottom-left corner, reduced to 1/4 original size)
 - ✅ **Filename Storage** - Upload endpoints now store filename in Pinecone metadata alongside chunks
 - ✅ **Report Format** - CSV file with columns: document_id, title (filename)
 - ✅ **Offline Record Keeping** - Users can download and maintain an offline spreadsheet of all uploaded documents
 - ✅ **Duplicate Management** - CSV export helps track and identify duplicate documents
 - ✅ **Robust Metadata Access** - Backend uses getattr() with fallback for handling Pinecone ScoredVector objects
-- ✅ **Mobile-Friendly** - Report button styled with touch-friendly 44px minimum height for iOS compatibility
+- ✅ **Mobile-Friendly** - Report button styled with touch-friendly height for iOS compatibility
 
 # Recent Changes (October 14, 2025)
 
