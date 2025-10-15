@@ -10,8 +10,10 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 - ✅ **Audio Download** - Uses yt-dlp to extract audio from YouTube videos
 - ✅ **AI Transcription** - OpenAI Whisper API (whisper-1 model) transcribes audio with proper punctuation
 - ✅ **Audio Compression** - Automatically compresses audio to 32kbps mono (keeps under 25MB for videos up to 90 minutes)
+- ✅ **Smart Chunking** - For videos >90 minutes, automatically splits audio into 10-minute chunks for transcription
+- ✅ **No Length Limit** - Can handle videos of ANY duration via automatic chunk splitting and recombination
 - ✅ **PDF Generation** - ReportLab creates professionally formatted PDFs with video title, metadata, and transcript
-- ✅ **Smart Validation** - Validates YouTube URLs, checks video duration (90-minute limit to fit Whisper 25MB constraint)
+- ✅ **Smart Validation** - Validates YouTube URLs and video metadata
 - ✅ **Error Handling** - Comprehensive error messages for invalid URLs, timeouts, file size issues, and API failures
 - ✅ **Clean UI** - Dedicated YouTube section (bottom of page) with red YouTube icon, input field, and purple "Transcribe" button
 - ✅ **Progress Tracking** - Real-time status updates showing download, transcription, and PDF generation progress
@@ -19,7 +21,7 @@ This is a FastAPI-based PDF Q&A application with a modern web interface that all
 - ✅ **Temp File Cleanup** - Automatic cleanup of temporary audio files after processing
 - ✅ **Mobile-Friendly** - Responsive design with touch-friendly buttons (44px min-height)
 - ✅ **Enter Key Support** - Press Enter in URL field to start transcription
-- ✅ **System Dependencies** - Installed ffmpeg (required by yt-dlp for audio extraction and compression)
+- ✅ **System Dependencies** - Installed ffmpeg (required by yt-dlp for audio extraction and compression), pydub (for audio chunking)
 
 ## Document Report Export Feature
 - ✅ **CSV Export Endpoint** - New `/documents/report` GET endpoint generates downloadable CSV reports

@@ -22,6 +22,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.enums import TA_LEFT
+from pydub import AudioSegment
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -488,14 +489,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             video_title = info_parts[0] if len(info_parts) > 0 else "YouTube Video"
             video_duration = int(info_parts[1]) if len(info_parts) > 1 and info_parts[1].isdigit() else 0
             
-            # Check duration (limit to 90 minutes = 5400 seconds due to 25MB Whisper limit)
-            if video_duration > 5400:
-                return JSONResponse(
-                    status_code=400,
-                    content={"error": f"Video is too long ({video_duration//60} minutes). Please use videos under 90 minutes."}
-                )
-            
-            print(f"📺 Video: {video_title} ({video_duration}s)")
+            print(f"📺 Video: {video_title} ({video_duration}s / {video_duration//60} min)")
             
             # Download audio with compression (32kbps mono for Whisper)
             # This keeps files under 25MB for videos up to ~90 minutes
@@ -532,22 +526,59 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             if not openai_client:
                 return JSONResponse(status_code=500, content={"error": "OpenAI client not initialized"})
             
-            with open(audio_path, "rb") as audio_file:
-                # Check file size (Whisper has 25MB limit)
-                file_size = os.path.getsize(audio_path)
-                if file_size > 25 * 1024 * 1024:  # 25MB
-                    return JSONResponse(
-                        status_code=400,
-                        content={"error": f"Audio file too large ({file_size//1024//1024}MB). Whisper limit is 25MB."}
-                    )
-                
-                transcript_response = openai_client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    response_format="text"
-                )
+            file_size = os.path.getsize(audio_path)
+            file_size_mb = file_size / (1024 * 1024)
             
-            transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
+            # If file is under 25MB, transcribe directly
+            if file_size < 25 * 1024 * 1024:
+                print(f"📝 File size {file_size_mb:.1f}MB - transcribing directly")
+                with open(audio_path, "rb") as audio_file:
+                    transcript_response = openai_client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        response_format="text"
+                    )
+                transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
+                
+            else:
+                # File is too large - split into chunks
+                print(f"📝 File size {file_size_mb:.1f}MB - splitting into chunks for transcription")
+                
+                # Load audio with pydub
+                audio = AudioSegment.from_file(audio_path)
+                chunk_length_ms = 10 * 60 * 1000  # 10 minutes per chunk
+                total_chunks = len(audio) // chunk_length_ms + (1 if len(audio) % chunk_length_ms else 0)
+                
+                transcriptions = []
+                
+                for i in range(0, len(audio), chunk_length_ms):
+                    chunk = audio[i:i + chunk_length_ms]
+                    chunk_path = os.path.join(temp_dir, f"chunk_{i//chunk_length_ms}.mp3")
+                    
+                    # Export chunk as compressed MP3
+                    chunk.export(chunk_path, format="mp3", bitrate="32k", parameters=["-ac", "1", "-ar", "16000"])
+                    
+                    # Transcribe chunk
+                    chunk_num = i // chunk_length_ms + 1
+                    print(f"  📝 Transcribing chunk {chunk_num}/{total_chunks}...")
+                    
+                    with open(chunk_path, "rb") as chunk_file:
+                        chunk_response = openai_client.audio.transcriptions.create(
+                            model="whisper-1",
+                            file=chunk_file,
+                            response_format="text"
+                        )
+                    
+                    chunk_transcript = chunk_response if isinstance(chunk_response, str) else chunk_response.text
+                    transcriptions.append(chunk_transcript)
+                    
+                    # Clean up chunk file
+                    os.remove(chunk_path)
+                
+                # Combine all transcriptions
+                transcript = " ".join(transcriptions)
+                print(f"✅ Combined {len(transcriptions)} chunks")
+            
             print(f"✅ Transcription complete: {len(transcript)} characters")
             
         except Exception as e:
@@ -555,8 +586,10 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
         finally:
             # Clean up audio file
             try:
-                os.remove(audio_path)
-                os.rmdir(temp_dir)
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+                if os.path.exists(temp_dir):
+                    os.rmdir(temp_dir)
             except:
                 pass
         
