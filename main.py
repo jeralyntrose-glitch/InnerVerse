@@ -553,7 +553,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                 download_command.insert(1, "--ffmpeg-location")
                 download_command.insert(2, os.path.dirname(ffmpeg_location))
             
-            result = subprocess.run(download_command, capture_output=True, text=True, timeout=600)
+            result = subprocess.run(download_command, capture_output=True, text=True, timeout=1800)
             
             if result.returncode != 0:
                 raise Exception(f"yt-dlp failed: {result.stderr}")

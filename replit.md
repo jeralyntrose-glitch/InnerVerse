@@ -5,7 +5,7 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 # Recent Changes (October 15, 2025)
 
 ## YouTube Transcription Fixes (Latest)
-- ✅ **Fixed download timeout** - Increased from 2 minutes to 10 minutes for longer videos (20+ min)
+- ✅ **Fixed download timeout** - Increased to 30 minutes to handle 90+ minute videos
 - ✅ **Fixed ffmpeg missing in production** - Changed deployment from Autoscale to VM to include Nix packages
 - ✅ **VM deployment includes system packages** - VM deployments include all Nix system packages (ffmpeg) in production
 - ✅ **Added ffmpeg detection** - Backend automatically finds and specifies ffmpeg location to yt-dlp
