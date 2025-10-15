@@ -4,7 +4,14 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 15, 2025)
 
-## Error Handling Improvements (Latest)
+## Document Report Enhancements (Latest)
+- ✅ **Upload timestamps** - CSV report now includes "uploaded_at" column showing when each document was added (formatted as "YYYY-MM-DD HH:MM AM/PM")
+
+## Cookie Storage System
+- ✅ **File-based YouTube cookies** - Switched from Replit Secrets to youtube_cookies.txt file for easier updates and no size limits
+- ✅ **Bypassed 64KB Secret limit** - No more publishing errors from oversized cookie data
+
+## Error Handling Improvements
 - ✅ **Better YouTube error messages** - User-friendly error messages for blocked videos, expired cookies, region locks, private videos, and download failures
 - ✅ **Whisper API error handling** - Clear messages for rate limits, API key issues, and transcription timeouts
 - ✅ **PDF generation errors** - Helpful feedback when PDF creation fails

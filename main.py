@@ -120,7 +120,8 @@ async def upload_pdf_base64(data: Base64Upload):
             vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
                 "text": chunk,
                 "doc_id": doc_id,
-                "filename": data.filename
+                "filename": data.filename,
+                "upload_timestamp": datetime.now().isoformat()
             }))
 
         if vectors_to_upsert:
@@ -169,7 +170,8 @@ async def upload_pdf(file: UploadFile = File(...)):
             vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
                 "text": chunk,
                 "doc_id": doc_id,
-                "filename": file.filename
+                "filename": file.filename,
+                "upload_timestamp": datetime.now().isoformat()
             }))
 
         if vectors_to_upsert:
@@ -262,7 +264,7 @@ async def get_documents_report():
             include_metadata=True
         )
         
-        # Extract unique documents
+        # Extract unique documents with timestamps
         documents = {}
         try:
             matches = query_response.matches  # type: ignore
@@ -280,17 +282,28 @@ async def get_documents_report():
             if metadata:
                 doc_id = metadata.get("doc_id") if hasattr(metadata, "get") else getattr(metadata, "doc_id", None)
                 filename = metadata.get("filename", "Unknown") if hasattr(metadata, "get") else getattr(metadata, "filename", "Unknown")
+                timestamp = metadata.get("upload_timestamp", "N/A") if hasattr(metadata, "get") else getattr(metadata, "upload_timestamp", "N/A")
                 
                 if doc_id and doc_id not in documents:
-                    documents[doc_id] = filename
+                    documents[doc_id] = {"filename": filename, "timestamp": timestamp}
         
         # Generate CSV
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["document_id", "title"])
+        writer.writerow(["document_id", "title", "uploaded_at"])
         
-        for doc_id, filename in sorted(documents.items()):
-            writer.writerow([doc_id, filename])
+        for doc_id, doc_info in sorted(documents.items()):
+            # Format timestamp nicely if available
+            timestamp_str = doc_info["timestamp"]
+            if timestamp_str != "N/A":
+                try:
+                    # Convert ISO format to readable format
+                    dt = datetime.fromisoformat(timestamp_str)
+                    timestamp_str = dt.strftime("%Y-%m-%d %I:%M %p")
+                except:
+                    pass  # Keep as-is if parsing fails
+            
+            writer.writerow([doc_id, doc_info["filename"], timestamp_str])
         
         # Return as downloadable file
         csv_content = output.getvalue()
