@@ -5,8 +5,11 @@ import base64
 import json
 import httpx
 import csv
+import tempfile
+import subprocess
+from datetime import datetime
 from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from pydantic import BaseModel
@@ -14,6 +17,11 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import openai
 from pinecone import Pinecone
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.enums import TA_LEFT
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -279,6 +287,10 @@ class QueryRequest(BaseModel):
     document_id: str
     question: str
 
+# === YouTube Transcription Request ===
+class YouTubeTranscribeRequest(BaseModel):
+    youtube_url: str
+
 @app.post("/query")
 async def query_pdf(request: QueryRequest):
     document_id = request.document_id
@@ -444,6 +456,176 @@ async def download_gdrive_file(file_id: str):
     except Exception as e:
         print(f"❌ Google Drive download error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# === YouTube Transcription to PDF ===
+@app.post("/transcribe-youtube")
+async def transcribe_youtube(request: YouTubeTranscribeRequest):
+    """Download YouTube audio, transcribe with Whisper, and generate PDF"""
+    try:
+        youtube_url = request.youtube_url
+        print(f"🎬 Processing YouTube URL: {youtube_url}")
+        
+        # Create temp directory for audio files
+        temp_dir = tempfile.mkdtemp()
+        audio_path = os.path.join(temp_dir, "audio.mp3")
+        
+        # Step 1: Download audio using yt-dlp
+        print("📥 Downloading audio from YouTube...")
+        try:
+            # Get video info first
+            info_command = [
+                "yt-dlp",
+                "--print", "%(title)s|||%(duration)s",
+                youtube_url
+            ]
+            info_result = subprocess.run(info_command, capture_output=True, text=True, timeout=30)
+            
+            if info_result.returncode != 0:
+                raise Exception(f"Failed to get video info: {info_result.stderr}")
+            
+            info_parts = info_result.stdout.strip().split("|||")
+            video_title = info_parts[0] if len(info_parts) > 0 else "YouTube Video"
+            video_duration = int(info_parts[1]) if len(info_parts) > 1 and info_parts[1].isdigit() else 0
+            
+            # Check duration (limit to 2 hours = 7200 seconds)
+            if video_duration > 7200:
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": f"Video is too long ({video_duration//60} minutes). Please use videos under 2 hours."}
+                )
+            
+            print(f"📺 Video: {video_title} ({video_duration}s)")
+            
+            # Download audio
+            download_command = [
+                "yt-dlp",
+                "-x",  # Extract audio
+                "--audio-format", "mp3",
+                "--audio-quality", "0",  # Best quality
+                "-o", audio_path,
+                youtube_url
+            ]
+            
+            result = subprocess.run(download_command, capture_output=True, text=True, timeout=120)
+            
+            if result.returncode != 0:
+                raise Exception(f"yt-dlp failed: {result.stderr}")
+            
+            # Check if file was created
+            if not os.path.exists(audio_path):
+                raise Exception("Audio file was not created")
+                
+            print(f"✅ Audio downloaded: {os.path.getsize(audio_path)} bytes")
+            
+        except subprocess.TimeoutExpired:
+            return JSONResponse(status_code=500, content={"error": "Download timed out. Video may be too long."})
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": f"Download failed: {str(e)}"})
+        
+        # Step 2: Transcribe with OpenAI Whisper
+        print("🎤 Transcribing with Whisper...")
+        try:
+            openai_client = get_openai_client()
+            if not openai_client:
+                return JSONResponse(status_code=500, content={"error": "OpenAI client not initialized"})
+            
+            with open(audio_path, "rb") as audio_file:
+                # Check file size (Whisper has 25MB limit)
+                file_size = os.path.getsize(audio_path)
+                if file_size > 25 * 1024 * 1024:  # 25MB
+                    return JSONResponse(
+                        status_code=400,
+                        content={"error": f"Audio file too large ({file_size//1024//1024}MB). Whisper limit is 25MB."}
+                    )
+                
+                transcript_response = openai_client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text"
+                )
+            
+            transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
+            print(f"✅ Transcription complete: {len(transcript)} characters")
+            
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": f"Transcription failed: {str(e)}"})
+        finally:
+            # Clean up audio file
+            try:
+                os.remove(audio_path)
+                os.rmdir(temp_dir)
+            except:
+                pass
+        
+        # Step 3: Generate PDF
+        print("📄 Generating PDF...")
+        try:
+            pdf_filename = f"transcript_{uuid.uuid4().hex[:8]}.pdf"
+            pdf_path = os.path.join("/tmp", pdf_filename)
+            
+            # Create PDF
+            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            
+            # Custom styles
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                textColor='#5B21B6',
+                spaceAfter=12
+            )
+            
+            body_style = ParagraphStyle(
+                'CustomBody',
+                parent=styles['BodyText'],
+                fontSize=11,
+                leading=16,
+                alignment=TA_LEFT
+            )
+            
+            # Build PDF content
+            story = []
+            
+            # Title
+            story.append(Paragraph(f"<b>{video_title}</b>", title_style))
+            story.append(Spacer(1, 0.2*inch))
+            
+            # Metadata
+            metadata_style = ParagraphStyle('Metadata', parent=styles['Normal'], fontSize=9, textColor='gray')
+            story.append(Paragraph(f"Transcribed on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", metadata_style))
+            story.append(Paragraph(f"Source: {youtube_url}", metadata_style))
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Transcript text - split into paragraphs
+            paragraphs = transcript.split('\n')
+            for para in paragraphs:
+                if para.strip():
+                    story.append(Paragraph(para.strip(), body_style))
+                    story.append(Spacer(1, 0.15*inch))
+            
+            # Build PDF
+            doc.build(story)
+            print(f"✅ PDF created: {pdf_path}")
+            
+            # Return the PDF as a download
+            return FileResponse(
+                pdf_path,
+                media_type="application/pdf",
+                filename=f"{video_title[:50].replace('/', '-')}_transcript.pdf",
+                headers={
+                    "Content-Disposition": f"attachment; filename=\"{video_title[:50].replace('/', '-')}_transcript.pdf\""
+                }
+            )
+            
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": f"PDF generation failed: {str(e)}"})
+        
+    except Exception as e:
+        print(f"❌ YouTube transcription error: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 
 # === Serve Frontend ===
 from fastapi.staticfiles import StaticFiles
