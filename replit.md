@@ -4,7 +4,10 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 15, 2025)
 
-## YouTube Transcription Fixes (Latest)
+## Bug Fixes (Latest)
+- ✅ **Fixed Delete All button** - Reordered API routes so `/documents/all` is matched before `/documents/{document_id}`
+
+## YouTube Transcription Fixes
 - ✅ **Fixed download timeout** - Increased to 30 minutes to handle 90+ minute videos
 - ✅ **Fixed ffmpeg missing in production** - Changed deployment from Autoscale to VM to include Nix packages
 - ✅ **VM deployment includes system packages** - VM deployments include all Nix system packages (ffmpeg) in production
