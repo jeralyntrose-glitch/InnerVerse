@@ -29,7 +29,9 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 - ✅ **Mobile optimized** - Works smoothly on iPhone with proper input sizing
 
 ## Document Report Enhancements
-- ✅ **Upload timestamps** - CSV report now includes "uploaded_at" column showing when each document was added (formatted as "YYYY-MM-DD HH:MM AM/PM")
+- ✅ **Hawaii timezone** - Timestamps now display in Hawaii time (HST/UTC-10) instead of UTC
+- ✅ **Chronological sorting** - Documents sorted from earliest to latest upload
+- ✅ **Upload timestamps** - CSV report includes "uploaded_at" column (formatted as "YYYY-MM-DD HH:MM AM/PM")
 
 ## Cookie Storage System
 - ✅ **File-based YouTube cookies** - Switched from Replit Secrets to youtube_cookies.txt file for easier updates and no size limits

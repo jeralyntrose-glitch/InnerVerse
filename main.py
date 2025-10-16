@@ -7,7 +7,7 @@ import httpx
 import csv
 import tempfile
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -318,14 +318,28 @@ async def get_documents_report():
         writer = csv.writer(output)
         writer.writerow(["document_id", "title", "uploaded_at"])
         
-        for doc_id, doc_info in sorted(documents.items()):
+        # Sort documents chronologically (earliest to latest) by timestamp
+        sorted_docs = sorted(
+            documents.items(),
+            key=lambda x: x[1]["timestamp"] if x[1]["timestamp"] != "N/A" else "9999-99-99"
+        )
+        
+        # Hawaii timezone (HST = UTC-10)
+        hawaii_tz = timezone(timedelta(hours=-10))
+        
+        for doc_id, doc_info in sorted_docs:
             # Format timestamp nicely if available
             timestamp_str = doc_info["timestamp"]
             if timestamp_str != "N/A":
                 try:
-                    # Convert ISO format to readable format
+                    # Convert ISO format to Hawaii time
                     dt = datetime.fromisoformat(timestamp_str)
-                    timestamp_str = dt.strftime("%Y-%m-%d %I:%M %p")
+                    # If no timezone info, assume UTC
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    # Convert to Hawaii time
+                    dt_hawaii = dt.astimezone(hawaii_tz)
+                    timestamp_str = dt_hawaii.strftime("%Y-%m-%d %I:%M %p")
                 except:
                     pass  # Keep as-is if parsing fails
             
