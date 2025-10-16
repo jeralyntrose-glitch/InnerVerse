@@ -364,7 +364,7 @@ async def get_documents_report():
 
 # === Query PDF for an answer ===
 class QueryRequest(BaseModel):
-    document_id: str
+    document_id: str = ""  # Optional - empty string means search all documents
     question: str
 
 # === YouTube Transcription Request ===
@@ -393,34 +393,55 @@ async def query_pdf(request: QueryRequest):
             input=question, model="text-embedding-ada-002")
         question_vector = embed_response.data[0].embedding
 
-        query_response = pinecone_index.query(vector=question_vector,
-                                              top_k=5,
-                                              include_metadata=True,
-                                              filter={"doc_id": document_id})
+        # If document_id is provided, search that document only
+        # If empty, search ALL documents
+        if document_id and document_id.strip():
+            print(f"🔍 Searching in document: {document_id}")
+            query_response = pinecone_index.query(
+                vector=question_vector,
+                top_k=5,
+                include_metadata=True,
+                filter={"doc_id": document_id}
+            )
+        else:
+            print(f"🔍 Searching across ALL documents")
+            query_response = pinecone_index.query(
+                vector=question_vector,
+                top_k=5,
+                include_metadata=True
+            )
 
         try:
             matches = query_response.matches  # type: ignore
         except AttributeError:
             matches = query_response.get("matches", [])  # type: ignore
         
-        contexts = [
-            m["metadata"]["text"] for m in matches
-            if "metadata" in m and "text" in m["metadata"]
-        ]
-
+        contexts = []
+        source_docs = set()
+        
+        for m in matches:
+            if "metadata" in m and "text" in m["metadata"]:
+                contexts.append(m["metadata"]["text"])
+                # Track which documents the answer came from
+                if "filename" in m["metadata"]:
+                    source_docs.add(m["metadata"]["filename"])
+        
         if not contexts:
-            return {"answer": "No relevant information found in the document."}
+            return {"answer": "No relevant information found in your documents."}
 
         context_text = "\n\n".join(contexts)
-        print(f"\n🔍 Sending this context to GPT:\n{context_text}\n")
+        print(f"\n🔍 Sending context from {len(source_docs)} document(s) to GPT\n")
 
+        # Include source information in the prompt
+        sources_text = f"\n\nSources: {', '.join(source_docs)}" if source_docs else ""
+        
         prompt = f"Answer the question based on the context below.\n\nContext:\n{context_text}\n\nQuestion: {question}\nAnswer:"
 
         completion = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{
                 "role": "system",
-                "content": "You are a helpful assistant."
+                "content": "You are a helpful assistant that answers questions based on uploaded documents. Provide clear, accurate answers based on the context provided."
             }, {
                 "role": "user",
                 "content": prompt
@@ -428,7 +449,13 @@ async def query_pdf(request: QueryRequest):
             timeout=15  # Prevents hanging
         )
 
-        answer = completion.choices[0].message.content
+        answer = completion.choices[0].message.content or "No answer generated."
+        
+        # Add source information to answer if searching all docs
+        if not document_id or not document_id.strip():
+            if source_docs:
+                answer += f"\n\n📚 Sources: {', '.join(sorted(source_docs))}"
+        
         return {"answer": answer}
 
     except Exception as e:

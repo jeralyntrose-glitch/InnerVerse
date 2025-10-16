@@ -2,9 +2,15 @@
 
 This project is a FastAPI-based PDF Q&A application designed to provide intelligent answers from uploaded PDF documents.
 
-# Recent Changes (October 15, 2025)
+# Recent Changes (October 16, 2025)
 
-## YouTube Transcription Timeout Fix (Latest)
+## Search All Documents Update (Latest)
+- ✅ **Global document search** - Chat now searches ALL uploaded documents at once instead of requiring specific document IDs
+- ✅ **Source attribution** - Answers automatically include which documents the information came from
+- ✅ **Simplified UI** - No more document ID input needed, just ask questions and get answers from your entire library
+- ✅ **Better context** - System message updated to clarify it answers from uploaded documents
+
+## YouTube Transcription Timeout Fix
 - ✅ **Fixed stalling/disappearing loading bar** - Added explicit 5-minute timeout on frontend and 3-minute timeout on Whisper API calls
 - ✅ **Better error handling** - Now shows clear timeout errors instead of silently failing
 - ✅ **Prevents hanging** - Backend Whisper calls won't hang indefinitely anymore

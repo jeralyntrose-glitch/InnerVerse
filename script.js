@@ -548,20 +548,18 @@ async function sendMessage() {
   const question = chatInput.value.trim();
   if (!question) return;
 
-  if (!currentDocumentId) {
-    appendMessage('bot', '⚠️ Please upload a PDF first.');
-    return;
-  }
+  // Search ALL documents by sending empty document_id
+  const documentIdToUse = "";  // Empty = search all docs
 
   appendMessage('user', question);
-  appendMessage('bot', '🧠 Thinking...');
+  appendMessage('bot', '🧠 Searching all documents...');
   sendBtn.disabled = true;
 
   try {
     const res = await fetch('/query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ document_id: currentDocumentId, question })
+      body: JSON.stringify({ document_id: documentIdToUse, question })
     });
 
     const data = await res.json();
