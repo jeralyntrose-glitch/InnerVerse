@@ -721,7 +721,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             
         except subprocess.TimeoutExpired:
             return JSONResponse(status_code=408, content={
-                "error": "Download timed out. This video may be too long (90+ min limit)."
+                "error": "Download timed out after 30 minutes. This could be due to slow network, video restrictions, or expired cookies. Try refreshing your cookies or a different video."
             })
         except Exception as e:
             error_str = str(e).lower()

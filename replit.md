@@ -10,6 +10,7 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 - ✅ **Clean design** - Modal overlay with backdrop blur, smooth animations
 - ✅ **All operations covered** - Upload failures, YouTube transcription errors, text-to-PDF errors, chat errors, and more
 - ✅ **Mobile optimized** - Proper positioning, sizing, and tap targets for iPhone
+- ✅ **Improved error messages** - Timeout errors now explain actual causes (network, restrictions, cookies) instead of assuming video length
 
 ## Search All Documents Update
 - ✅ **Global document search** - Chat now searches ALL uploaded documents at once instead of requiring specific document IDs
