@@ -4,7 +4,12 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 15, 2025)
 
-## Pinecone Batch Upload Fix (Latest)
+## YouTube Transcription Timeout Fix (Latest)
+- ✅ **Fixed stalling/disappearing loading bar** - Added explicit 5-minute timeout on frontend and 3-minute timeout on Whisper API calls
+- ✅ **Better error handling** - Now shows clear timeout errors instead of silently failing
+- ✅ **Prevents hanging** - Backend Whisper calls won't hang indefinitely anymore
+
+## Pinecone Batch Upload Fix
 - ✅ **Fixed large PDF uploads** - Now batches vector uploads in groups of 50 to avoid Pinecone's 4MB request limit
 - ✅ **Supports books up to 1000+ pages** - Can handle very large documents by splitting uploads into safe batch sizes
 - ✅ **Progress logging** - Shows batch upload progress in server logs (e.g., "Uploaded batch 3/8")

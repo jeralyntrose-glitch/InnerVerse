@@ -717,12 +717,17 @@ transcribeBtn.addEventListener('click', async () => {
       updateYoutubeProgress(progress);
     }, 300);
     
+    // Add 5 minute timeout for long videos
+    const timeoutId = setTimeout(() => youtubeAbortController.abort(), 300000);
+    
     const response = await fetch('/transcribe-youtube', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ youtube_url: url }),
       signal: youtubeAbortController.signal
     });
+    
+    clearTimeout(timeoutId);
     
     // Clear progress interval
     clearInterval(youtubeProgressInterval);
