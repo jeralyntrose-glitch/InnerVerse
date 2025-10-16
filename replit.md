@@ -4,7 +4,13 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 16, 2025)
 
-## Search All Documents Update (Latest)
+## Persistent Error Notifications (Latest)
+- ✅ **Persistent error modal** - Errors now stay visible until you dismiss them with an OK button
+- ✅ **No missed errors** - Walk away during uploads/transcriptions and still see what went wrong when you return
+- ✅ **Clean design** - Modal overlay with backdrop blur, smooth animations
+- ✅ **All operations covered** - Upload failures, YouTube transcription errors, text-to-PDF errors, chat errors, and more
+
+## Search All Documents Update
 - ✅ **Global document search** - Chat now searches ALL uploaded documents at once instead of requiring specific document IDs
 - ✅ **Source attribution** - Answers automatically include which documents the information came from
 - ✅ **Simplified UI** - No more document ID input needed, just ask questions and get answers from your entire library

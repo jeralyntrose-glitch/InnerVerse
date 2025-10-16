@@ -9,6 +9,29 @@ const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const chatLog = document.getElementById('chat-log');
 
+// === Error Modal ===
+const errorModal = document.getElementById('error-modal');
+const errorModalMessage = document.getElementById('error-modal-message');
+const errorModalOk = document.getElementById('error-modal-ok');
+
+function showError(message) {
+  errorModalMessage.textContent = message;
+  errorModal.classList.remove('hidden');
+}
+
+function hideError() {
+  errorModal.classList.add('hidden');
+}
+
+errorModalOk.addEventListener('click', hideError);
+
+// Close modal when clicking outside
+errorModal.addEventListener('click', (e) => {
+  if (e.target === errorModal) {
+    hideError();
+  }
+});
+
 // === Notification Sound ===
 function playNotificationSound() {
   try {
@@ -284,6 +307,9 @@ function processFile(file) {
         uploadItem.querySelector('.upload-filename').textContent = `${file.name} - ${errorMsg}`;
         uploadStats.errors++;
         updateStats();
+        
+        // Show persistent error modal
+        showError(`Upload failed for "${file.name}": ${errorMsg}`);
       }
     } finally {
       // Remove from active uploads
@@ -366,7 +392,7 @@ gdriveBtn.addEventListener('click', async () => {
     const tokenData = await tokenResponse.json();
 
     if (!apiKeyData.api_key || !tokenData.access_token) {
-      alert('❌ Google Drive not properly configured. Please contact support.');
+      showError('Google Drive not properly configured. Please contact support.');
       return;
     }
 
@@ -400,7 +426,7 @@ gdriveBtn.addEventListener('click', async () => {
     picker.setVisible(true);
   } catch (error) {
     console.error('Picker error:', error);
-    alert('❌ Failed to open Google Drive picker: ' + error.message);
+    showError('Failed to open Google Drive picker: ' + error.message);
   }
 });
 
@@ -410,7 +436,7 @@ async function pickerCallback(data) {
     const files = data.docs.filter(doc => doc.mimeType === 'application/pdf');
     
     if (files.length === 0) {
-      alert('❌ Please select PDF files only.');
+      showError('Please select PDF files only.');
       return;
     }
 
@@ -522,6 +548,10 @@ async function downloadAndProcessGDriveFile(fileId, fileName) {
       uploadItem.classList.add('error');
       uploadStats.errors++;
       updateStats();
+      
+      // Show persistent error modal
+      let errorMsg = error.message || 'Upload failed';
+      showError(`Google Drive upload failed for "${fileName}": ${errorMsg}`);
     }
   } finally {
     // Remove from active uploads
@@ -568,11 +598,12 @@ async function sendMessage() {
     if (res.ok) {
       appendMessage('bot', data.answer || 'No response.');
     } else {
-      appendMessage('bot', `❌ Error: ${data.error || 'Query failed.'}`);
+      removeLastBotMessage();
+      showError('Chat query failed: ' + (data.error || 'Unknown error'));
     }
   } catch (err) {
     removeLastBotMessage();
-    appendMessage('bot', `❌ Error: ${err.message}`);
+    showError('Chat error: ' + err.message);
   }
 
   sendBtn.disabled = false;
@@ -628,7 +659,7 @@ deleteAllBtn.addEventListener('click', async () => {
     
   } catch (error) {
     console.error('Delete all error:', error);
-    alert('❌ Error deleting documents: ' + error.message);
+    showError('Error deleting documents: ' + error.message);
     deleteAllBtn.textContent = '🗑️ Delete All Files';
     deleteAllBtn.disabled = false;
   }
@@ -667,7 +698,7 @@ downloadReportBtn.addEventListener('click', async () => {
     }, 2000);
   } catch (error) {
     console.error('Report download error:', error);
-    alert('❌ Failed to download report: ' + error.message);
+    showError('Failed to download report: ' + error.message);
     downloadReportBtn.textContent = '📄 Download Document Report';
     downloadReportBtn.disabled = false;
   }
@@ -778,7 +809,7 @@ transcribeBtn.addEventListener('click', async () => {
       showYoutubeStatus('⚠️ Transcription cancelled', 'error');
     } else {
       console.error('YouTube transcription error:', error);
-      showYoutubeStatus('❌ ' + error.message, 'error');
+      showError('YouTube transcription failed: ' + error.message);
     }
     
     transcribeBtn.textContent = 'Transcribe';
@@ -951,7 +982,8 @@ createPdfBtn.addEventListener('click', async () => {
     
   } catch (error) {
     console.error('Text to PDF error:', error);
-    showTextPdfError(`❌ ${error.message}`);
+    textPdfProgress.classList.add('hidden');
+    showError('Text to PDF failed: ' + error.message);
   } finally {
     createPdfBtn.disabled = false;
     createPdfBtn.textContent = '✨ Create PDF';
