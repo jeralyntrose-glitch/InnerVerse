@@ -112,6 +112,7 @@ const countErrors = document.getElementById('count-errors');
 const cancelUploadBtn = document.getElementById('cancel-upload-btn');
 
 let uploadStats = { uploaded: 0, completed: 0, errors: 0 };
+let uploadSoundPlayed = false; // Track if completion sound was played for this batch
 let activeUploads = []; // Track active uploads for cancellation
 let uploadsCancelled = false; // Global flag to stop upload loops
 
@@ -151,6 +152,7 @@ function handleFiles(files) {
   uploadStats = { uploaded: pdfFiles.length, completed: 0, errors: 0 };
   activeUploads = []; // Clear previous uploads
   uploadsCancelled = false; // Reset cancellation flag
+  uploadSoundPlayed = false; // Reset sound flag for new batch
   updateStats();
   uploadStatusSection.classList.remove('hidden');
   uploadList.innerHTML = '';
@@ -323,6 +325,12 @@ function processFile(file) {
 function checkUploadComplete() {
   if (activeUploads.length === 0) {
     cancelUploadBtn.classList.add('hidden');
+    
+    // Play notification sound if any uploads succeeded (only once per batch)
+    if (uploadStats.completed > 0 && !uploadSoundPlayed) {
+      playNotificationSound();
+      uploadSoundPlayed = true; // Mark as played for this batch
+    }
   }
 }
 
@@ -444,6 +452,7 @@ async function pickerCallback(data) {
     uploadStats = { uploaded: files.length, completed: 0, errors: 0 };
     activeUploads = [];
     uploadsCancelled = false;
+    uploadSoundPlayed = false; // Reset sound flag for new batch
     updateStats();
     uploadStatusSection.classList.remove('hidden');
     uploadList.innerHTML = '';
