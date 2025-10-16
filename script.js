@@ -270,7 +270,18 @@ function processFile(file) {
       } else {
         progressBar.style.width = '100%';
         uploadItem.classList.add('error');
-        uploadItem.querySelector('.upload-filename').textContent = `${file.name} - ${err.message || 'Upload failed'}`;
+        
+        // Better error message extraction
+        let errorMsg = 'Upload failed';
+        if (err.message) {
+          errorMsg = err.message;
+        } else if (typeof err === 'string') {
+          errorMsg = err;
+        } else if (err.toString && err.toString() !== '[object Object]') {
+          errorMsg = err.toString();
+        }
+        
+        uploadItem.querySelector('.upload-filename').textContent = `${file.name} - ${errorMsg}`;
         uploadStats.errors++;
         updateStats();
       }
