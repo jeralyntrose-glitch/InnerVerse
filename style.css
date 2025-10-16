@@ -1380,3 +1380,33 @@ label,
     transform: translateY(0);
   }
 }
+
+/* Mobile optimization for error modal */
+@media (max-width: 768px) {
+  .error-modal {
+    padding: 16px;
+    align-items: flex-start;
+    padding-top: 80px;
+  }
+  
+  .error-modal-content {
+    padding: 20px;
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .error-modal-header {
+    font-size: 18px;
+  }
+  
+  .error-modal-message {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .error-modal-btn {
+    padding: 12px 28px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+}
