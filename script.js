@@ -666,9 +666,13 @@ async function handleChatCommand(input) {
   // Help command
   if (lowerInput === 'help' || lowerInput === '/help') {
     appendMessage('bot', `📋 Available Commands:
+
 • list docs - Show all uploaded documents
+
 • show doc [id] - Display document details
+
 • delete doc [id] - Delete a specific document
+
 • help - Show this help message
 
 💬 Or just ask any question to search all your documents!`);
