@@ -625,7 +625,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                     })
                 else:
                     return JSONResponse(status_code=400, content={
-                        "error": "Unable to access video. Check the URL or try a different video."
+                        "error": "Unable to access video. If multiple videos fail, your YouTube cookies may be expired - update youtube_cookies.txt and republish. Otherwise, check the URL or try a different video."
                     })
             
             info_parts = info_result.stdout.strip().split("|||")
