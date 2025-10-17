@@ -1214,3 +1214,71 @@ function showTextPdfError(message) {
   }, 5000);
 }
 
+// === Cost Tracker ===
+async function updateCostTracker() {
+  try {
+    const response = await fetch('/api/usage');
+    if (!response.ok) {
+      console.error('Failed to fetch usage data');
+      return;
+    }
+    
+    const data = await response.json();
+    
+    // Update total cost
+    document.getElementById('total-cost').textContent = `$${data.total_cost.toFixed(4)}`;
+    
+    // Update 24h cost
+    document.getElementById('cost-24h').textContent = `$${data.cost_24h.toFixed(4)}`;
+    
+    // Update breakdown by operation
+    const breakdown = data.by_operation;
+    const breakdownHtml = `
+      <div class="cost-breakdown-item">
+        <span>Chat: <strong>$${(breakdown.chat_completion || 0).toFixed(4)}</strong></span>
+      </div>
+      <div class="cost-breakdown-item">
+        <span>Embeddings: <strong>$${(breakdown.embedding || 0).toFixed(4)}</strong></span>
+      </div>
+      <div class="cost-breakdown-item">
+        <span>Whisper: <strong>$${(breakdown.whisper || 0).toFixed(4)}</strong></span>
+      </div>
+      <div class="cost-breakdown-item">
+        <span>Text Fix: <strong>$${(breakdown.text_fix || 0).toFixed(4)}</strong></span>
+      </div>
+    `;
+    document.getElementById('cost-by-operation').innerHTML = breakdownHtml;
+    
+    // Update recent calls
+    const recentCallsDiv = document.getElementById('recent-calls');
+    if (data.recent_calls && data.recent_calls.length > 0) {
+      const recentHtml = data.recent_calls.slice(0, 10).map(call => `
+        <div class="recent-call-item">
+          <span class="recent-call-operation">${formatOperation(call.operation)}</span>
+          <span class="recent-call-cost">$${call.cost.toFixed(4)}</span>
+        </div>
+      `).join('');
+      recentCallsDiv.innerHTML = recentHtml;
+    } else {
+      recentCallsDiv.innerHTML = '<div class="recent-call-placeholder">No recent activity</div>';
+    }
+    
+  } catch (error) {
+    console.error('Error updating cost tracker:', error);
+  }
+}
+
+function formatOperation(operation) {
+  const formats = {
+    'chat_completion': '💬 Chat',
+    'embedding': '📊 Embedding',
+    'whisper': '🎤 Whisper',
+    'text_fix': '✨ Text Fix'
+  };
+  return formats[operation] || operation;
+}
+
+// Update cost tracker on page load and every 30 seconds
+updateCostTracker();
+setInterval(updateCostTracker, 30000);
+
