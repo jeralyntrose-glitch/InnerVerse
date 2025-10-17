@@ -402,56 +402,6 @@ async def get_documents_report():
     except Exception as e:
         print(f"❌ Report generation error: {str(e)}")
         return JSONResponse(status_code=500, content={"error": str(e)})
-
-
-# === Usage Stats Endpoint ===
-@app.get("/api/usage")
-async def get_usage_stats():
-    """Get API usage statistics"""
-    try:
-        total_cost = sum(entry["cost"] for entry in usage_log)
-        total_requests = len(usage_log)
-        
-        # Group by operation
-        by_operation = {}
-        for entry in usage_log:
-            op = entry["operation"]
-            if op not in by_operation:
-                by_operation[op] = {"count": 0, "cost": 0, "tokens": 0}
-            by_operation[op]["count"] += 1
-            by_operation[op]["cost"] += entry["cost"]
-            by_operation[op]["tokens"] += entry["input_tokens"] + entry["output_tokens"]
-        
-        # Recent usage (last 24 hours)
-        now = datetime.now()
-        day_ago = now - timedelta(days=1)
-        recent_cost = sum(
-            entry["cost"] for entry in usage_log 
-            if datetime.fromisoformat(entry["timestamp"]) > day_ago
-        )
-        recent_requests = sum(
-            1 for entry in usage_log 
-            if datetime.fromisoformat(entry["timestamp"]) > day_ago
-        )
-        
-        return {
-            "total_requests": total_requests,
-            "total_cost": round(total_cost, 4),
-            "last_24h_requests": recent_requests,
-            "last_24h_cost": round(recent_cost, 4),
-            "by_operation": {
-                op: {
-                    "count": data["count"],
-                    "cost": round(data["cost"], 4),
-                    "tokens": data["tokens"]
-                }
-                for op, data in by_operation.items()
-            },
-            "recent_calls": list(usage_log)[-20:]  # Last 20 calls
-        }
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
-
 # === Query PDF for an answer ===
 class QueryRequest(BaseModel):
     document_id: str = ""  # Optional - empty string means search all documents
@@ -1137,6 +1087,64 @@ async def text_to_pdf(request: TextToPDFRequest):
         return JSONResponse(status_code=500, content={
             "error": "Something went wrong. Please try again."
         })
+
+
+# === API Usage Endpoint ===
+@app.get("/api/usage")
+async def get_usage_stats():
+    """Return API usage statistics for cost tracker"""
+    try:
+        now = datetime.now()
+        yesterday = now - timedelta(hours=24)
+        
+        total_cost = 0.0
+        last_24h_cost = 0.0
+        by_operation = {}
+        recent_calls = []
+        
+        for entry in usage_log:
+            entry_time = datetime.fromisoformat(entry["timestamp"])
+            cost = entry["cost"]
+            operation = entry["operation"]
+            
+            # Calculate total cost
+            total_cost += cost
+            
+            # Calculate 24h cost
+            if entry_time >= yesterday:
+                last_24h_cost += cost
+            
+            # Group by operation
+            if operation not in by_operation:
+                by_operation[operation] = {"cost": 0.0, "count": 0}
+            by_operation[operation]["cost"] += cost
+            by_operation[operation]["count"] += 1
+            
+            # Add to recent calls
+            recent_calls.append({
+                "operation": operation,
+                "cost": cost,
+                "timestamp": entry["timestamp"]
+            })
+        
+        # Sort recent calls by timestamp (newest first) and take top 10
+        recent_calls.sort(key=lambda x: x["timestamp"], reverse=True)
+        recent_calls = recent_calls[:10]
+        
+        return {
+            "total_cost": round(total_cost, 6),
+            "last_24h_cost": round(last_24h_cost, 6),
+            "by_operation": by_operation,
+            "recent_calls": recent_calls
+        }
+    except Exception as e:
+        print(f"❌ Error calculating usage stats: {str(e)}")
+        return {
+            "total_cost": 0.0,
+            "last_24h_cost": 0.0,
+            "by_operation": {},
+            "recent_calls": []
+        }
 
 
 # === Serve Frontend ===
