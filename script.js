@@ -33,28 +33,60 @@ errorModal.addEventListener('click', (e) => {
 });
 
 // === Notification Sound ===
+// Initialize AudioContext on first user interaction (for iOS compatibility)
+let audioContext = null;
+
+function initAudioContext() {
+  if (!audioContext) {
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      // Resume context in case it's suspended (iOS requirement)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      console.log('✅ AudioContext initialized for notifications');
+    } catch (error) {
+      console.log('AudioContext not available:', error);
+    }
+  }
+  return audioContext;
+}
+
 function playNotificationSound() {
   try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    const ctx = audioContext || initAudioContext();
+    if (!ctx) return;
     
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    // Delicate "ting" like iPhone - high pitch, very short
-    oscillator.frequency.value = 1200;
-    oscillator.type = 'sine';
-    
-    // Very quick fade out for dainty sound
-    gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
+    // Resume if suspended (iOS often suspends audio contexts)
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        playSound(ctx);
+      });
+    } else {
+      playSound(ctx);
+    }
   } catch (error) {
-    console.log('Notification sound not available:', error);
+    console.log('Notification sound error:', error);
   }
+}
+
+function playSound(ctx) {
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  
+  // Delicate "ting" like iPhone - high pitch, very short
+  oscillator.frequency.value = 1200;
+  oscillator.type = 'sine';
+  
+  // Very quick fade out for dainty sound
+  gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+  
+  oscillator.start(ctx.currentTime);
+  oscillator.stop(ctx.currentTime + 0.2);
 }
 
 // Theme toggle
@@ -141,6 +173,9 @@ fileInput.addEventListener('change', e => {
 });
 
 function handleFiles(files) {
+  // Initialize audio context for notification (iOS compatibility)
+  initAudioContext();
+  
   const pdfFiles = files.filter(f => f.type === 'application/pdf');
   
   if (pdfFiles.length === 0) {
@@ -722,6 +757,9 @@ let youtubeProgressInterval = null;
 let youtubeAbortController = null;
 
 transcribeBtn.addEventListener('click', async () => {
+  // Initialize audio context for notification (iOS compatibility)
+  initAudioContext();
+  
   const url = youtubeUrl.value.trim();
   
   if (!url) {
@@ -937,6 +975,9 @@ const createPdfBtn = document.getElementById('create-pdf-btn');
 const textPdfProgress = document.getElementById('text-pdf-progress');
 
 createPdfBtn.addEventListener('click', async () => {
+  // Initialize audio context for notification (iOS compatibility)
+  initAudioContext();
+  
   const title = pdfTitle.value.trim() || 'Document';
   const text = pdfText.value.trim();
   
