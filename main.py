@@ -8,7 +8,8 @@ import csv
 import tempfile
 import subprocess
 from datetime import datetime, timezone, timedelta
-from fastapi import FastAPI, UploadFile, File
+from collections import deque
+from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -29,6 +30,47 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX")
 
+# === Usage Tracking ===
+usage_log = deque(maxlen=1000)  # Keep last 1000 API calls
+request_timestamps = deque(maxlen=1000)  # For rate limiting
+
+# Pricing per 1K tokens (as of Oct 2025)
+PRICING = {
+    "text-embedding-ada-002": 0.0001,  # per 1K tokens
+    "gpt-3.5-turbo-input": 0.0005,     # per 1K tokens
+    "gpt-3.5-turbo-output": 0.0015,    # per 1K tokens
+}
+
+def log_api_usage(operation, model, input_tokens=0, output_tokens=0, cost=0.0):
+    """Log API usage with timestamp and cost"""
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "operation": operation,
+        "model": model,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "cost": round(cost, 6)
+    }
+    usage_log.append(entry)
+    print(f"💰 API Usage: {operation} | Model: {model} | Cost: ${cost:.6f}")
+    return entry
+
+def check_rate_limit(max_requests_per_hour=100):
+    """Check if rate limit is exceeded"""
+    now = datetime.now()
+    one_hour_ago = now - timedelta(hours=1)
+    
+    # Remove old timestamps
+    while request_timestamps and datetime.fromisoformat(request_timestamps[0]) < one_hour_ago:
+        request_timestamps.popleft()
+    
+    # Check limit
+    if len(request_timestamps) >= max_requests_per_hour:
+        return False, len(request_timestamps)
+    
+    # Add current timestamp
+    request_timestamps.append(now.isoformat())
+    return True, len(request_timestamps)
 
 # Initialize clients
 def get_openai_client():
@@ -362,6 +404,54 @@ async def get_documents_report():
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# === Usage Stats Endpoint ===
+@app.get("/api/usage")
+async def get_usage_stats():
+    """Get API usage statistics"""
+    try:
+        total_cost = sum(entry["cost"] for entry in usage_log)
+        total_requests = len(usage_log)
+        
+        # Group by operation
+        by_operation = {}
+        for entry in usage_log:
+            op = entry["operation"]
+            if op not in by_operation:
+                by_operation[op] = {"count": 0, "cost": 0, "tokens": 0}
+            by_operation[op]["count"] += 1
+            by_operation[op]["cost"] += entry["cost"]
+            by_operation[op]["tokens"] += entry["input_tokens"] + entry["output_tokens"]
+        
+        # Recent usage (last 24 hours)
+        now = datetime.now()
+        day_ago = now - timedelta(days=1)
+        recent_cost = sum(
+            entry["cost"] for entry in usage_log 
+            if datetime.fromisoformat(entry["timestamp"]) > day_ago
+        )
+        recent_requests = sum(
+            1 for entry in usage_log 
+            if datetime.fromisoformat(entry["timestamp"]) > day_ago
+        )
+        
+        return {
+            "total_requests": total_requests,
+            "total_cost": round(total_cost, 4),
+            "last_24h_requests": recent_requests,
+            "last_24h_cost": round(recent_cost, 4),
+            "by_operation": {
+                op: {
+                    "count": data["count"],
+                    "cost": round(data["cost"], 4),
+                    "tokens": data["tokens"]
+                }
+                for op, data in by_operation.items()
+            },
+            "recent_calls": list(usage_log)[-20:]  # Last 20 calls
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 # === Query PDF for an answer ===
 class QueryRequest(BaseModel):
     document_id: str = ""  # Optional - empty string means search all documents
@@ -378,6 +468,16 @@ class TextToPDFRequest(BaseModel):
 
 @app.post("/query")
 async def query_pdf(request: QueryRequest):
+    # Rate limiting check
+    allowed, count = check_rate_limit(max_requests_per_hour=100)
+    if not allowed:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": f"Rate limit exceeded. Maximum 100 requests per hour. You've made {count} requests in the last hour. Please try again later."
+            }
+        )
+    
     document_id = request.document_id
     question = request.question
     openai_client = get_openai_client()
@@ -392,6 +492,11 @@ async def query_pdf(request: QueryRequest):
         embed_response = openai_client.embeddings.create(
             input=question, model="text-embedding-ada-002")
         question_vector = embed_response.data[0].embedding
+        
+        # Log embedding usage
+        embed_tokens = embed_response.usage.total_tokens
+        embed_cost = (embed_tokens / 1000) * PRICING["text-embedding-ada-002"]
+        log_api_usage("query_embedding", "text-embedding-ada-002", input_tokens=embed_tokens, cost=embed_cost)
 
         # If document_id is provided, search that document only
         # If empty, search ALL documents
@@ -450,6 +555,13 @@ async def query_pdf(request: QueryRequest):
         )
 
         answer = completion.choices[0].message.content or "No answer generated."
+        
+        # Log chat completion usage
+        if completion.usage:
+            input_tokens = completion.usage.prompt_tokens
+            output_tokens = completion.usage.completion_tokens
+            chat_cost = (input_tokens / 1000) * PRICING["gpt-3.5-turbo-input"] + (output_tokens / 1000) * PRICING["gpt-3.5-turbo-output"]
+            log_api_usage("chat_completion", "gpt-3.5-turbo", input_tokens=input_tokens, output_tokens=output_tokens, cost=chat_cost)
         
         # Add source information to answer if searching all docs
         if not document_id or not document_id.strip():
