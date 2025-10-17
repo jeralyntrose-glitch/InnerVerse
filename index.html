@@ -150,6 +150,53 @@
       </div>
     </div>
 
+    <!-- 💰 Cost Tracker Section -->
+    <div class="cost-tracker-section">
+      <div class="cost-tracker-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <polyline points="17 5 12 1 7 5"></polyline>
+          <polyline points="7 19 12 23 17 19"></polyline>
+        </svg>
+        <span>API Cost Tracker</span>
+      </div>
+      
+      <div class="cost-stats">
+        <div class="cost-stat-row">
+          <div class="cost-stat-item">
+            <div class="cost-stat-label">Total Cost</div>
+            <div id="total-cost" class="cost-stat-value">$0.00</div>
+          </div>
+          <div class="cost-stat-item">
+            <div class="cost-stat-label">Last 24 Hours</div>
+            <div id="cost-24h" class="cost-stat-value">$0.00</div>
+          </div>
+        </div>
+        
+        <div class="cost-breakdown">
+          <div class="cost-breakdown-label">By Operation</div>
+          <div id="cost-by-operation" class="cost-breakdown-items">
+            <div class="cost-breakdown-item">
+              <span>Chat: <strong>$0.00</strong></span>
+            </div>
+            <div class="cost-breakdown-item">
+              <span>Embeddings: <strong>$0.00</strong></span>
+            </div>
+            <div class="cost-breakdown-item">
+              <span>Whisper: <strong>$0.00</strong></span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="recent-calls-section">
+          <div class="recent-calls-label">Recent Calls</div>
+          <div id="recent-calls" class="recent-calls-list">
+            <div class="recent-call-placeholder">No recent activity</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 📊 Buttons at Bottom -->
     <div class="report-section">
       <button id="download-report-btn" class="btn-report">📄 Download Document Report</button>
