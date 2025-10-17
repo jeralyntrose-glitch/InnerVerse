@@ -622,36 +622,157 @@ async function sendMessage() {
   const question = chatInput.value.trim();
   if (!question) return;
 
-  // Search ALL documents by sending empty document_id
-  const documentIdToUse = "";  // Empty = search all docs
-
   appendMessage('user', question);
-  appendMessage('bot', '🧠 Searching all documents...');
   sendBtn.disabled = true;
 
-  try {
-    const res = await fetch('/query', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ document_id: documentIdToUse, question })
-    });
+  // Check if this is a command
+  const isCommand = await handleChatCommand(question);
+  
+  if (!isCommand) {
+    // Not a command, search ALL documents by sending empty document_id
+    const documentIdToUse = "";  // Empty = search all docs
+    appendMessage('bot', '🧠 Searching all documents...');
 
-    const data = await res.json();
-    removeLastBotMessage();
+    try {
+      const res = await fetch('/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document_id: documentIdToUse, question })
+      });
 
-    if (res.ok) {
-      appendMessage('bot', data.answer || 'No response.');
-    } else {
+      const data = await res.json();
       removeLastBotMessage();
-      showError('Chat query failed: ' + (data.error || 'Unknown error'));
+
+      if (res.ok) {
+        appendMessage('bot', data.answer || 'No response.');
+      } else {
+        removeLastBotMessage();
+        showError('Chat query failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      removeLastBotMessage();
+      showError('Chat error: ' + err.message);
     }
-  } catch (err) {
-    removeLastBotMessage();
-    showError('Chat error: ' + err.message);
   }
 
   sendBtn.disabled = false;
   chatInput.value = '';
+}
+
+// Handle chat commands
+async function handleChatCommand(input) {
+  const lowerInput = input.toLowerCase().trim();
+  
+  // Help command
+  if (lowerInput === 'help' || lowerInput === '/help') {
+    appendMessage('bot', `📋 Available Commands:
+• list docs - Show all uploaded documents
+• show doc [id] - Display document details
+• delete doc [id] - Delete a specific document
+• help - Show this help message
+
+💬 Or just ask any question to search all your documents!`);
+    return true;
+  }
+  
+  // List docs command
+  if (lowerInput === 'list docs' || lowerInput === 'list' || lowerInput === 'show docs') {
+    appendMessage('bot', '📂 Loading your documents...');
+    
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const docs = stored ? JSON.parse(stored) : [];
+      
+      removeLastBotMessage();
+      
+      if (docs.length === 0) {
+        appendMessage('bot', '📭 No documents uploaded yet. Upload a PDF to get started!');
+      } else {
+        let message = `📚 Your Documents (${docs.length}):\n\n`;
+        docs.forEach((doc, index) => {
+          const date = new Date(doc.timestamp).toLocaleString();
+          message += `${index + 1}. ${doc.name}\n   ID: ${doc.id}\n   Uploaded: ${date}\n\n`;
+        });
+        appendMessage('bot', message);
+      }
+    } catch (error) {
+      removeLastBotMessage();
+      showError('Failed to load documents: ' + error.message);
+    }
+    
+    return true;
+  }
+  
+  // Show doc command
+  const showDocMatch = lowerInput.match(/^show doc (.+)$/);
+  if (showDocMatch) {
+    const docId = showDocMatch[1].trim();
+    appendMessage('bot', `🔍 Looking up document: ${docId}...`);
+    
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const docs = stored ? JSON.parse(stored) : [];
+      const doc = docs.find(d => d.id === docId);
+      
+      removeLastBotMessage();
+      
+      if (doc) {
+        const date = new Date(doc.timestamp).toLocaleString();
+        appendMessage('bot', `📄 Document Details:
+        
+Name: ${doc.name}
+ID: ${doc.id}
+Uploaded: ${date}`);
+      } else {
+        appendMessage('bot', `❌ Document not found: ${docId}\n\nType "list docs" to see all available documents.`);
+      }
+    } catch (error) {
+      removeLastBotMessage();
+      showError('Failed to show document: ' + error.message);
+    }
+    
+    return true;
+  }
+  
+  // Delete doc command
+  const deleteDocMatch = lowerInput.match(/^delete doc (.+)$/);
+  if (deleteDocMatch) {
+    const docId = deleteDocMatch[1].trim();
+    
+    if (!confirm(`⚠️ Delete document "${docId}"?\n\nThis will remove all data from Pinecone. This cannot be undone!`)) {
+      appendMessage('bot', '❌ Delete cancelled.');
+      return true;
+    }
+    
+    appendMessage('bot', `🗑️ Deleting document: ${docId}...`);
+    
+    try {
+      const response = await fetch(`/documents/${docId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete document');
+      }
+      
+      // Remove from localStorage
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const docs = stored ? JSON.parse(stored) : [];
+      const updatedDocs = docs.filter(d => d.id !== docId);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedDocs));
+      uploadedFiles = updatedDocs;
+      
+      removeLastBotMessage();
+      appendMessage('bot', `✅ Document deleted successfully!\n\nDeleted: ${docId}`);
+    } catch (error) {
+      removeLastBotMessage();
+      showError('Failed to delete document: ' + error.message);
+    }
+    
+    return true;
+  }
+  
+  return false; // Not a command
 }
 
 function appendMessage(sender, text) {
