@@ -1226,25 +1226,25 @@ async function updateCostTracker() {
     const data = await response.json();
     
     // Update total cost
-    document.getElementById('total-cost').textContent = `$${data.total_cost.toFixed(4)}`;
+    document.getElementById('total-cost').textContent = `$${(data.total_cost || 0).toFixed(4)}`;
     
     // Update 24h cost
-    document.getElementById('cost-24h').textContent = `$${data.cost_24h.toFixed(4)}`;
+    document.getElementById('cost-24h').textContent = `$${(data.last_24h_cost || 0).toFixed(4)}`;
     
     // Update breakdown by operation
-    const breakdown = data.by_operation;
+    const breakdown = data.by_operation || {};
     const breakdownHtml = `
       <div class="cost-breakdown-item">
-        <span>Chat: <strong>$${(breakdown.chat_completion || 0).toFixed(4)}</strong></span>
+        <span>Chat: <strong>$${(breakdown.chat_completion?.cost || 0).toFixed(4)}</strong></span>
       </div>
       <div class="cost-breakdown-item">
-        <span>Embeddings: <strong>$${(breakdown.embedding || 0).toFixed(4)}</strong></span>
+        <span>Embeddings: <strong>$${(breakdown.embedding?.cost || 0).toFixed(4)}</strong></span>
       </div>
       <div class="cost-breakdown-item">
-        <span>Whisper: <strong>$${(breakdown.whisper || 0).toFixed(4)}</strong></span>
+        <span>Whisper: <strong>$${(breakdown.whisper?.cost || 0).toFixed(4)}</strong></span>
       </div>
       <div class="cost-breakdown-item">
-        <span>Text Fix: <strong>$${(breakdown.text_fix || 0).toFixed(4)}</strong></span>
+        <span>Text Fix: <strong>$${(breakdown.text_fix?.cost || 0).toFixed(4)}</strong></span>
       </div>
     `;
     document.getElementById('cost-by-operation').innerHTML = breakdownHtml;

@@ -4,7 +4,24 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 17, 2025)
 
-## Chat Commands System (Latest)
+## Visual Cost Tracker (Latest)
+- ✅ **Live cost monitoring** - Beautiful visual tracker showing API costs in real-time
+- ✅ **Comprehensive stats** - Displays total cost, last 24 hours, and breakdown by operation type
+- ✅ **Recent calls view** - Shows the 10 most recent API calls with individual costs
+- ✅ **Auto-refresh** - Updates every 30 seconds to show current spending
+- ✅ **Golden theme** - Distinct amber/gold design to highlight cost information
+- ✅ **Always visible** - Located below Text-to-PDF section for constant monitoring
+- ✅ **ADHD-friendly** - Constant visibility helps prevent forgotten spending
+
+## API Usage Monitoring & Rate Limiting
+- ✅ **Comprehensive tracking** - Logs every OpenAI API call with token counts and costs
+- ✅ **Cost estimation** - Real-time cost calculation for embeddings, chat, Whisper, and text fixes
+- ✅ **Rate limiting** - Maximum 100 requests per hour to prevent cost spikes
+- ✅ **Usage endpoint** - /api/usage shows detailed spending statistics
+- ✅ **Server-side logging** - Every API call prints cost info to console
+- ✅ **Privacy protection** - Ready for sharing with close friends/partners with cost controls
+
+## Chat Commands System
 - ✅ **Document management via chat** - Type commands directly in chat to manage your documents
 - ✅ **list docs** - Shows all uploaded documents with IDs and timestamps
 - ✅ **delete doc [id]** - Delete specific documents from Pinecone with confirmation
