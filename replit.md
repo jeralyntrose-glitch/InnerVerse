@@ -2,9 +2,16 @@
 
 This project is a FastAPI-based PDF Q&A application designed to provide intelligent answers from uploaded PDF documents.
 
-# Recent Changes (October 16, 2025)
+# Recent Changes (October 17, 2025)
 
-## Persistent Error Notifications (Latest)
+## Upload UI Mobile Optimization (Latest)
+- ✅ **Slimmer upload boxes** - Reduced padding (8px), thinner borders (1px), smaller fonts (11px) for mobile
+- ✅ **Tighter spacing** - Less margin between upload items (6px) and reduced container padding
+- ✅ **Thinner progress bars** - Reduced to 5px height on mobile for sleek appearance
+- ✅ **Upload completion sound** - Single notification ping plays when all uploads finish successfully (works on mobile)
+- ✅ **Smart sound tracking** - Plays once per batch, resets for new uploads, won't play if all failed or cancelled
+
+## Persistent Error Notifications
 - ✅ **Persistent error modal** - Errors now stay visible until you dismiss them with an OK button
 - ✅ **No missed errors** - Walk away during uploads/transcriptions and still see what went wrong when you return
 - ✅ **Clean design** - Modal overlay with backdrop blur, smooth animations

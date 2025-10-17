@@ -1208,17 +1208,24 @@ label,
     font-size: 12px;
   }
 
+  .upload-list {
+    padding: 8px;
+  }
+
   .upload-item {
-    padding: 10px;
-    margin-bottom: 8px;
+    padding: 8px;
+    margin-bottom: 6px;
+    border-width: 1px;
+    border-radius: 8px;
   }
 
   .upload-filename {
-    font-size: 12px;
+    font-size: 11px;
+    margin-bottom: 6px;
   }
 
   .progress-bar-container {
-    height: 6px;
+    height: 5px;
     border-radius: 3px;
   }
 
