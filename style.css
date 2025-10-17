@@ -1220,8 +1220,9 @@ label,
   }
 
   .upload-filename {
-    font-size: 11px;
+    font-size: 10px;
     margin-bottom: 6px;
+    font-weight: 400;
   }
 
   .progress-bar-container {
