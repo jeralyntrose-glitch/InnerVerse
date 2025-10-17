@@ -4,7 +4,12 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 17, 2025)
 
-## YouTube Transcription Timeout Fix (Latest)
+## YouTube Cookies Deployment Fix (Latest)
+- ✅ **Fixed production access errors** - Removed youtube_cookies.txt from .gitignore so it deploys to production
+- ✅ **All videos work again** - Cookies file now included in deployment, resolving "Unable to access video" errors
+- ✅ **Dev/production parity** - Both environments now have access to YouTube authentication
+
+## YouTube Transcription Timeout Fix
 - ✅ **Increased timeout** - Extended from 5 minutes to 15 minutes for longer videos
 - ✅ **Better error messages** - Now clearly shows "timeout" vs "cancelled" with helpful suggestions
 - ✅ **Timeout detection** - Distinguishes between automatic timeout and manual cancellation
