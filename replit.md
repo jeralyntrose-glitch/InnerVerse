@@ -4,7 +4,13 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 17, 2025)
 
-## YouTube Cookies Deployment Fix (Latest)
+## Extended Timeouts for Long Videos (Latest)
+- ✅ **60-minute frontend timeout** - Increased from 15 minutes to handle very long videos (1+ hours)
+- ✅ **10-minute Whisper timeout** - Increased from 3 minutes to handle longer audio chunks
+- ✅ **Better error messaging** - Clear feedback when videos exceed 60-minute processing time
+- ✅ **Supports 1.5+ hour videos** - Can now handle feature-length content without timeouts
+
+## YouTube Cookies Deployment Fix
 - ✅ **Fixed production access errors** - Removed youtube_cookies.txt from .gitignore so it deploys to production
 - ✅ **All videos work again** - Cookies file now included in deployment, resolving "Unable to access video" errors
 - ✅ **Dev/production parity** - Both environments now have access to YouTube authentication

@@ -752,7 +752,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                         model="whisper-1",
                         file=audio_file,
                         response_format="text",
-                        timeout=180  # 3 minute timeout for Whisper
+                        timeout=600  # 10 minute timeout for Whisper
                     )
                 transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
                 
@@ -783,7 +783,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                             model="whisper-1",
                             file=chunk_file,
                             response_format="text",
-                            timeout=180  # 3 minute timeout per chunk
+                            timeout=600  # 10 minute timeout per chunk
                         )
                     
                     chunk_transcript = chunk_response if isinstance(chunk_response, str) else chunk_response.text

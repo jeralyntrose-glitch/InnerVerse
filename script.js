@@ -755,12 +755,12 @@ transcribeBtn.addEventListener('click', async () => {
       updateYoutubeProgress(progress);
     }, 300);
     
-    // Add 15 minute timeout for long videos (increased from 5 minutes)
+    // Add 60 minute timeout for very long videos (1+ hours)
     let isTimeout = false;
     const timeoutId = setTimeout(() => {
       isTimeout = true;
       youtubeAbortController.abort();
-    }, 900000); // 15 minutes
+    }, 3600000); // 60 minutes
     
     const response = await fetch('/transcribe-youtube', {
       method: 'POST',
@@ -820,7 +820,7 @@ transcribeBtn.addEventListener('click', async () => {
     
     if (error.name === 'AbortError') {
       if (isTimeout) {
-        showError('Transcription timeout: This video is taking too long to process (over 15 minutes). Try a shorter video or check your internet connection.');
+        showError('Transcription timeout: This video is taking too long to process (over 60 minutes). The video may be extremely long, have network issues, or YouTube restrictions. Try a shorter video or check your connection.');
       } else {
         showYoutubeStatus('⚠️ Transcription cancelled', 'error');
       }
