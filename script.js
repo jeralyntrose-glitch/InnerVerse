@@ -755,8 +755,12 @@ transcribeBtn.addEventListener('click', async () => {
       updateYoutubeProgress(progress);
     }, 300);
     
-    // Add 5 minute timeout for long videos
-    const timeoutId = setTimeout(() => youtubeAbortController.abort(), 300000);
+    // Add 15 minute timeout for long videos (increased from 5 minutes)
+    let isTimeout = false;
+    const timeoutId = setTimeout(() => {
+      isTimeout = true;
+      youtubeAbortController.abort();
+    }, 900000); // 15 minutes
     
     const response = await fetch('/transcribe-youtube', {
       method: 'POST',
@@ -815,7 +819,11 @@ transcribeBtn.addEventListener('click', async () => {
     hideYoutubeProgress();
     
     if (error.name === 'AbortError') {
-      showYoutubeStatus('⚠️ Transcription cancelled', 'error');
+      if (isTimeout) {
+        showError('Transcription timeout: This video is taking too long to process (over 15 minutes). Try a shorter video or check your internet connection.');
+      } else {
+        showYoutubeStatus('⚠️ Transcription cancelled', 'error');
+      }
     } else {
       console.error('YouTube transcription error:', error);
       showError('YouTube transcription failed: ' + error.message);
@@ -896,11 +904,6 @@ function hideYoutubeProgress() {
 }
 
 function cancelYoutubeTranscription() {
-  // Confirm before cancelling to prevent accidental taps
-  if (!confirm('Cancel YouTube transcription?')) {
-    return;
-  }
-  
   if (youtubeAbortController) {
     youtubeAbortController.abort();
     clearInterval(youtubeProgressInterval);

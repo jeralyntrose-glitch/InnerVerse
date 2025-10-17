@@ -4,8 +4,14 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 17, 2025)
 
-## Upload UI Mobile Optimization (Latest)
-- ✅ **Slimmer upload boxes** - Reduced padding (8px), thinner borders (1px), smaller fonts (11px) for mobile
+## YouTube Transcription Timeout Fix (Latest)
+- ✅ **Increased timeout** - Extended from 5 minutes to 15 minutes for longer videos
+- ✅ **Better error messages** - Now clearly shows "timeout" vs "cancelled" with helpful suggestions
+- ✅ **Timeout detection** - Distinguishes between automatic timeout and manual cancellation
+- ✅ **Fixed false "cancelled" errors** - Properly identifies when transcription times out due to video length or network issues
+
+## Upload UI Mobile Optimization
+- ✅ **Slimmer upload boxes** - Reduced padding (8px), thinner borders (1px), smaller fonts (10px, no bold) for mobile
 - ✅ **Tighter spacing** - Less margin between upload items (6px) and reduced container padding
 - ✅ **Thinner progress bars** - Reduced to 5px height on mobile for sleek appearance
 - ✅ **Upload completion sound** - Single notification ping plays when all uploads finish successfully (works on mobile)
