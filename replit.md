@@ -4,7 +4,16 @@ This project is a FastAPI-based PDF Q&A application designed to provide intellig
 
 # Recent Changes (October 17, 2025)
 
-## Extended Timeouts for Long Videos (Latest)
+## Chat Commands System (Latest)
+- ✅ **Document management via chat** - Type commands directly in chat to manage your documents
+- ✅ **list docs** - Shows all uploaded documents with IDs and timestamps
+- ✅ **delete doc [id]** - Delete specific documents from Pinecone with confirmation
+- ✅ **show doc [id]** - Display document details (name, ID, upload date)
+- ✅ **help command** - Type 'help' to see all available commands
+- ✅ **Smart routing** - Commands are intercepted before GPT, regular questions still search all documents
+- ✅ **iOS notification fix** - Mobile ping now works on iPhone when uploads/transcriptions complete
+
+## Extended Timeouts for Long Videos
 - ✅ **60-minute frontend timeout** - Increased from 15 minutes to handle very long videos (1+ hours)
 - ✅ **10-minute Whisper timeout** - Increased from 3 minutes to handle longer audio chunks
 - ✅ **Better error messaging** - Clear feedback when videos exceed 60-minute processing time
