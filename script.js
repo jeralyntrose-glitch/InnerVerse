@@ -896,6 +896,11 @@ function hideYoutubeProgress() {
 }
 
 function cancelYoutubeTranscription() {
+  // Confirm before cancelling to prevent accidental taps
+  if (!confirm('Cancel YouTube transcription?')) {
+    return;
+  }
+  
   if (youtubeAbortController) {
     youtubeAbortController.abort();
     clearInterval(youtubeProgressInterval);
