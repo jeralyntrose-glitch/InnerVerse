@@ -917,6 +917,19 @@ function cancelYoutubeTranscription() {
   }
 }
 
+// === Text to PDF Collapsible Toggle ===
+const textPdfToggle = document.getElementById('text-pdf-toggle');
+const textPdfContent = document.getElementById('text-pdf-content');
+
+// Start collapsed by default
+textPdfToggle.classList.add('collapsed');
+textPdfContent.classList.add('collapsed');
+
+textPdfToggle.addEventListener('click', () => {
+  textPdfToggle.classList.toggle('collapsed');
+  textPdfContent.classList.toggle('collapsed');
+});
+
 // === Text to PDF Feature ===
 const pdfTitle = document.getElementById('pdf-title');
 const pdfText = document.getElementById('pdf-text');

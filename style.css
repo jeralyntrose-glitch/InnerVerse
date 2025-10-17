@@ -397,6 +397,58 @@ input[type="file"] {
   transition: all 0.3s ease;
 }
 
+.text-pdf-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0;
+  transition: all 0.2s ease;
+}
+
+.text-pdf-toggle:hover {
+  opacity: 0.8;
+}
+
+.text-pdf-toggle-content {
+  display: flex;
+  align-items: center;
+}
+
+.text-pdf-toggle-content svg {
+  color: #10b981;
+}
+
+.text-pdf-chevron {
+  color: var(--text-secondary);
+  transition: transform 0.3s ease;
+}
+
+.text-pdf-toggle.collapsed .text-pdf-chevron {
+  transform: rotate(-90deg);
+}
+
+.text-pdf-content {
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
+  opacity: 1;
+  margin-top: 16px;
+}
+
+.text-pdf-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
+
 .text-pdf-header {
   font-size: 18px;
   font-weight: 600;
