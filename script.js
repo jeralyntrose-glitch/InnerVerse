@@ -308,11 +308,16 @@ function processFile(file) {
 
       console.log('📡 Sending fetch request to /upload');
 
+      // Extended timeout for OCR processing (15 minutes)
+      const timeoutId = setTimeout(() => abortController.abort(), 15 * 60 * 1000);
+      
       const res = await fetch('/upload', {
         method: 'POST',
         body: formData,
         signal: abortController.signal
       });
+      
+      clearTimeout(timeoutId);
 
       console.log('✅ Got response:', res.status, res.statusText);
 
