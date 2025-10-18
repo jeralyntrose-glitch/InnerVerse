@@ -1122,6 +1122,18 @@ textPdfToggle.addEventListener('click', () => {
   textPdfContent.classList.toggle('collapsed');
 });
 
+// === Cost Tracker Collapsible Toggle ===
+const costTrackerToggle = document.getElementById('cost-tracker-toggle');
+const costTrackerContent = document.getElementById('cost-tracker-content');
+
+// Start EXPANDED by default (no collapsed class)
+if (costTrackerToggle && costTrackerContent) {
+  costTrackerToggle.addEventListener('click', () => {
+    costTrackerToggle.classList.toggle('collapsed');
+    costTrackerContent.classList.toggle('collapsed');
+  });
+}
+
 // === Text to PDF Feature ===
 const pdfTitle = document.getElementById('pdf-title');
 const pdfText = document.getElementById('pdf-text');

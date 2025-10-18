@@ -610,23 +610,59 @@ input[type="file"] {
   transition: all 0.3s ease;
 }
 
-.cost-tracker-header {
+.cost-tracker-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 20px;
+  margin-bottom: 0;
+  transition: all 0.2s ease;
+}
+
+.cost-tracker-toggle:hover {
+  opacity: 0.8;
+}
+
+.cost-tracker-toggle-content {
   display: flex;
   align-items: center;
 }
 
-.cost-tracker-header svg {
+.cost-tracker-toggle-content svg {
   color: #f59e0b;
 }
 
+.cost-tracker-chevron {
+  color: var(--text-secondary);
+  transition: transform 0.3s ease;
+}
+
+.cost-tracker-toggle.collapsed .cost-tracker-chevron {
+  transform: rotate(-90deg);
+}
+
 .cost-stats {
+  max-height: 2000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
+  opacity: 1;
+  margin-top: 20px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.cost-stats.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
 }
 
 .cost-stat-row {

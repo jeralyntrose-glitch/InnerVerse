@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="format-detection" content="telephone=no" />
   <title>Axis Mind - Upload & Chat</title>
-  <link rel="stylesheet" href="/static/style.css?v=43" />
+  <link rel="stylesheet" href="/static/style.css?v=44" />
 </head>
 <body>
   <!-- Theme Toggle -->
@@ -152,16 +152,21 @@
 
     <!-- 💰 Cost Tracker Section -->
     <div class="cost-tracker-section">
-      <div class="cost-tracker-header">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
-          <line x1="12" y1="1" x2="12" y2="23"></line>
-          <polyline points="17 5 12 1 7 5"></polyline>
-          <polyline points="7 19 12 23 17 19"></polyline>
+      <button class="cost-tracker-toggle" id="cost-tracker-toggle">
+        <div class="cost-tracker-toggle-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <polyline points="17 5 12 1 7 5"></polyline>
+            <polyline points="7 19 12 23 17 19"></polyline>
+          </svg>
+          <span>API Cost Tracker</span>
+        </div>
+        <svg class="cost-tracker-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
         </svg>
-        <span>API Cost Tracker</span>
-      </div>
+      </button>
       
-      <div class="cost-stats">
+      <div class="cost-stats" id="cost-tracker-content">
         <div class="cost-stat-row">
           <div class="cost-stat-item">
             <div class="cost-stat-label">Total Cost</div>
@@ -232,6 +237,6 @@
   </div>
 
   <script src="https://apis.google.com/js/api.js"></script>
-  <script src="/static/script.js?v=50"></script>
+  <script src="/static/script.js?v=51"></script>
 </body>
 </html>
