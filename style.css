@@ -214,13 +214,13 @@ input[type="file"] {
 /* Report Section */
 /* YouTube Transcription Section */
 .youtube-section {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
+  background: var(--drop-area-bg);
+  border: 2px dashed var(--drop-area-border);
   border-radius: 16px;
-  padding: 24px;
+  padding: 35px 30px;
   margin-top: 30px;
   text-align: left;
-  box-shadow: 0 4px 6px var(--shadow-color);
+  box-shadow: 0 1px 3px var(--shadow-color);
   transition: all 0.3s ease;
   position: relative;
 }
