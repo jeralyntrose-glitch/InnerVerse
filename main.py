@@ -1160,7 +1160,8 @@ async def get_usage_stats():
         
         # Get total cost
         cursor.execute("SELECT COALESCE(SUM(cost), 0) as total_cost FROM api_usage")
-        total_cost = float(cursor.fetchone()["total_cost"])
+        result = cursor.fetchone()
+        total_cost = float(result["total_cost"]) if result else 0.0
         
         # Get last 24h cost (convert to Hawaii timezone for display)
         cursor.execute("""
@@ -1168,7 +1169,8 @@ async def get_usage_stats():
             FROM api_usage 
             WHERE timestamp >= NOW() - INTERVAL '24 hours'
         """)
-        last_24h_cost = float(cursor.fetchone()["last_24h_cost"])
+        result = cursor.fetchone()
+        last_24h_cost = float(result["last_24h_cost"]) if result else 0.0
         
         # Group by operation
         cursor.execute("""
