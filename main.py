@@ -1070,17 +1070,39 @@ async def transcribe_youtube_free(request: YouTubeTranscribeRequest):
         
         # Try to get the transcript
         try:
-            # Get transcript (tries English first, then any available language)
+            # Get transcript (tries manual first, then auto-generated, any language)
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
             
-            # Try to get English transcript first
+            transcript_data = None
+            language = 'unknown'
+            
+            # Try manual transcripts first (any language)
             try:
-                transcript_data = transcript_list.find_transcript(['en']).fetch()
-                language = 'English'
+                for transcript in transcript_list:
+                    if not transcript.is_generated:
+                        transcript_data = transcript.fetch()
+                        language = transcript.language
+                        print(f"📝 Found manual transcript in {language}")
+                        break
             except:
-                # If no English, get first available transcript
-                transcript_data = transcript_list.find_generated_transcript(['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh']).fetch()
-                language = 'auto-detected'
+                pass
+            
+            # If no manual transcript, try auto-generated (any language)
+            if not transcript_data:
+                try:
+                    for transcript in transcript_list:
+                        if transcript.is_generated:
+                            transcript_data = transcript.fetch()
+                            language = f"{transcript.language} (auto)"
+                            print(f"🤖 Found auto-generated transcript in {language}")
+                            break
+                except:
+                    pass
+            
+            # If still nothing, try the old way as fallback
+            if not transcript_data:
+                transcript_data = transcript_list.find_transcript(['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi']).fetch()
+                language = 'fallback'
             
             # Combine all transcript segments into one text
             transcript = ' '.join([entry['text'] for entry in transcript_data])
@@ -1089,6 +1111,7 @@ async def transcribe_youtube_free(request: YouTubeTranscribeRequest):
             
         except Exception as e:
             error_str = str(e).lower()
+            print(f"❌ Transcript error: {e}")
             
             if 'transcript' in error_str and 'disabled' in error_str:
                 return JSONResponse(status_code=404, content={

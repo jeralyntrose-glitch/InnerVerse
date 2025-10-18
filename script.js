@@ -1123,7 +1123,7 @@ function showYoutubeStatus(message, type) {
   if (type === 'error') {
     setTimeout(() => {
       youtubeStatus.classList.add('hidden');
-    }, 5000);
+    }, 15000);
   }
 }
 
