@@ -24,7 +24,10 @@ Preferred communication style: Simple, everyday language.
 ## Document Processing Pipeline
 - **PDF Parsing**: Uses PyPDF2 for text extraction from PDFs.
 - **Text Chunking**: Employs LangChain's `RecursiveCharacterTextSplitter` to break documents into overlapping chunks (1000 characters with 200 character overlap).
-- **YouTube Transcription**: Utilizes `yt-dlp` for audio extraction, OpenAI Whisper API for transcription, and ReportLab for PDF generation. Includes extended timeouts for long videos (60 min frontend, 15 min Whisper) and robust error handling for download issues.
+- **YouTube Transcription**: Two options available:
+  - **FREE Transcript**: Uses `youtube-transcript-api` to extract existing YouTube captions at zero cost. Works for public videos with captions enabled.
+  - **Whisper Transcription**: Utilizes `yt-dlp` for audio extraction and OpenAI Whisper API for transcription (~$0.006/min). Works for any video including those without captions. Includes extended timeouts for long videos (60 min frontend, 15 min Whisper) and robust error handling for download issues.
+  - Both generate formatted PDFs using ReportLab.
 - **Text to PDF**: Converts text to formatted PDFs with automatic punctuation and grammar fixes using GPT-3.5.
 - **Large File Support**: Efficient binary uploads (multipart/form-data), batch processing for Pinecone upserts (batches of 50), and increased embedding timeouts for large files.
 
@@ -39,7 +42,7 @@ Preferred communication style: Simple, everyday language.
 ## API Structure
 - **Upload**: `POST /upload` (multipart/form-data) and `POST /upload-base64` (JSON) for PDF uploads.
 - **Query**: `POST /query` for document Q&A.
-- **YouTube Transcription**: `POST /transcribe-youtube`.
+- **YouTube Transcription**: `POST /transcribe-youtube` (Whisper API, costs money) and `POST /transcribe-youtube-free` (FREE, uses YouTube captions).
 - **Text to PDF**: `POST /text-to-pdf`.
 - **Document Report**: `GET /documents/report` (CSV export with Hawaii timezone timestamps).
 - **Document Management**: `DELETE /documents/{document_id}` for removing document data; chat commands for `list`, `delete`, `show`.
@@ -71,6 +74,7 @@ Preferred communication style: Simple, everyday language.
 - **PyPDF2**: For PDF parsing and text extraction.
 - **LangChain**: For text splitting utilities.
 - **yt-dlp**: For downloading audio from YouTube videos.
+- **youtube-transcript-api**: For extracting FREE YouTube captions without API costs.
 - **ReportLab**: For generating formatted PDFs.
 - **PostgreSQL**: For persistent cost tracking.
 
