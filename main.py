@@ -1058,9 +1058,9 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             return FileResponse(
                 pdf_path,
                 media_type="application/pdf",
-                filename=f"{video_title[:50].replace('/', '-')}_transcript.pdf",
+                filename=f"{video_title[:50].replace('/', '-')}.pdf",
                 headers={
-                    "Content-Disposition": f"attachment; filename=\"{video_title[:50].replace('/', '-')}_transcript.pdf\""
+                    "Content-Disposition": f"attachment; filename=\"{video_title[:50].replace('/', '-')}.pdf\""
                 }
             )
             
