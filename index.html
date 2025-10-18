@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="format-detection" content="telephone=no" />
   <title>InnerVerse - Upload & Chat</title>
-  <link rel="stylesheet" href="/static/style.css?v=45" />
+  <link rel="stylesheet" href="/static/style.css?v=46" />
 </head>
 <body>
   <!-- Theme Toggle -->
@@ -109,17 +109,12 @@
         </svg>
         <span>YouTube Transcription</span>
       </div>
-      <p class="youtube-description">Paste a YouTube URL to transcribe and download as PDF</p>
+      <p class="youtube-description">Transcribe YouTube videos using Whisper AI (~$0.006/min)</p>
       <div class="youtube-input-group">
         <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." />
-        <div class="youtube-buttons">
-          <button id="transcribe-free-btn" class="btn-transcribe-free" title="FREE - Uses YouTube's captions (if available)">
-            🆓 Free Transcript
-          </button>
-          <button id="transcribe-btn" class="btn-transcribe" title="Costs ~$0.006/min - Works for any video">
-            💰 Use Whisper
-          </button>
-        </div>
+        <button id="transcribe-btn" class="btn-transcribe" title="Costs ~$0.006/min - Works for any video">
+          🎤 Transcribe Video
+        </button>
       </div>
       <div id="youtube-status" class="youtube-status hidden"></div>
     </div>
@@ -244,6 +239,6 @@
   </div>
 
   <script src="https://apis.google.com/js/api.js"></script>
-  <script src="/static/script.js?v=53"></script>
+  <script src="/static/script.js?v=54"></script>
 </body>
 </html>
