@@ -340,6 +340,12 @@ function processFile(file) {
         timestamp: Date.now()
       });
       saveUploadedFiles(uploadedFiles);
+      
+      // Save tags if present (InnerVerse Intelligence Layer)
+      if (result.tags && Array.isArray(result.tags)) {
+        saveDocumentTags(result.document_id, file.name, result.tags);
+        console.log(`🏷️ Document tagged with ${result.tags.length} concepts:`, result.tags.slice(0, 5));
+      }
 
       progressBar.style.width = '100%';
       uploadItem.classList.add('success');
@@ -606,6 +612,12 @@ async function downloadAndProcessGDriveFile(fileId, fileName) {
       });
       saveUploadedFiles(uploadedFiles);
       
+      // Save tags if present (InnerVerse Intelligence Layer)
+      if (result.tags && Array.isArray(result.tags)) {
+        saveDocumentTags(result.document_id, fileName, result.tags);
+        console.log(`🏷️ Document tagged with ${result.tags.length} concepts:`, result.tags.slice(0, 5));
+      }
+      
       // Success
       progressBar.style.width = '100%';
       uploadItem.classList.add('success');
@@ -849,6 +861,9 @@ deleteAllBtn.addEventListener('click', async () => {
     const response = await fetch('/documents/all', {
       method: 'DELETE'
     });
+    
+    // Also clear tagged documents from localStorage
+    clearTaggedDocuments();
     
     if (!response.ok) {
       throw new Error('Failed to delete documents');
@@ -1356,3 +1371,115 @@ setInterval(updateCostTracker, 30000);
 
 } // end init function
 })(); // end IIFE
+
+// === Tag Library Collapsible Toggle ===
+const tagLibraryToggle = document.getElementById('tag-library-toggle');
+const tagLibraryContent = document.getElementById('tag-library-content');
+
+// Start collapsed by default
+if (tagLibraryToggle && tagLibraryContent) {
+  tagLibraryToggle.classList.add('collapsed');
+  tagLibraryContent.classList.add('collapsed');
+  
+  tagLibraryToggle.addEventListener('click', () => {
+    tagLibraryToggle.classList.toggle('collapsed');
+    tagLibraryToggle.classList.toggle('open');
+    tagLibraryContent.classList.toggle('collapsed');
+    tagLibraryContent.classList.toggle('open');
+    
+    // Load tag library when opened
+    if (tagLibraryContent.classList.contains('open')) {
+      loadTagLibrary();
+    }
+  });
+}
+
+// === Tag Library Functions ===
+function saveDocumentTags(documentId, filename, tags) {
+  const taggedDocs = JSON.parse(localStorage.getItem('innerverse_tagged_docs') || '{}');
+  taggedDocs[documentId] = {
+    filename: filename,
+    tags: tags || [],
+    timestamp: Date.now()
+  };
+  localStorage.setItem('innerverse_tagged_docs', JSON.stringify(taggedDocs));
+  console.log(`💾 Saved ${tags?.length || 0} tags for document: ${filename}`);
+}
+
+function getTaggedDocuments() {
+  return JSON.parse(localStorage.getItem('innerverse_tagged_docs') || '{}');
+}
+
+function clearTaggedDocuments() {
+  localStorage.removeItem('innerverse_tagged_docs');
+  console.log('🗑️ Cleared all tagged documents from localStorage');
+}
+
+async function loadTagLibrary() {
+  const taggedDocs = getTaggedDocuments();
+  const docCount = Object.keys(taggedDocs).length;
+  
+  console.log(`📚 Loading tag library with ${docCount} documents`);
+  
+  if (docCount === 0) {
+    // Show placeholder
+    document.getElementById('tag-cloud').innerHTML = '<div class="tag-cloud-placeholder">Upload documents to see extracted tags...</div>';
+    document.getElementById('tagged-documents-list').innerHTML = '<div class="tagged-documents-placeholder">No tagged documents yet. Upload a PDF to see auto-extracted MBTI tags!</div>';
+    return;
+  }
+  
+  // Build tag frequency map
+  const tagFrequency = {};
+  Object.values(taggedDocs).forEach(doc => {
+    if (doc.tags && Array.isArray(doc.tags)) {
+      doc.tags.forEach(tag => {
+        tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
+      });
+    }
+  });
+  
+  // Sort tags by frequency
+  const sortedTags = Object.entries(tagFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 30); // Top 30 tags
+  
+  // Build tag cloud
+  const tagCloudHTML = sortedTags.map(([tag, count]) => 
+    `<div class="tag-badge clickable" onclick="filterByTag('${tag}')">
+      ${tag}
+      <span class="tag-count">${count}</span>
+    </div>`
+  ).join('');
+  
+  document.getElementById('tag-cloud').innerHTML = tagCloudHTML || '<div class="tag-cloud-placeholder">No tags extracted yet</div>';
+  
+  // Build document list
+  const docsArray = Object.entries(taggedDocs)
+    .map(([id, doc]) => ({ id, ...doc }))
+    .sort((a, b) => b.timestamp - a.timestamp);
+  
+  const docsHTML = docsArray.map(doc => `
+    <div class="tagged-document-item">
+      <div class="tagged-document-title">${doc.filename}</div>
+      <div class="tagged-document-tags">
+        ${doc.tags && doc.tags.length > 0 
+          ? doc.tags.map(tag => `<span class="tag-mini">${tag}</span>`).join('')
+          : '<span class="tag-mini" style="opacity: 0.5;">No tags</span>'
+        }
+      </div>
+      <div class="tagged-document-meta">
+        <span>🏷️ ${doc.tags?.length || 0} tags</span>
+        <span>📅 ${new Date(doc.timestamp).toLocaleDateString()}</span>
+      </div>
+    </div>
+  `).join('');
+  
+  document.getElementById('tagged-documents-list').innerHTML = docsHTML;
+}
+
+function filterByTag(tag) {
+  console.log(`🔍 Filtering by tag: ${tag}`);
+  // TODO: Could implement filtering in the document list
+  // For now, just highlight the tag
+  alert(`Filter by tag: ${tag}\n\nThis will search documents tagged with "${tag}"`);
+}
