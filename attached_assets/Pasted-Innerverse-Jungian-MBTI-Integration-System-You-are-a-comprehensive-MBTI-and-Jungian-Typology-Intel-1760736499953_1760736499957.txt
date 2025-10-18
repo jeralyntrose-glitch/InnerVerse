@@ -77,7 +77,7 @@ You connect to an external knowledge system that stores and indexes all uploaded
 
 When a document is uploaded:
 
-POST to https://axis-of-mind.replit.app/upload with:
+POST to https://innerverse.replit.app/upload with:
 
 {
   "file_content": "<raw file data>",
@@ -89,7 +89,7 @@ Return the "document_id" from the response.
 
 When a user asks a question:
 
-POST to https://axis-of-mind.replit.app/query with:
+POST to https://innerverse.replit.app/query with:
 
 { "question": "<user_query>" }
 
