@@ -152,6 +152,42 @@
       </div>
     </div>
 
+    <!-- 🏷️ Tag Library Section -->
+    <div class="tag-library-section">
+      <button class="tag-library-toggle" id="tag-library-toggle">
+        <div class="tag-library-toggle-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+          <span>🧠 InnerVerse Tag Library</span>
+        </div>
+        <svg class="tag-library-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      
+      <div class="tag-library-content" id="tag-library-content">
+        <p class="tag-library-description">Browse your documents organized by MBTI/Jungian taxonomy tags</p>
+        
+        <!-- Tag Cloud / Filter -->
+        <div class="tag-cloud-section">
+          <div class="tag-cloud-label">Popular Tags</div>
+          <div id="tag-cloud" class="tag-cloud">
+            <div class="tag-cloud-placeholder">Upload documents to see extracted tags...</div>
+          </div>
+        </div>
+        
+        <!-- Document List with Tags -->
+        <div class="tagged-documents-section">
+          <div class="tagged-documents-label">Documents & Tags</div>
+          <div id="tagged-documents-list" class="tagged-documents-list">
+            <div class="tagged-documents-placeholder">No tagged documents yet. Upload a PDF to see auto-extracted MBTI tags!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 💰 Cost Tracker Section -->
     <div class="cost-tracker-section">
       <button class="cost-tracker-toggle" id="cost-tracker-toggle">
@@ -199,42 +235,6 @@
           <div class="recent-calls-label">Recent Calls</div>
           <div id="recent-calls" class="recent-calls-list">
             <div class="recent-call-placeholder">No recent activity</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 🏷️ Tag Library Section -->
-    <div class="tag-library-section">
-      <button class="tag-library-toggle" id="tag-library-toggle">
-        <div class="tag-library-toggle-content">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
-            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-            <line x1="7" y1="7" x2="7.01" y2="7"></line>
-          </svg>
-          <span>🧠 InnerVerse Tag Library</span>
-        </div>
-        <svg class="tag-library-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-        </svg>
-      </button>
-      
-      <div class="tag-library-content" id="tag-library-content">
-        <p class="tag-library-description">Browse your documents organized by MBTI/Jungian taxonomy tags</p>
-        
-        <!-- Tag Cloud / Filter -->
-        <div class="tag-cloud-section">
-          <div class="tag-cloud-label">Popular Tags</div>
-          <div id="tag-cloud" class="tag-cloud">
-            <div class="tag-cloud-placeholder">Upload documents to see extracted tags...</div>
-          </div>
-        </div>
-        
-        <!-- Document List with Tags -->
-        <div class="tagged-documents-section">
-          <div class="tagged-documents-label">Documents & Tags</div>
-          <div id="tagged-documents-list" class="tagged-documents-list">
-            <div class="tagged-documents-placeholder">No tagged documents yet. Upload a PDF to see auto-extracted MBTI tags!</div>
           </div>
         </div>
       </div>

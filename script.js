@@ -1161,8 +1161,11 @@ textPdfToggle.addEventListener('click', () => {
 const costTrackerToggle = document.getElementById('cost-tracker-toggle');
 const costTrackerContent = document.getElementById('cost-tracker-content');
 
-// Start EXPANDED by default (no collapsed class)
+// Start COLLAPSED by default
 if (costTrackerToggle && costTrackerContent) {
+  costTrackerToggle.classList.add('collapsed');
+  costTrackerContent.classList.add('collapsed');
+  
   costTrackerToggle.addEventListener('click', () => {
     costTrackerToggle.classList.toggle('collapsed');
     costTrackerContent.classList.toggle('collapsed');
