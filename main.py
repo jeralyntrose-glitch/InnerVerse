@@ -31,10 +31,6 @@ from youtube_transcript_api import YouTubeTranscriptApi
 import re
 import requests
 from http.cookiejar import MozillaCookieJar
-from pdf2image import convert_from_bytes
-import pytesseract
-from PIL import Image
-import glob
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -189,66 +185,6 @@ def chunk_text(text, chunk_size=1000, chunk_overlap=200):
     return chunks
 
 
-def extract_text_with_ocr(pdf_bytes, filename):
-    """
-    Extract text from scanned PDF using OCR (Tesseract).
-    Returns extracted text string.
-    """
-    print(f"📸 Starting OCR extraction for scanned PDF: {filename}")
-    
-    try:
-        poppler_path = None
-        poppler_search = glob.glob("/nix/store/*-poppler*/bin")
-        if poppler_search:
-            poppler_path = poppler_search[0]
-            print(f"🔧 Found poppler at: {poppler_path}")
-        
-        images = convert_from_bytes(pdf_bytes, dpi=300, poppler_path=poppler_path)
-        total_pages = len(images)
-        print(f"🖼️ Converted {total_pages} pages to images")
-        
-        extracted_text = []
-        
-        for i, image in enumerate(images, 1):
-            print(f"🔍 OCR processing page {i}/{total_pages}...")
-            
-            page_text = pytesseract.image_to_string(image, lang='eng')
-            
-            if page_text.strip():
-                extracted_text.append(page_text)
-            
-            if i % 10 == 0:
-                print(f"✅ Processed {i}/{total_pages} pages")
-        
-        full_text = "\n\n".join(extracted_text)
-        char_count = len(full_text)
-        print(f"✅ OCR complete: extracted {char_count:,} characters from {total_pages} pages")
-        
-        return full_text
-        
-    except Exception as e:
-        print(f"❌ OCR extraction failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"OCR extraction failed: {str(e)}")
-
-
-def detect_scanned_pdf(text, page_count):
-    """
-    Detect if a PDF is scanned (has minimal extractable text).
-    Returns True if scanned, False otherwise.
-    """
-    if page_count == 0:
-        return False
-    
-    avg_chars_per_page = len(text) / page_count
-    
-    is_scanned = avg_chars_per_page < 50
-    
-    if is_scanned:
-        print(f"🔍 Scanned PDF detected: {avg_chars_per_page:.1f} chars/page (threshold: 50)")
-    else:
-        print(f"✅ Text-based PDF: {avg_chars_per_page:.1f} chars/page")
-    
-    return is_scanned
 
 
 # Create FastAPI app
@@ -308,10 +244,6 @@ async def upload_pdf_base64(data: Base64Upload):
         pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
         page_count = len(pdf_reader.pages)
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
-        
-        if detect_scanned_pdf(text, page_count):
-            text = extract_text_with_ocr(pdf_bytes, data.filename)
-        
         chunks = chunk_text(text)
         print(f"📄 Uploading {len(chunks)} chunks to Pinecone")
 
@@ -380,10 +312,6 @@ async def upload_pdf(file: UploadFile = File(...)):
         pdf_reader = PdfReader(io.BytesIO(contents))
         page_count = len(pdf_reader.pages)
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
-        
-        if detect_scanned_pdf(text, page_count):
-            text = extract_text_with_ocr(contents, file.filename)
-        
         chunks = chunk_text(text)
         print(f"📄 Processing {len(chunks)} chunks from {page_count} pages")
 

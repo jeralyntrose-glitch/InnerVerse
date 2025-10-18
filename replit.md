@@ -22,8 +22,7 @@ Preferred communication style: Simple, everyday language.
 - **Deployment**: VM deployment to ensure inclusion of system packages like `ffmpeg`.
 
 ## Document Processing Pipeline
-- **PDF Parsing**: Uses PyPDF2 for text extraction from PDFs with automatic OCR fallback for scanned documents.
-- **OCR Support**: Automatically detects scanned PDFs (documents with <50 chars/page) and uses Tesseract OCR for text extraction. Processes at 300 DPI with progress logging for large documents. Uses pdf2image with poppler for PDF-to-image conversion and pytesseract for optical character recognition.
+- **PDF Parsing**: Uses PyPDF2 for text extraction from text-based PDFs.
 - **Text Chunking**: Employs LangChain's `RecursiveCharacterTextSplitter` to break documents into overlapping chunks (1000 characters with 200 character overlap).
 - **YouTube Transcription**: Utilizes `yt-dlp` for audio extraction and OpenAI Whisper API for transcription (~$0.006/min). Works for any video. Includes extended timeouts for long videos (60 min frontend, 15 min Whisper) and robust error handling for download issues. Generates formatted PDFs using ReportLab.
 - **Text to PDF**: Converts text to formatted PDFs with automatic punctuation and grammar fixes using GPT-3.5.
@@ -70,9 +69,6 @@ Preferred communication style: Simple, everyday language.
 
 ## Document Processing
 - **PyPDF2**: For PDF parsing and text extraction.
-- **pdf2image**: For converting PDF pages to images (OCR preprocessing).
-- **pytesseract**: For OCR text extraction from scanned PDFs.
-- **Pillow**: For image processing and manipulation.
 - **LangChain**: For text splitting utilities.
 - **yt-dlp**: For downloading audio from YouTube videos.
 - **ReportLab**: For generating formatted PDFs.

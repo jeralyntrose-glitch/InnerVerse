@@ -3,7 +3,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["bash", "ffmpeg", "ffmpeg-full", "freetype", "glibcLocales", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "poppler", "poppler_utils", "tcl", "tesseract", "tk", "zlib"]
+packages = ["bash", "ffmpeg", "ffmpeg-full", "zlib"]
 
 [unitTest]
 language = "python3"
