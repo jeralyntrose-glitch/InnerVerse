@@ -518,19 +518,17 @@ class TextToPDFRequest(BaseModel):
 
 @app.post("/query")
 async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
-    # API Key validation
-    expected_api_key = os.getenv("API_KEY")
-    if not expected_api_key:
-        raise HTTPException(status_code=500, detail="Server configuration error: API key not set")
-    
-    # Check if Authorization header is present and valid
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing API key. Please provide Authorization header.")
-    
-    # Support both "Bearer <token>" and direct token formats
-    token = authorization.replace("Bearer ", "").strip()
-    if token != expected_api_key:
-        raise HTTPException(status_code=403, detail="Invalid API key")
+    # API Key validation (only if Authorization header is provided)
+    # Web app can call without auth, but external calls (custom GPT) must provide valid token
+    if authorization:
+        expected_api_key = os.getenv("API_KEY")
+        if not expected_api_key:
+            raise HTTPException(status_code=500, detail="Server configuration error: API key not set")
+        
+        # Support both "Bearer <token>" and direct token formats
+        token = authorization.replace("Bearer ", "").strip()
+        if token != expected_api_key:
+            raise HTTPException(status_code=403, detail="Invalid API key")
     
     # Rate limiting check
     allowed, count = check_rate_limit(max_requests_per_hour=100)
