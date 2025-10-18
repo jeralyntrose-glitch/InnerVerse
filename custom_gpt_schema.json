@@ -18,8 +18,8 @@
         "operationId": "searchKnowledgeBase",
         "x-openai-isConsequential": false,
         "requestBody": {
-          "required": true,
-          "content": {
+          "required": true,A
+          "content": {A
             "application/json": {
               "schema": {
                 "type": "object",
