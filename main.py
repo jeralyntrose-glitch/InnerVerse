@@ -1071,7 +1071,8 @@ async def transcribe_youtube_free(request: YouTubeTranscribeRequest):
         # Try to get the transcript
         try:
             # Get transcript (tries manual first, then auto-generated, any language)
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            ytt_api = YouTubeTranscriptApi()
+            transcript_list = ytt_api.list(video_id)
             
             transcript_data = None
             language = 'unknown'
@@ -1099,9 +1100,9 @@ async def transcribe_youtube_free(request: YouTubeTranscribeRequest):
                 except:
                     pass
             
-            # If still nothing, try the old way as fallback
+            # If still nothing, try the simple fetch method as fallback
             if not transcript_data:
-                transcript_data = transcript_list.find_transcript(['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi']).fetch()
+                transcript_data = ytt_api.fetch(video_id, languages=['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi'])
                 language = 'fallback'
             
             # Combine all transcript segments into one text
