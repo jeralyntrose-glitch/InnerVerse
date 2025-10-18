@@ -1,6 +1,6 @@
 # Overview
 
-This project is a FastAPI-based PDF Q&A application that provides intelligent answers from uploaded PDF documents. It features a modern web interface with drag-and-drop upload capabilities, processes documents by chunking and embedding their content, stores these embeddings in Pinecone, and leverages OpenAI's GPT models for answering user queries based on the document content. The application aims to offer an intuitive user experience for document interaction and knowledge retrieval, including the ability to transcribe YouTube videos into searchable PDFs and generate document reports. The project also includes robust API usage monitoring with real-time cost tracking and rate limiting.
+InnerVerse is a FastAPI-based PDF Q&A application that provides intelligent answers from uploaded PDF documents. It features a modern web interface with drag-and-drop upload capabilities, processes documents by chunking and embedding their content, stores these embeddings in Pinecone, and leverages OpenAI's GPT models for answering user queries based on the document content. The application aims to offer an intuitive user experience for document interaction and knowledge retrieval, including the ability to transcribe YouTube videos into searchable PDFs and generate document reports. The project also includes robust API usage monitoring with real-time cost tracking and rate limiting.
 
 # User Preferences
 

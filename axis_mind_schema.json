@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "AXIS MIND - AI Document Intelligence",
+    "title": "InnerVerse - AI Document Intelligence",
     "version": "1.0.0",
     "description": "Query uploaded PDF documents, transcribe YouTube videos, and manage your knowledge base using AI-powered semantic search. All answers are grounded in actual document content for maximum accuracy."
   },

@@ -995,7 +995,7 @@ if (transcribeBtn && youtubeUrl && youtubeStatus) {
       
       setTimeout(() => {
         hideYoutubeProgress();
-        showYoutubeStatus('✅ PDF downloaded! You can now upload it to Axis Mind.', 'success');
+        showYoutubeStatus('✅ PDF downloaded! You can now upload it to InnerVerse.', 'success');
         playNotificationSound(); // Play notification ping
       }, 500);
       
