@@ -280,10 +280,15 @@ Your response (JSON array only):"""
             max_tokens=500
         )
         
-        # Track usage
-        tokens_used = response.usage.total_tokens
-        cost = (tokens_used / 1000) * PRICING["gpt-3.5-turbo"]["total"]
-        log_api_usage("auto_tagging", cost, tokens_used)
+        # Track usage (calculate cost from input + output tokens)
+        input_tokens = response.usage.prompt_tokens
+        output_tokens = response.usage.completion_tokens
+        cost = (input_tokens / 1000) * PRICING["gpt-3.5-turbo-input"] + \
+               (output_tokens / 1000) * PRICING["gpt-3.5-turbo-output"]
+        log_api_usage("auto_tagging", "gpt-3.5-turbo", 
+                      input_tokens=input_tokens, 
+                      output_tokens=output_tokens, 
+                      cost=cost)
         
         # Parse tags from response
         response_text = response.choices[0].message.content.strip()
@@ -493,10 +498,12 @@ async def upload_pdf(file: UploadFile = File(...)):
             print(f"⏱️ Total time: {total_elapsed:.1f}s (upload: {upsert_elapsed:.1f}s)")
 
         return {
-            "message": "PDF uploaded and indexed",
+            "message": "PDF uploaded and indexed with InnerVerse Intelligence Layer",
             "document_id": doc_id,
             "chunks_count": len(chunks),
-            "filename": file.filename
+            "filename": file.filename,
+            "tags": tags,
+            "tags_count": len(tags)
         }
 
     except Exception as e:
