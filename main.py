@@ -34,6 +34,7 @@ from http.cookiejar import MozillaCookieJar
 from pdf2image import convert_from_bytes
 import pytesseract
 from PIL import Image
+import glob
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -196,7 +197,13 @@ def extract_text_with_ocr(pdf_bytes, filename):
     print(f"📸 Starting OCR extraction for scanned PDF: {filename}")
     
     try:
-        images = convert_from_bytes(pdf_bytes, dpi=300)
+        poppler_path = None
+        poppler_search = glob.glob("/nix/store/*-poppler*/bin")
+        if poppler_search:
+            poppler_path = poppler_search[0]
+            print(f"🔧 Found poppler at: {poppler_path}")
+        
+        images = convert_from_bytes(pdf_bytes, dpi=300, poppler_path=poppler_path)
         total_pages = len(images)
         print(f"🖼️ Converted {total_pages} pages to images")
         
