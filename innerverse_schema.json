@@ -1,0 +1,189 @@
+{
+  "schema_version": "1.0",
+  "description": "InnerVerse Intelligence Layer - Comprehensive MBTI/Jungian taxonomy for automatic document classification",
+  
+  "layers": {
+    "1_cognitive_architecture": {
+      "description": "Core cognitive building blocks",
+      "categories": {
+        "cognitive_functions": {
+          "values": ["Fe", "Fi", "Te", "Ti", "Ne", "Ni", "Se", "Si"],
+          "description": "The 8 cognitive functions"
+        },
+        "function_attitudes": {
+          "values": ["Extraverted", "Introverted"],
+          "description": "Function orientation"
+        },
+        "function_axes": {
+          "values": ["Fe-Ti", "Te-Fi", "Ne-Si", "Ni-Se"],
+          "description": "Opposing function pairs"
+        },
+        "cognitive_roles": {
+          "values": ["Hero", "Parent", "Child", "Inferior", "Nemesis", "Critic", "Trickster", "Demon"],
+          "description": "8-function cognitive role model"
+        },
+        "cognitive_polarities": {
+          "values": ["Thinking vs Feeling", "Intuition vs Sensing", "Judging vs Perceiving"],
+          "description": "Fundamental cognitive dichotomies"
+        }
+      }
+    },
+    
+    "2_typological_structures": {
+      "description": "Systems that give shape to how cognition interacts across the psyche",
+      "categories": {
+        "four_sides_of_mind": {
+          "values": ["Ego", "Subconscious", "Unconscious", "Shadow", "Superego"],
+          "description": "The four cognitive sides model"
+        },
+        "ego_hacking": {
+          "values": ["Cognitive Transition", "Shadow Access", "Subconscious Integration"],
+          "description": "How types access different sides of the mind"
+        },
+        "interaction_styles": {
+          "values": ["Directing", "Initiating", "Responding", "Informing", "DCS"],
+          "description": "Communication and social interaction patterns"
+        },
+        "temperaments": {
+          "values": ["Artisan", "Guardian", "Idealist", "Rational", "SP", "SJ", "NF", "NT"],
+          "description": "The four classical temperaments"
+        },
+        "quadras": {
+          "values": ["Alpha", "Beta", "Gamma", "Delta"],
+          "description": "Function family groupings (Socionics)"
+        },
+        "cognitive_synchronicity": {
+          "values": ["Function Resonance", "Cognitive Harmony", "Type Chemistry"],
+          "description": "How functions resonate between people"
+        },
+        "functional_loops_grips": {
+          "values": ["Ne-Fi loop", "Ti-Ne loop", "Se-Ni grip", "Fi-Si loop", "Te-Se loop", "Ni-Ti loop", "Fe-Ne loop", "Si-Fe loop"],
+          "description": "Unhealthy cognitive patterns and stress responses"
+        }
+      }
+    },
+    
+    "3_type_specific_indexing": {
+      "description": "Individual type identities and their dynamics",
+      "categories": {
+        "mbti_types": {
+          "values": ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP", "ISTJ", "ISFJ", "ESTJ", "ESFJ", "ISTP", "ISFP", "ESTP", "ESFP"],
+          "description": "The 16 personality types"
+        },
+        "type_pair_dynamics": {
+          "values": ["Golden Pair", "Silver Pair", "Bronze Pair", "Shadow Pair", "Companion", "Pedagogue"],
+          "description": "Relationship dynamics between type pairs"
+        },
+        "intertype_relations": {
+          "values": ["Duality", "Conflict", "Mirage", "Supervision", "Activation", "Identical", "Quasi-Identical", "Semi-Duality", "Business", "Kindred", "Super-Ego", "Benefactor", "Beneficiary", "Supervisee", "Supervisor"],
+          "description": "Socionics intertype relationship taxonomy"
+        },
+        "compatibility_themes": {
+          "values": ["Love Languages", "Empathy Mismatches", "Emotional Polarity", "Cognitive Compatibility", "Communication Harmony"],
+          "description": "Relationship compatibility patterns"
+        },
+        "developmental_stages": {
+          "values": ["Childhood Imprinting", "Adolescent Development", "Young Adult Maturation", "Midlife Individuation", "Elder Wisdom"],
+          "description": "How types develop and mature over lifespan"
+        }
+      }
+    },
+    
+    "4_depth_psychology_jungian": {
+      "description": "Jungian depth psychology beyond MBTI",
+      "categories": {
+        "archetypes": {
+          "values": ["Hero", "Anima", "Animus", "Shadow", "Self", "Trickster", "Wise Old Man", "Great Mother", "Divine Child", "Persona"],
+          "description": "Jungian archetypal structures"
+        },
+        "persona_shadow_integration": {
+          "values": ["Persona Development", "Shadow Work", "Shadow Integration", "Persona vs Authenticity"],
+          "description": "The relationship between public self and hidden self"
+        },
+        "individuation_process": {
+          "values": ["Self-Discovery", "Integration", "Wholeness", "Self-Realization"],
+          "description": "The journey toward psychological wholeness"
+        },
+        "transference_projection": {
+          "values": ["Transference", "Projection", "Counter-Transference", "Projective Identification"],
+          "description": "Psychological projection mechanisms"
+        },
+        "synchronicity_symbolism": {
+          "values": ["Synchronicity", "Meaningful Coincidence", "Symbolic Resonance", "Acausal Connection"],
+          "description": "Non-causal meaningful connections"
+        },
+        "complexes": {
+          "values": ["Mother Complex", "Father Complex", "Inferiority Complex", "Power Complex", "Savior Complex"],
+          "description": "Autonomous psychological patterns"
+        },
+        "dream_symbolism": {
+          "values": ["Dream Analysis", "Active Imagination", "Symbol Interpretation", "Unconscious Communication"],
+          "description": "Dream work and symbolic exploration"
+        }
+      }
+    },
+    
+    "5_behavioral_expression": {
+      "description": "How cognition manifests in real behavior",
+      "categories": {
+        "communication_styles": {
+          "values": ["Fe Harmony Speech", "Ti Precision Speech", "Te Direct Speech", "Fi Authentic Speech", "Ne Possibility Speech", "Ni Vision Speech", "Se Present Speech", "Si Detailed Speech"],
+          "description": "Function-based communication patterns"
+        },
+        "emotional_regulation": {
+          "values": ["Fi Internal Processing", "Fe External Harmony", "Fi/Fe Differences", "Emotional Authenticity vs Social Harmony"],
+          "description": "How different functions handle emotions"
+        },
+        "cognitive_biases": {
+          "values": ["Confirmation Bias", "Availability Heuristic", "Function-Specific Blindspots", "Cognitive Distortions"],
+          "description": "Function-specific thinking patterns and biases"
+        },
+        "conflict_resolution": {
+          "values": ["Fe Mediating", "Te Problem-Solving", "Fi Values-Based", "Ti Logical Analysis", "Avoidant", "Assertive", "Collaborative"],
+          "description": "How types approach and resolve conflict"
+        },
+        "energy_management": {
+          "values": ["Extroversion", "Introversion", "Social Energy", "Solitude Needs", "Recharge Patterns"],
+          "description": "Energy flow and social battery management"
+        },
+        "shadow_triggers": {
+          "values": ["Stress Response", "Defense Mechanisms", "Grip Experience", "Trigger Patterns", "Emotional Reactivity"],
+          "description": "What triggers unhealthy patterns in each type"
+        }
+      }
+    },
+    
+    "6_integration_meta": {
+      "description": "The big brain glue - how concepts connect",
+      "categories": {
+        "function_interaction_maps": {
+          "values": ["Fe → Ne", "Ti → Si", "Te → Se", "Fi → Ni", "Ne → Ti", "Ni → Fe", "Se → Te", "Si → Fi", "Function Flow", "Cognitive Pathways"],
+          "description": "How functions influence and interact with each other"
+        },
+        "cross_system_overlays": {
+          "values": ["MBTI + Enneagram", "MBTI + Temperament", "MBTI + Astrology", "MBTI + Big Five", "Integrated Models"],
+          "description": "Integration with other personality systems"
+        },
+        "type_evolution": {
+          "values": ["Type Maturation", "Age-Based Development", "INFP at 20 vs 40", "Type Refinement", "Function Development"],
+          "description": "How types mature and evolve over time"
+        },
+        "consciousness_levels": {
+          "values": ["Ego Awareness", "Subconscious Access", "Shadow Awareness", "Superego Integration", "Awareness Shifts"],
+          "description": "Levels of awareness across the four sides"
+        },
+        "metaphorical_frameworks": {
+          "values": ["Fe = Social Gravity", "Ti = Inner Architect", "Ne = Possibility Generator", "Si = Memory Vault", "Cognitive Metaphors"],
+          "description": "Metaphorical language for understanding functions"
+        }
+      }
+    }
+  },
+  
+  "usage_instructions": {
+    "auto_tagging": "Use GPT to analyze document content and extract relevant tags from all 6 layers",
+    "metadata_storage": "Store extracted tags in Pinecone metadata field alongside embeddings",
+    "query_filtering": "Enable filtering by any combination of tags during semantic search",
+    "tag_format": "Use flat array of strings for easy filtering, e.g., ['Fe', 'ENFJ', 'Golden Pair', 'Shadow Integration']"
+  }
+}

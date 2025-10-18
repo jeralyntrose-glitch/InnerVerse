@@ -22,8 +22,9 @@ Preferred communication style: Simple, everyday language.
 - **Deployment**: VM deployment to ensure inclusion of system packages like `ffmpeg`.
 
 ## Document Processing Pipeline
-- **PDF Parsing**: Uses PyPDF2 for text extraction from text-based PDFs.
+- **PDF Parsing**: Uses PyPDF2 for text extraction from text-based PDFs. Supports encrypted PDFs via PyCryptodome.
 - **Text Chunking**: Employs LangChain's `RecursiveCharacterTextSplitter` to break documents into overlapping chunks (1000 characters with 200 character overlap).
+- **InnerVerse Intelligence Layer**: Automatic MBTI/Jungian taxonomy tagging system using GPT-3.5. Analyzes uploaded documents and extracts relevant tags across 6 layers: Cognitive Architecture, Typological Structures, Type-Specific Indexing, Depth Psychology & Jungian Theory, Behavioral & Expression Layers, and Integration & Meta Layers. Tags are stored in Pinecone metadata for advanced filtering and retrieval.
 - **YouTube Transcription**: Utilizes `yt-dlp` for audio extraction and OpenAI Whisper API for transcription (~$0.006/min). Works for any video. Includes extended timeouts for long videos (60 min frontend, 15 min Whisper) and robust error handling for download issues. Generates formatted PDFs using ReportLab.
 - **Text to PDF**: Converts text to formatted PDFs with automatic punctuation and grammar fixes using GPT-3.5.
 - **Large File Support**: Efficient binary uploads (multipart/form-data), batch processing for Pinecone upserts (batches of 50), and increased embedding timeouts for large files.

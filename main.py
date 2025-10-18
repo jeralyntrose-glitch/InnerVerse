@@ -185,6 +185,119 @@ def chunk_text(text, chunk_size=1000, chunk_overlap=200):
     return chunks
 
 
+# Load InnerVerse taxonomy schema
+def load_innerverse_schema():
+    """Load the MBTI/Jungian taxonomy schema for auto-tagging"""
+    try:
+        with open('innerverse_schema.json', 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print("⚠️ innerverse_schema.json not found - auto-tagging disabled")
+        return None
+
+
+# Auto-tag document using GPT and InnerVerse schema
+async def auto_tag_document(text, filename, openai_client):
+    """
+    Analyze document content and extract MBTI/Jungian taxonomy tags using GPT.
+    Returns a list of relevant tags from the InnerVerse Intelligence Layer.
+    """
+    schema = load_innerverse_schema()
+    if not schema:
+        return []
+    
+    # Sample first 3000 chars for analysis (balance cost vs accuracy)
+    sample_text = text[:3000] if len(text) > 3000 else text
+    
+    # Build prompt with schema context
+    prompt = f"""You are an expert in MBTI, Jungian psychology, and cognitive functions. Analyze this document and extract ALL relevant taxonomy tags from the InnerVerse Intelligence Layer schema.
+
+Document Title: {filename}
+Document Sample: {sample_text}
+
+TAXONOMY SCHEMA (6 Layers):
+
+1. COGNITIVE ARCHITECTURE
+- Cognitive Functions: Fe, Fi, Te, Ti, Ne, Ni, Se, Si
+- Function Axes: Fe-Ti, Te-Fi, Ne-Si, Ni-Se
+- Cognitive Roles: Hero, Parent, Child, Inferior, Nemesis, Critic, Trickster, Demon
+- Cognitive Polarities: Thinking vs Feeling, Intuition vs Sensing, Judging vs Perceiving
+
+2. TYPOLOGICAL STRUCTURES
+- Four Sides of Mind: Ego, Subconscious, Unconscious, Shadow, Superego
+- Interaction Styles: Directing, Initiating, Responding, Informing
+- Temperaments: Artisan, Guardian, Idealist, Rational
+- Quadras: Alpha, Beta, Gamma, Delta
+- Loops & Grips: Ne-Fi loop, Ti-Ne loop, Se-Ni grip, etc.
+
+3. TYPE-SPECIFIC INDEXING
+- MBTI Types: INTJ, INTP, ENTJ, ENTP, INFJ, INFP, ENFJ, ENFP, ISTJ, ISFJ, ESTJ, ESFJ, ISTP, ISFP, ESTP, ESFP
+- Type Pair Dynamics: Golden Pair, Silver Pair, Shadow Pair
+- Intertype Relations: Duality, Conflict, Mirage, Supervision, Activation
+- Compatibility Themes: Love Languages, Empathy Mismatches
+- Developmental Stages: Childhood Imprinting, Midlife Individuation
+
+4. DEPTH PSYCHOLOGY & JUNGIAN
+- Archetypes: Hero, Anima, Animus, Shadow, Self, Trickster
+- Shadow Integration, Individuation Process
+- Complexes: Mother Complex, Father Complex, Inferiority Complex
+- Dream Symbolism, Active Imagination
+
+5. BEHAVIORAL EXPRESSION
+- Communication Styles: Fe Harmony Speech, Ti Precision Speech, etc.
+- Emotional Regulation: Fi Internal Processing, Fe External Harmony
+- Conflict Resolution, Energy Management
+- Shadow Triggers & Defense Mechanisms
+
+6. INTEGRATION & META
+- Function Interaction Maps: Fe → Ne, Ti → Si, etc.
+- Cross-System Overlays: MBTI + Enneagram, MBTI + Temperament
+- Type Evolution: Type Maturation, Age-Based Development
+- Consciousness Levels, Metaphorical Frameworks
+
+INSTRUCTIONS:
+1. Read the document sample carefully
+2. Identify ALL relevant tags from the taxonomy above
+3. Return ONLY a JSON array of tag strings, nothing else
+4. Be thorough - include any tag that's clearly discussed in the document
+5. Format: ["tag1", "tag2", "tag3"]
+
+Example output format:
+["Fe", "ENFJ", "Fe-Ti", "Golden Pair", "Shadow Integration", "Harmony Speech"]
+
+Your response (JSON array only):"""
+
+    try:
+        print(f"🏷️ Auto-tagging document: {filename}")
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an expert MBTI/Jungian analyst. Extract taxonomy tags from documents."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=500
+        )
+        
+        # Track usage
+        tokens_used = response.usage.total_tokens
+        cost = (tokens_used / 1000) * PRICING["gpt-3.5-turbo"]["total"]
+        log_api_usage("auto_tagging", cost, tokens_used)
+        
+        # Parse tags from response
+        response_text = response.choices[0].message.content.strip()
+        tags = json.loads(response_text)
+        
+        print(f"✅ Extracted {len(tags)} tags: {tags[:5]}..." if len(tags) > 5 else f"✅ Extracted {len(tags)} tags: {tags}")
+        
+        return tags
+        
+    except Exception as e:
+        print(f"⚠️ Auto-tagging failed: {str(e)}")
+        return []
+
+
 
 
 # Create FastAPI app
@@ -256,6 +369,9 @@ async def upload_pdf_base64(data: Base64Upload):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
 
+        # Auto-tag document with InnerVerse taxonomy
+        tags = await auto_tag_document(text, data.filename, openai_client)
+
         # Batch embedding + upsert
         vectors_to_upsert = []
         for i, chunk in enumerate(chunks):
@@ -270,7 +386,8 @@ async def upload_pdf_base64(data: Base64Upload):
                 "text": chunk,
                 "doc_id": doc_id,
                 "filename": data.filename,
-                "upload_timestamp": datetime.now().isoformat()
+                "upload_timestamp": datetime.now().isoformat(),
+                "tags": tags
             }))
 
         # Upload in batches to avoid Pinecone's 4MB request limit
@@ -287,9 +404,11 @@ async def upload_pdf_base64(data: Base64Upload):
             print(f"✅ Successfully uploaded {len(vectors_to_upsert)} total chunks")
 
         return {
-            "message": "PDF uploaded and indexed",
+            "message": "PDF uploaded and indexed with InnerVerse Intelligence Layer",
             "document_id": doc_id,
-            "chunks_count": len(chunks)
+            "chunks_count": len(chunks),
+            "tags": tags,
+            "tags_count": len(tags)
         }
 
     except Exception as e:
@@ -324,6 +443,9 @@ async def upload_pdf(file: UploadFile = File(...)):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
 
+        # Auto-tag document with InnerVerse taxonomy
+        tags = await auto_tag_document(text, file.filename, openai_client)
+
         # Batch embedding + upsert
         vectors_to_upsert = []
         embed_start = datetime.now()
@@ -342,7 +464,8 @@ async def upload_pdf(file: UploadFile = File(...)):
                     "text": chunk,
                     "doc_id": doc_id,
                     "filename": file.filename,
-                    "upload_timestamp": datetime.now().isoformat()
+                    "upload_timestamp": datetime.now().isoformat(),
+                    "tags": tags
                 }))
             except Exception as embed_error:
                 print(f"❌ Embedding error on chunk {i}: {str(embed_error)}")
@@ -535,6 +658,7 @@ async def get_documents_report():
 class QueryRequest(BaseModel):
     document_id: str = ""  # Optional - empty string means search all documents
     question: str
+    tags: list = []  # Optional - filter by InnerVerse taxonomy tags
 
 # === YouTube Transcription Request ===
 class YouTubeTranscribeRequest(BaseModel):
@@ -571,6 +695,7 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
     
     document_id = request.document_id
     question = request.question
+    filter_tags = request.tags
     openai_client = get_openai_client()
     pinecone_index = get_pinecone_client()
 
@@ -589,22 +714,41 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
         embed_cost = (embed_tokens / 1000) * PRICING["text-embedding-ada-002"]
         log_api_usage("query_embedding", "text-embedding-ada-002", input_tokens=embed_tokens, cost=embed_cost)
 
-        # If document_id is provided, search that document only
-        # If empty, search ALL documents
+        # Build Pinecone filter based on document_id and tags
+        filter_conditions = []
         if document_id and document_id.strip():
-            print(f"🔍 Searching in document: {document_id}")
-            query_response = pinecone_index.query(
-                vector=question_vector,
-                top_k=5,
-                include_metadata=True,
-                filter={"doc_id": document_id}
-            )
-        else:
+            filter_conditions.append({"doc_id": document_id})
+        if filter_tags and len(filter_tags) > 0:
+            # Filter for documents that contain ANY of the specified tags
+            filter_conditions.append({"tags": {"$in": filter_tags}})
+        
+        # Build final filter
+        if len(filter_conditions) == 0:
+            # No filters - search all documents
             print(f"🔍 Searching across ALL documents")
             query_response = pinecone_index.query(
                 vector=question_vector,
                 top_k=5,
                 include_metadata=True
+            )
+        elif len(filter_conditions) == 1:
+            # Single filter
+            filter_str = f"doc_id={document_id}" if document_id else f"tags={filter_tags}"
+            print(f"🔍 Searching with filter: {filter_str}")
+            query_response = pinecone_index.query(
+                vector=question_vector,
+                top_k=5,
+                include_metadata=True,
+                filter=filter_conditions[0]
+            )
+        else:
+            # Multiple filters - use $and
+            print(f"🔍 Searching with filters: doc_id={document_id}, tags={filter_tags}")
+            query_response = pinecone_index.query(
+                vector=question_vector,
+                top_k=5,
+                include_metadata=True,
+                filter={"$and": filter_conditions}
             )
 
         try:
