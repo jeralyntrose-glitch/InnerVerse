@@ -112,7 +112,14 @@
       <p class="youtube-description">Paste a YouTube URL to transcribe and download as PDF</p>
       <div class="youtube-input-group">
         <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." />
-        <button id="transcribe-btn" class="btn-transcribe">Transcribe</button>
+        <div class="youtube-buttons">
+          <button id="transcribe-free-btn" class="btn-transcribe-free" title="FREE - Uses YouTube's captions (if available)">
+            🆓 Free Transcript
+          </button>
+          <button id="transcribe-btn" class="btn-transcribe" title="Costs ~$0.006/min - Works for any video">
+            💰 Transcribe with Whisper
+          </button>
+        </div>
       </div>
       <div id="youtube-status" class="youtube-status hidden"></div>
     </div>

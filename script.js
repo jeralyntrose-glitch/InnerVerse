@@ -1022,14 +1022,96 @@ if (transcribeBtn && youtubeUrl && youtubeStatus) {
       transcribeBtn.disabled = false;
     }
   });
+}
 
-  // Enter key support for YouTube input
-  youtubeUrl.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !transcribeBtn.disabled) {
-      transcribeBtn.click();
+// === FREE YouTube Transcription (No API costs) ===
+const transcribeFreeBtn = document.getElementById('transcribe-free-btn');
+
+if (transcribeFreeBtn && youtubeUrl && youtubeStatus) {
+  transcribeFreeBtn.addEventListener('click', async () => {
+    const url = youtubeUrl.value.trim();
+    
+    if (!url) {
+      showYoutubeStatus('Please enter a YouTube URL', 'error');
+      return;
+    }
+    
+    // Validate YouTube URL
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)/;
+    if (!youtubeRegex.test(url)) {
+      showYoutubeStatus('Please enter a valid YouTube URL', 'error');
+      return;
+    }
+    
+    try {
+      transcribeFreeBtn.disabled = true;
+      transcribeFreeBtn.textContent = '⏳ Getting FREE transcript...';
+      transcribeBtn.disabled = true;
+      
+      showYoutubeStatus('🆓 Fetching free captions... (no cost!)', 'processing');
+      
+      const response = await fetch('/transcribe-youtube-free', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ youtube_url: url })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to get captions');
+      }
+      
+      // Download the PDF
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'youtube_FREE_transcript.pdf';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+      
+      showYoutubeStatus('✅ FREE PDF downloaded! No API costs! 🎉', 'success');
+      playNotificationSound();
+      
+      youtubeUrl.value = '';
+      transcribeFreeBtn.textContent = '🆓 Free Transcript';
+      transcribeFreeBtn.disabled = false;
+      transcribeBtn.disabled = false;
+      
+    } catch (error) {
+      console.error('FREE YouTube transcript error:', error);
+      showYoutubeStatus(error.message, 'error');
+      
+      transcribeFreeBtn.textContent = '🆓 Free Transcript';
+      transcribeFreeBtn.disabled = false;
+      transcribeBtn.disabled = false;
     }
   });
-} else {
+}
+
+// Enter key support for YouTube input (defaults to FREE transcript)
+if (youtubeUrl && transcribeFreeBtn) {
+  youtubeUrl.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !transcribeFreeBtn.disabled) {
+      transcribeFreeBtn.click();
+    }
+  });
+}
+
+if (!transcribeBtn || !youtubeUrl || !youtubeStatus) {
   console.error('❌ YouTube transcription elements not found in DOM');
 }
 
