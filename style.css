@@ -271,16 +271,14 @@ input[type="file"] {
   background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: white;
   border: none;
-  padding: 14px 28px;
+  padding: 12px 24px;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  min-height: 48px;
-  width: 100%;
-  margin-top: 12px;
+  min-height: 44px;
 }
 
 .btn-transcribe:hover {
@@ -806,8 +804,8 @@ input[type="file"] {
   
   .btn-transcribe {
     width: 100%;
-    padding: 16px 20px;
-    font-size: 15px;
+    padding: 14px 20px;
+    font-size: 14px;
   }
   
   .youtube-progress-bar {
