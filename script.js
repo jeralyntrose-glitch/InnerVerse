@@ -906,128 +906,132 @@ const youtubeStatus = document.getElementById('youtube-status');
 let youtubeProgressInterval = null;
 let youtubeAbortController = null;
 
-transcribeBtn.addEventListener('click', async () => {
-  // Initialize audio context for notification (iOS compatibility)
-  initAudioContext();
-  
-  const url = youtubeUrl.value.trim();
-  
-  if (!url) {
-    showYoutubeStatus('Please enter a YouTube URL', 'error');
-    return;
-  }
-  
-  // Validate YouTube URL
-  const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)/;
-  if (!youtubeRegex.test(url)) {
-    showYoutubeStatus('Please enter a valid YouTube URL', 'error');
-    return;
-  }
-  
-  try {
-    transcribeBtn.disabled = true;
-    transcribeBtn.textContent = '⏳ Processing...';
+if (transcribeBtn && youtubeUrl && youtubeStatus) {
+  transcribeBtn.addEventListener('click', async () => {
+    // Initialize audio context for notification (iOS compatibility)
+    initAudioContext();
     
-    // Create abort controller
-    youtubeAbortController = new AbortController();
+    const url = youtubeUrl.value.trim();
     
-    // Show progress bar
-    showYoutubeProgress(0, 'Downloading audio...');
-    
-    // Simulate progress stages
-    let progress = 0;
-    youtubeProgressInterval = setInterval(() => {
-      if (progress < 20) progress += 1; // Slow start for download
-      else if (progress < 60) progress += 2; // Faster for transcription
-      else if (progress < 90) progress += 1; // Slow down near end
-      updateYoutubeProgress(progress);
-    }, 300);
-    
-    // Add 60 minute timeout for very long videos (1+ hours)
-    let isTimeout = false;
-    const timeoutId = setTimeout(() => {
-      isTimeout = true;
-      youtubeAbortController.abort();
-    }, 3600000); // 60 minutes
-    
-    const response = await fetch('/transcribe-youtube', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ youtube_url: url }),
-      signal: youtubeAbortController.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    // Clear progress interval
-    clearInterval(youtubeProgressInterval);
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Transcription failed');
+    if (!url) {
+      showYoutubeStatus('Please enter a YouTube URL', 'error');
+      return;
     }
     
-    // Show completion
-    updateYoutubeProgress(100, 'Complete!');
+    // Validate YouTube URL
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)/;
+    if (!youtubeRegex.test(url)) {
+      showYoutubeStatus('Please enter a valid YouTube URL', 'error');
+      return;
+    }
     
-    // Download the PDF
-    const blob = await response.blob();
-    const downloadUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    
-    // Extract filename from Content-Disposition header or use default
-    const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = 'youtube_transcript.pdf';
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-      if (filenameMatch) {
-        filename = filenameMatch[1];
+    try {
+      transcribeBtn.disabled = true;
+      transcribeBtn.textContent = '⏳ Processing...';
+      
+      // Create abort controller
+      youtubeAbortController = new AbortController();
+      
+      // Show progress bar
+      showYoutubeProgress(0, 'Downloading audio...');
+      
+      // Simulate progress stages
+      let progress = 0;
+      youtubeProgressInterval = setInterval(() => {
+        if (progress < 20) progress += 1; // Slow start for download
+        else if (progress < 60) progress += 2; // Faster for transcription
+        else if (progress < 90) progress += 1; // Slow down near end
+        updateYoutubeProgress(progress);
+      }, 300);
+      
+      // Add 60 minute timeout for very long videos (1+ hours)
+      let isTimeout = false;
+      const timeoutId = setTimeout(() => {
+        isTimeout = true;
+        youtubeAbortController.abort();
+      }, 3600000); // 60 minutes
+      
+      const response = await fetch('/transcribe-youtube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ youtube_url: url }),
+        signal: youtubeAbortController.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // Clear progress interval
+      clearInterval(youtubeProgressInterval);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Transcription failed');
       }
-    }
-    
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(downloadUrl);
-    document.body.removeChild(a);
-    
-    setTimeout(() => {
+      
+      // Show completion
+      updateYoutubeProgress(100, 'Complete!');
+      
+      // Download the PDF
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'youtube_transcript.pdf';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+      
+      setTimeout(() => {
+        hideYoutubeProgress();
+        showYoutubeStatus('✅ PDF downloaded! You can now upload it to Axis Mind.', 'success');
+        playNotificationSound(); // Play notification ping
+      }, 500);
+      
+      youtubeUrl.value = '';
+      transcribeBtn.textContent = 'Transcribe';
+      transcribeBtn.disabled = false;
+      
+    } catch (error) {
+      clearInterval(youtubeProgressInterval);
       hideYoutubeProgress();
-      showYoutubeStatus('✅ PDF downloaded! You can now upload it to Axis Mind.', 'success');
-      playNotificationSound(); // Play notification ping
-    }, 500);
-    
-    youtubeUrl.value = '';
-    transcribeBtn.textContent = 'Transcribe';
-    transcribeBtn.disabled = false;
-    
-  } catch (error) {
-    clearInterval(youtubeProgressInterval);
-    hideYoutubeProgress();
-    
-    if (error.name === 'AbortError') {
-      if (isTimeout) {
-        showError('Transcription timeout: This video is taking too long to process (over 60 minutes). The video may be extremely long, have network issues, or YouTube restrictions. Try a shorter video or check your connection.');
+      
+      if (error.name === 'AbortError') {
+        if (isTimeout) {
+          showError('Transcription timeout: This video is taking too long to process (over 60 minutes). The video may be extremely long, have network issues, or YouTube restrictions. Try a shorter video or check your connection.');
+        } else {
+          showYoutubeStatus('⚠️ Transcription cancelled', 'error');
+        }
       } else {
-        showYoutubeStatus('⚠️ Transcription cancelled', 'error');
+        console.error('YouTube transcription error:', error);
+        showError('YouTube transcription failed: ' + error.message);
       }
-    } else {
-      console.error('YouTube transcription error:', error);
-      showError('YouTube transcription failed: ' + error.message);
+      
+      transcribeBtn.textContent = 'Transcribe';
+      transcribeBtn.disabled = false;
     }
-    
-    transcribeBtn.textContent = 'Transcribe';
-    transcribeBtn.disabled = false;
-  }
-});
+  });
 
-// Enter key support for YouTube input
-youtubeUrl.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter' && !transcribeBtn.disabled) {
-    transcribeBtn.click();
-  }
-});
+  // Enter key support for YouTube input
+  youtubeUrl.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !transcribeBtn.disabled) {
+      transcribeBtn.click();
+    }
+  });
+} else {
+  console.error('❌ YouTube transcription elements not found in DOM');
+}
 
 function showYoutubeStatus(message, type) {
   youtubeStatus.innerHTML = message;
