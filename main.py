@@ -27,6 +27,8 @@ from pydub import AudioSegment
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import pytz
+from youtube_transcript_api import YouTubeTranscriptApi
+import re
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -1034,6 +1036,166 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
         print(f"❌ YouTube transcription error: {str(e)}")
         return JSONResponse(status_code=500, content={
             "error": "Something went wrong. Please try again or use a different video."
+        })
+
+
+# === FREE YouTube Transcript (No Whisper Cost) ===
+@app.post("/transcribe-youtube-free")
+async def transcribe_youtube_free(request: YouTubeTranscribeRequest):
+    """Get FREE YouTube transcript (no Whisper API costs) - only works for videos with captions"""
+    try:
+        youtube_url = request.youtube_url
+        print(f"🎬 Getting FREE transcript for: {youtube_url}")
+        
+        # Extract video ID from URL
+        video_id = None
+        patterns = [
+            r'(?:youtube\.com/watch\?v=|youtu\.be/)([^&\n?#]+)',
+            r'youtube\.com/embed/([^&\n?#]+)',
+            r'youtube\.com/v/([^&\n?#]+)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, youtube_url)
+            if match:
+                video_id = match.group(1)
+                break
+        
+        if not video_id:
+            return JSONResponse(status_code=400, content={
+                "error": "Invalid YouTube URL. Please check the URL and try again."
+            })
+        
+        print(f"📺 Video ID: {video_id}")
+        
+        # Try to get the transcript
+        try:
+            # Get transcript (tries English first, then any available language)
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            
+            # Try to get English transcript first
+            try:
+                transcript_data = transcript_list.find_transcript(['en']).fetch()
+                language = 'English'
+            except:
+                # If no English, get first available transcript
+                transcript_data = transcript_list.find_generated_transcript(['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh']).fetch()
+                language = 'auto-detected'
+            
+            # Combine all transcript segments into one text
+            transcript = ' '.join([entry['text'] for entry in transcript_data])
+            
+            print(f"✅ FREE transcript retrieved ({len(transcript)} characters, {language})")
+            
+        except Exception as e:
+            error_str = str(e).lower()
+            
+            if 'transcript' in error_str and 'disabled' in error_str:
+                return JSONResponse(status_code=404, content={
+                    "error": "This video has captions disabled. Use the 'Transcribe with Whisper' button instead (costs ~$0.006/min)."
+                })
+            elif 'subtitles are disabled' in error_str or 'no transcript' in error_str:
+                return JSONResponse(status_code=404, content={
+                    "error": "No captions available for this video. Use the 'Transcribe with Whisper' button instead (costs ~$0.006/min)."
+                })
+            elif 'private' in error_str or 'unavailable' in error_str:
+                return JSONResponse(status_code=403, content={
+                    "error": "Video is private or unavailable. Try a different video."
+                })
+            else:
+                return JSONResponse(status_code=404, content={
+                    "error": f"Could not get captions for this video. Use the 'Transcribe with Whisper' button instead (costs ~$0.006/min)."
+                })
+        
+        # Get video title using yt-dlp
+        video_title = "YouTube Video"
+        try:
+            info_command = ["yt-dlp", "--print", "%(title)s", youtube_url]
+            info_result = subprocess.run(info_command, capture_output=True, text=True, timeout=10)
+            if info_result.returncode == 0 and info_result.stdout.strip():
+                video_title = info_result.stdout.strip()
+        except:
+            pass  # Use default title if yt-dlp fails
+        
+        # Generate PDF
+        print("📄 Generating FREE PDF...")
+        try:
+            pdf_filename = f"transcript_free_{uuid.uuid4().hex[:8]}.pdf"
+            pdf_path = os.path.join("/tmp", pdf_filename)
+            
+            # Create PDF
+            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            
+            # Custom styles
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                textColor='#5B21B6',
+                spaceAfter=12
+            )
+            
+            body_style = ParagraphStyle(
+                'CustomBody',
+                parent=styles['BodyText'],
+                fontSize=11,
+                leading=16,
+                alignment=TA_LEFT
+            )
+            
+            # Build PDF content
+            story = []
+            
+            # Title
+            story.append(Paragraph(f"<b>{video_title}</b>", title_style))
+            story.append(Spacer(1, 0.2*inch))
+            
+            # Metadata
+            metadata_style = ParagraphStyle('Metadata', parent=styles['Normal'], fontSize=9, textColor='gray')
+            story.append(Paragraph(f"FREE Transcript - {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", metadata_style))
+            story.append(Paragraph(f"Source: {youtube_url}", metadata_style))
+            story.append(Paragraph(f"Language: {language}", metadata_style))
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Transcript text - split into paragraphs
+            paragraphs = transcript.split('. ')  # Split on sentences for better formatting
+            current_para = ""
+            for sentence in paragraphs:
+                current_para += sentence + ". "
+                # Create a new paragraph every ~500 characters
+                if len(current_para) > 500:
+                    story.append(Paragraph(current_para.strip(), body_style))
+                    story.append(Spacer(1, 0.15*inch))
+                    current_para = ""
+            
+            # Add any remaining text
+            if current_para.strip():
+                story.append(Paragraph(current_para.strip(), body_style))
+            
+            # Build PDF
+            doc.build(story)
+            print(f"✅ FREE PDF created: {pdf_path}")
+            
+            # Return the PDF as a download
+            return FileResponse(
+                pdf_path,
+                media_type="application/pdf",
+                filename=f"{video_title[:50].replace('/', '-')}_FREE_transcript.pdf",
+                headers={
+                    "Content-Disposition": f"attachment; filename=\"{video_title[:50].replace('/', '-')}_FREE_transcript.pdf\""
+                }
+            )
+            
+        except Exception as e:
+            return JSONResponse(status_code=500, content={
+                "error": "Failed to create PDF from transcript."
+            })
+        
+    except Exception as e:
+        print(f"❌ FREE YouTube transcript error: {str(e)}")
+        return JSONResponse(status_code=500, content={
+            "error": "Something went wrong. Please try again or use the Whisper transcription."
         })
 
 
