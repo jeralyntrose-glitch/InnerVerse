@@ -443,6 +443,13 @@ if (typeof gapi !== 'undefined') {
 // Open Google Drive Picker
 gdriveBtn.addEventListener('click', async () => {
   try {
+    // Check if on mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      showError('📱 Google Drive integration is only available on desktop. Please use a computer to upload from Google Drive, or use the "Start uploading" button to upload files directly from your mobile device.');
+      return;
+    }
+    
     // Check if Picker API is loaded
     if (!pickerApiLoaded) {
       alert('⏳ Google Drive is still loading. Please wait a moment and try again.');
