@@ -38,6 +38,13 @@ PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# === Startup Logging ===
+print("🚀 Starting InnerVerse...")
+print(f"✅ OPENAI_API_KEY: {'SET' if OPENAI_API_KEY else 'MISSING'}")
+print(f"✅ PINECONE_API_KEY: {'SET' if PINECONE_API_KEY else 'MISSING'}")
+print(f"✅ PINECONE_INDEX: {'SET' if PINECONE_INDEX else 'MISSING'}")
+print(f"✅ DATABASE_URL: {'SET' if DATABASE_URL else 'MISSING'}")
+
 # === YouTube Cookies Helper ===
 def get_youtube_session_with_cookies():
     """Create a requests session with YouTube cookies loaded"""
@@ -71,12 +78,17 @@ PRICING = {
 # === Database Functions ===
 def get_db_connection():
     """Get PostgreSQL database connection"""
+    if not DATABASE_URL:
+        print("⚠️ DATABASE_URL not set - cost tracking will not work")
+        return None
     return psycopg2.connect(DATABASE_URL)
 
 def init_database():
     """Initialize database tables for API usage tracking"""
     try:
         conn = get_db_connection()
+        if not conn:
+            return
         cursor = conn.cursor()
         
         # Create api_usage table
@@ -109,6 +121,8 @@ def log_api_usage(operation, model, input_tokens=0, output_tokens=0, cost=0.0):
     """Log API usage with timestamp and cost to database"""
     try:
         conn = get_db_connection()
+        if not conn:
+            return
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -187,7 +201,9 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on app startup"""
+    print("🚀 FastAPI startup event triggered")
     init_database()
+    print("✅ App initialization complete - ready to accept requests")
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui():
@@ -1365,6 +1381,13 @@ async def get_usage_stats():
     """Return API usage statistics for cost tracker"""
     try:
         conn = get_db_connection()
+        if not conn:
+            return {
+                "total_cost": 0.0,
+                "last_24h_cost": 0.0,
+                "by_operation": {},
+                "recent_calls": []
+            }
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # Get total cost
@@ -1443,6 +1466,11 @@ async def get_usage_stats():
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+@app.get("/health", include_in_schema=False)
+def health_check():
+    """Health check endpoint for deployments"""
+    return {"status": "healthy", "app": "InnerVerse"}
+
 @app.get("/", include_in_schema=False)
 def serve_frontend():
     return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
@@ -1459,4 +1487,5 @@ app.mount("/static", StaticFiles(directory="."), name="static")
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 5000))
+    print(f"🌐 Starting server on 0.0.0.0:{port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
