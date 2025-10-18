@@ -1,12 +1,18 @@
+console.log('✅ SCRIPT FILE LOADED - TOP OF FILE');
+
 // Run immediately if DOM is ready, otherwise wait for DOMContentLoaded
 (function() {
+console.log('✅ IIFE STARTED, readyState:', document.readyState);
 if (document.readyState === 'loading') {
+  console.log('⏳ Waiting for DOMContentLoaded...');
   document.addEventListener('DOMContentLoaded', init);
 } else {
+  console.log('✅ DOM already ready, calling init()');
   init();
 }
 
 function init() {
+console.log('✅ INIT FUNCTION CALLED');
 const dropArea = document.getElementById('drop-area');
 const fileInput = document.getElementById('fileElem');
 const gdriveBtn = document.getElementById('gdrive-btn');
