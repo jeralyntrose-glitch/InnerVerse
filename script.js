@@ -1,4 +1,12 @@
-document.addEventListener('DOMContentLoaded', function() {
+// Run immediately if DOM is ready, otherwise wait for DOMContentLoaded
+(function() {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+function init() {
 const dropArea = document.getElementById('drop-area');
 const fileInput = document.getElementById('fileElem');
 const gdriveBtn = document.getElementById('gdrive-btn');
@@ -1296,4 +1304,5 @@ console.log('🚀 Script loaded, calling updateCostTracker...');
 updateCostTracker();
 setInterval(updateCostTracker, 30000);
 
-});
+} // end init function
+})(); // end IIFE
