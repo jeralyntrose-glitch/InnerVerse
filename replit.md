@@ -1,128 +1,6 @@
 # Overview
 
-This project is a FastAPI-based PDF Q&A application designed to provide intelligent answers from uploaded PDF documents.
-
-# Recent Changes (October 17, 2025)
-
-## Visual Cost Tracker (Latest)
-- ✅ **Live cost monitoring** - Beautiful visual tracker showing API costs in real-time
-- ✅ **Comprehensive stats** - Displays total cost, last 24 hours, and breakdown by operation type
-- ✅ **Recent calls view** - Shows the 10 most recent API calls with individual costs
-- ✅ **Auto-refresh** - Updates every 30 seconds to show current spending
-- ✅ **Golden theme** - Distinct amber/gold design to highlight cost information
-- ✅ **Always visible** - Located below Text-to-PDF section for constant monitoring
-- ✅ **ADHD-friendly** - Constant visibility helps prevent forgotten spending
-
-## API Usage Monitoring & Rate Limiting
-- ✅ **Comprehensive tracking** - Logs every OpenAI API call with token counts and costs
-- ✅ **Cost estimation** - Real-time cost calculation for embeddings, chat, Whisper, and text fixes
-- ✅ **Rate limiting** - Maximum 100 requests per hour to prevent cost spikes
-- ✅ **Usage endpoint** - /api/usage shows detailed spending statistics
-- ✅ **Server-side logging** - Every API call prints cost info to console
-- ✅ **Privacy protection** - Ready for sharing with close friends/partners with cost controls
-
-## Chat Commands System
-- ✅ **Document management via chat** - Type commands directly in chat to manage your documents
-- ✅ **list docs** - Shows all uploaded documents with IDs and timestamps
-- ✅ **delete doc [id]** - Delete specific documents from Pinecone with confirmation
-- ✅ **show doc [id]** - Display document details (name, ID, upload date)
-- ✅ **help command** - Type 'help' to see all available commands
-- ✅ **Smart routing** - Commands are intercepted before GPT, regular questions still search all documents
-- ✅ **iOS notification fix** - Mobile ping now works on iPhone when uploads/transcriptions complete
-
-## Extended Timeouts for Long Videos
-- ✅ **60-minute frontend timeout** - Increased from 15 minutes to handle very long videos (1+ hours)
-- ✅ **10-minute Whisper timeout** - Increased from 3 minutes to handle longer audio chunks
-- ✅ **Better error messaging** - Clear feedback when videos exceed 60-minute processing time
-- ✅ **Supports 1.5+ hour videos** - Can now handle feature-length content without timeouts
-
-## YouTube Cookies Deployment Fix
-- ✅ **Fixed production access errors** - Removed youtube_cookies.txt from .gitignore so it deploys to production
-- ✅ **All videos work again** - Cookies file now included in deployment, resolving "Unable to access video" errors
-- ✅ **Dev/production parity** - Both environments now have access to YouTube authentication
-
-## YouTube Transcription Timeout Fix
-- ✅ **Increased timeout** - Extended from 5 minutes to 15 minutes for longer videos
-- ✅ **Better error messages** - Now clearly shows "timeout" vs "cancelled" with helpful suggestions
-- ✅ **Timeout detection** - Distinguishes between automatic timeout and manual cancellation
-- ✅ **Fixed false "cancelled" errors** - Properly identifies when transcription times out due to video length or network issues
-
-## Upload UI Mobile Optimization
-- ✅ **Slimmer upload boxes** - Reduced padding (8px), thinner borders (1px), smaller fonts (10px, no bold) for mobile
-- ✅ **Tighter spacing** - Less margin between upload items (6px) and reduced container padding
-- ✅ **Thinner progress bars** - Reduced to 5px height on mobile for sleek appearance
-- ✅ **Upload completion sound** - Single notification ping plays when all uploads finish successfully (works on mobile)
-- ✅ **Smart sound tracking** - Plays once per batch, resets for new uploads, won't play if all failed or cancelled
-
-## Persistent Error Notifications
-- ✅ **Persistent error modal** - Errors now stay visible until you dismiss them with an OK button
-- ✅ **No missed errors** - Walk away during uploads/transcriptions and still see what went wrong when you return
-- ✅ **Clean design** - Modal overlay with backdrop blur, smooth animations
-- ✅ **All operations covered** - Upload failures, YouTube transcription errors, text-to-PDF errors, chat errors, and more
-- ✅ **Mobile optimized** - Proper positioning, sizing, and tap targets for iPhone
-- ✅ **Improved error messages** - Timeout errors now explain actual causes (network, restrictions, cookies) instead of assuming video length
-
-## Search All Documents Update
-- ✅ **Global document search** - Chat now searches ALL uploaded documents at once instead of requiring specific document IDs
-- ✅ **Source attribution** - Answers automatically include which documents the information came from
-- ✅ **Simplified UI** - No more document ID input needed, just ask questions and get answers from your entire library
-- ✅ **Better context** - System message updated to clarify it answers from uploaded documents
-
-## YouTube Transcription Timeout Fix
-- ✅ **Fixed stalling/disappearing loading bar** - Added explicit 5-minute timeout on frontend and 3-minute timeout on Whisper API calls
-- ✅ **Better error handling** - Now shows clear timeout errors instead of silently failing
-- ✅ **Prevents hanging** - Backend Whisper calls won't hang indefinitely anymore
-
-## Pinecone Batch Upload Fix
-- ✅ **Fixed large PDF uploads** - Now batches vector uploads in groups of 50 to avoid Pinecone's 4MB request limit
-- ✅ **Supports books up to 1000+ pages** - Can handle very large documents by splitting uploads into safe batch sizes
-- ✅ **Progress logging** - Shows batch upload progress in server logs (e.g., "Uploaded batch 3/8")
-
-## Upload Optimization & Large File Support
-- ✅ **Efficient binary uploads** - Switched from base64 to multipart/form-data (33% smaller, faster, uses less memory)
-- ✅ **Large file support** - Warning for files >20MB, increased embedding timeout to 60s, progress tracking every 50 chunks
-- ✅ **Better error messages** - File read errors and network failures now show specific error messages to user
-- ✅ **File size display** - Large uploads (>10MB) show file size in upload UI
-- ✅ **Notification sound** - Delicate iPhone-style "ting" plays when YouTube transcription or text-to-PDF completes (1200Hz, 0.2s duration)
-- ✅ **Text-to-PDF progress bar** - Green-themed progress bar with status stages (Analyzing → Fixing → Generating → Complete)
-
-## Text to PDF Feature
-- ✅ **New text-to-PDF converter** - Convert text to formatted PDFs with automatic punctuation and grammar fixes using GPT-3.5
-- ✅ **Smart formatting** - AI cleans up text before converting to professional PDF document
-- ✅ **Green-themed UI** - Distinct design from YouTube section for easy identification
-- ✅ **Mobile optimized** - Works smoothly on iPhone with proper input sizing
-
-## Document Report Enhancements
-- ✅ **Hawaii timezone** - Timestamps now display in Hawaii time (HST/UTC-10) instead of UTC
-- ✅ **Chronological sorting** - Documents sorted from earliest to latest upload
-- ✅ **Upload timestamps** - CSV report includes "uploaded_at" column (formatted as "YYYY-MM-DD HH:MM AM/PM")
-
-## Cookie Storage System
-- ✅ **File-based YouTube cookies** - Switched from Replit Secrets to youtube_cookies.txt file for easier updates and no size limits
-- ✅ **Bypassed 64KB Secret limit** - No more publishing errors from oversized cookie data
-
-## Error Handling Improvements
-- ✅ **Better YouTube error messages** - User-friendly error messages for blocked videos, expired cookies, region locks, private videos, and download failures
-- ✅ **Whisper API error handling** - Clear messages for rate limits, API key issues, and transcription timeouts
-- ✅ **PDF generation errors** - Helpful feedback when PDF creation fails
-- ✅ **Actionable guidance** - Error messages suggest next steps (refresh cookies, try different video, wait for rate limit, etc.)
-
-## UI Enhancements
-- ✅ **iPhone-style chat bubbles** - Updated chat interface with rounded bubbles, purple gradient for user messages, smooth animations
-- ✅ **Fixed Delete All button** - Reordered API routes so `/documents/all` is matched before `/documents/{document_id}`
-
-## YouTube Transcription Fixes
-- ✅ **Fixed download timeout** - Increased to 30 minutes to handle 90+ minute videos
-- ✅ **Fixed ffmpeg missing in production** - Changed deployment from Autoscale to VM to include Nix packages
-- ✅ **VM deployment includes system packages** - VM deployments include all Nix system packages (ffmpeg) in production
-- ✅ **Added ffmpeg detection** - Backend automatically finds and specifies ffmpeg location to yt-dlp
-- ✅ **Minimized cancel button** - Made very small (9px font, 2px/6px padding) to prevent overlap
-
-## Mobile UI Enhancements
-- ✅ **Compact branding** - Adjusted brain icon (70px), title (24px), and tagline (13px) sizes for mobile
-- ✅ **Thinner progress bars** - Reduced to 6px height on mobile for cleaner look
-- ✅ **Fixed chat bubble** - Proper width constraints and positioning for mobile devices
-- ✅ **Cancel button improvements** - Ultra-compact on mobile (9px font, auto width, no min-height) It features a modern web interface with drag-and-drop upload capabilities, processes documents by chunking and embedding their content, stores these embeddings in Pinecone, and leverages OpenAI's GPT models for answering user queries based on the document content. The application aims to offer an intuitive user experience for document interaction and knowledge retrieval, including the ability to transcribe YouTube videos into searchable PDFs and generate document reports.
+This project is a FastAPI-based PDF Q&A application that provides intelligent answers from uploaded PDF documents. It features a modern web interface with drag-and-drop upload capabilities, processes documents by chunking and embedding their content, stores these embeddings in Pinecone, and leverages OpenAI's GPT models for answering user queries based on the document content. The application aims to offer an intuitive user experience for document interaction and knowledge retrieval, including the ability to transcribe YouTube videos into searchable PDFs and generate document reports. The project also includes robust API usage monitoring with real-time cost tracking and rate limiting.
 
 # User Preferences
 
@@ -131,25 +9,28 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Frontend Architecture
-- **Interface**: Single-page application with a modern, glassmorphic UI, animated SVG brain icon, and a purple gradient theme.
+- **Interface**: Single-page application with a modern, glassmorphic UI, animated SVG brain icon, and a purple gradient theme. Includes a live visual cost tracker with a golden theme.
 - **Theme System**: Light/Dark mode toggle with persistence via localStorage.
-- **Upload Flow**: Supports drag-and-drop PDF uploads, Google Drive integration, and YouTube video transcription to PDF. Progress tracking and real-time status updates are provided for all uploads.
-- **Chat Flow**: Integrates a chat interface that allows users to ask questions about uploaded documents, with answers generated by GPT models.
-- **Features**: Auto-clipboard copy for document IDs, responsive design for mobile, and various UI enhancements for user interaction.
+- **Upload Flow**: Supports drag-and-drop PDF uploads, Google Drive integration, and YouTube video transcription to PDF. Provides progress tracking, real-time status updates, and persistent error notifications. Mobile-optimized upload boxes and progress bars.
+- **Chat Flow**: Integrates a chat interface with iPhone-style bubbles, allowing users to ask questions about uploaded documents and manage them via chat commands (`list docs`, `delete doc [id]`, `show doc [id]`, `help`). Answers are generated by GPT models, searching across all uploaded documents.
+- **Features**: Auto-clipboard copy for document IDs, responsive design for mobile, and various UI enhancements for user interaction. Upload completion sound notification.
 
 ## Backend Architecture
 - **Framework**: FastAPI with asynchronous operations.
 - **Runtime**: Python with Uvicorn ASGI server.
 - **Design Pattern**: Stateless API where the frontend manages `document_id` and the backend uses it for Pinecone queries.
+- **Deployment**: VM deployment to ensure inclusion of system packages like `ffmpeg`.
 
 ## Document Processing Pipeline
 - **PDF Parsing**: Uses PyPDF2 for text extraction from PDFs.
-- **Text Chunking**: Employs LangChain's `RecursiveCharacterTextSplitter` to break documents into overlapping chunks (1000 characters with 200 character overlap) to maintain context.
-- **YouTube Transcription**: Utilizes `yt-dlp` for audio extraction from YouTube videos, OpenAI Whisper API for transcription, and ReportLab for PDF generation, supporting videos of any length through smart chunking.
+- **Text Chunking**: Employs LangChain's `RecursiveCharacterTextSplitter` to break documents into overlapping chunks (1000 characters with 200 character overlap).
+- **YouTube Transcription**: Utilizes `yt-dlp` for audio extraction, OpenAI Whisper API for transcription, and ReportLab for PDF generation. Includes extended timeouts for long videos (60 min frontend, 15 min Whisper) and robust error handling for download issues.
+- **Text to PDF**: Converts text to formatted PDFs with automatic punctuation and grammar fixes using GPT-3.5.
+- **Large File Support**: Efficient binary uploads (multipart/form-data), batch processing for Pinecone upserts (batches of 50), and increased embedding timeouts for large files.
 
 ## Vector Storage Strategy
 - **Database**: Pinecone vector database (index: "mbti-knowledge") for storing document embeddings.
-- **Query Strategy**: Filters by `document_id` to ensure queries are answered from the specified document's content.
+- **Query Strategy**: Filters by `document_id` for document-specific queries, and performs global searches across all documents when no specific ID is provided.
 
 ## Embedding Generation
 - **Provider**: OpenAI API (`text-embedding-ada-002` model) for generating embeddings.
@@ -157,17 +38,26 @@ Preferred communication style: Simple, everyday language.
 
 ## API Structure
 - **Upload**: `POST /upload` (multipart/form-data) and `POST /upload-base64` (JSON) for PDF uploads.
-- **Query**: `POST /query` for document-specific Q&A.
-- **YouTube Transcription**: `POST /transcribe-youtube` for converting YouTube videos to searchable PDFs.
-- **Text to PDF**: `POST /text-to-pdf` for converting text to formatted PDFs with AI-powered punctuation fixes.
-- **Document Report**: `GET /documents/report` for CSV export of uploaded documents.
-- **Delete Document**: `DELETE /documents/{document_id}` for removing document data from Pinecone.
+- **Query**: `POST /query` for document Q&A.
+- **YouTube Transcription**: `POST /transcribe-youtube`.
+- **Text to PDF**: `POST /text-to-pdf`.
+- **Document Report**: `GET /documents/report` (CSV export with Hawaii timezone timestamps).
+- **Document Management**: `DELETE /documents/{document_id}` for removing document data; chat commands for `list`, `delete`, `show`.
+- **Usage Monitoring**: `/api/usage` for detailed spending statistics.
 - **Static Files**: Serves frontend assets and documentation (`/docs` for Swagger UI).
 - **CORS**: Enabled for all origins.
 
 ## Configuration Management
 - **Environment Variables**: API keys (OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX) are managed via Replit Secrets.
+- **YouTube Cookies**: Stored in `youtube_cookies.txt` file for easier updates and to bypass size limits.
 - **Client Initialization**: Lazy initialization pattern is used for API clients.
+
+## API Usage and Cost Tracking
+- **Tracking**: Logs every OpenAI API call (embeddings, chat, Whisper) with token counts and costs.
+- **Persistence**: Cost data is saved to a PostgreSQL database, ensuring persistence across restarts.
+- **Monitoring**: `/api/usage` endpoint provides detailed spending statistics in Hawaii time.
+- **Rate Limiting**: Maximum 100 requests per hour to prevent cost spikes.
+- **Visual Tracker**: Real-time visual display of total cost, last 24 hours, and breakdown by operation type.
 
 # External Dependencies
 
@@ -175,14 +65,14 @@ Preferred communication style: Simple, everyday language.
 - **Pinecone**: Cloud-based vector database for storing and querying embeddings.
 
 ## AI/ML Services
-- **OpenAI API**: Used for text embeddings (text-embedding-ada-002), GPT-3.5-turbo for Q&A, and Whisper API for audio transcription.
+- **OpenAI API**: Used for text embeddings (text-embedding-ada-002), GPT-3.5-turbo for Q&A and text fixes, and Whisper API for audio transcription.
 
 ## Document Processing
 - **PyPDF2**: For PDF parsing and text extraction.
 - **LangChain**: For text splitting utilities.
 - **yt-dlp**: For downloading audio from YouTube videos.
-- **OpenAI Whisper API**: For transcribing audio.
-- **ReportLab**: For generating formatted PDFs from transcriptions.
+- **ReportLab**: For generating formatted PDFs.
+- **PostgreSQL**: For persistent cost tracking.
 
 ## Web Framework
 - **FastAPI**: Python web framework.
@@ -190,5 +80,5 @@ Preferred communication style: Simple, everyday language.
 - **Pydantic**: Data validation.
 
 ## Integrations
-- **Google Drive Picker API**: For seamless integration with Google Drive for file selection.
+- **Google Drive Picker API**: For seamless integration with Google Drive.
 - **ffmpeg**: System dependency for audio processing with `yt-dlp`.

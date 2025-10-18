@@ -11,3 +11,5 @@ httpx
 reportlab
 yt-dlp
 pydub
+psycopg2-binary
+pytz

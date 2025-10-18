@@ -24,11 +24,15 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.enums import TA_LEFT
 from pydub import AudioSegment
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import pytz
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # === Usage Tracking ===
 usage_log = deque(maxlen=1000)  # Keep last 1000 API calls
@@ -41,19 +45,70 @@ PRICING = {
     "gpt-3.5-turbo-output": 0.0015,    # per 1K tokens
 }
 
+# === Database Functions ===
+def get_db_connection():
+    """Get PostgreSQL database connection"""
+    return psycopg2.connect(DATABASE_URL)
+
+def init_database():
+    """Initialize database tables for API usage tracking"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Create api_usage table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS api_usage (
+                id SERIAL PRIMARY KEY,
+                timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                operation VARCHAR(100) NOT NULL,
+                model VARCHAR(100) NOT NULL,
+                input_tokens INTEGER DEFAULT 0,
+                output_tokens INTEGER DEFAULT 0,
+                cost DECIMAL(10, 6) NOT NULL
+            )
+        """)
+        
+        # Create index on timestamp for faster queries
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_usage_timestamp 
+            ON api_usage(timestamp DESC)
+        """)
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("✅ Database initialized successfully")
+    except Exception as e:
+        print(f"❌ Database initialization error: {str(e)}")
+
 def log_api_usage(operation, model, input_tokens=0, output_tokens=0, cost=0.0):
-    """Log API usage with timestamp and cost"""
-    entry = {
-        "timestamp": datetime.now().isoformat(),
-        "operation": operation,
-        "model": model,
-        "input_tokens": input_tokens,
-        "output_tokens": output_tokens,
-        "cost": round(cost, 6)
-    }
-    usage_log.append(entry)
-    print(f"💰 API Usage: {operation} | Model: {model} | Cost: ${cost:.6f}")
-    return entry
+    """Log API usage with timestamp and cost to database"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO api_usage (operation, model, input_tokens, output_tokens, cost)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (operation, model, input_tokens, output_tokens, round(cost, 6)))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        print(f"💰 API Usage: {operation} | Model: {model} | Cost: ${cost:.6f}")
+    except Exception as e:
+        print(f"❌ Failed to log API usage: {str(e)}")
+        # Fallback to in-memory logging if database fails
+        usage_log.append({
+            "timestamp": datetime.now().isoformat(),
+            "operation": operation,
+            "model": model,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "cost": round(cost, 6)
+        })
 
 def check_rate_limit(max_requests_per_hour=100):
     """Check if rate limit is exceeded"""
@@ -104,6 +159,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on app startup"""
+    init_database()
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui():
@@ -1094,42 +1155,62 @@ async def text_to_pdf(request: TextToPDFRequest):
 async def get_usage_stats():
     """Return API usage statistics for cost tracker"""
     try:
-        now = datetime.now()
-        yesterday = now - timedelta(hours=24)
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        total_cost = 0.0
-        last_24h_cost = 0.0
+        # Get total cost
+        cursor.execute("SELECT COALESCE(SUM(cost), 0) as total_cost FROM api_usage")
+        total_cost = float(cursor.fetchone()["total_cost"])
+        
+        # Get last 24h cost (convert to Hawaii timezone for display)
+        cursor.execute("""
+            SELECT COALESCE(SUM(cost), 0) as last_24h_cost 
+            FROM api_usage 
+            WHERE timestamp >= NOW() - INTERVAL '24 hours'
+        """)
+        last_24h_cost = float(cursor.fetchone()["last_24h_cost"])
+        
+        # Group by operation
+        cursor.execute("""
+            SELECT operation, 
+                   COALESCE(SUM(cost), 0) as cost, 
+                   COUNT(*) as count
+            FROM api_usage
+            GROUP BY operation
+        """)
         by_operation = {}
-        recent_calls = []
+        for row in cursor.fetchall():
+            by_operation[row["operation"]] = {
+                "cost": float(row["cost"]),
+                "count": row["count"]
+            }
         
-        for entry in usage_log:
-            entry_time = datetime.fromisoformat(entry["timestamp"])
-            cost = entry["cost"]
-            operation = entry["operation"]
+        # Get recent 10 calls (convert to Hawaii timezone)
+        cursor.execute("""
+            SELECT operation, 
+                   cost, 
+                   timestamp
+            FROM api_usage
+            ORDER BY timestamp DESC
+            LIMIT 10
+        """)
+        recent_calls = []
+        hawaii_tz = pytz.timezone('Pacific/Honolulu')
+        for row in cursor.fetchall():
+            # Convert UTC timestamp to Hawaii timezone
+            utc_time = row["timestamp"]
+            if utc_time.tzinfo is None:
+                utc_time = pytz.utc.localize(utc_time)
+            hawaii_time = utc_time.astimezone(hawaii_tz)
             
-            # Calculate total cost
-            total_cost += cost
-            
-            # Calculate 24h cost
-            if entry_time >= yesterday:
-                last_24h_cost += cost
-            
-            # Group by operation
-            if operation not in by_operation:
-                by_operation[operation] = {"cost": 0.0, "count": 0}
-            by_operation[operation]["cost"] += cost
-            by_operation[operation]["count"] += 1
-            
-            # Add to recent calls
             recent_calls.append({
-                "operation": operation,
-                "cost": cost,
-                "timestamp": entry["timestamp"]
+                "operation": row["operation"],
+                "cost": float(row["cost"]),
+                "timestamp": hawaii_time.isoformat()
             })
         
-        # Sort recent calls by timestamp (newest first) and take top 10
-        recent_calls.sort(key=lambda x: x["timestamp"], reverse=True)
-        recent_calls = recent_calls[:10]
+        cursor.close()
+        conn.close()
         
         return {
             "total_cost": round(total_cost, 6),
