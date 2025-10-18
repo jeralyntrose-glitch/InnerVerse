@@ -299,13 +299,17 @@ async def upload_pdf_base64(data: Base64Upload):
 async def upload_pdf(file: UploadFile = File(...)):
     try:
         # ✅ Debug log — confirms if file is even received
+        file_size_mb = 0
         print(f"🛬 Received file: {file.filename}")
 
         contents = await file.read()
+        file_size_mb = len(contents) / (1024 * 1024)  # Convert to MB
+        print(f"📦 File size: {file_size_mb:.2f} MB")
+        
         pdf_reader = PdfReader(io.BytesIO(contents))
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
         chunks = chunk_text(text)
-        print(f"📄 Uploading {len(chunks)} chunks to Pinecone")
+        print(f"📄 Processing {len(chunks)} chunks from {len(pdf_reader.pages)} pages")
 
         doc_id = str(uuid.uuid4())
         openai_client = get_openai_client()
@@ -318,43 +322,64 @@ async def upload_pdf(file: UploadFile = File(...)):
 
         # Batch embedding + upsert
         vectors_to_upsert = []
+        embed_start = datetime.now()
+        
         for i, chunk in enumerate(chunks):
             # Show progress for large documents
-            if i % 50 == 0 and i > 0:
-                print(f"📊 Processing chunk {i}/{len(chunks)}...")
+            if i % 50 == 0:
+                elapsed = (datetime.now() - embed_start).total_seconds()
+                print(f"📊 Processing chunk {i}/{len(chunks)} (elapsed: {elapsed:.1f}s)...")
             
-            response = openai_client.embeddings.create(
-                input=chunk, model="text-embedding-ada-002", timeout=60)
-            vector = response.data[0].embedding
-            vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
-                "text": chunk,
-                "doc_id": doc_id,
-                "filename": file.filename,
-                "upload_timestamp": datetime.now().isoformat()
-            }))
+            try:
+                response = openai_client.embeddings.create(
+                    input=chunk, model="text-embedding-ada-002", timeout=120)  # Increased timeout
+                vector = response.data[0].embedding
+                vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
+                    "text": chunk,
+                    "doc_id": doc_id,
+                    "filename": file.filename,
+                    "upload_timestamp": datetime.now().isoformat()
+                }))
+            except Exception as embed_error:
+                print(f"❌ Embedding error on chunk {i}: {str(embed_error)}")
+                raise Exception(f"Failed to embed chunk {i}/{len(chunks)}: {str(embed_error)}")
 
         # Upload in batches to avoid Pinecone's 4MB request limit
         if vectors_to_upsert:
             batch_size = 50  # Safe batch size to stay under 4MB
             total_batches = (len(vectors_to_upsert) + batch_size - 1) // batch_size
+            upsert_start = datetime.now()
             
             for batch_num in range(0, len(vectors_to_upsert), batch_size):
                 batch = vectors_to_upsert[batch_num:batch_num + batch_size]
-                pinecone_index.upsert(vectors=batch)
-                current_batch = (batch_num // batch_size) + 1
-                print(f"📤 Uploaded batch {current_batch}/{total_batches} ({len(batch)} vectors)")
+                try:
+                    pinecone_index.upsert(vectors=batch)
+                    current_batch = (batch_num // batch_size) + 1
+                    print(f"📤 Uploaded batch {current_batch}/{total_batches} ({len(batch)} vectors)")
+                except Exception as upsert_error:
+                    print(f"❌ Pinecone upsert error on batch {current_batch}: {str(upsert_error)}")
+                    raise Exception(f"Failed to upload to Pinecone: {str(upsert_error)}")
             
-            print(f"✅ Successfully uploaded {len(vectors_to_upsert)} total chunks")
+            upsert_elapsed = (datetime.now() - upsert_start).total_seconds()
+            total_elapsed = (datetime.now() - embed_start).total_seconds()
+            print(f"✅ Successfully uploaded {len(vectors_to_upsert)} chunks")
+            print(f"⏱️ Total time: {total_elapsed:.1f}s (upload: {upsert_elapsed:.1f}s)")
 
         return {
             "message": "PDF uploaded and indexed",
             "document_id": doc_id,
-            "chunks_count": len(chunks)
+            "chunks_count": len(chunks),
+            "filename": file.filename
         }
 
     except Exception as e:
-        print(f"❌ Upload error: {str(e)}")
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        error_msg = str(e)
+        print(f"❌ Upload error for {file.filename if 'file' in locals() else 'unknown'}: {error_msg}")
+        # Return more detailed error
+        return JSONResponse(status_code=500, content={
+            "error": f"Upload failed: {error_msg}",
+            "filename": file.filename if 'file' in locals() else "unknown"
+        })
 
 
 # === Delete ALL Documents ===
