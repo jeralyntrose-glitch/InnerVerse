@@ -1238,7 +1238,7 @@ async function updateCostTracker() {
         <span>Chat: <strong>$${(breakdown.chat_completion?.cost || 0).toFixed(4)}</strong></span>
       </div>
       <div class="cost-breakdown-item">
-        <span>Embeddings: <strong>$${(breakdown.embedding?.cost || 0).toFixed(4)}</strong></span>
+        <span>Embeddings: <strong>$${(breakdown.query_embedding?.cost || 0).toFixed(4)}</strong></span>
       </div>
       <div class="cost-breakdown-item">
         <span>Whisper: <strong>$${(breakdown.whisper?.cost || 0).toFixed(4)}</strong></span>
@@ -1271,6 +1271,7 @@ async function updateCostTracker() {
 function formatOperation(operation) {
   const formats = {
     'chat_completion': '💬 Chat',
+    'query_embedding': '📊 Embedding',
     'embedding': '📊 Embedding',
     'whisper': '🎤 Whisper',
     'text_fix': '✨ Text Fix'
