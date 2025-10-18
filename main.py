@@ -29,12 +29,33 @@ from psycopg2.extras import RealDictCursor
 import pytz
 from youtube_transcript_api import YouTubeTranscriptApi
 import re
+import requests
+from http.cookiejar import MozillaCookieJar
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX")
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+# === YouTube Cookies Helper ===
+def get_youtube_session_with_cookies():
+    """Create a requests session with YouTube cookies loaded"""
+    session = requests.Session()
+    cookies_file = "youtube_cookies.txt"
+    
+    if os.path.exists(cookies_file):
+        try:
+            cookie_jar = MozillaCookieJar(cookies_file)
+            cookie_jar.load(ignore_discard=True, ignore_expires=True)
+            session.cookies = cookie_jar
+            print(f"✅ Loaded YouTube cookies for transcript API")
+        except Exception as e:
+            print(f"⚠️ Could not load cookies: {e}")
+    else:
+        print(f"⚠️ youtube_cookies.txt not found - FREE transcripts may be blocked by YouTube")
+    
+    return session
 
 # === Usage Tracking ===
 usage_log = deque(maxlen=1000)  # Keep last 1000 API calls
@@ -1071,7 +1092,9 @@ async def transcribe_youtube_free(request: YouTubeTranscribeRequest):
         # Try to get the transcript
         try:
             # Get transcript (tries manual first, then auto-generated, any language)
-            ytt_api = YouTubeTranscriptApi()
+            # Use cookies to bypass YouTube's IP blocking for cloud providers
+            session = get_youtube_session_with_cookies()
+            ytt_api = YouTubeTranscriptApi(http_client=session)
             transcript_list = ytt_api.list(video_id)
             
             transcript_data = None
