@@ -16,22 +16,32 @@ const errorModalMessage = document.getElementById('error-modal-message');
 const errorModalOk = document.getElementById('error-modal-ok');
 
 function showError(message) {
-  errorModalMessage.textContent = message;
-  errorModal.classList.remove('hidden');
+  if (errorModalMessage && errorModal) {
+    errorModalMessage.textContent = message;
+    errorModal.classList.remove('hidden');
+  } else {
+    console.error('Error modal not found:', message);
+  }
 }
 
 function hideError() {
-  errorModal.classList.add('hidden');
+  if (errorModal) {
+    errorModal.classList.add('hidden');
+  }
 }
 
-errorModalOk.addEventListener('click', hideError);
+if (errorModalOk) {
+  errorModalOk.addEventListener('click', hideError);
+}
 
 // Close modal when clicking outside
-errorModal.addEventListener('click', (e) => {
-  if (e.target === errorModal) {
-    hideError();
-  }
-});
+if (errorModal) {
+  errorModal.addEventListener('click', (e) => {
+    if (e.target === errorModal) {
+      hideError();
+    }
+  });
+}
 
 // === Notification Sound ===
 // Initialize AudioContext on first user interaction (for iOS compatibility)
@@ -1217,6 +1227,7 @@ function showTextPdfError(message) {
 
 // === Cost Tracker ===
 async function updateCostTracker() {
+  console.log('💰 updateCostTracker called!');
   try {
     const response = await fetch('/api/usage');
     if (!response.ok) {
@@ -1281,6 +1292,7 @@ function formatOperation(operation) {
 }
 
 // Update cost tracker on page load and every 30 seconds
+console.log('🚀 Script loaded, calling updateCostTracker...');
 updateCostTracker();
 setInterval(updateCostTracker, 30000);
 
