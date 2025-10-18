@@ -18,3 +18,4 @@ pdf2image
 pillow
 pytesseract
 requests
+pycryptodome
