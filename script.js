@@ -1534,7 +1534,7 @@ async function renameDocument(docId, currentName) {
   }
   
   try {
-    showNotification('Renaming document...', 'info');
+    console.log('🔄 Renaming document...');
     
     const response = await fetch(`/documents/${docId}/rename`, {
       method: 'PATCH',
@@ -1551,14 +1551,14 @@ async function renameDocument(docId, currentName) {
     const result = await response.json();
     console.log(`✅ Document renamed: ${result.vectors_updated} vectors updated`);
     
-    showNotification(`Renamed to "${newName}"`, 'success');
+    alert(`✅ Document renamed to "${newName}"\n\n${result.vectors_updated} vectors updated in Pinecone!`);
     
     // Reload tag library to show new name (cloud-synced!)
     await loadTagLibrary();
     
   } catch (error) {
     console.error('❌ Rename error:', error);
-    showNotification('Failed to rename document', 'error');
+    alert(`❌ Failed to rename document: ${error.message}`);
   }
 }
 
