@@ -728,6 +728,8 @@ async function handleChatCommand(input) {
 
 • delete doc [id] - Delete a specific document
 
+• delete all - Delete ALL uploaded documents
+
 • help - Show this help message
 
 💬 Or just ask any question to search all your documents!`);
@@ -836,6 +838,44 @@ Uploaded: ${date}`);
     return true;
   }
   
+  // Delete all command
+  if (lowerInput === 'delete all' || lowerInput === 'delete all docs') {
+    if (!confirm('⚠️ Are you sure you want to delete ALL uploaded documents? This cannot be undone!')) {
+      appendMessage('bot', '❌ Delete cancelled.');
+      return true;
+    }
+    
+    appendMessage('bot', '🗑️ Deleting all documents...');
+    
+    try {
+      const response = await fetch('/documents/all', {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete documents');
+      }
+      
+      // Clear all localStorage
+      localStorage.removeItem('uploadedDocuments');
+      localStorage.removeItem('innerverse_tagged_docs');
+      
+      removeLastBotMessage();
+      appendMessage('bot', '✅ All documents deleted successfully!\n\nReloading page...');
+      
+      // Reload page after a brief delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
+    } catch (error) {
+      removeLastBotMessage();
+      showError('Failed to delete all documents: ' + error.message);
+    }
+    
+    return true;
+  }
+  
   return false; // Not a command
 }
 
@@ -856,46 +896,6 @@ function removeLastBotMessage() {
   const messages = chatLog.querySelectorAll('.message.bot');
   if (messages.length > 0) messages[messages.length - 1].remove();
 }
-
-// === Delete All Documents (Temporary) ===
-const deleteAllBtn = document.getElementById('delete-all-btn');
-
-deleteAllBtn.addEventListener('click', async () => {
-  if (!confirm('⚠️ Are you sure you want to delete ALL uploaded documents? This cannot be undone!')) {
-    return;
-  }
-  
-  try {
-    deleteAllBtn.disabled = true;
-    deleteAllBtn.textContent = '⏳ Deleting...';
-    
-    const response = await fetch('/documents/all', {
-      method: 'DELETE'
-    });
-    
-    // Also clear tagged documents from localStorage
-    clearTaggedDocuments();
-    
-    if (!response.ok) {
-      throw new Error('Failed to delete documents');
-    }
-    
-    const data = await response.json();
-    alert('✅ All documents deleted successfully!');
-    
-    // Clear localStorage
-    localStorage.removeItem('uploadedDocuments');
-    
-    // Reload page to reset UI
-    window.location.reload();
-    
-  } catch (error) {
-    console.error('Delete all error:', error);
-    showError('Error deleting documents: ' + error.message);
-    deleteAllBtn.textContent = '🗑️ Delete All Files';
-    deleteAllBtn.disabled = false;
-  }
-});
 
 // === Download Document Report ===
 const downloadReportBtn = document.getElementById('download-report-btn');
