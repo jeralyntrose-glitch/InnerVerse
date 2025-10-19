@@ -1561,3 +1561,6 @@ async function renameDocument(docId, currentName) {
     showNotification('Failed to rename document', 'error');
   }
 }
+
+// Expose to global scope for onclick handlers
+window.renameDocument = renameDocument;
