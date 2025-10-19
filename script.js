@@ -78,6 +78,14 @@ function initAudioContext() {
 }
 
 function playNotificationSound() {
+  // Try vibration first (works better on mobile)
+  if ('vibrate' in navigator) {
+    // Two short vibrations like a notification
+    navigator.vibrate([200, 100, 200]);
+    console.log('📳 Vibration notification sent');
+  }
+  
+  // Also try sound (works on desktop and some mobile)
   try {
     const ctx = audioContext || initAudioContext();
     if (!ctx) return;
