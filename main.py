@@ -661,6 +661,68 @@ async def get_documents_report():
     except Exception as e:
         print(f"❌ Report generation error: {str(e)}")
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# === Get Tagged Documents (Cloud-based Tag Library) ===
+@app.get("/api/tagged-documents")
+async def get_tagged_documents():
+    """Get all documents with their tags from Pinecone (cloud-based tag library)"""
+    try:
+        pinecone_index = get_pinecone_client()
+        
+        if not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Pinecone client not initialized"})
+        
+        # Query Pinecone to get all documents
+        dummy_vector = [0.0] * 1536  # OpenAI ada-002 has 1536 dimensions
+        
+        query_response = pinecone_index.query(
+            vector=dummy_vector,
+            top_k=10000,  # Get up to 10k results
+            include_metadata=True
+        )
+        
+        # Extract unique documents with tags
+        documents = {}
+        try:
+            matches = query_response.matches
+        except AttributeError:
+            matches = query_response.get("matches", [])
+        
+        for match in matches:
+            metadata = getattr(match, "metadata", None)
+            if not metadata:
+                try:
+                    metadata = match.get("metadata", {})
+                except (AttributeError, TypeError):
+                    metadata = {}
+            
+            if metadata:
+                doc_id = metadata.get("doc_id") if hasattr(metadata, "get") else getattr(metadata, "doc_id", None)
+                filename = metadata.get("filename", "Unknown") if hasattr(metadata, "get") else getattr(metadata, "filename", "Unknown")
+                timestamp = metadata.get("upload_timestamp", None) if hasattr(metadata, "get") else getattr(metadata, "upload_timestamp", None)
+                tags = metadata.get("tags", []) if hasattr(metadata, "get") else getattr(metadata, "tags", [])
+                
+                if doc_id and doc_id not in documents:
+                    documents[doc_id] = {
+                        "filename": filename,
+                        "tags": tags if isinstance(tags, list) else [],
+                        "timestamp": timestamp or datetime.now().isoformat()
+                    }
+        
+        print(f"✅ Retrieved {len(documents)} tagged documents from Pinecone")
+        
+        return {
+            "documents": documents
+        }
+        
+    except Exception as e:
+        print(f"❌ Tagged documents retrieval error: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 # === Query PDF for an answer ===
 class QueryRequest(BaseModel):
     document_id: str = ""  # Optional - empty string means search all documents

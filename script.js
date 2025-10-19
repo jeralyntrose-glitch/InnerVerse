@@ -1431,7 +1431,24 @@ function clearTaggedDocuments() {
 }
 
 async function loadTagLibrary() {
-  const taggedDocs = getTaggedDocuments();
+  // Try to load from Pinecone cloud first (works across all devices!)
+  let taggedDocs = {};
+  
+  try {
+    const response = await fetch('/api/tagged-documents');
+    if (response.ok) {
+      const data = await response.json();
+      taggedDocs = data.documents || {};
+      console.log(`☁️ Loaded ${Object.keys(taggedDocs).length} documents from cloud (Pinecone)`);
+    } else {
+      throw new Error('Failed to fetch from cloud');
+    }
+  } catch (error) {
+    // Fallback to localStorage if cloud fetch fails
+    console.warn('⚠️ Cloud fetch failed, falling back to localStorage:', error.message);
+    taggedDocs = getTaggedDocuments();
+  }
+  
   const docCount = Object.keys(taggedDocs).length;
   
   console.log(`📚 Loading tag library with ${docCount} documents`);
