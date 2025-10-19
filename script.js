@@ -341,14 +341,16 @@ function processFile(file) {
       });
       saveUploadedFiles(uploadedFiles);
       
-      // Save tags if present (InnerVerse Intelligence Layer)
-      if (result.tags && Array.isArray(result.tags) && result.tags.length > 0) {
-        saveDocumentTags(result.document_id, file.name, result.tags);
-        console.log(`🏷️ Document tagged with ${result.tags.length} concepts:`, result.tags.slice(0, 5));
+      // Save tags (InnerVerse Intelligence Layer) - save ALL docs even with 0 tags
+      const tags = (result.tags && Array.isArray(result.tags)) ? result.tags : [];
+      saveDocumentTags(result.document_id, file.name, tags);
+      
+      if (tags.length > 0) {
+        console.log(`🏷️ Document tagged with ${tags.length} concepts:`, tags.slice(0, 5));
       } else {
-        // Warn user that auto-tagging failed (but upload succeeded)
+        // Warn user that auto-tagging failed (but upload succeeded and doc will still appear in library)
         console.warn('⚠️ Auto-tagging failed for:', file.name);
-        showError(`⚠️ "${file.name}" uploaded successfully, but auto-tagging failed. Your document is fully searchable, but won't appear in the tag library.`);
+        showError(`⚠️ "${file.name}" uploaded successfully, but auto-tagging failed. Document will appear in the tag library with no tags.`);
       }
 
       progressBar.style.width = '100%';
