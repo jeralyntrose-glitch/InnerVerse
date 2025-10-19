@@ -78,19 +78,20 @@ function initAudioContext() {
 }
 
 function playNotificationSound() {
-  // Try vibration first (works better on mobile)
+  // Visual flash notification (works on all devices, especially iPhone)
+  showVisualNotification();
+  
+  // Try vibration (works on Android)
   if ('vibrate' in navigator) {
-    // Two short vibrations like a notification
     navigator.vibrate([200, 100, 200]);
     console.log('📳 Vibration notification sent');
   }
   
-  // Also try sound (works on desktop and some mobile)
+  // Also try sound (works on desktop)
   try {
     const ctx = audioContext || initAudioContext();
     if (!ctx) return;
     
-    // Resume if suspended (iOS often suspends audio contexts)
     if (ctx.state === 'suspended') {
       ctx.resume().then(() => {
         playSound(ctx);
@@ -101,6 +102,38 @@ function playNotificationSound() {
   } catch (error) {
     console.log('Notification sound error:', error);
   }
+}
+
+function showVisualNotification() {
+  // Create a full-screen flash overlay
+  const flash = document.createElement('div');
+  flash.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+    opacity: 0;
+    z-index: 10000;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  `;
+  
+  document.body.appendChild(flash);
+  
+  // Flash animation: fade in and out twice
+  setTimeout(() => { flash.style.opacity = '0.4'; }, 10);
+  setTimeout(() => { flash.style.opacity = '0'; }, 300);
+  setTimeout(() => { flash.style.opacity = '0.4'; }, 500);
+  setTimeout(() => { flash.style.opacity = '0'; }, 800);
+  
+  // Remove element after animation
+  setTimeout(() => {
+    document.body.removeChild(flash);
+  }, 1000);
+  
+  console.log('✨ Visual notification shown');
 }
 
 function playSound(ctx) {
