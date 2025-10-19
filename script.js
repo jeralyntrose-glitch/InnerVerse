@@ -1385,10 +1385,13 @@ setInterval(updateCostTracker, 30000);
 const tagLibraryToggle = document.getElementById('tag-library-toggle');
 const tagLibraryContent = document.getElementById('tag-library-content');
 
-// Start collapsed by default
+// Start collapsed by default (Popular Tags visible, Documents hidden)
 if (tagLibraryToggle && tagLibraryContent) {
   tagLibraryToggle.classList.add('collapsed');
   tagLibraryContent.classList.add('collapsed');
+  
+  // Load tag library on page load to show Popular Tags
+  loadTagLibrary();
   
   tagLibraryToggle.addEventListener('click', () => {
     tagLibraryToggle.classList.toggle('collapsed');
@@ -1396,10 +1399,8 @@ if (tagLibraryToggle && tagLibraryContent) {
     tagLibraryContent.classList.toggle('collapsed');
     tagLibraryContent.classList.toggle('open');
     
-    // Load tag library when opened
-    if (tagLibraryContent.classList.contains('open')) {
-      loadTagLibrary();
-    }
+    // Refresh tag library when toggled
+    loadTagLibrary();
   });
 }
 

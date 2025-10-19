@@ -1709,11 +1709,22 @@ label,
 
 .tag-library-content {
   margin-top: 20px;
-  display: none;
+  display: block;
   animation: fadeIn 0.3s ease;
 }
 
-.tag-library-content.open {
+.tag-library-content.collapsed {
+  display: block;
+}
+
+/* Hide description and documents section when collapsed */
+.tag-library-content.collapsed .tag-library-description,
+.tag-library-content.collapsed .tagged-documents-section {
+  display: none;
+}
+
+/* Always show Popular Tags section */
+.tag-library-content .tag-cloud-section {
   display: block;
 }
 
