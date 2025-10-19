@@ -569,6 +569,98 @@ async def delete_document(document_id: str):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# === Rename Document ===
+class RenameDocumentRequest(BaseModel):
+    new_filename: str
+
+@app.patch("/documents/{document_id}/rename")
+async def rename_document(document_id: str, request: RenameDocumentRequest):
+    """Rename a document by updating its filename metadata in all vectors"""
+    try:
+        pinecone_index = get_pinecone_client()
+        
+        if not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Pinecone client not initialized"})
+        
+        # First, fetch all vectors for this document
+        dummy_vector = [0.0] * 1536
+        query_response = pinecone_index.query(
+            vector=dummy_vector,
+            filter={"doc_id": document_id},
+            top_k=10000,
+            include_metadata=True
+        )
+        
+        # Get matches
+        try:
+            matches = query_response.matches
+        except AttributeError:
+            matches = query_response.get("matches", [])
+        
+        if not matches:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Document not found"})
+        
+        # Update each vector's metadata with new filename
+        updates = []
+        for match in matches:
+            vector_id = getattr(match, "id", None) or match.get("id")
+            metadata = getattr(match, "metadata", None) or match.get("metadata", {})
+            
+            # Update filename in metadata
+            updated_metadata = dict(metadata) if hasattr(metadata, "items") else metadata
+            updated_metadata["filename"] = request.new_filename
+            
+            updates.append({
+                "id": vector_id,
+                "metadata": updated_metadata
+            })
+        
+        # Batch update in Pinecone (50 at a time)
+        batch_size = 50
+        for i in range(0, len(updates), batch_size):
+            batch = updates[i:i + batch_size]
+            
+            # Use upsert with same IDs to update metadata
+            upsert_data = []
+            for item in batch:
+                # Get the original vector values
+                fetch_response = pinecone_index.fetch(ids=[item["id"]])
+                if hasattr(fetch_response, "vectors"):
+                    vectors_dict = fetch_response.vectors
+                else:
+                    vectors_dict = fetch_response.get("vectors", {})
+                
+                if item["id"] in vectors_dict:
+                    vector_data = vectors_dict[item["id"]]
+                    values = getattr(vector_data, "values", None) or vector_data.get("values", [])
+                    
+                    upsert_data.append((
+                        item["id"],
+                        values,
+                        item["metadata"]
+                    ))
+            
+            if upsert_data:
+                pinecone_index.upsert(vectors=upsert_data)
+        
+        print(f"✅ Renamed document {document_id} to '{request.new_filename}' ({len(updates)} vectors updated)")
+        
+        return {
+            "message": "Document renamed successfully",
+            "document_id": document_id,
+            "new_filename": request.new_filename,
+            "vectors_updated": len(updates)
+        }
+        
+    except Exception as e:
+        print(f"❌ Rename error: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 # === Generate Document Report ===
 @app.get("/documents/report")
 async def get_documents_report():

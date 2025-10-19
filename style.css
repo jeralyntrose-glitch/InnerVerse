@@ -1874,11 +1874,39 @@ label,
   display: flex;
   align-items: center;
   gap: 8px;
+  justify-content: space-between;
 }
 
 .tagged-document-title::before {
   content: "📄";
   font-size: 16px;
+}
+
+.doc-filename {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-doc-btn {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+  min-height: auto;
+  flex-shrink: 0;
+}
+
+.edit-doc-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
 
 .tagged-document-tags {

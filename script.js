@@ -1496,7 +1496,10 @@ async function loadTagLibrary() {
   
   const docsHTML = docsArray.map(doc => `
     <div class="tagged-document-item">
-      <div class="tagged-document-title">${doc.filename}</div>
+      <div class="tagged-document-title">
+        <span class="doc-filename">${doc.filename}</span>
+        <button class="edit-doc-btn" onclick="renameDocument('${doc.id}', '${doc.filename.replace(/'/g, "\\'")}')">✏️</button>
+      </div>
       <div class="tagged-document-tags">
         ${doc.tags && doc.tags.length > 0 
           ? doc.tags.map(tag => `<span class="tag-mini">${tag}</span>`).join('')
@@ -1518,4 +1521,43 @@ function filterByTag(tag) {
   // TODO: Could implement filtering in the document list
   // For now, just highlight the tag
   alert(`Filter by tag: ${tag}\n\nThis will search documents tagged with "${tag}"`);
+}
+
+async function renameDocument(docId, currentName) {
+  console.log(`✏️ Renaming document ${docId}: ${currentName}`);
+  
+  const newName = prompt('Enter new document name:', currentName);
+  
+  if (!newName || newName === currentName) {
+    console.log('❌ Rename cancelled or no change');
+    return;
+  }
+  
+  try {
+    showNotification('Renaming document...', 'info');
+    
+    const response = await fetch(`/documents/${docId}/rename`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ new_filename: newName })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to rename document');
+    }
+    
+    const result = await response.json();
+    console.log(`✅ Document renamed: ${result.vectors_updated} vectors updated`);
+    
+    showNotification(`Renamed to "${newName}"`, 'success');
+    
+    // Reload tag library to show new name (cloud-synced!)
+    await loadTagLibrary();
+    
+  } catch (error) {
+    console.error('❌ Rename error:', error);
+    showNotification('Failed to rename document', 'error');
+  }
 }
