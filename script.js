@@ -1485,10 +1485,14 @@ async function loadTagLibrary() {
   
   document.getElementById('tag-cloud').innerHTML = tagCloudHTML || '<div class="tag-cloud-placeholder">No tags extracted yet</div>';
   
-  // Build document list
+  // Build document list - sorted by upload time (newest first)
   const docsArray = Object.entries(taggedDocs)
     .map(([id, doc]) => ({ id, ...doc }))
-    .sort((a, b) => b.timestamp - a.timestamp);
+    .sort((a, b) => {
+      const dateA = new Date(a.timestamp || 0);
+      const dateB = new Date(b.timestamp || 0);
+      return dateB - dateA; // Newest first
+    });
   
   const docsHTML = docsArray.map(doc => `
     <div class="tagged-document-item">
