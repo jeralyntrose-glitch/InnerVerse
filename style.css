@@ -98,6 +98,8 @@ body {
   margin: 0 auto 20px;
   display: block;
   animation: float 3s ease-in-out infinite;
+  width: 200px;
+  height: 200px;
 }
 
 @keyframes float {
@@ -1306,8 +1308,8 @@ label,
   }
 
   .brain-icon {
-    width: 70px;
-    height: 70px;
+    width: 110px;
+    height: 110px;
   }
 
   .page-wrapper {
@@ -1526,8 +1528,8 @@ label,
   }
 
   .brain-icon {
-    width: 60px;
-    height: 60px;
+    width: 90px;
+    height: 90px;
   }
 
   .chat-container {
