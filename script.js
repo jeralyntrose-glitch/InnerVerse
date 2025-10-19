@@ -814,12 +814,17 @@ Uploaded: ${date}`);
         throw new Error('Failed to delete document');
       }
       
-      // Remove from localStorage
+      // Remove from localStorage (uploaded files)
       const stored = localStorage.getItem(STORAGE_KEY);
       const docs = stored ? JSON.parse(stored) : [];
       const updatedDocs = docs.filter(d => d.id !== docId);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedDocs));
       uploadedFiles = updatedDocs;
+      
+      // Also remove from tag library
+      const taggedDocs = getTaggedDocuments();
+      delete taggedDocs[docId];
+      localStorage.setItem('innerverse_tagged_docs', JSON.stringify(taggedDocs));
       
       removeLastBotMessage();
       appendMessage('bot', `✅ Document deleted successfully!\n\nDeleted: ${docId}`);
