@@ -73,6 +73,7 @@ PRICING = {
     "text-embedding-ada-002": 0.0001,  # per 1K tokens
     "gpt-3.5-turbo-input": 0.0005,     # per 1K tokens
     "gpt-3.5-turbo-output": 0.0015,    # per 1K tokens
+    "whisper-1": 0.006,                # per minute of audio
 }
 
 # === Database Functions ===
@@ -1255,6 +1256,11 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             # If file is under 25MB, transcribe directly
             if file_size < 25 * 1024 * 1024:
                 print(f"📝 File size {file_size_mb:.1f}MB - transcribing directly")
+                
+                # Get audio duration for cost calculation
+                audio = AudioSegment.from_file(audio_path)
+                duration_minutes = len(audio) / (1000 * 60)  # Convert ms to minutes
+                
                 with open(audio_path, "rb") as audio_file:
                     transcript_response = openai_client.audio.transcriptions.create(
                         model="whisper-1",
@@ -1264,6 +1270,11 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                     )
                 transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
                 
+                # Log Whisper API usage
+                whisper_cost = duration_minutes * PRICING["whisper-1"]
+                log_api_usage("whisper_transcription", "whisper-1", input_tokens=0, output_tokens=0, cost=whisper_cost)
+                print(f"💰 Whisper cost: ${whisper_cost:.4f} ({duration_minutes:.2f} minutes)")
+                
             else:
                 # File is too large - split into chunks
                 print(f"📝 File size {file_size_mb:.1f}MB - splitting into chunks for transcription")
@@ -1272,12 +1283,14 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                 audio = AudioSegment.from_file(audio_path)
                 chunk_length_ms = 10 * 60 * 1000  # 10 minutes per chunk
                 total_chunks = len(audio) // chunk_length_ms + (1 if len(audio) % chunk_length_ms else 0)
+                total_duration_minutes = len(audio) / (1000 * 60)
                 
                 transcriptions = []
                 
                 for i in range(0, len(audio), chunk_length_ms):
                     chunk = audio[i:i + chunk_length_ms]
                     chunk_path = os.path.join(temp_dir, f"chunk_{i//chunk_length_ms}.mp3")
+                    chunk_duration_minutes = len(chunk) / (1000 * 60)
                     
                     # Export chunk as compressed MP3
                     chunk.export(chunk_path, format="mp3", bitrate="32k", parameters=["-ac", "1", "-ar", "16000"])
@@ -1297,12 +1310,17 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                     chunk_transcript = chunk_response if isinstance(chunk_response, str) else chunk_response.text
                     transcriptions.append(chunk_transcript)
                     
+                    # Log Whisper API usage for this chunk
+                    chunk_cost = chunk_duration_minutes * PRICING["whisper-1"]
+                    log_api_usage("whisper_transcription", "whisper-1", input_tokens=0, output_tokens=0, cost=chunk_cost)
+                    
                     # Clean up chunk file
                     os.remove(chunk_path)
                 
                 # Combine all transcriptions
                 transcript = " ".join(transcriptions)
                 print(f"✅ Combined {len(transcriptions)} chunks")
+                print(f"💰 Total Whisper cost: ${total_duration_minutes * PRICING['whisper-1']:.4f} ({total_duration_minutes:.2f} minutes)")
             
             print(f"✅ Transcription complete: {len(transcript)} characters")
             
