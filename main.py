@@ -1272,7 +1272,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                 
                 # Log Whisper API usage
                 whisper_cost = duration_minutes * PRICING["whisper-1"]
-                log_api_usage("whisper_transcription", "whisper-1", input_tokens=0, output_tokens=0, cost=whisper_cost)
+                log_api_usage("whisper", "whisper-1", input_tokens=0, output_tokens=0, cost=whisper_cost)
                 print(f"💰 Whisper cost: ${whisper_cost:.4f} ({duration_minutes:.2f} minutes)")
                 
             else:
@@ -1312,7 +1312,7 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                     
                     # Log Whisper API usage for this chunk
                     chunk_cost = chunk_duration_minutes * PRICING["whisper-1"]
-                    log_api_usage("whisper_transcription", "whisper-1", input_tokens=0, output_tokens=0, cost=chunk_cost)
+                    log_api_usage("whisper", "whisper-1", input_tokens=0, output_tokens=0, cost=chunk_cost)
                     
                     # Clean up chunk file
                     os.remove(chunk_path)
