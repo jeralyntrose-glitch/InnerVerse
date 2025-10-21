@@ -259,12 +259,16 @@ TAXONOMY SCHEMA (6 Layers):
 INSTRUCTIONS:
 1. Read the document sample carefully
 2. Identify ALL relevant tags from the taxonomy above
-3. Return ONLY a JSON array of tag strings, nothing else
-4. Be thorough - include any tag that's clearly discussed in the document
-5. Format: ["tag1", "tag2", "tag3"]
+3. Return ONLY short tag names - NO category prefixes (e.g., "Sexual Compatibility" NOT "Compatibility Themes: Sexual Compatibility")
+4. Return ONLY a JSON array of tag strings, nothing else
+5. Be thorough - include any tag that's clearly discussed in the document
+6. Format: ["tag1", "tag2", "tag3"]
 
-Example output format:
-["Fe", "ENFJ", "Fe-Ti", "Golden Pair", "Shadow Integration", "Harmony Speech"]
+CORRECT examples:
+["Fe", "ENFJ", "Fe-Ti", "Golden Pair", "Shadow Integration", "Sexual Compatibility", "Emotional Compatibility"]
+
+WRONG examples (DO NOT DO THIS):
+["Compatibility Themes: Sexual Compatibility", "Developmental Stages: Relationship Success"]
 
 Your response (JSON array only):"""
 
