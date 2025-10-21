@@ -9,6 +9,7 @@ import tempfile
 import subprocess
 from datetime import datetime, timezone, timedelta
 from collections import deque
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, Request, Header, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -85,38 +86,63 @@ def get_db_connection():
     return psycopg2.connect(DATABASE_URL)
 
 def init_database():
-    """Initialize database tables for API usage tracking"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return
-        cursor = conn.cursor()
-        
-        # Create api_usage table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS api_usage (
-                id SERIAL PRIMARY KEY,
-                timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                operation VARCHAR(100) NOT NULL,
-                model VARCHAR(100) NOT NULL,
-                input_tokens INTEGER DEFAULT 0,
-                output_tokens INTEGER DEFAULT 0,
-                cost DECIMAL(10, 6) NOT NULL
-            )
-        """)
-        
-        # Create index on timestamp for faster queries
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_api_usage_timestamp 
-            ON api_usage(timestamp DESC)
-        """)
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        print("✅ Database initialized successfully")
-    except Exception as e:
-        print(f"❌ Database initialization error: {str(e)}")
+    """Initialize database tables for API usage tracking with robust error handling"""
+    if not DATABASE_URL:
+        print("⚠️ DATABASE_URL not set - skipping database initialization (cost tracking disabled)")
+        return False
+    
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            print(f"🔄 Attempting database connection (attempt {attempt + 1}/{max_retries})...")
+            conn = get_db_connection()
+            if not conn:
+                print(f"⚠️ Database connection returned None")
+                return False
+            
+            cursor = conn.cursor()
+            
+            # Create api_usage table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS api_usage (
+                    id SERIAL PRIMARY KEY,
+                    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    operation VARCHAR(100) NOT NULL,
+                    model VARCHAR(100) NOT NULL,
+                    input_tokens INTEGER DEFAULT 0,
+                    output_tokens INTEGER DEFAULT 0,
+                    cost DECIMAL(10, 6) NOT NULL
+                )
+            """)
+            
+            # Create index on timestamp for faster queries
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_api_usage_timestamp 
+                ON api_usage(timestamp DESC)
+            """)
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print("✅ Database initialized successfully")
+            return True
+            
+        except psycopg2.OperationalError as e:
+            print(f"⚠️ Database connection attempt {attempt + 1} failed: {str(e)}")
+            if attempt < max_retries - 1:
+                import time
+                print(f"⏳ Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                print(f"❌ Database initialization failed after {max_retries} attempts - app will continue without cost tracking")
+                return False
+        except Exception as e:
+            print(f"❌ Unexpected database error: {str(e)}")
+            return False
+    
+    return False
 
 def log_api_usage(operation, model, input_tokens=0, output_tokens=0, cost=0.0):
     """Log API usage with timestamp and cost to database"""
@@ -310,8 +336,29 @@ Your response (JSON array only):"""
 
 
 
-# Create FastAPI app
-app = FastAPI()
+# Lifespan context manager for startup/shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize app on startup and cleanup on shutdown"""
+    print("🚀 FastAPI lifespan startup triggered")
+    print("📋 Initializing InnerVerse...")
+    
+    db_initialized = init_database()
+    
+    if db_initialized:
+        print("✅ Database connection verified")
+    else:
+        print("⚠️ App starting without database - cost tracking unavailable")
+    
+    print("✅ App initialization complete - ready to accept requests")
+    print("🌐 Health check available at /health")
+    
+    yield
+    
+    print("👋 Shutting down InnerVerse...")
+
+# Create FastAPI app with lifespan
+app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
@@ -321,14 +368,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize database on startup
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database tables on app startup"""
-    print("🚀 FastAPI startup event triggered")
-    init_database()
-    print("✅ App initialization complete - ready to accept requests")
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui():

@@ -17,10 +17,15 @@ Preferred communication style: Simple, everyday language.
 - **Features**: Auto-clipboard copy for document IDs, responsive design for mobile, and various UI enhancements for user interaction. Upload completion sound notification.
 
 ## Backend Architecture
-- **Framework**: FastAPI with asynchronous operations.
+- **Framework**: FastAPI with asynchronous operations and modern lifespan event handlers.
 - **Runtime**: Python with Uvicorn ASGI server.
 - **Design Pattern**: Stateless API where the frontend manages `document_id` and the backend uses it for Pinecone queries.
-- **Deployment**: VM deployment to ensure inclusion of system packages like `ffmpeg`.
+- **Deployment**: VM deployment to ensure inclusion of system packages like `ffmpeg`. Includes production-ready features:
+  - Health check endpoint at `/health` for deployment monitoring
+  - Robust database initialization with 3-retry logic and graceful degradation
+  - Detailed startup logging for debugging deployment issues
+  - Proper binding to 0.0.0.0:5000 for all network interfaces
+  - Lifespan context manager for clean startup/shutdown handling
 
 ## Document Processing Pipeline
 - **PDF Parsing**: Uses PyPDF2 for text extraction from text-based PDFs. Supports encrypted PDFs via PyCryptodome.
