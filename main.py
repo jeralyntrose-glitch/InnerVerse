@@ -1147,12 +1147,39 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                     "error": "System error: transcription service unavailable. Please try again later."
                 })
             
-            # Get video info first
+            # Check for YouTube cookies file FIRST (before any yt-dlp commands)
+            cookies_path = None
+            cookies_file = "youtube_cookies.txt"
+            
+            if os.path.exists(cookies_file):
+                # Read cookies from file
+                with open(cookies_file, "r") as f:
+                    cookies_content = f.read().strip()
+                
+                # Only use if file has actual cookies (not just comments)
+                if cookies_content and not cookies_content.startswith("# Paste your"):
+                    cookies_path = os.path.join(temp_dir, "cookies.txt")
+                    with open(cookies_path, "w") as f:
+                        f.write(cookies_content)
+                    print(f"✅ Using YouTube cookies from file for authentication")
+                else:
+                    print(f"⚠️ youtube_cookies.txt exists but is empty or not configured")
+            else:
+                print(f"⚠️ youtube_cookies.txt not found - some videos may be restricted")
+            
+            # Get video info first (WITH cookies for age-restricted/login-required videos)
             info_command = [
                 "yt-dlp",
                 "--print", "%(title)s|||%(duration)s",
                 youtube_url
             ]
+            
+            # Add cookies to info command if available
+            if cookies_path:
+                info_command.insert(1, "--cookies")
+                info_command.insert(2, cookies_path)
+                print(f"🔐 Metadata probe using cookies for authentication")
+            
             info_result = subprocess.run(info_command, capture_output=True, text=True, timeout=30)
             
             if info_result.returncode != 0:
@@ -1197,26 +1224,6 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                     print("⚠️ ffmpeg not found in PATH")
             except Exception as e:
                 print(f"⚠️ Could not check for ffmpeg: {e}")
-            
-            # Check for YouTube cookies file
-            cookies_path = None
-            cookies_file = "youtube_cookies.txt"
-            
-            if os.path.exists(cookies_file):
-                # Read cookies from file
-                with open(cookies_file, "r") as f:
-                    cookies_content = f.read().strip()
-                
-                # Only use if file has actual cookies (not just comments)
-                if cookies_content and not cookies_content.startswith("# Paste your"):
-                    cookies_path = os.path.join(temp_dir, "cookies.txt")
-                    with open(cookies_path, "w") as f:
-                        f.write(cookies_content)
-                    print(f"✅ Using YouTube cookies from file for authentication")
-                else:
-                    print(f"⚠️ youtube_cookies.txt exists but is empty or not configured")
-            else:
-                print(f"⚠️ youtube_cookies.txt not found - some videos may be restricted")
             
             # Download audio with compression (32kbps mono for Whisper)
             # This keeps files under 25MB for videos up to ~90 minutes
