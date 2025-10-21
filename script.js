@@ -1516,24 +1516,56 @@ async function loadTagLibrary() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 30); // Top 30 tags
   
-  // Build tag cloud
-  const tagCloudHTML = sortedTags.map(([tag, count]) => 
-    `<div class="tag-badge clickable" onclick="filterByTag('${tag}')">
+  // Build tag cloud with single/double click handlers
+  const tagCloudHTML = sortedTags.map(([tag, count]) => {
+    const isActive = activeTagFilter === tag;
+    const activeClass = isActive ? 'tag-active' : '';
+    return `<div class="tag-badge clickable ${activeClass}" 
+                 onclick="filterByTag('${tag}')" 
+                 ondblclick="handleDoubleClickTag('${tag}')">
       ${tag}
       <span class="tag-count">${count}</span>
-    </div>`
-  ).join('');
+      ${isActive ? '<span class="tag-active-indicator">✓</span>' : ''}
+    </div>`;
+  }).join('');
   
   document.getElementById('tag-cloud').innerHTML = tagCloudHTML || '<div class="tag-cloud-placeholder">No tags extracted yet</div>';
   
+  // Add filter status banner if active
+  const taggedDocsLabel = document.querySelector('.tagged-documents-label');
+  const existingBanner = document.getElementById('tag-filter-banner');
+  if (existingBanner) {
+    existingBanner.remove();
+  }
+  
+  if (activeTagFilter && taggedDocsLabel) {
+    const filterBanner = document.createElement('div');
+    filterBanner.id = 'tag-filter-banner';
+    filterBanner.className = 'tag-filter-banner';
+    filterBanner.innerHTML = `
+      <span>🔍 Filtered by: <strong>${activeTagFilter}</strong></span>
+      <button class="clear-filter-btn" onclick="clearTagFilter()">✕ Clear</button>
+    `;
+    taggedDocsLabel.after(filterBanner);
+  }
+  
   // Build document list - sorted by upload time (newest first)
-  const docsArray = Object.entries(taggedDocs)
+  let docsArray = Object.entries(taggedDocs)
     .map(([id, doc]) => ({ id, ...doc }))
     .sort((a, b) => {
       const dateA = new Date(a.timestamp || 0);
       const dateB = new Date(b.timestamp || 0);
       return dateB - dateA; // Newest first
     });
+  
+  // Apply tag filter if active
+  const totalDocs = docsArray.length;
+  if (activeTagFilter) {
+    docsArray = docsArray.filter(doc => 
+      doc.tags && doc.tags.includes(activeTagFilter)
+    );
+    console.log(`🔍 Filtered to ${docsArray.length} docs with tag "${activeTagFilter}"`);
+  }
   
   const docsHTML = docsArray.map(doc => `
     <div class="tagged-document-item">
@@ -1557,11 +1589,66 @@ async function loadTagLibrary() {
   document.getElementById('tagged-documents-list').innerHTML = docsHTML;
 }
 
+// Track active tag filter and click timing
+let activeTagFilter = null;
+let tagClickTimer = null;
+
 function filterByTag(tag) {
-  console.log(`🔍 Filtering by tag: ${tag}`);
-  // TODO: Could implement filtering in the document list
-  // For now, just highlight the tag
-  alert(`Filter by tag: ${tag}\n\nThis will search documents tagged with "${tag}"`);
+  // Clear any pending single-click action
+  if (tagClickTimer) {
+    clearTimeout(tagClickTimer);
+    tagClickTimer = null;
+  }
+  
+  // Wait 300ms to detect if this is a double-click
+  tagClickTimer = setTimeout(() => {
+    // SINGLE CLICK: Filter documents
+    handleSingleClickTag(tag);
+  }, 300);
+}
+
+function handleSingleClickTag(tag) {
+  console.log(`🔍 Single-click: Filtering by tag: ${tag}`);
+  
+  // Toggle filter: if clicking same tag, clear filter
+  if (activeTagFilter === tag) {
+    activeTagFilter = null;
+    console.log('🔄 Clearing tag filter');
+  } else {
+    activeTagFilter = tag;
+  }
+  
+  // Reload tag library with filter applied
+  loadTagLibrary();
+}
+
+function handleDoubleClickTag(tag) {
+  console.log(`💬 Double-click: Opening chat for tag: ${tag}`);
+  
+  // Cancel the pending single-click action
+  if (tagClickTimer) {
+    clearTimeout(tagClickTimer);
+    tagClickTimer = null;
+  }
+  
+  // Scroll to chat section
+  const chatSection = document.querySelector('.chat-container');
+  if (chatSection) {
+    chatSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  
+  // Pre-fill chat input with tag question
+  const chatInput = document.getElementById('chat-input');
+  if (chatInput) {
+    chatInput.value = `Tell me about ${tag} in the context of MBTI and Jungian psychology`;
+    chatInput.focus();
+    
+    // Add a subtle pulse animation
+    chatInput.style.animation = 'pulse 0.5s ease-in-out';
+    setTimeout(() => {
+      chatInput.style.animation = '';
+    }, 500);
+  }
 }
 
 async function renameDocument(docId, currentName) {
@@ -1603,5 +1690,12 @@ async function renameDocument(docId, currentName) {
   }
 }
 
+function clearTagFilter() {
+  console.log('🔄 Clearing tag filter');
+  activeTagFilter = null;
+  loadTagLibrary();
+}
+
 // Expose to global scope for onclick handlers
 window.renameDocument = renameDocument;
+window.clearTagFilter = clearTagFilter;
