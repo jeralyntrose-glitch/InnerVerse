@@ -977,224 +977,9 @@ downloadReportBtn.addEventListener('click', async () => {
   }
 });
 
-// === YouTube Transcription ===
-const youtubeUrl = document.getElementById('youtube-url');
-const transcribeBtn = document.getElementById('transcribe-btn');
-const youtubeStatus = document.getElementById('youtube-status');
-
-let youtubeProgressInterval = null;
-let youtubeAbortController = null;
-
-if (transcribeBtn && youtubeUrl && youtubeStatus) {
-  transcribeBtn.addEventListener('click', async () => {
-    // Initialize audio context for notification (iOS compatibility)
-    initAudioContext();
-    
-    const url = youtubeUrl.value.trim();
-    
-    if (!url) {
-      showYoutubeStatus('Please enter a YouTube URL', 'error');
-      return;
-    }
-    
-    // Validate YouTube URL
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)/;
-    if (!youtubeRegex.test(url)) {
-      showYoutubeStatus('Please enter a valid YouTube URL', 'error');
-      return;
-    }
-    
-    try {
-      transcribeBtn.disabled = true;
-      transcribeBtn.textContent = '⏳ Processing...';
-      
-      // Create abort controller
-      youtubeAbortController = new AbortController();
-      
-      // Show progress bar
-      showYoutubeProgress(0, 'Downloading audio...');
-      
-      // Simulate progress stages
-      let progress = 0;
-      youtubeProgressInterval = setInterval(() => {
-        if (progress < 20) progress += 1; // Slow start for download
-        else if (progress < 60) progress += 2; // Faster for transcription
-        else if (progress < 90) progress += 1; // Slow down near end
-        updateYoutubeProgress(progress);
-      }, 300);
-      
-      // Add 60 minute timeout for very long videos (1+ hours)
-      let isTimeout = false;
-      const timeoutId = setTimeout(() => {
-        isTimeout = true;
-        youtubeAbortController.abort();
-      }, 3600000); // 60 minutes
-      
-      const response = await fetch('/transcribe-youtube', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ youtube_url: url }),
-        signal: youtubeAbortController.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      // Clear progress interval
-      clearInterval(youtubeProgressInterval);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Transcription failed');
-      }
-      
-      // Show completion
-      updateYoutubeProgress(100, 'Complete!');
-      
-      // Download the PDF
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      
-      // Extract filename from Content-Disposition header or use default
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = 'youtube_transcript.pdf';
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
-        }
-      }
-      
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(downloadUrl);
-      document.body.removeChild(a);
-      
-      setTimeout(() => {
-        hideYoutubeProgress();
-        showYoutubeStatus('✅ PDF downloaded! You can now upload it to InnerVerse.', 'success');
-        playNotificationSound(); // Play notification ping
-      }, 500);
-      
-      youtubeUrl.value = '';
-      transcribeBtn.textContent = 'Transcribe';
-      transcribeBtn.disabled = false;
-      
-    } catch (error) {
-      clearInterval(youtubeProgressInterval);
-      hideYoutubeProgress();
-      
-      if (error.name === 'AbortError') {
-        if (isTimeout) {
-          showError('Transcription timeout: This video is taking too long to process (over 60 minutes). The video may be extremely long, have network issues, or YouTube restrictions. Try a shorter video or check your connection.');
-        } else {
-          showYoutubeStatus('⚠️ Transcription cancelled', 'error');
-        }
-      } else {
-        console.error('YouTube transcription error:', error);
-        showError('YouTube transcription failed: ' + error.message);
-      }
-      
-      transcribeBtn.textContent = 'Transcribe';
-      transcribeBtn.disabled = false;
-    }
-  });
-}
-
-// Enter key support for YouTube input
-if (youtubeUrl && transcribeBtn) {
-  youtubeUrl.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !transcribeBtn.disabled) {
-      transcribeBtn.click();
-    }
-  });
-}
-
-if (!transcribeBtn || !youtubeUrl || !youtubeStatus) {
-  console.error('❌ YouTube transcription elements not found in DOM');
-}
-
-function showYoutubeStatus(message, type) {
-  youtubeStatus.innerHTML = message;
-  youtubeStatus.className = 'youtube-status ' + type;
-  youtubeStatus.classList.remove('hidden');
-  
-  if (type === 'error') {
-    setTimeout(() => {
-      youtubeStatus.classList.add('hidden');
-    }, 15000);
-  }
-}
-
-function showYoutubeProgress(percent, statusText) {
-  const youtubeSection = document.querySelector('.youtube-section');
-  
-  // Remove existing cancel button if present
-  const existingCancel = youtubeSection.querySelector('.youtube-cancel-btn');
-  if (existingCancel) {
-    existingCancel.remove();
-  }
-  
-  // Add cancel button to YouTube section (top right corner)
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'youtube-cancel-btn';
-  cancelBtn.innerHTML = '✕ Cancel';
-  cancelBtn.onclick = cancelYoutubeTranscription;
-  youtubeSection.appendChild(cancelBtn);
-  
-  // Show progress bar without cancel button inside
-  youtubeStatus.innerHTML = `
-    <div class="youtube-progress-container">
-      <div class="youtube-progress-bar">
-        <div class="youtube-progress-fill" style="width: ${percent}%"></div>
-        <span class="youtube-progress-text">${percent}% - ${statusText}</span>
-      </div>
-    </div>
-  `;
-  youtubeStatus.className = 'youtube-status processing';
-  youtubeStatus.classList.remove('hidden');
-}
-
-function updateYoutubeProgress(percent, statusText = 'Processing...') {
-  const fill = youtubeStatus.querySelector('.youtube-progress-fill');
-  const text = youtubeStatus.querySelector('.youtube-progress-text');
-  
-  if (fill && text) {
-    fill.style.width = percent + '%';
-    text.textContent = `${percent}% - ${statusText}`;
-  }
-}
-
-function hideYoutubeProgress() {
-  youtubeStatus.classList.add('hidden');
-  
-  // Remove cancel button when hiding progress
-  const youtubeSection = document.querySelector('.youtube-section');
-  const cancelBtn = youtubeSection.querySelector('.youtube-cancel-btn');
-  if (cancelBtn) {
-    cancelBtn.remove();
-  }
-}
-
-function cancelYoutubeTranscription() {
-  if (youtubeAbortController) {
-    youtubeAbortController.abort();
-    clearInterval(youtubeProgressInterval);
-    
-    // Remove cancel button
-    const youtubeSection = document.querySelector('.youtube-section');
-    const cancelBtn = youtubeSection.querySelector('.youtube-cancel-btn');
-    if (cancelBtn) {
-      cancelBtn.remove();
-    }
-  }
-}
-
-// === Audio Upload & Transcription ===
+// === YouTube MP3 Upload & Transcription ===
 const audioFileElem = document.getElementById('audioFileElem');
-const audioStatus = document.getElementById('audio-status');
+const youtubeStatus = document.getElementById('youtube-status');
 
 audioFileElem.addEventListener('change', async (e) => {
   const file = e.target.files[0];
@@ -1224,9 +1009,9 @@ audioFileElem.addEventListener('change', async (e) => {
   
   try {
     // Show processing status
-    audioStatus.classList.remove('hidden', 'success', 'error');
-    audioStatus.classList.add('processing');
-    audioStatus.textContent = `🎤 Uploading "${file.name}" (${fileSizeMB.toFixed(1)}MB)...`;
+    youtubeStatus.classList.remove('hidden', 'success', 'error');
+    youtubeStatus.classList.add('processing');
+    youtubeStatus.textContent = `🎤 Uploading "${file.name}" (${fileSizeMB.toFixed(1)}MB)...`;
     
     // Upload audio file
     const formData = new FormData();
@@ -1244,9 +1029,9 @@ audioFileElem.addEventListener('change', async (e) => {
     }
     
     // Success
-    audioStatus.classList.remove('processing');
-    audioStatus.classList.add('success');
-    audioStatus.textContent = `✅ "${result.filename}" transcribed successfully! (${result.duration_minutes} min, ~$${result.whisper_cost})`;
+    youtubeStatus.classList.remove('processing');
+    youtubeStatus.classList.add('success');
+    youtubeStatus.textContent = `✅ "${result.filename}" transcribed successfully! (${result.duration_minutes} min, ~$${result.whisper_cost})`;
     
     // Save document to tag library
     saveDocumentTags(result.document_id, result.filename, result.tags || []);
@@ -1259,7 +1044,7 @@ audioFileElem.addEventListener('change', async (e) => {
     
     // Clear success message after 10 seconds
     setTimeout(() => {
-      audioStatus.classList.add('hidden');
+      youtubeStatus.classList.add('hidden');
     }, 10000);
     
     // Update cost tracker
@@ -1270,13 +1055,13 @@ audioFileElem.addEventListener('change', async (e) => {
     
   } catch (error) {
     console.error('Audio upload error:', error);
-    audioStatus.classList.remove('processing', 'success');
-    audioStatus.classList.add('error');
-    audioStatus.textContent = `❌ ${error.message}`;
+    youtubeStatus.classList.remove('processing', 'success');
+    youtubeStatus.classList.add('error');
+    youtubeStatus.textContent = `❌ ${error.message}`;
     
     // Clear error after 10 seconds
     setTimeout(() => {
-      audioStatus.classList.add('hidden');
+      youtubeStatus.classList.add('hidden');
     }, 10000);
   } finally {
     // Reset file input so same file can be uploaded again

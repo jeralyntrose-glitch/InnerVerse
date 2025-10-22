@@ -101,36 +101,18 @@
 
     <div id="status" class="status"></div>
 
-    <!-- 🎵 Audio Upload Section -->
-    <div class="audio-section">
-      <div class="audio-header">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
-          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-        </svg>
-        <span>Audio Upload & Transcription</span>
-      </div>
-      <p class="audio-description">Upload MP3, M4A, or WAV files to transcribe with Whisper AI (~$0.006/min)</p>
-      <div class="audio-input-group">
-        <label for="audioFileElem" class="btn-audio-upload">📁 Choose Audio File</label>
-        <input type="file" id="audioFileElem" accept="audio/mp3,audio/m4a,audio/wav,audio/x-m4a,audio/mpeg,video/mp4" style="display: none;" />
-      </div>
-      <div id="audio-status" class="audio-status hidden"></div>
-    </div>
-
-    <!-- 🎬 YouTube Transcription Section -->
+    <!-- 🎬 YouTube MP3 Transcription Section -->
     <div class="youtube-section">
       <div class="youtube-header">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
           <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
         </svg>
-        <span>YouTube Transcription</span>
+        <span>YouTube MP3 Transcription</span>
       </div>
-      <p class="youtube-description">Paste a YouTube URL to transcribe and download as PDF</p>
+      <p class="youtube-description">Upload MP3, M4A, or WAV files from YouTube videos to transcribe with Whisper AI (~$0.006/min)</p>
       <div class="youtube-input-group">
-        <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." />
-        <button id="transcribe-btn" class="btn-transcribe" title="Costs ~$0.006/min - Works for any video">
-          Transcribe
-        </button>
+        <label for="audioFileElem" class="btn-transcribe">📁 Choose Audio File</label>
+        <input type="file" id="audioFileElem" accept="audio/mp3,audio/m4a,audio/wav,audio/x-m4a,audio/mpeg,video/mp4" style="display: none;" />
       </div>
       <div id="youtube-status" class="youtube-status hidden"></div>
     </div>
