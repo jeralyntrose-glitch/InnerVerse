@@ -17,6 +17,7 @@ def check_requirements():
     
     # Check Python
 
+
     
     try:
         import openai
