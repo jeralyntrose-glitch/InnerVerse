@@ -120,11 +120,30 @@ def transcribe_youtube(youtube_url, output_folder=None):
     
     print(f"🎥 Processing: {youtube_url}\n")
     
+    # Check for cookies file
+    cookies_file = None
+    possible_cookie_paths = [
+        "youtube_cookies.txt",
+        os.path.expanduser("~/Desktop/youtube_cookies.txt"),
+        os.path.join(os.path.dirname(__file__), "youtube_cookies.txt")
+    ]
+    
+    for path in possible_cookie_paths:
+        if os.path.exists(path):
+            cookies_file = path
+            print(f"🍪 Using cookies from: {path}\n")
+            break
+    
     # Step 1: Get video info
     print("📋 Getting video info...")
     try:
+        info_cmd = ["yt-dlp", "--print", "%(title)s|||%(duration)s"]
+        if cookies_file:
+            info_cmd.extend(["--cookies", cookies_file])
+        info_cmd.append(youtube_url)
+        
         info_result = subprocess.run(
-            ["yt-dlp", "--print", "%(title)s|||%(duration)s", youtube_url],
+            info_cmd,
             capture_output=True,
             text=True,
             timeout=30
@@ -152,17 +171,25 @@ def transcribe_youtube(youtube_url, output_folder=None):
         audio_path = os.path.join(temp_dir, "audio.mp3")
         
         try:
+            download_cmd = [
+                "yt-dlp",
+                "--user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "--referer", "https://www.youtube.com/",
+            ]
+            
+            if cookies_file:
+                download_cmd.extend(["--cookies", cookies_file])
+            
+            download_cmd.extend([
+                "-x",
+                "--audio-format", "mp3",
+                "--postprocessor-args", "ffmpeg:-ac 1 -ar 16000 -b:a 32k",
+                "-o", audio_path,
+                youtube_url
+            ])
+            
             download_result = subprocess.run(
-                [
-                    "yt-dlp",
-                    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                    "--referer", "https://www.youtube.com/",
-                    "-x",
-                    "--audio-format", "mp3",
-                    "--postprocessor-args", "ffmpeg:-ac 1 -ar 16000 -b:a 32k",
-                    "-o", audio_path,
-                    youtube_url
-                ],
+                download_cmd,
                 capture_output=True,
                 text=True,
                 timeout=1800
