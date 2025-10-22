@@ -869,6 +869,10 @@ class QueryRequest(BaseModel):
 class YouTubeTranscribeRequest(BaseModel):
     youtube_url: str
 
+# === YouTube URL Download Request (with Proxy) ===
+class YouTubeDownloadRequest(BaseModel):
+    youtube_url: str
+
 # === Text to PDF Request ===
 class TextToPDFRequest(BaseModel):
     text: str
@@ -2015,6 +2019,300 @@ async def upload_audio(file: UploadFile = File(...)):
             status_code=500,
             content={"error": f"Audio upload failed: {str(e)}"}
         )
+
+
+# === Download YouTube Video with Proxy ===
+@app.post("/download-youtube")
+async def download_youtube(request: YouTubeDownloadRequest):
+    """Download YouTube audio using Decodo residential proxy, transcribe, auto-tag, and index"""
+    try:
+        youtube_url = request.youtube_url
+        print(f"🎬 Processing YouTube URL with proxy: {youtube_url}")
+        
+        # Check if proxy credentials are set
+        proxy_host = os.getenv("DECODO_PROXY_HOST")
+        proxy_port = os.getenv("DECODO_PROXY_PORT")
+        proxy_user = os.getenv("DECODO_PROXY_USER")
+        proxy_pass = os.getenv("DECODO_PROXY_PASS")
+        
+        if not all([proxy_host, proxy_port, proxy_user, proxy_pass]):
+            return JSONResponse(status_code=500, content={
+                "error": "Proxy configuration not set. Please configure Decodo proxy credentials."
+            })
+        
+        # Build proxy URL
+        proxy_url = f"http://{proxy_user}:{proxy_pass}@{proxy_host}:{proxy_port}"
+        print(f"🌐 Using Decodo residential proxy: {proxy_host}:{proxy_port}")
+        
+        # Create temp directory for audio files
+        temp_dir = tempfile.mkdtemp()
+        audio_path = os.path.join(temp_dir, "youtube_audio.mp3")
+        
+        try:
+            # Step 1: Get video metadata with proxy
+            print("📋 Fetching video metadata...")
+            info_command = [
+                "yt-dlp",
+                "--proxy", proxy_url,
+                "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "--referer", "https://www.youtube.com/",
+                "--print", "%(title)s|||%(duration)s",
+                youtube_url
+            ]
+            
+            info_result = subprocess.run(info_command, capture_output=True, text=True, timeout=30)
+            
+            if info_result.returncode != 0:
+                error_msg = info_result.stderr.lower()
+                if "private video" in error_msg or "members-only" in error_msg:
+                    return JSONResponse(status_code=403, content={
+                        "error": "This video is private or members-only."
+                    })
+                elif "age-restricted" in error_msg:
+                    return JSONResponse(status_code=403, content={
+                        "error": "Age-restricted video. Cannot access with proxy."
+                    })
+                elif "video unavailable" in error_msg or "removed" in error_msg:
+                    return JSONResponse(status_code=404, content={
+                        "error": "Video unavailable or removed."
+                    })
+                else:
+                    return JSONResponse(status_code=400, content={
+                        "error": "Unable to access video. Check the URL and try again."
+                    })
+            
+            info_parts = info_result.stdout.strip().split("|||")
+            video_title = info_parts[0] if len(info_parts) > 0 else "YouTube Video"
+            video_duration = int(info_parts[1]) if len(info_parts) > 1 and info_parts[1].isdigit() else 0
+            
+            print(f"📺 Video: {video_title} ({video_duration}s / {video_duration//60} min)")
+            
+            # Estimate download time (rough: 1 minute of video = ~1-2 seconds download with good connection)
+            estimated_download_seconds = max(5, video_duration // 30)
+            print(f"⏱️ Estimated download time: ~{estimated_download_seconds} seconds")
+            
+            # Step 2: Download audio with proxy
+            print("📥 Downloading audio via Decodo proxy...")
+            download_command = [
+                "yt-dlp",
+                "--proxy", proxy_url,
+                "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "--referer", "https://www.youtube.com/",
+                "-x",  # Extract audio
+                "--audio-format", "mp3",
+                "--audio-quality", "0",  # Best quality
+                "-o", audio_path,
+                youtube_url
+            ]
+            
+            # Extended timeout for long videos
+            timeout_seconds = max(300, video_duration * 3)  # At least 5 minutes, or 3x video duration
+            download_result = subprocess.run(download_command, capture_output=True, text=True, timeout=timeout_seconds)
+            
+            if download_result.returncode != 0:
+                error_msg = download_result.stderr.lower()
+                if "http error 403" in error_msg:
+                    return JSONResponse(status_code=403, content={
+                        "error": "Download blocked. The proxy may be detected by YouTube."
+                    })
+                elif "http error 429" in error_msg:
+                    return JSONResponse(status_code=429, content={
+                        "error": "Too many requests. Please wait a few minutes and try again."
+                    })
+                else:
+                    return JSONResponse(status_code=500, content={
+                        "error": "Download failed. Try again or try a different video."
+                    })
+            
+            # Check if file was created
+            if not os.path.exists(audio_path):
+                return JSONResponse(status_code=500, content={
+                    "error": "Audio extraction failed."
+                })
+            
+            file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+            print(f"✅ Downloaded: {file_size_mb:.2f} MB")
+            
+            # Check file size (Whisper has 25MB limit)
+            if file_size_mb > 24:
+                return JSONResponse(status_code=400, content={
+                    "error": f"Audio file too large ({file_size_mb:.1f}MB). Whisper API has 24MB limit. Try a shorter video."
+                })
+            
+            # Step 3: Transcribe with Whisper
+            print("🎤 Transcribing with Whisper...")
+            openai_client = get_openai_client()
+            if not openai_client:
+                return JSONResponse(status_code=500, content={
+                    "error": "OpenAI client not initialized"
+                })
+            
+            # Get audio duration for cost calculation
+            audio = AudioSegment.from_file(audio_path)
+            duration_minutes = len(audio) / (1000 * 60)
+            
+            with open(audio_path, "rb") as audio_file:
+                transcript_response = openai_client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text",
+                    timeout=900
+                )
+            
+            transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
+            
+            # Log Whisper API usage
+            whisper_cost = duration_minutes * PRICING["whisper-1"]
+            log_api_usage("whisper_youtube", "whisper-1", input_tokens=0, output_tokens=0, cost=whisper_cost)
+            print(f"✅ Transcription complete: {len(transcript)} characters")
+            print(f"💰 Whisper cost: ${whisper_cost:.4f} ({duration_minutes:.2f} minutes)")
+            
+        finally:
+            # Clean up temp audio file
+            try:
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+                if os.path.exists(temp_dir):
+                    os.rmdir(temp_dir)
+            except:
+                pass
+        
+        # Step 4: Generate PDF from transcript
+        print("📄 Generating PDF from transcript...")
+        pdf_filename = f"{video_title[:50].replace('/', '-')}.pdf"
+        pdf_bytes = None
+        
+        try:
+            pdf_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}.pdf")
+            
+            # Create PDF with ReportLab
+            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                textColor='#5B21B6',
+                spaceAfter=12
+            )
+            
+            body_style = ParagraphStyle(
+                'CustomBody',
+                parent=styles['BodyText'],
+                fontSize=11,
+                leading=16,
+                alignment=TA_LEFT
+            )
+            
+            story = []
+            story.append(Paragraph(f"<b>{video_title}</b>", title_style))
+            story.append(Spacer(1, 0.2*inch))
+            
+            # Metadata
+            hawaii_tz = pytz.timezone('Pacific/Honolulu')
+            hawaii_time = datetime.now(hawaii_tz)
+            metadata_style = ParagraphStyle('Metadata', parent=styles['Normal'], fontSize=9, textColor='gray')
+            story.append(Paragraph(f"Transcribed on {hawaii_time.strftime('%B %d, %Y at %I:%M %p')} HST", metadata_style))
+            story.append(Paragraph(f"Source: {youtube_url}", metadata_style))
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Transcript
+            paragraphs = transcript.split('\n')
+            for para in paragraphs:
+                if para.strip():
+                    story.append(Paragraph(para.strip(), body_style))
+                    story.append(Spacer(1, 0.15*inch))
+            
+            doc.build(story)
+            
+            # Read PDF as bytes
+            with open(pdf_path, 'rb') as f:
+                pdf_bytes = f.read()
+            
+            os.remove(pdf_path)
+            print(f"✅ PDF generated successfully")
+            
+        except Exception as e:
+            print(f"❌ PDF generation error: {str(e)}")
+            return JSONResponse(status_code=500, content={
+                "error": "Failed to generate PDF from transcript"
+            })
+        
+        # Step 5: Index in Pinecone with auto-tagging
+        print("📚 Indexing transcript in Pinecone...")
+        
+        try:
+            pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
+            text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
+            chunks = chunk_text(text)
+            
+            doc_id = str(uuid.uuid4())
+            pinecone_index = get_pinecone_client()
+            
+            if not pinecone_index:
+                return JSONResponse(status_code=500, content={
+                    "error": "Pinecone client not initialized"
+                })
+            
+            # Auto-tag document
+            tags = await auto_tag_document(text, pdf_filename, openai_client)
+            
+            # Batch embedding + upsert
+            vectors_to_upsert = []
+            for i, chunk in enumerate(chunks):
+                if i % 50 == 0 and i > 0:
+                    print(f"📊 Processing chunk {i}/{len(chunks)}...")
+                
+                response = openai_client.embeddings.create(
+                    input=chunk, model="text-embedding-ada-002", timeout=120)
+                vector = response.data[0].embedding
+                vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
+                    "text": chunk,
+                    "doc_id": doc_id,
+                    "filename": pdf_filename,
+                    "upload_timestamp": datetime.now().isoformat(),
+                    "tags": tags,
+                    "source": "youtube_url"
+                }))
+            
+            # Upload in batches to Pinecone
+            if vectors_to_upsert:
+                batch_size = 50
+                total_batches = (len(vectors_to_upsert) + batch_size - 1) // batch_size
+                
+                for batch_num in range(0, len(vectors_to_upsert), batch_size):
+                    batch = vectors_to_upsert[batch_num:batch_num + batch_size]
+                    pinecone_index.upsert(vectors=batch)
+                    current_batch = (batch_num // batch_size) + 1
+                    print(f"📤 Uploaded batch {current_batch}/{total_batches} ({len(batch)} vectors)")
+                
+                print(f"✅ Successfully indexed {len(vectors_to_upsert)} chunks in Pinecone")
+            
+            return {
+                "message": "YouTube video downloaded, transcribed, and indexed successfully",
+                "document_id": doc_id,
+                "filename": pdf_filename,
+                "video_title": video_title,
+                "chunks_count": len(chunks),
+                "tags": tags,
+                "tags_count": len(tags),
+                "duration_minutes": round(duration_minutes, 2),
+                "whisper_cost": round(whisper_cost, 4),
+                "file_size_mb": round(file_size_mb, 2)
+            }
+            
+        except Exception as e:
+            print(f"❌ Indexing error: {str(e)}")
+            return JSONResponse(status_code=500, content={
+                "error": f"Download and transcription succeeded but indexing failed: {str(e)}"
+            })
+        
+    except Exception as e:
+        print(f"❌ YouTube download error: {str(e)}")
+        return JSONResponse(status_code=500, content={
+            "error": f"YouTube download failed: {str(e)}"
+        })
 
 
 # === API Usage Endpoint ===

@@ -1069,6 +1069,99 @@ audioFileElem.addEventListener('change', async (e) => {
   }
 });
 
+// === YouTube URL Download & Transcription ===
+const youtubeUrlInput = document.getElementById('youtube-url-input');
+const downloadYoutubeBtn = document.getElementById('download-youtube-btn');
+
+downloadYoutubeBtn.addEventListener('click', async () => {
+  const youtubeUrl = youtubeUrlInput.value.trim();
+  
+  if (!youtubeUrl) {
+    showError('Please enter a YouTube URL');
+    return;
+  }
+  
+  // Basic YouTube URL validation
+  const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+  if (!youtubeRegex.test(youtubeUrl)) {
+    showError('Please enter a valid YouTube URL');
+    return;
+  }
+  
+  // Initialize audio context for notification (iOS compatibility)
+  initAudioContext();
+  
+  try {
+    // Disable button and show processing status
+    downloadYoutubeBtn.disabled = true;
+    downloadYoutubeBtn.textContent = '⏳ Processing...';
+    
+    youtubeStatus.classList.remove('hidden', 'success', 'error');
+    youtubeStatus.classList.add('processing');
+    youtubeStatus.textContent = '🌐 Connecting to YouTube via proxy...';
+    
+    // Call the new download-youtube endpoint
+    const response = await fetch('/download-youtube', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        youtube_url: youtubeUrl
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Download failed');
+    }
+    
+    // Success
+    youtubeStatus.classList.remove('processing');
+    youtubeStatus.classList.add('success');
+    youtubeStatus.textContent = `✅ "${result.video_title}" downloaded and transcribed! (${result.duration_minutes} min, ${result.file_size_mb}MB, ~$${result.whisper_cost})`;
+    
+    // Save document to tag library
+    saveDocumentTags(result.document_id, result.filename, result.tags || []);
+    
+    // Copy document ID to clipboard
+    navigator.clipboard.writeText(result.document_id);
+    
+    // Play notification sound
+    playNotificationSound();
+    
+    // Clear URL input
+    youtubeUrlInput.value = '';
+    
+    // Clear success message after 15 seconds
+    setTimeout(() => {
+      youtubeStatus.classList.add('hidden');
+    }, 15000);
+    
+    // Update cost tracker
+    updateCostTracker();
+    
+    // Reload tag library
+    loadTagLibrary();
+    
+  } catch (error) {
+    console.error('YouTube download error:', error);
+    youtubeStatus.classList.remove('processing', 'success');
+    youtubeStatus.classList.add('error');
+    youtubeStatus.textContent = `❌ ${error.message}`;
+    
+    // Clear error after 15 seconds
+    setTimeout(() => {
+      youtubeStatus.classList.add('hidden');
+    }, 15000);
+  } finally {
+    // Re-enable button
+    downloadYoutubeBtn.disabled = false;
+    downloadYoutubeBtn.textContent = '🚀 Download & Transcribe';
+  }
+});
+
 // === Text to PDF Collapsible Toggle ===
 const textPdfToggle = document.getElementById('text-pdf-toggle');
 const textPdfContent = document.getElementById('text-pdf-content');
