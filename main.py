@@ -1170,6 +1170,8 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             # Get video info first (WITH cookies for age-restricted/login-required videos)
             info_command = [
                 "yt-dlp",
+                "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "--referer", "https://www.youtube.com/",
                 "--print", "%(title)s|||%(duration)s",
                 youtube_url
             ]
@@ -1229,6 +1231,8 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
             # This keeps files under 25MB for videos up to ~90 minutes
             download_command = [
                 "yt-dlp",
+                "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "--referer", "https://www.youtube.com/",
                 "-x",  # Extract audio
                 "--audio-format", "mp3",
                 "--postprocessor-args", "ffmpeg:-ac 1 -ar 16000 -b:a 32k",  # Mono, 16kHz, 32kbps
