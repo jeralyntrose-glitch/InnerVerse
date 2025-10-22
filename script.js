@@ -1192,6 +1192,98 @@ function cancelYoutubeTranscription() {
   }
 }
 
+// === Audio Upload & Transcription ===
+const audioFileElem = document.getElementById('audioFileElem');
+const audioStatus = document.getElementById('audio-status');
+
+audioFileElem.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  // Initialize audio context for notification (iOS compatibility)
+  initAudioContext();
+  
+  // Check file type
+  const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/m4a', 'audio/wav', 'audio/x-m4a', 'video/mp4'];
+  const allowedExtensions = ['.mp3', '.m4a', '.wav', '.m4v', '.mp4'];
+  const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  
+  if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+    showError('Please upload an MP3, M4A, WAV, or MP4 audio file.');
+    audioFileElem.value = ''; // Reset file input
+    return;
+  }
+  
+  // Check file size (24MB limit for Whisper)
+  const fileSizeMB = file.size / (1024 * 1024);
+  if (fileSizeMB > 24) {
+    showError(`Audio file is too large (${fileSizeMB.toFixed(1)}MB). Maximum size is 24MB. Please compress the audio or split into smaller files.`);
+    audioFileElem.value = ''; // Reset file input
+    return;
+  }
+  
+  try {
+    // Show processing status
+    audioStatus.classList.remove('hidden', 'success', 'error');
+    audioStatus.classList.add('processing');
+    audioStatus.textContent = `🎤 Uploading "${file.name}" (${fileSizeMB.toFixed(1)}MB)...`;
+    
+    // Upload audio file
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('/upload-audio', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Audio upload failed');
+    }
+    
+    // Success
+    audioStatus.classList.remove('processing');
+    audioStatus.classList.add('success');
+    audioStatus.textContent = `✅ "${result.filename}" transcribed successfully! (${result.duration_minutes} min, ~$${result.whisper_cost})`;
+    
+    // Save document to tag library
+    saveDocumentTags(result.document_id, result.filename, result.tags || []);
+    
+    // Copy document ID to clipboard
+    navigator.clipboard.writeText(result.document_id);
+    
+    // Play notification sound
+    playNotificationSound();
+    
+    // Clear success message after 10 seconds
+    setTimeout(() => {
+      audioStatus.classList.add('hidden');
+    }, 10000);
+    
+    // Update cost tracker
+    updateCostTracker();
+    
+    // Reload tag library
+    loadTagLibrary();
+    
+  } catch (error) {
+    console.error('Audio upload error:', error);
+    audioStatus.classList.remove('processing', 'success');
+    audioStatus.classList.add('error');
+    audioStatus.textContent = `❌ ${error.message}`;
+    
+    // Clear error after 10 seconds
+    setTimeout(() => {
+      audioStatus.classList.add('hidden');
+    }, 10000);
+  } finally {
+    // Reset file input so same file can be uploaded again
+    audioFileElem.value = '';
+  }
+});
+
 // === Text to PDF Collapsible Toggle ===
 const textPdfToggle = document.getElementById('text-pdf-toggle');
 const textPdfContent = document.getElementById('text-pdf-content');

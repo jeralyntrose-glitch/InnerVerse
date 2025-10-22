@@ -101,6 +101,22 @@
 
     <div id="status" class="status"></div>
 
+    <!-- 🎵 Audio Upload Section -->
+    <div class="audio-section">
+      <div class="audio-header">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
+          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>
+        <span>Audio Upload & Transcription</span>
+      </div>
+      <p class="audio-description">Upload MP3, M4A, or WAV files to transcribe with Whisper AI (~$0.006/min)</p>
+      <div class="audio-input-group">
+        <label for="audioFileElem" class="btn-audio-upload">📁 Choose Audio File</label>
+        <input type="file" id="audioFileElem" accept="audio/mp3,audio/m4a,audio/wav,audio/x-m4a,audio/mpeg,video/mp4" style="display: none;" />
+      </div>
+      <div id="audio-status" class="audio-status hidden"></div>
+    </div>
+
     <!-- 🎬 YouTube Transcription Section -->
     <div class="youtube-section">
       <div class="youtube-header">
