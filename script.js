@@ -977,11 +977,12 @@ downloadReportBtn.addEventListener('click', async () => {
   }
 });
 
-// === YouTube MP3 Upload & Transcription ===
-const audioFileElem = document.getElementById('audioFileElem');
+// === YouTube Status Element ===
 const youtubeStatus = document.getElementById('youtube-status');
 
-audioFileElem.addEventListener('change', async (e) => {
+// === YouTube MP3 Upload & Transcription (DISABLED - removed from UI) ===
+// const audioFileElem = document.getElementById('audioFileElem');
+// audioFileElem.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   
@@ -1065,9 +1066,9 @@ audioFileElem.addEventListener('change', async (e) => {
     }, 10000);
   } finally {
     // Reset file input so same file can be uploaded again
-    audioFileElem.value = '';
-  }
-});
+    // audioFileElem.value = '';
+  // }
+// });
 
 // === YouTube URL Download & Transcription ===
 const youtubeUrlInput = document.getElementById('youtube-url-input');
