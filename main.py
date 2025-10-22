@@ -2066,6 +2066,7 @@ async def download_youtube(request: YouTubeDownloadRequest):
             
             if info_result.returncode != 0:
                 error_msg = info_result.stderr.lower()
+                print(f"❌ yt-dlp metadata error: {info_result.stderr}")
                 if "private video" in error_msg or "members-only" in error_msg:
                     return JSONResponse(status_code=403, content={
                         "error": "This video is private or members-only."
@@ -2078,9 +2079,17 @@ async def download_youtube(request: YouTubeDownloadRequest):
                     return JSONResponse(status_code=404, content={
                         "error": "Video unavailable or removed."
                     })
+                elif "timed out" in error_msg or "timeout" in error_msg:
+                    return JSONResponse(status_code=408, content={
+                        "error": "Proxy connection timed out. Please try again."
+                    })
+                elif "407" in error_msg or "proxy authentication" in error_msg:
+                    return JSONResponse(status_code=407, content={
+                        "error": "Proxy authentication failed. Please check your credentials."
+                    })
                 else:
                     return JSONResponse(status_code=400, content={
-                        "error": "Unable to access video. Check the URL and try again."
+                        "error": f"Unable to access video: {info_result.stderr[:200]}"
                     })
             
             info_parts = info_result.stdout.strip().split("|||")
