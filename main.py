@@ -2041,10 +2041,13 @@ async def download_youtube(request: YouTubeDownloadRequest):
                 "error": "Proxy configuration not set. Please configure Decodo proxy credentials."
             })
         
-        # Build proxy URL (URL-encode password to handle special characters)
+        # Build proxy URL (URL-encode username and password to handle special characters)
+        encoded_user = quote(proxy_user, safe='')
         encoded_password = quote(proxy_pass, safe='')
-        proxy_url = f"http://{proxy_user}:{encoded_password}@{proxy_host}:{proxy_port}"
+        proxy_url = f"http://{encoded_user}:{encoded_password}@{proxy_host}:{proxy_port}"
         print(f"🌐 Using Decodo residential proxy: {proxy_host}:{proxy_port}")
+        print(f"🔐 Username: {proxy_user} → Encoded: {encoded_user}")
+        print(f"🔐 Password length: {len(proxy_pass)} → Encoded length: {len(encoded_password)}")
         
         # Create temp directory for audio files
         temp_dir = tempfile.mkdtemp()
