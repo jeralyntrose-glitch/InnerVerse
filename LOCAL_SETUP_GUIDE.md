@@ -66,26 +66,50 @@ set OPENAI_API_KEY=sk-your-key-here
 
 ## ▶️ How to Use
 
-### Option 1: Run with Command Line
-
-```bash
-cd /path/to/folder/with/script
-python local_youtube_transcriber.py "https://www.youtube.com/watch?v=VIDEO_ID"
-```
-
-### Option 2: Run Interactively
+### Option 1: Run Interactively (Recommended - Choose Where to Save!)
 
 ```bash
 python local_youtube_transcriber.py
 ```
 
-Then paste the YouTube URL when prompted.
+Then you'll be asked:
+1. **YouTube URL** - Paste the video link
+2. **Where to save** - Choose from:
+   - iCloud Drive (automatically detected!)
+   - Custom folder (paste any folder path)
+   - Local folder (transcriptions/ folder)
+
+### Option 2: Quick Run with Command Line
+
+**Save to auto-detected location (iCloud or local):**
+```bash
+python local_youtube_transcriber.py "https://www.youtube.com/watch?v=VIDEO_ID"
+```
+
+**Save to specific folder:**
+```bash
+python local_youtube_transcriber.py "https://www.youtube.com/watch?v=VIDEO_ID" "~/Documents/MBTI Videos"
+```
+
+**Save to iCloud Drive folder:**
+```bash
+python local_youtube_transcriber.py "https://www.youtube.com/watch?v=VIDEO_ID" "~/Library/Mobile Documents/com~apple~CloudDocs/My Folder"
+```
 
 ---
 
 ## 📂 Output
 
-PDFs are saved in a `transcriptions/` folder in the same directory as the script.
+### Default Behavior:
+- **Mac with iCloud:** Automatically saves to `iCloud Drive/InnerVerse Transcriptions/`
+- **No iCloud:** Saves to local `transcriptions/` folder
+
+### Custom Folders:
+You can save to **any folder** you want:
+- Your Documents folder
+- A specific iCloud Drive folder
+- External drive
+- Anywhere on your computer!
 
 ---
 

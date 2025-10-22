@@ -74,8 +74,21 @@ def check_requirements():
     print("\n✅ All requirements met!\n")
     return True
 
-def transcribe_youtube(youtube_url, output_folder="transcriptions"):
+def transcribe_youtube(youtube_url, output_folder=None):
     """Download and transcribe a YouTube video"""
+    
+    # Default to iCloud Drive if available, otherwise use local transcriptions folder
+    if output_folder is None:
+        # Check for iCloud Drive (Mac)
+        icloud_path = os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs/InnerVerse Transcriptions")
+        local_path = "transcriptions"
+        
+        if os.path.exists(os.path.expanduser("~/Library/Mobile Documents/com~apple~CloudDocs")):
+            output_folder = icloud_path
+            print(f"📱 Using iCloud Drive: {output_folder}\n")
+        else:
+            output_folder = local_path
+            print(f"💾 Using local folder: {output_folder}\n")
     from openai import OpenAI
     from reportlab.lib.pagesizes import letter
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
@@ -291,16 +304,35 @@ def main():
     if not check_requirements():
         return
     
+    # Get YouTube URL
     if len(sys.argv) > 1:
         youtube_url = sys.argv[1]
+        output_folder = sys.argv[2] if len(sys.argv) > 2 else None
     else:
         youtube_url = input("🎥 Enter YouTube URL: ").strip()
+        
+        if not youtube_url:
+            print("❌ No URL provided")
+            return
+        
+        # Ask where to save
+        print("\n📁 Where do you want to save the PDF?")
+        print("   1. iCloud Drive (auto-detected)")
+        print("   2. Choose custom folder")
+        print("   3. Current directory (transcriptions/)")
+        
+        choice = input("\nYour choice (1/2/3, or press Enter for default): ").strip()
+        
+        if choice == "2":
+            output_folder = input("Enter full folder path: ").strip()
+            if output_folder:
+                output_folder = os.path.expanduser(output_folder)
+        elif choice == "3":
+            output_folder = "transcriptions"
+        else:
+            output_folder = None  # Will auto-detect iCloud
     
-    if not youtube_url:
-        print("❌ No URL provided")
-        return
-    
-    transcribe_youtube(youtube_url)
+    transcribe_youtube(youtube_url, output_folder)
     print("\n✨ Done!")
 
 if __name__ == "__main__":
