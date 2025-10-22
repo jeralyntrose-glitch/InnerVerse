@@ -1699,3 +1699,5 @@ function clearTagFilter() {
 // Expose to global scope for onclick handlers
 window.renameDocument = renameDocument;
 window.clearTagFilter = clearTagFilter;
+window.filterByTag = filterByTag;
+window.handleDoubleClickTag = handleDoubleClickTag;
