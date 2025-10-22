@@ -172,6 +172,9 @@ def transcribe_youtube(youtube_url, output_folder="transcriptions"):
         print("   (This costs ~$0.006 per minute of audio)\n")
         
         try:
+            file_size = os.path.getsize(audio_path)
+            file_size_mb = file_size / (1024 * 1024)
+            
             # Get audio duration for cost estimate
             audio = AudioSegment.from_file(audio_path)
             duration_minutes = len(audio) / (1000 * 60)
@@ -179,15 +182,52 @@ def transcribe_youtube(youtube_url, output_folder="transcriptions"):
             
             print(f"💰 Estimated cost: ${estimated_cost:.3f}")
             
-            with open(audio_path, "rb") as audio_file:
-                transcript_response = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    response_format="text",
-                    timeout=600
-                )
+            # If file is under 25MB, transcribe directly
+            if file_size < 25 * 1024 * 1024:
+                print(f"📝 File size {file_size_mb:.1f}MB - transcribing directly\n")
+                
+                with open(audio_path, "rb") as audio_file:
+                    transcript_response = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        response_format="text",
+                        timeout=600
+                    )
+                
+                transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
             
-            transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
+            # If file is >25MB, split into chunks and transcribe
+            else:
+                print(f"📝 File size {file_size_mb:.1f}MB - splitting into chunks\n")
+                
+                chunk_length_ms = 10 * 60 * 1000  # 10 minutes per chunk
+                total_chunks = (len(audio) + chunk_length_ms - 1) // chunk_length_ms
+                
+                transcriptions = []
+                
+                for i in range(0, len(audio), chunk_length_ms):
+                    chunk = audio[i:i + chunk_length_ms]
+                    chunk_path = os.path.join(temp_dir, f"chunk_{i}.mp3")
+                    chunk.export(chunk_path, format="mp3")
+                    
+                    chunk_num = i // chunk_length_ms + 1
+                    print(f"  📝 Transcribing chunk {chunk_num}/{total_chunks}...")
+                    
+                    with open(chunk_path, "rb") as chunk_file:
+                        chunk_response = client.audio.transcriptions.create(
+                            model="whisper-1",
+                            file=chunk_file,
+                            response_format="text",
+                            timeout=600
+                        )
+                    
+                    chunk_transcript = chunk_response if isinstance(chunk_response, str) else chunk_response.text
+                    transcriptions.append(chunk_transcript)
+                    
+                    os.remove(chunk_path)
+                
+                transcript = " ".join(transcriptions)
+                print()
             
             print(f"✅ Transcription complete! ({len(transcript)} characters)\n")
             
