@@ -1,0 +1,267 @@
+#!/usr/bin/env python3
+"""
+InnerVerse - Local YouTube Transcriber
+Run this on your laptop to transcribe YouTube videos without IP blocks!
+"""
+
+import os
+import sys
+import subprocess
+from pathlib import Path
+
+def check_requirements():
+    """Check if required tools are installed"""
+    print("🔍 Checking requirements...\n")
+    
+    missing = []
+    
+    # Check Python
+    try:
+        import openai
+        print("✅ Python openai package installed")
+    except ImportError:
+        missing.append("openai")
+        print("❌ Python openai package missing")
+    
+    # Check yt-dlp
+    try:
+        result = subprocess.run(["yt-dlp", "--version"], capture_output=True, timeout=5)
+        if result.returncode == 0:
+            print(f"✅ yt-dlp installed (version {result.stdout.decode().strip()})")
+        else:
+            missing.append("yt-dlp")
+            print("❌ yt-dlp not working")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        missing.append("yt-dlp")
+        print("❌ yt-dlp not found")
+    
+    # Check ffmpeg
+    try:
+        result = subprocess.run(["ffmpeg", "-version"], capture_output=True, timeout=5)
+        if result.returncode == 0:
+            print("✅ ffmpeg installed")
+        else:
+            missing.append("ffmpeg")
+            print("❌ ffmpeg not working")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        missing.append("ffmpeg")
+        print("❌ ffmpeg not found")
+    
+    try:
+        from reportlab.lib.pagesizes import letter
+        print("✅ ReportLab installed")
+    except ImportError:
+        missing.append("reportlab")
+        print("❌ ReportLab missing")
+    
+    try:
+        from pydub import AudioSegment
+        print("✅ pydub installed")
+    except ImportError:
+        missing.append("pydub")
+        print("❌ pydub missing")
+    
+    if missing:
+        print(f"\n❌ Missing: {', '.join(missing)}")
+        print("\nRun this command to install missing packages:")
+        print(f"pip install {' '.join([p for p in missing if p not in ['yt-dlp', 'ffmpeg']])}")
+        if 'yt-dlp' in missing:
+            print("pip install yt-dlp")
+        if 'ffmpeg' in missing:
+            print("\nFor ffmpeg, visit: https://ffmpeg.org/download.html")
+        return False
+    
+    print("\n✅ All requirements met!\n")
+    return True
+
+def transcribe_youtube(youtube_url, output_folder="transcriptions"):
+    """Download and transcribe a YouTube video"""
+    from openai import OpenAI
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from pydub import AudioSegment
+    import tempfile
+    import time
+    
+    # Get OpenAI API key
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        print("❌ OPENAI_API_KEY not found in environment variables!")
+        print("\nSet it with:")
+        print("  Mac/Linux: export OPENAI_API_KEY='your-key-here'")
+        print("  Windows:   set OPENAI_API_KEY=your-key-here")
+        return
+    
+    client = OpenAI(api_key=api_key)
+    
+    # Create output folder
+    Path(output_folder).mkdir(exist_ok=True)
+    
+    print(f"🎥 Processing: {youtube_url}\n")
+    
+    # Step 1: Get video info
+    print("📋 Getting video info...")
+    try:
+        info_result = subprocess.run(
+            ["yt-dlp", "--print", "%(title)s|||%(duration)s", youtube_url],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if info_result.returncode != 0:
+            print(f"❌ Failed to get video info: {info_result.stderr}")
+            return
+        
+        info_parts = info_result.stdout.strip().split("|||")
+        video_title = info_parts[0] if len(info_parts) > 0 else "YouTube Video"
+        video_duration = int(info_parts[1]) if len(info_parts) > 1 and info_parts[1].isdigit() else 0
+        
+        print(f"📺 Title: {video_title}")
+        print(f"⏱️  Duration: {video_duration // 60} minutes {video_duration % 60} seconds\n")
+        
+    except Exception as e:
+        print(f"❌ Error getting video info: {e}")
+        return
+    
+    # Step 2: Download audio
+    print("🎵 Downloading audio...")
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        audio_path = os.path.join(temp_dir, "audio.mp3")
+        
+        try:
+            download_result = subprocess.run(
+                [
+                    "yt-dlp",
+                    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "--referer", "https://www.youtube.com/",
+                    "-x",
+                    "--audio-format", "mp3",
+                    "--postprocessor-args", "ffmpeg:-ac 1 -ar 16000 -b:a 32k",
+                    "-o", audio_path,
+                    youtube_url
+                ],
+                capture_output=True,
+                text=True,
+                timeout=1800
+            )
+            
+            if download_result.returncode != 0:
+                print(f"❌ Download failed: {download_result.stderr}")
+                return
+            
+            if not os.path.exists(audio_path):
+                print("❌ Audio file not created")
+                return
+            
+            file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+            print(f"✅ Audio downloaded: {file_size_mb:.1f} MB\n")
+            
+        except subprocess.TimeoutExpired:
+            print("❌ Download timed out (30 min limit)")
+            return
+        except Exception as e:
+            print(f"❌ Download error: {e}")
+            return
+        
+        # Step 3: Transcribe with Whisper
+        print("🎤 Transcribing with Whisper API...")
+        print("   (This costs ~$0.006 per minute of audio)\n")
+        
+        try:
+            # Get audio duration for cost estimate
+            audio = AudioSegment.from_file(audio_path)
+            duration_minutes = len(audio) / (1000 * 60)
+            estimated_cost = duration_minutes * 0.006
+            
+            print(f"💰 Estimated cost: ${estimated_cost:.3f}")
+            
+            with open(audio_path, "rb") as audio_file:
+                transcript_response = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text",
+                    timeout=600
+                )
+            
+            transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
+            
+            print(f"✅ Transcription complete! ({len(transcript)} characters)\n")
+            
+        except Exception as e:
+            print(f"❌ Transcription error: {e}")
+            return
+    
+    # Step 4: Generate PDF
+    print("📄 Generating PDF...")
+    
+    safe_title = "".join(c for c in video_title if c.isalnum() or c in (' ', '-', '_')).strip()
+    safe_title = safe_title[:100]
+    timestamp = int(time.time())
+    pdf_filename = f"{safe_title}_{timestamp}.pdf"
+    pdf_path = os.path.join(output_folder, pdf_filename)
+    
+    try:
+        doc = SimpleDocTemplate(pdf_path, pagesize=letter,
+                                rightMargin=72, leftMargin=72,
+                                topMargin=72, bottomMargin=18)
+        
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor='#6366F1',
+            spaceAfter=30,
+        )
+        
+        story = []
+        story.append(Paragraph(video_title, title_style))
+        story.append(Spacer(1, 12))
+        story.append(Paragraph(f"<b>Source:</b> {youtube_url}", styles['Normal']))
+        story.append(Paragraph(f"<b>Duration:</b> {video_duration // 60} min {video_duration % 60} sec", styles['Normal']))
+        story.append(Spacer(1, 20))
+        story.append(Paragraph("<b>Transcript:</b>", styles['Heading2']))
+        story.append(Spacer(1, 12))
+        
+        paragraphs = transcript.split('\n')
+        for para in paragraphs:
+            if para.strip():
+                story.append(Paragraph(para.strip(), styles['BodyText']))
+                story.append(Spacer(1, 12))
+        
+        doc.build(story)
+        
+        print(f"✅ PDF saved: {pdf_path}\n")
+        print(f"📂 Open folder: {os.path.abspath(output_folder)}")
+        
+    except Exception as e:
+        print(f"❌ PDF generation error: {e}")
+        return
+
+def main():
+    print("=" * 60)
+    print("🧠 InnerVerse - Local YouTube Transcriber")
+    print("=" * 60)
+    print()
+    
+    if not check_requirements():
+        return
+    
+    if len(sys.argv) > 1:
+        youtube_url = sys.argv[1]
+    else:
+        youtube_url = input("🎥 Enter YouTube URL: ").strip()
+    
+    if not youtube_url:
+        print("❌ No URL provided")
+        return
+    
+    transcribe_youtube(youtube_url)
+    print("\n✨ Done!")
+
+if __name__ == "__main__":
+    main()
