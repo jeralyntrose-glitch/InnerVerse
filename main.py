@@ -1791,6 +1791,232 @@ async def text_to_pdf(request: TextToPDFRequest):
         })
 
 
+# === Upload Audio File (MP3/M4A/WAV) for Transcription ===
+@app.post("/upload-audio")
+async def upload_audio(file: UploadFile = File(...)):
+    """Upload audio file, transcribe with Whisper, generate PDF, auto-tag, and index in Pinecone"""
+    try:
+        print(f"🎵 Received audio file: {file.filename}")
+        
+        # Validate file type
+        allowed_extensions = ['.mp3', '.m4a', '.wav', '.m4v', '.mp4']
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        
+        if file_ext not in allowed_extensions:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Unsupported file type. Please upload MP3, M4A, WAV, or MP4 files."}
+            )
+        
+        # Read file content
+        contents = await file.read()
+        file_size_mb = len(contents) / (1024 * 1024)
+        print(f"📦 File size: {file_size_mb:.2f} MB")
+        
+        # Check file size (Whisper has 25MB limit)
+        if file_size_mb > 24:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"File too large ({file_size_mb:.1f}MB). Maximum size is 24MB. Please compress the audio or split into smaller files."}
+            )
+        
+        # Create temp directory for audio processing
+        temp_dir = tempfile.mkdtemp()
+        audio_path = os.path.join(temp_dir, file.filename)
+        
+        try:
+            # Save uploaded file
+            with open(audio_path, 'wb') as f:
+                f.write(contents)
+            print(f"✅ Audio file saved temporarily")
+            
+            # Transcribe with OpenAI Whisper
+            print("🎤 Transcribing with Whisper...")
+            openai_client = get_openai_client()
+            if not openai_client:
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": "OpenAI client not initialized"})
+            
+            # Get audio duration for cost calculation
+            audio = AudioSegment.from_file(audio_path)
+            duration_minutes = len(audio) / (1000 * 60)  # Convert ms to minutes
+            
+            with open(audio_path, "rb") as audio_file:
+                transcript_response = openai_client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text",
+                    timeout=900  # 15 minute timeout for Whisper
+                )
+            
+            transcript = transcript_response if isinstance(transcript_response, str) else transcript_response.text
+            
+            # Log Whisper API usage
+            whisper_cost = duration_minutes * PRICING["whisper-1"]
+            log_api_usage("whisper", "whisper-1", input_tokens=0, output_tokens=0, cost=whisper_cost)
+            print(f"✅ Transcription complete: {len(transcript)} characters")
+            print(f"💰 Whisper cost: ${whisper_cost:.4f} ({duration_minutes:.2f} minutes)")
+            
+        finally:
+            # Clean up temp audio file
+            try:
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+                if os.path.exists(temp_dir):
+                    os.rmdir(temp_dir)
+            except:
+                pass
+        
+        # Generate PDF from transcript
+        print("📄 Generating PDF from transcript...")
+        pdf_filename = f"transcript_{file.filename}".replace(file_ext, '.pdf')
+        pdf_bytes = None
+        
+        try:
+            pdf_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}.pdf")
+            
+            # Create PDF with ReportLab
+            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            
+            # Custom styles
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                textColor='#5B21B6',
+                spaceAfter=12
+            )
+            
+            body_style = ParagraphStyle(
+                'CustomBody',
+                parent=styles['BodyText'],
+                fontSize=11,
+                leading=16,
+                alignment=TA_LEFT
+            )
+            
+            # Build PDF content
+            story = []
+            
+            # Title
+            title_text = file.filename.replace(file_ext, '')
+            story.append(Paragraph(f"<b>{title_text}</b>", title_style))
+            story.append(Spacer(1, 0.2*inch))
+            
+            # Metadata (Hawaii timezone)
+            hawaii_tz = pytz.timezone('Pacific/Honolulu')
+            hawaii_time = datetime.now(hawaii_tz)
+            
+            metadata_style = ParagraphStyle('Metadata', parent=styles['Normal'], fontSize=9, textColor='gray')
+            story.append(Paragraph(f"Transcribed on {hawaii_time.strftime('%B %d, %Y at %I:%M %p')} HST", metadata_style))
+            story.append(Paragraph(f"Source: {file.filename} ({duration_minutes:.1f} minutes)", metadata_style))
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Transcript text - split into paragraphs
+            paragraphs = transcript.split('\n')
+            for para in paragraphs:
+                if para.strip():
+                    story.append(Paragraph(para.strip(), body_style))
+                    story.append(Spacer(1, 0.15*inch))
+            
+            # Build PDF
+            doc.build(story)
+            
+            # Read PDF as bytes
+            with open(pdf_path, 'rb') as f:
+                pdf_bytes = f.read()
+            
+            # Clean up temp PDF
+            os.remove(pdf_path)
+            
+            print(f"✅ PDF generated successfully")
+            
+        except Exception as e:
+            print(f"❌ PDF generation error: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Failed to generate PDF from transcript"}
+            )
+        
+        # Now process the PDF like a regular upload: extract text, chunk, embed, and index
+        print("📚 Indexing transcript in Pinecone...")
+        
+        try:
+            # Read PDF text
+            pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
+            text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
+            chunks = chunk_text(text)
+            
+            doc_id = str(uuid.uuid4())
+            pinecone_index = get_pinecone_client()
+            
+            if not pinecone_index:
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": "Pinecone client not initialized"})
+            
+            # Auto-tag document with InnerVerse taxonomy
+            tags = await auto_tag_document(text, pdf_filename, openai_client)
+            
+            # Batch embedding + upsert
+            vectors_to_upsert = []
+            for i, chunk in enumerate(chunks):
+                if i % 50 == 0 and i > 0:
+                    print(f"📊 Processing chunk {i}/{len(chunks)}...")
+                
+                response = openai_client.embeddings.create(
+                    input=chunk, model="text-embedding-ada-002", timeout=120)
+                vector = response.data[0].embedding
+                vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
+                    "text": chunk,
+                    "doc_id": doc_id,
+                    "filename": pdf_filename,
+                    "upload_timestamp": datetime.now().isoformat(),
+                    "tags": tags,
+                    "source": "audio_upload"
+                }))
+            
+            # Upload in batches to Pinecone
+            if vectors_to_upsert:
+                batch_size = 50
+                total_batches = (len(vectors_to_upsert) + batch_size - 1) // batch_size
+                
+                for batch_num in range(0, len(vectors_to_upsert), batch_size):
+                    batch = vectors_to_upsert[batch_num:batch_num + batch_size]
+                    pinecone_index.upsert(vectors=batch)
+                    current_batch = (batch_num // batch_size) + 1
+                    print(f"📤 Uploaded batch {current_batch}/{total_batches} ({len(batch)} vectors)")
+                
+                print(f"✅ Successfully indexed {len(vectors_to_upsert)} chunks in Pinecone")
+            
+            return {
+                "message": "Audio transcribed and indexed with InnerVerse Intelligence Layer",
+                "document_id": doc_id,
+                "filename": pdf_filename,
+                "chunks_count": len(chunks),
+                "tags": tags,
+                "tags_count": len(tags),
+                "duration_minutes": round(duration_minutes, 2),
+                "whisper_cost": round(whisper_cost, 4)
+            }
+            
+        except Exception as e:
+            print(f"❌ Indexing error: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"Transcription succeeded but indexing failed: {str(e)}"}
+            )
+        
+    except Exception as e:
+        print(f"❌ Audio upload error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Audio upload failed: {str(e)}"}
+        )
+
+
 # === API Usage Endpoint ===
 @app.get("/api/usage")
 async def get_usage_stats():
