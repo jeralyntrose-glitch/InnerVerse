@@ -10,6 +10,7 @@ import subprocess
 from datetime import datetime, timezone, timedelta
 from collections import deque
 from contextlib import asynccontextmanager
+from urllib.parse import quote
 from fastapi import FastAPI, UploadFile, File, Request, Header, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -2040,8 +2041,9 @@ async def download_youtube(request: YouTubeDownloadRequest):
                 "error": "Proxy configuration not set. Please configure Decodo proxy credentials."
             })
         
-        # Build proxy URL
-        proxy_url = f"http://{proxy_user}:{proxy_pass}@{proxy_host}:{proxy_port}"
+        # Build proxy URL (URL-encode password to handle special characters)
+        encoded_password = quote(proxy_pass, safe='')
+        proxy_url = f"http://{proxy_user}:{encoded_password}@{proxy_host}:{proxy_port}"
         print(f"🌐 Using Decodo residential proxy: {proxy_host}:{proxy_port}")
         
         # Create temp directory for audio files
