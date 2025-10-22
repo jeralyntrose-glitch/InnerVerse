@@ -1159,7 +1159,7 @@ downloadYoutubeBtn.addEventListener('click', async () => {
   } finally {
     // Re-enable button
     downloadYoutubeBtn.disabled = false;
-    downloadYoutubeBtn.textContent = '🚀 Download & Transcribe';
+    downloadYoutubeBtn.textContent = '🚀 Transcribe';
   }
 });
 
