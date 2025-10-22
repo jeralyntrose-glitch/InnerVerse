@@ -2062,7 +2062,7 @@ async def download_youtube(request: YouTubeDownloadRequest):
                 youtube_url
             ]
             
-            info_result = subprocess.run(info_command, capture_output=True, text=True, timeout=30)
+            info_result = subprocess.run(info_command, capture_output=True, text=True, timeout=90)
             
             if info_result.returncode != 0:
                 error_msg = info_result.stderr.lower()
