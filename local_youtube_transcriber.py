@@ -95,6 +95,8 @@ def transcribe_youtube(youtube_url, output_folder=None):
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
     from pydub import AudioSegment
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
     import tempfile
     import time
     
@@ -266,19 +268,28 @@ def transcribe_youtube(youtube_url, output_folder=None):
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=24,
-            textColor='#6366F1',
-            spaceAfter=30,
+            fontSize=18,
+            textColor='#000000',
+            spaceAfter=12,
         )
+        
+        subtitle_style = ParagraphStyle(
+            'Subtitle',
+            parent=styles['Normal'],
+            fontSize=11,
+            spaceAfter=6,
+        )
+        
+        # Get current time in Hawaii timezone
+        hawaii_now = datetime.now(ZoneInfo("Pacific/Honolulu"))
+        timestamp_text = hawaii_now.strftime("Transcribed on %B %d, %Y at %I:%M %p")
         
         story = []
         story.append(Paragraph(video_title, title_style))
         story.append(Spacer(1, 12))
-        story.append(Paragraph(f"<b>Source:</b> {youtube_url}", styles['Normal']))
-        story.append(Paragraph(f"<b>Duration:</b> {video_duration // 60} min {video_duration % 60} sec", styles['Normal']))
-        story.append(Spacer(1, 20))
-        story.append(Paragraph("<b>Transcript:</b>", styles['Heading2']))
-        story.append(Spacer(1, 12))
+        story.append(Paragraph(timestamp_text, subtitle_style))
+        story.append(Paragraph(f"Source: {youtube_url}", subtitle_style))
+        story.append(Spacer(1, 24))
         
         paragraphs = transcript.split('\n')
         for para in paragraphs:
