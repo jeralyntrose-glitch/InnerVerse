@@ -1176,6 +1176,13 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                 youtube_url
             ]
             
+            # Add proxy if configured (helps bypass YouTube datacenter IP blocks)
+            proxy_url = os.environ.get("YT_PROXY")
+            if proxy_url:
+                info_command.insert(1, "--proxy")
+                info_command.insert(2, proxy_url)
+                print(f"🌐 Using proxy for YouTube access")
+            
             # Add cookies to info command if available
             if cookies_path:
                 info_command.insert(1, "--cookies")
@@ -1239,6 +1246,11 @@ async def transcribe_youtube(request: YouTubeTranscribeRequest):
                 "-o", audio_path,
                 youtube_url
             ]
+            
+            # Add proxy if configured
+            if proxy_url:
+                download_command.insert(1, "--proxy")
+                download_command.insert(2, proxy_url)
             
             # Add cookies if available
             if cookies_path:
