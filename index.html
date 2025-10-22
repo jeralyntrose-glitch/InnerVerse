@@ -101,7 +101,7 @@
 
     <div id="status" class="status"></div>
 
-    <!-- 🎬 YouTube MP3 Transcription Section -->
+    <!-- 🎬 YouTube Transcription Section -->
     <div class="youtube-section">
       <div class="youtube-header">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
@@ -109,22 +109,11 @@
         </svg>
         <span>YouTube Transcription</span>
       </div>
-      <p class="youtube-description" style="font-size: 13px; margin-bottom: 12px;">Paste YouTube URL to automatically download and transcribe, or upload audio file</p>
+      <p class="youtube-description">Paste any YouTube URL to automatically download, transcribe, and index with MBTI taxonomy</p>
       
-      <!-- URL Input -->
       <div class="youtube-url-input-group">
-        <input type="text" id="youtube-url-input" placeholder="Paste YouTube URL here..." class="youtube-url-input" />
-        <button id="download-youtube-btn" class="btn-download-youtube">🚀 Download & Transcribe</button>
-      </div>
-      
-      <div class="youtube-divider">
-        <span class="youtube-divider-text">or</span>
-      </div>
-      
-      <!-- File Upload -->
-      <div class="youtube-input-group">
-        <label for="audioFileElem" class="btn-transcribe">📁 Upload Audio File</label>
-        <input type="file" id="audioFileElem" accept="audio/mp3,audio/m4a,audio/wav,audio/x-m4a,audio/mpeg,video/mp4" style="display: none;" />
+        <input type="text" id="youtube-url-input" placeholder="https://www.youtube.com/watch?v=..." class="youtube-url-input" />
+        <button id="download-youtube-btn" class="btn-download-youtube">🚀 Transcribe</button>
       </div>
       
       <div id="youtube-status" class="youtube-status hidden"></div>
