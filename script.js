@@ -1307,7 +1307,7 @@ async function handleReprocessPDF(file) {
     
     updateReprocessProgress('📄 Creating enhanced PDF...', 80);
     
-    // Download the improved PDF (mobile-friendly)
+    // Open PDF in new window (iOS-friendly)
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
     
@@ -1321,26 +1321,23 @@ async function handleReprocessPDF(file) {
       }
     }
     
-    // Mobile Safari-friendly download
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = downloadUrl;
-    a.download = filename;
-    a.target = '_blank'; // Help with mobile Safari
-    document.body.appendChild(a);
-    
-    // Trigger download with slight delay for mobile Safari
-    setTimeout(() => {
+    // Open in new window for iOS share sheet
+    const newWindow = window.open(downloadUrl, '_blank');
+    if (!newWindow) {
+      // Popup blocked - try direct link approach
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename;
+      a.target = '_blank';
       a.click();
-      
-      // Clean up after delay (give time for download to start)
-      setTimeout(() => {
-        window.URL.revokeObjectURL(downloadUrl);
-        document.body.removeChild(a);
-      }, 500);
-    }, 100);
+    }
     
-    updateReprocessProgress('✅ Enhanced PDF downloaded! Ready to upload to InnerVerse.', 100);
+    // Clean up after delay
+    setTimeout(() => {
+      window.URL.revokeObjectURL(downloadUrl);
+    }, 3000);
+    
+    updateReprocessProgress('✅ Enhanced PDF opened! Use Share → Save to Files to save it.', 100);
     playNotificationSound(); // Play notification ping
     
     // Clear input and hide progress after delay
