@@ -19,3 +19,4 @@ pytesseract
 requests
 pycryptodome
 youtube-transcript-api
+anthropic
