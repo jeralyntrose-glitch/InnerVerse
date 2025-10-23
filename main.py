@@ -2041,11 +2041,12 @@ async def download_youtube(request: YouTubeDownloadRequest):
                 "error": "Proxy configuration not set. Please configure Decodo proxy credentials."
             })
         
-        # Build proxy URL (URL-encode username and password to handle special characters)
+        # Build proxy URL for SOCKS5 (URL-encode username and password to handle special characters)
         encoded_user = quote(proxy_user, safe='')
         encoded_password = quote(proxy_pass, safe='')
-        proxy_url = f"https://{encoded_user}:{encoded_password}@{proxy_host}:{proxy_port}"
-        print(f"🌐 Using Decodo residential proxy (HTTPS): {proxy_host}:{proxy_port}")
+        socks5_port = "7000"
+        proxy_url = f"socks5://{encoded_user}:{encoded_password}@{proxy_host}:{socks5_port}"
+        print(f"🌐 Using Decodo residential proxy (SOCKS5): {proxy_host}:{socks5_port}")
         print(f"🔐 Username: {proxy_user} → Encoded: {encoded_user}")
         print(f"🔐 Password length: {len(proxy_pass)} → Encoded length: {len(encoded_password)}")
         
