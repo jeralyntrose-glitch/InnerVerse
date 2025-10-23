@@ -1,0 +1,70 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "InnerVerse MBTI Knowledge Base API",
+    "description": "Query CS Joseph's MBTI/Jungian psychology knowledge base with 183+ transcripts",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://axis-of-mind.replit.app"
+    }
+  ],
+  "paths": {
+    "/query": {
+      "post": {
+        "operationId": "queryKnowledgeBase",
+        "summary": "Query the InnerVerse knowledge base for MBTI/Jungian psychology questions",
+        "description": "Searches across all CS Joseph transcripts and MBTI documents to find relevant information. Use this for ANY MBTI type, cognitive function, or Jungian psychology question.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "document_id": {
+                    "type": "string",
+                    "description": "Leave empty string to search all documents",
+                    "default": ""
+                  },
+                  "question": {
+                    "type": "string",
+                    "description": "The user's question about MBTI types, cognitive functions, or Jungian psychology"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional MBTI/Jungian tags to filter results",
+                    "default": []
+                  }
+                },
+                "required": ["question"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful query response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "answer": {
+                      "type": "string",
+                      "description": "The answer generated from the knowledge base"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
