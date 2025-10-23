@@ -66,6 +66,7 @@ After discovering YouTube blocks ALL cloud provider IPs (AWS, GCP, Azure, Replit
 - **InnerVerse Intelligence Layer**: Automatic MBTI/Jungian taxonomy tagging system using GPT-3.5. Analyzes uploaded documents and extracts relevant tags across 6 layers: Cognitive Architecture, Typological Structures, Type-Specific Indexing, Depth Psychology & Jungian Theory, Behavioral & Expression Layers, and Integration & Meta Layers. Tags are stored in Pinecone metadata for advanced filtering and retrieval.
 - **YouTube MP3 Transcription**: Users download MP3, M4A, or WAV files from YouTube videos using browser extensions (Video DownloadHelper, 4K Video Downloader), then upload them to InnerVerse. Accepts audio files up to 24MB (Whisper API limit). Transcribes using OpenAI Whisper API (~$0.006/min), generates formatted PDFs using ReportLab, auto-tags with MBTI/Jungian taxonomy, and indexes in Pinecone. This workflow bypasses YouTube's datacenter IP blocking that prevents direct URL transcription from Replit's servers.
 - **Text to PDF**: Converts text to formatted PDFs with automatic punctuation and grammar fixes using GPT-3.5.
+- **Reprocess PDF**: Allows users to upload existing Whisper-transcribed PDFs and enhance them with the same GPT-3.5 cleanup pipeline used in Text to PDF. Extracts text from uploaded PDFs, removes filler words and meta-commentary, optimizes for embeddings, and returns an improved PDF for download. This enables users to upgrade their 160 old Whisper PDFs (5-6/10 quality) to the new 9.5/10 embedding quality standard.
 - **Large File Support**: Efficient binary uploads (multipart/form-data), batch processing for Pinecone upserts (batches of 50), and increased embedding timeouts for large files.
 
 ## Vector Storage Strategy
@@ -81,6 +82,7 @@ After discovering YouTube blocks ALL cloud provider IPs (AWS, GCP, Azure, Replit
 - **YouTube MP3 Upload**: `POST /upload-audio` (multipart/form-data) for audio file uploads (MP3, M4A, WAV, MP4). Transcribes with Whisper API, generates PDF, auto-tags, and indexes in Pinecone.
 - **Query**: `POST /query` for document Q&A.
 - **Text to PDF**: `POST /text-to-pdf`.
+- **Reprocess PDF**: `POST /reprocess-pdf` (multipart/form-data) for uploading existing PDFs, extracting text, enhancing with GPT-3.5 cleanup, and returning improved PDFs.
 - **Document Report**: `GET /documents/report` (CSV export with Hawaii timezone timestamps).
 - **Document Management**: `DELETE /documents/{document_id}` for removing single document; `DELETE /documents/all` for removing all documents; `PATCH /documents/{document_id}/rename` for renaming documents (updates metadata in all Pinecone vectors); chat commands for `list docs`, `delete doc [id]`, `delete all`, `show doc [id]`, `help`.
 - **Usage Monitoring**: `/api/usage` for detailed spending statistics.
