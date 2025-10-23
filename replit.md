@@ -6,6 +6,37 @@ InnerVerse is a FastAPI-based PDF Q&A application that provides intelligent answ
 
 Preferred communication style: Simple, everyday language.
 
+# Portfolio-Worthy Project Stories
+
+## YouTube Transcription: Smart Pivot Under Technical Constraints
+
+**Challenge:** Need to transcribe 321 CS Joseph YouTube videos on MBTI/Jungian psychology for a knowledge base project. Initial approach using Whisper API ($0.006/min) worked for ~160 videos before hitting YouTube's aggressive anti-bot detection systems.
+
+**Technical Blockers Encountered:**
+1. **Datacenter IP Blocking:** YouTube blocks Replit's cloud IPs from downloading videos
+2. **Residential Proxy Detection:** Tested Decodo residential proxies with HTTP, HTTPS, and SOCKS5 protocols - all blocked with 403 Forbidden errors during download phase
+3. **Proxy Authentication Success But Download Failure:** Proxies authenticated successfully and retrieved metadata, but YouTube detected and blocked actual audio downloads
+
+**Solution/Pivot:**
+Switched from audio-based transcription to YouTube Transcript API + GPT-3.5 cleanup pipeline:
+- **FREE transcript fetching** via YouTube's public Transcript API (same data shown in "Show transcript" button)
+- **GPT-3.5 text cleanup** for proper punctuation, capitalization, and grammar (~$0.001-0.002 per video)
+- **Auto-tagging** with MBTI/Jungian taxonomy using existing GPT-3.5 pipeline
+- **Pinecone indexing** for semantic search across all transcripts
+
+**Results:**
+- **Cost Reduction:** $44.30 → $0.64 for 321 videos (70x cheaper, ~98.5% cost savings)
+- **Reliability:** 100% success rate (no proxy blocking issues)
+- **Speed:** Faster processing (no audio download wait times)
+- **Quality:** Comparable quality (YouTube's transcription + GPT cleanup vs. Whisper)
+
+**PM Skills Demonstrated:**
+- Technical problem-solving and creative pivoting when blocked
+- Cost optimization through architectural changes
+- Managing third-party API constraints and limitations
+- Risk mitigation (documented proxy blocking across multiple protocols)
+- Data-driven decision making (cost/benefit analysis of alternatives)
+
 # System Architecture
 
 ## Frontend Architecture
