@@ -1796,6 +1796,159 @@ async def text_to_pdf(request: TextToPDFRequest):
         })
 
 
+# === Reprocess PDF (Extract text, enhance with GPT, return improved PDF) ===
+@app.post("/reprocess-pdf")
+async def reprocess_pdf(file: UploadFile = File(...)):
+    """Upload an existing PDF, extract text, enhance with GPT cleanup, return improved PDF"""
+    try:
+        print(f"📄 Received PDF for reprocessing: {file.filename}")
+        
+        # Validate file type
+        if not file.filename.lower().endswith('.pdf'):
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Please upload a PDF file"}
+            )
+        
+        # Read PDF content
+        contents = await file.read()
+        print(f"📦 File size: {len(contents) / 1024:.2f} KB")
+        
+        # Save temporarily
+        temp_pdf_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}.pdf")
+        with open(temp_pdf_path, 'wb') as f:
+            f.write(contents)
+        
+        try:
+            # Extract text from PDF
+            print("📖 Extracting text from PDF...")
+            pdf_text = ""
+            pdf_reader = PdfReader(temp_pdf_path)
+            
+            for page_num, page in enumerate(pdf_reader.pages):
+                try:
+                    page_text = page.extract_text()
+                    if page_text:
+                        pdf_text += page_text + "\n"
+                except Exception as e:
+                    print(f"⚠️ Could not extract text from page {page_num + 1}: {e}")
+            
+            if not pdf_text.strip():
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "Could not extract text from PDF. The PDF might be image-based or encrypted."}
+                )
+            
+            print(f"✅ Extracted {len(pdf_text)} characters from PDF")
+            
+            # Use enhanced GPT cleanup (same as Text to PDF)
+            openai_client = get_openai_client()
+            if not openai_client:
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": "OpenAI client not initialized"}
+                )
+            
+            print("✨ Enhancing text with GPT-3.5 (removing filler, optimizing for embeddings)...")
+            try:
+                completion = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a professional editor optimizing text for semantic search and vector embeddings. Your tasks: 1) Fix all punctuation, grammar, and formatting errors. 2) Remove speech filler words (so, yeah, anyway, basically, um, you know, etc.) only when they add no meaning. Preserve 'like' when used for comparisons or analogies. 3) Remove only the redundant clauses of meta-commentary (e.g., 'we'll get into that later', 'as I mentioned before') while keeping the substantive content of those sentences. 4) Normalize conversational tone to clear, direct statements while preserving all conceptual content, examples, and technical terminology. 5) Add proper paragraph breaks at topic transitions. Return only the cleaned text with NO explanations or comments."
+                        },
+                        {
+                            "role": "user",
+                            "content": pdf_text
+                        }
+                    ],
+                    temperature=0.3
+                )
+                
+                cleaned_text = completion.choices[0].message.content.strip()
+                print("✅ Text enhanced successfully")
+                
+            except Exception as e:
+                print(f"⚠️ GPT enhancement failed: {e}, using original text")
+                cleaned_text = pdf_text
+            
+            # Generate improved PDF
+            print("📄 Creating improved PDF...")
+            output_pdf_path = os.path.join(tempfile.gettempdir(), f"enhanced_{uuid.uuid4().hex[:8]}.pdf")
+            
+            doc = SimpleDocTemplate(output_pdf_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            
+            # Custom styles
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                textColor='#5B21B6',
+                spaceAfter=12
+            )
+            
+            body_style = ParagraphStyle(
+                'CustomBody',
+                parent=styles['BodyText'],
+                fontSize=11,
+                leading=16,
+                alignment=TA_LEFT
+            )
+            
+            metadata_style = ParagraphStyle('Metadata', parent=styles['Normal'], fontSize=9, textColor='gray')
+            
+            # Build PDF content
+            story = []
+            
+            # Title (use original filename)
+            original_title = file.filename.replace('.pdf', '').replace('_', ' ')
+            story.append(Paragraph(f"<b>{original_title} (Enhanced)</b>", title_style))
+            story.append(Spacer(1, 0.2*inch))
+            
+            # Metadata
+            story.append(Paragraph(f"Reprocessed on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", metadata_style))
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Content
+            paragraphs = cleaned_text.split('\n')
+            for para in paragraphs:
+                if para.strip():
+                    story.append(Paragraph(para.strip(), body_style))
+                    story.append(Spacer(1, 0.15*inch))
+            
+            # Build PDF
+            doc.build(story)
+            print(f"✅ Enhanced PDF created")
+            
+            # Return the improved PDF
+            safe_filename = file.filename.replace('.pdf', '_enhanced.pdf').replace('/', '-').replace('\\', '-')
+            return FileResponse(
+                output_pdf_path,
+                media_type="application/pdf",
+                filename=safe_filename,
+                headers={
+                    "Content-Disposition": f"attachment; filename=\"{safe_filename}\""
+                }
+            )
+            
+        finally:
+            # Clean up temp file
+            try:
+                if os.path.exists(temp_pdf_path):
+                    os.remove(temp_pdf_path)
+            except:
+                pass
+        
+    except Exception as e:
+        print(f"❌ PDF reprocessing error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to reprocess PDF: {str(e)}"}
+        )
+
+
 # === Upload Audio File (MP3/M4A/WAV) for Transcription ===
 @app.post("/upload-audio")
 async def upload_audio(file: UploadFile = File(...)):
