@@ -2330,6 +2330,300 @@ async def download_youtube(request: YouTubeDownloadRequest):
         })
 
 
+# === Smart YouTube Transcript (Free + GPT Cleanup + Auto-Tag + Index) ===
+@app.post("/transcript-youtube-smart")
+async def transcript_youtube_smart(request: YouTubeTranscribeRequest):
+    """Get FREE YouTube transcript, clean with GPT-3.5, auto-tag, and index to Pinecone"""
+    try:
+        youtube_url = request.youtube_url
+        print(f"🎬 Smart transcription starting for: {youtube_url}")
+        
+        # Step 1: Extract video ID
+        video_id = None
+        patterns = [
+            r'(?:youtube\.com/watch\?v=|youtu\.be/)([^&\n?#]+)',
+            r'youtube\.com/embed/([^&\n?#]+)',
+            r'youtube\.com/v/([^&\n?#]+)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, youtube_url)
+            if match:
+                video_id = match.group(1)
+                break
+        
+        if not video_id:
+            return JSONResponse(status_code=400, content={
+                "error": "Invalid YouTube URL. Please check the URL and try again."
+            })
+        
+        print(f"📺 Video ID: {video_id}")
+        
+        # Step 2: Fetch YouTube transcript (FREE)
+        try:
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            transcript_data = None
+            language = 'unknown'
+            
+            # Try manual transcripts first (any language)
+            try:
+                for transcript in transcript_list:
+                    if not transcript.is_generated:
+                        transcript_data = transcript.fetch()
+                        language = transcript.language
+                        print(f"📝 Found manual transcript in {language}")
+                        break
+            except:
+                pass
+            
+            # If no manual transcript, try auto-generated
+            if not transcript_data:
+                try:
+                    for transcript in transcript_list:
+                        if transcript.is_generated:
+                            transcript_data = transcript.fetch()
+                            language = f"{transcript.language} (auto)"
+                            print(f"🤖 Found auto-generated transcript in {language}")
+                            break
+                except:
+                    pass
+            
+            # Fallback: try simple fetch
+            if not transcript_data:
+                transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi'])
+                language = 'fallback'
+            
+            # Combine all transcript segments
+            raw_transcript = ' '.join([entry['text'] for entry in transcript_data])
+            print(f"✅ Raw transcript retrieved ({len(raw_transcript)} characters, {language})")
+            
+        except Exception as e:
+            error_str = str(e).lower()
+            print(f"❌ Transcript error: {e}")
+            
+            if 'disabled' in error_str or 'no transcript' in error_str:
+                return JSONResponse(status_code=404, content={
+                    "error": "No captions available for this video. Captions must be enabled by the video creator."
+                })
+            elif 'private' in error_str or 'unavailable' in error_str:
+                return JSONResponse(status_code=403, content={
+                    "error": "Video is private or unavailable."
+                })
+            else:
+                return JSONResponse(status_code=404, content={
+                    "error": f"Could not get captions: {str(e)}"
+                })
+        
+        # Step 3: Get video title
+        video_title = "YouTube Video"
+        try:
+            info_command = ["yt-dlp", "--print", "%(title)s", youtube_url]
+            info_result = subprocess.run(info_command, capture_output=True, text=True, timeout=10)
+            if info_result.returncode == 0 and info_result.stdout.strip():
+                video_title = info_result.stdout.strip()
+                print(f"📺 Video title: {video_title}")
+        except:
+            pass
+        
+        # Step 4: Clean up transcript with GPT-3.5 (add punctuation, fix grammar)
+        print("✨ Cleaning transcript with GPT-3.5 (adding punctuation & fixing grammar)...")
+        openai_client = get_openai_client()
+        
+        if not openai_client:
+            return JSONResponse(status_code=500, content={
+                "error": "OpenAI client not initialized"
+            })
+        
+        try:
+            # Truncate if too long (GPT-3.5 has 16K context window)
+            max_chars = 60000
+            if len(raw_transcript) > max_chars:
+                print(f"⚠️ Transcript too long ({len(raw_transcript)} chars), truncating to {max_chars}")
+                raw_transcript = raw_transcript[:max_chars] + "...[truncated]"
+            
+            cleanup_prompt = f"""You are a professional transcript editor. Your task is to clean up this YouTube transcript by:
+1. Adding proper punctuation (periods, commas, question marks, etc.)
+2. Adding proper capitalization
+3. Breaking into logical paragraphs
+4. Fixing obvious transcription errors/typos
+5. Making it readable and professional
+
+Keep the content exactly as spoken - DO NOT summarize or change the meaning. Just fix formatting and readability.
+
+Raw transcript:
+{raw_transcript}
+
+Return ONLY the cleaned transcript with proper formatting, nothing else."""
+            
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a professional transcript editor who adds punctuation and fixes formatting without changing content."},
+                    {"role": "user", "content": cleanup_prompt}
+                ],
+                temperature=0.3,
+                max_tokens=16000
+            )
+            
+            cleaned_transcript = response.choices[0].message.content.strip()
+            
+            # Log GPT usage
+            input_tokens = response.usage.prompt_tokens
+            output_tokens = response.usage.completion_tokens
+            gpt_cost = (input_tokens * PRICING["gpt-3.5-turbo-input"] / 1000) + (output_tokens * PRICING["gpt-3.5-turbo-output"] / 1000)
+            log_api_usage("transcript_cleanup", "gpt-3.5-turbo", input_tokens, output_tokens, gpt_cost)
+            
+            print(f"✅ Transcript cleaned ({len(cleaned_transcript)} characters)")
+            print(f"💰 GPT cleanup cost: ${gpt_cost:.4f}")
+            
+        except Exception as e:
+            print(f"❌ GPT cleanup error: {str(e)}")
+            # Fallback to raw transcript if GPT fails
+            cleaned_transcript = raw_transcript
+        
+        # Step 5: Generate PDF
+        print("📄 Generating PDF...")
+        pdf_filename = f"{video_title[:50].replace('/', '-')}.pdf"
+        pdf_bytes = None
+        
+        try:
+            pdf_path = os.path.join(tempfile.gettempdir(), f"temp_{uuid.uuid4().hex[:8]}.pdf")
+            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                textColor='#5B21B6',
+                spaceAfter=12
+            )
+            
+            body_style = ParagraphStyle(
+                'CustomBody',
+                parent=styles['BodyText'],
+                fontSize=11,
+                leading=16,
+                alignment=TA_LEFT
+            )
+            
+            story = []
+            story.append(Paragraph(f"<b>{video_title}</b>", title_style))
+            story.append(Spacer(1, 0.2*inch))
+            
+            # Metadata
+            hawaii_tz = pytz.timezone('Pacific/Honolulu')
+            hawaii_time = datetime.now(hawaii_tz)
+            metadata_style = ParagraphStyle('Metadata', parent=styles['Normal'], fontSize=9, textColor='gray')
+            story.append(Paragraph(f"Transcribed on {hawaii_time.strftime('%B %d, %Y at %I:%M %p')} HST", metadata_style))
+            story.append(Paragraph(f"Source: {youtube_url}", metadata_style))
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Transcript paragraphs
+            paragraphs = cleaned_transcript.split('\n')
+            for para in paragraphs:
+                if para.strip():
+                    story.append(Paragraph(para.strip(), body_style))
+                    story.append(Spacer(1, 0.15*inch))
+            
+            doc.build(story)
+            
+            # Read PDF as bytes
+            with open(pdf_path, 'rb') as f:
+                pdf_bytes = f.read()
+            
+            os.remove(pdf_path)
+            print(f"✅ PDF generated successfully")
+            
+        except Exception as e:
+            print(f"❌ PDF generation error: {str(e)}")
+            return JSONResponse(status_code=500, content={
+                "error": "Failed to generate PDF from transcript"
+            })
+        
+        # Step 6: Auto-tag with MBTI taxonomy
+        print("🏷️ Auto-tagging with MBTI taxonomy...")
+        tags = await auto_tag_document(cleaned_transcript, pdf_filename, openai_client)
+        print(f"✅ Auto-tagged with {len(tags)} tags: {tags[:5]}...")
+        
+        # Step 7: Index in Pinecone
+        print("📚 Indexing in Pinecone...")
+        
+        try:
+            pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
+            text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
+            chunks = chunk_text(text)
+            
+            doc_id = str(uuid.uuid4())
+            pinecone_index = get_pinecone_client()
+            
+            if not pinecone_index:
+                return JSONResponse(status_code=500, content={
+                    "error": "Pinecone client not initialized"
+                })
+            
+            # Create embeddings and vectors
+            vectors_to_upsert = []
+            for i, chunk in enumerate(chunks):
+                try:
+                    embedding = get_embedding_with_logging(chunk)
+                    vector_id = f"{doc_id}_{i}"
+                    vectors_to_upsert.append({
+                        "id": vector_id,
+                        "values": embedding,
+                        "metadata": {
+                            "document_id": doc_id,
+                            "filename": pdf_filename,
+                            "chunk_index": i,
+                            "text": chunk[:1000],
+                            "tags": tags,
+                            "source": "youtube_transcript",
+                            "video_url": youtube_url
+                        }
+                    })
+                except Exception as e:
+                    print(f"⚠️ Skipping chunk {i} due to error: {e}")
+            
+            # Batch upsert to Pinecone
+            if vectors_to_upsert:
+                batch_size = 50
+                total_batches = (len(vectors_to_upsert) + batch_size - 1) // batch_size
+                
+                for batch_num in range(0, len(vectors_to_upsert), batch_size):
+                    batch = vectors_to_upsert[batch_num:batch_num + batch_size]
+                    pinecone_index.upsert(vectors=batch)
+                    current_batch = (batch_num // batch_size) + 1
+                    print(f"📤 Uploaded batch {current_batch}/{total_batches} ({len(batch)} vectors)")
+                
+                print(f"✅ Successfully indexed {len(vectors_to_upsert)} chunks in Pinecone")
+            
+            return {
+                "message": "YouTube transcript fetched, cleaned, tagged, and indexed successfully!",
+                "document_id": doc_id,
+                "filename": pdf_filename,
+                "video_title": video_title,
+                "chunks_count": len(chunks),
+                "tags": tags,
+                "tags_count": len(tags),
+                "transcript_length": len(cleaned_transcript),
+                "cleanup_cost": round(gpt_cost, 4),
+                "total_cost": round(gpt_cost, 4),
+                "note": "FREE transcript + GPT cleanup (~$0.001-0.002 per video) - 44x cheaper than Whisper!"
+            }
+            
+        except Exception as e:
+            print(f"❌ Indexing error: {str(e)}")
+            return JSONResponse(status_code=500, content={
+                "error": f"Transcript cleaned but indexing failed: {str(e)}"
+            })
+        
+    except Exception as e:
+        print(f"❌ Smart transcript error: {str(e)}")
+        return JSONResponse(status_code=500, content={
+            "error": f"Smart transcription failed: {str(e)}"
+        })
+
+
 # === API Usage Endpoint ===
 @app.get("/api/usage")
 async def get_usage_stats():

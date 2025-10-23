@@ -1009,10 +1009,10 @@ downloadYoutubeBtn.addEventListener('click', async () => {
     
     youtubeStatus.classList.remove('hidden', 'success', 'error');
     youtubeStatus.classList.add('processing');
-    youtubeStatus.textContent = '🌐 Connecting to YouTube via proxy...';
+    youtubeStatus.textContent = '📝 Fetching YouTube transcript...';
     
-    // Call the new download-youtube endpoint
-    const response = await fetch('/download-youtube', {
+    // Call the smart transcript endpoint (free + GPT cleanup)
+    const response = await fetch('/transcript-youtube-smart', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -1025,13 +1025,13 @@ downloadYoutubeBtn.addEventListener('click', async () => {
     const result = await response.json();
     
     if (!response.ok) {
-      throw new Error(result.error || 'Download failed');
+      throw new Error(result.error || 'Transcription failed');
     }
     
     // Success
     youtubeStatus.classList.remove('processing');
     youtubeStatus.classList.add('success');
-    youtubeStatus.textContent = `✅ "${result.video_title}" downloaded and transcribed! (${result.duration_minutes} min, ${result.file_size_mb}MB, ~$${result.whisper_cost})`;
+    youtubeStatus.textContent = `✅ "${result.video_title}" transcribed! (${result.chunks_count} chunks, ~$${result.cleanup_cost}) - FREE transcript + GPT cleanup`;
     
     // Save document to tag library
     saveDocumentTags(result.document_id, result.filename, result.tags || []);
