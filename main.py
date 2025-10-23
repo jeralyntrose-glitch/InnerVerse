@@ -1852,7 +1852,7 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             print("✨ Enhancing text with GPT-3.5 (removing filler, optimizing for embeddings)...")
             try:
                 # Split into chunks to avoid GPT output token limits (4096 tokens ~= 12-16KB)
-                chunk_size = 5000  # Conservative chunk size in characters (smaller to prevent output truncation)
+                chunk_size = 2500  # Very conservative chunk size to prevent GPT output truncation
                 text_chunks = []
                 
                 # Split text into manageable chunks
