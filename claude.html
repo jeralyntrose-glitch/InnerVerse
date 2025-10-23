@@ -420,78 +420,6 @@
             margin-bottom: 8px;
         }
 
-        /* Welcome Screen */
-        .welcome-screen {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-        }
-
-        .brain-icon-large {
-            width: 120px;
-            height: 120px;
-            margin-bottom: 24px;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .welcome-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 12px;
-            background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .welcome-subtitle {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            margin-bottom: 32px;
-        }
-
-        .welcome-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            max-width: 800px;
-            width: 100%;
-        }
-
-        .welcome-card {
-            padding: 20px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .welcome-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px var(--shadow-color);
-        }
-
-        .welcome-card-emoji {
-            font-size: 2rem;
-            margin-bottom: 8px;
-        }
-
-        .welcome-card-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
         /* Modal */
         .modal {
             display: none;
@@ -586,14 +514,6 @@
 
             .message {
                 max-width: 85%;
-            }
-
-            .welcome-title {
-                font-size: 2rem;
-            }
-
-            .welcome-cards {
-                grid-template-columns: 1fr;
             }
         }
 
@@ -718,43 +638,8 @@
                 </button>
             </div>
 
-            <!-- Welcome Screen -->
-            <div class="welcome-screen" id="welcomeScreen">
-                <svg class="brain-icon-large" width="120" height="120" viewBox="0 0 200 200">
-                    <defs>
-                        <linearGradient id="brainGradientLarge" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
-                        </linearGradient>
-                    </defs>
-                    <g class="brain-network">
-                        <line x1="60" y1="50" x2="100" y2="80" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <line x1="140" y1="50" x2="100" y2="80" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <line x1="60" y1="50" x2="100" y2="120" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <line x1="140" y1="50" x2="100" y2="120" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <line x1="40" y1="100" x2="100" y2="80" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <line x1="160" y1="100" x2="100" y2="80" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <line x1="40" y1="100" x2="100" y2="120" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <line x1="160" y1="100" x2="100" y2="120" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <line x1="60" y1="150" x2="100" y2="120" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <line x1="140" y1="150" x2="100" y2="120" stroke="url(#brainGradientLarge)" stroke-width="2" opacity="0.6"/>
-                        <circle cx="60" cy="50" r="8" fill="url(#brainGradientLarge)" opacity="0.9"/>
-                        <circle cx="140" cy="50" r="8" fill="url(#brainGradientLarge)" opacity="0.9"/>
-                        <circle cx="40" cy="100" r="8" fill="url(#brainGradientLarge)" opacity="0.9"/>
-                        <circle cx="100" cy="80" r="10" fill="url(#brainGradientLarge)"/>
-                        <circle cx="100" cy="120" r="10" fill="url(#brainGradientLarge)"/>
-                        <circle cx="160" cy="100" r="8" fill="url(#brainGradientLarge)" opacity="0.9"/>
-                        <circle cx="60" cy="150" r="8" fill="url(#brainGradientLarge)" opacity="0.9"/>
-                        <circle cx="140" cy="150" r="8" fill="url(#brainGradientLarge)" opacity="0.9"/>
-                    </g>
-                </svg>
-                <h1 class="welcome-title">InnerVerse</h1>
-                <p class="welcome-subtitle">Your MBTI knowledge workspace powered by Claude Sonnet 4</p>
-                <div class="welcome-cards" id="welcomeCards"></div>
-            </div>
-
             <!-- Chat Area -->
-            <div class="chat-area" id="chatArea" style="display: none;">
+            <div class="chat-area" id="chatArea">
                 <div class="messages-container" id="messagesContainer">
                     <div class="typing-indicator" id="typingIndicator">
                         <span></span><span></span><span></span>
@@ -815,6 +700,6 @@
             }
         });
     </script>
-    <script src="/claude-app.js?v=2.1"></script>
+    <script src="/claude-app.js?v=2.2"></script>
 </body>
 </html>

@@ -117,14 +117,6 @@ const app = {
     },
 
     showDefaultChatView() {
-        const welcomeScreen = document.getElementById('welcomeScreen');
-        const chatContainer = document.getElementById('chatContainer');
-        
-        if (welcomeScreen && chatContainer) {
-            welcomeScreen.style.display = 'none';
-            chatContainer.style.display = 'flex';
-        }
-        
         const messagesContainer = document.getElementById('messagesContainer');
         if (messagesContainer) {
             messagesContainer.innerHTML = `
@@ -134,35 +126,6 @@ const app = {
                 </div>
             `;
         }
-    },
-
-    renderWelcomeCards() {
-        const container = document.getElementById('welcomeCards');
-        if (!container) return;
-
-        container.innerHTML = '';
-
-        this.projects.slice(0, 6).forEach(project => {
-            const card = document.createElement('div');
-            card.className = 'welcome-card';
-            
-            const emojiDiv = document.createElement('div');
-            emojiDiv.className = 'welcome-card-emoji';
-            emojiDiv.textContent = project.emoji;
-            
-            const titleDiv = document.createElement('div');
-            titleDiv.className = 'welcome-card-title';
-            titleDiv.textContent = project.name.replace(project.emoji, '').trim();
-            
-            card.appendChild(emojiDiv);
-            card.appendChild(titleDiv);
-            
-            card.addEventListener('click', () => {
-                this.openProject(project.id, project.name);
-            });
-            
-            container.appendChild(card);
-        });
     },
 
     async openProject(projectId, projectName) {
