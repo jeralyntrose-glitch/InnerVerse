@@ -1875,6 +1875,7 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             
             # Generate improved PDF
             print("📄 Creating improved PDF...")
+            print(f"   Cleaned text length: {len(cleaned_text)} characters")
             output_pdf_path = os.path.join(tempfile.gettempdir(), f"enhanced_{uuid.uuid4().hex[:8]}.pdf")
             
             doc = SimpleDocTemplate(output_pdf_path, pagesize=letter)
@@ -1894,7 +1895,8 @@ async def reprocess_pdf(file: UploadFile = File(...)):
                 parent=styles['BodyText'],
                 fontSize=11,
                 leading=16,
-                alignment=TA_LEFT
+                alignment=TA_LEFT,
+                wordWrap='CJK'  # Better word wrapping
             )
             
             metadata_style = ParagraphStyle('Metadata', parent=styles['Normal'], fontSize=9, textColor='gray')
@@ -1911,16 +1913,24 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             story.append(Paragraph(f"Reprocessed on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", metadata_style))
             story.append(Spacer(1, 0.3*inch))
             
-            # Content
+            # Content - handle as continuous text with paragraph breaks
+            # Split into actual paragraphs (double newlines) or single lines
             paragraphs = cleaned_text.split('\n')
+            paragraph_count = 0
             for para in paragraphs:
-                if para.strip():
-                    story.append(Paragraph(para.strip(), body_style))
+                para = para.strip()
+                if para:
+                    # Escape HTML special characters but preserve text
+                    para = para.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                    story.append(Paragraph(para, body_style))
                     story.append(Spacer(1, 0.15*inch))
+                    paragraph_count += 1
+            
+            print(f"   Created {paragraph_count} paragraphs for PDF")
             
             # Build PDF
             doc.build(story)
-            print(f"✅ Enhanced PDF created")
+            print(f"✅ Enhanced PDF created at {output_pdf_path}")
             
             # Return the improved PDF
             safe_filename = file.filename.replace('.pdf', '_enhanced.pdf').replace('/', '-').replace('\\', '-')
