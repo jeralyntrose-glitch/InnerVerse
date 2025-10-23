@@ -2362,10 +2362,11 @@ async def transcript_youtube_smart(request: YouTubeTranscribeRequest):
         # Step 2: Fetch YouTube transcript (FREE)
         try:
             # Try to get transcript (tries multiple languages automatically)
-            transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi'])
+            ytt_api = YouTubeTranscriptApi()
+            fetched_transcript = ytt_api.fetch(video_id, languages=['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi'])
             
             # Combine all transcript segments
-            raw_transcript = ' '.join([entry['text'] for entry in transcript_data])
+            raw_transcript = ' '.join([entry['text'] for entry in fetched_transcript])
             print(f"✅ Raw transcript retrieved ({len(raw_transcript)} characters)")
             
         except Exception as e:
