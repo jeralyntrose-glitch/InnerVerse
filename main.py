@@ -1851,23 +1851,43 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             
             print("✨ Enhancing text with GPT-3.5 (removing filler, optimizing for embeddings)...")
             try:
-                completion = openai_client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are a professional editor optimizing text for semantic search and vector embeddings. Your tasks: 1) Fix all punctuation, grammar, and formatting errors. 2) Remove speech filler words (so, yeah, anyway, basically, um, you know, etc.) only when they add no meaning. Preserve 'like' when used for comparisons or analogies. 3) Remove only the redundant clauses of meta-commentary (e.g., 'we'll get into that later', 'as I mentioned before') while keeping the substantive content of those sentences. 4) Normalize conversational tone to clear, direct statements while preserving all conceptual content, examples, and technical terminology. 5) Add proper paragraph breaks at topic transitions. Return only the cleaned text with NO explanations or comments."
-                        },
-                        {
-                            "role": "user",
-                            "content": pdf_text
-                        }
-                    ],
-                    temperature=0.3
-                )
+                # Split into chunks to avoid GPT output token limits (4096 tokens ~= 12-16KB)
+                chunk_size = 10000  # Conservative chunk size in characters
+                text_chunks = []
                 
-                cleaned_text = completion.choices[0].message.content.strip()
-                print("✅ Text enhanced successfully")
+                # Split text into manageable chunks
+                for i in range(0, len(pdf_text), chunk_size):
+                    chunk = pdf_text[i:i + chunk_size]
+                    text_chunks.append(chunk)
+                
+                print(f"   Processing {len(text_chunks)} chunks...")
+                
+                # Process each chunk
+                cleaned_chunks = []
+                for idx, chunk in enumerate(text_chunks):
+                    print(f"   Processing chunk {idx + 1}/{len(text_chunks)}...")
+                    
+                    completion = openai_client.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a professional editor optimizing text for semantic search and vector embeddings. Your tasks: 1) Fix all punctuation, grammar, and formatting errors. 2) Remove speech filler words (so, yeah, anyway, basically, um, you know, etc.) only when they add no meaning. Preserve 'like' when used for comparisons or analogies. 3) Remove only the redundant clauses of meta-commentary (e.g., 'we'll get into that later', 'as I mentioned before') while keeping the substantive content of those sentences. 4) Normalize conversational tone to clear, direct statements while preserving all conceptual content, examples, and technical terminology. 5) Add proper paragraph breaks at topic transitions. Return only the cleaned text with NO explanations or comments."
+                            },
+                            {
+                                "role": "user",
+                                "content": chunk
+                            }
+                        ],
+                        temperature=0.3
+                    )
+                    
+                    cleaned_chunk = completion.choices[0].message.content.strip()
+                    cleaned_chunks.append(cleaned_chunk)
+                
+                # Combine all cleaned chunks
+                cleaned_text = "\n\n".join(cleaned_chunks)
+                print(f"✅ Text enhanced successfully ({len(cleaned_chunks)} chunks processed)")
                 
             except Exception as e:
                 print(f"⚠️ GPT enhancement failed: {e}, using original text")
