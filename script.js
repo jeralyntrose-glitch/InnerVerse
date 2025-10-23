@@ -1073,13 +1073,24 @@ downloadYoutubeBtn.addEventListener('click', async () => {
   }
 });
 
+// === YouTube Collapsible Toggle ===
+const youtubeToggle = document.getElementById('youtube-toggle');
+const youtubeContent = document.getElementById('youtube-content');
+
+// Start collapsed by default
+youtubeToggle.classList.add('collapsed');
+youtubeContent.classList.add('collapsed');
+
+youtubeToggle.addEventListener('click', () => {
+  youtubeToggle.classList.toggle('collapsed');
+  youtubeContent.classList.toggle('collapsed');
+});
+
 // === Text to PDF Collapsible Toggle ===
 const textPdfToggle = document.getElementById('text-pdf-toggle');
 const textPdfContent = document.getElementById('text-pdf-content');
 
-// Start collapsed by default
-textPdfToggle.classList.add('collapsed');
-textPdfContent.classList.add('collapsed');
+// Start expanded by default (no collapsed class)
 
 textPdfToggle.addEventListener('click', () => {
   textPdfToggle.classList.toggle('collapsed');
