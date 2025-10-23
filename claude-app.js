@@ -3,11 +3,14 @@ const app = {
     currentConversation: null,
     projects: [],
     modalCallback: null,
+    sidebarOpen: true,
 
     async init() {
         await this.loadProjects();
-        this.renderProjects();
+        this.renderSidebarProjects();
+        this.renderWelcomeCards();
         this.setupEventListeners();
+        this.loadSidebarState();
     },
 
     setupEventListeners() {
@@ -26,17 +29,6 @@ const app = {
             });
         }
 
-        const globalSearch = document.getElementById('globalSearch');
-        if (globalSearch) {
-            let searchTimeout;
-            globalSearch.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    this.searchGlobal(e.target.value);
-                }, 300);
-            });
-        }
-
         const modalInput = document.getElementById('modalInput');
         if (modalInput) {
             modalInput.addEventListener('keydown', (e) => {
@@ -46,6 +38,35 @@ const app = {
                 }
             });
         }
+
+        if (window.innerWidth <= 768) {
+            this.sidebarOpen = false;
+            document.getElementById('sidebar').classList.add('hidden');
+        }
+    },
+
+    loadSidebarState() {
+        const savedState = localStorage.getItem('sidebarOpen');
+        if (savedState !== null) {
+            this.sidebarOpen = savedState === 'true';
+            const sidebar = document.getElementById('sidebar');
+            if (!this.sidebarOpen) {
+                sidebar.classList.add('hidden');
+            }
+        }
+    },
+
+    toggleSidebar() {
+        this.sidebarOpen = !this.sidebarOpen;
+        const sidebar = document.getElementById('sidebar');
+        
+        if (this.sidebarOpen) {
+            sidebar.classList.remove('hidden');
+        } else {
+            sidebar.classList.add('hidden');
+        }
+        
+        localStorage.setItem('sidebarOpen', this.sidebarOpen);
     },
 
     async loadProjects() {
@@ -59,67 +80,98 @@ const app = {
         }
     },
 
-    renderProjects() {
-        const grid = document.getElementById('projectGrid');
-        if (!grid) return;
+    renderSidebarProjects() {
+        const container = document.getElementById('sidebarProjects');
+        if (!container) return;
 
-        grid.innerHTML = this.projects.map(project => `
-            <div class="project-card" onclick="app.openProject('${project.id}', '${project.name}')">
-                <div class="emoji">${project.emoji}</div>
-                <h3>${project.name.replace(project.emoji, '').trim()}</h3>
-                <p>${project.description}</p>
+        container.innerHTML = this.projects.map(project => `
+            <div class="project-item" onclick="app.openProject('${project.id}', '${project.name}')">
+                <div class="project-emoji">${project.emoji}</div>
+                <div class="project-name">${project.name.replace(project.emoji, '').trim()}</div>
+            </div>
+        `).join('');
+    },
+
+    renderWelcomeCards() {
+        const container = document.getElementById('welcomeCards');
+        if (!container) return;
+
+        container.innerHTML = this.projects.slice(0, 6).map(project => `
+            <div class="welcome-card" onclick="app.openProject('${project.id}', '${project.name}')">
+                <div class="welcome-card-emoji">${project.emoji}</div>
+                <div class="welcome-card-title">${project.name.replace(project.emoji, '').trim()}</div>
             </div>
         `).join('');
     },
 
     async openProject(projectId, projectName) {
         this.currentProject = projectId;
-        document.getElementById('projectTitle').textContent = projectName;
+        
+        document.getElementById('topBarTitle').textContent = projectName.split(' ').slice(1).join(' ');
+        
         await this.loadConversations();
-        this.showView('conversationsView');
+        
+        document.querySelectorAll('.project-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        event.target.closest('.project-item')?.classList.add('active');
+        
+        if (window.innerWidth <= 768) {
+            this.toggleSidebar();
+        }
     },
 
     async loadConversations() {
+        if (!this.currentProject) return;
+
         try {
             const response = await fetch(`/claude/conversations/${this.currentProject}`);
             const data = await response.json();
-            this.renderConversations(data.conversations);
+            this.renderSidebarConversations(data.conversations);
         } catch (error) {
             console.error('Error loading conversations:', error);
-            this.renderConversations([]);
         }
     },
 
-    renderConversations(conversations) {
-        const list = document.getElementById('conversationList');
-        if (!list) return;
+    renderSidebarConversations(conversations) {
+        const section = document.getElementById('sidebarConversationsSection');
+        const container = document.getElementById('sidebarConversations');
+        
+        if (!container) return;
+
+        section.style.display = 'block';
 
         if (conversations.length === 0) {
-            list.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">💬</div>
-                    <p>No conversations yet. Start a new one!</p>
-                </div>
-            `;
-            return;
-        }
-
-        list.innerHTML = conversations.map(conv => {
-            const date = new Date(conv.updated_at);
-            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            return `
-                <div class="conversation-item" onclick="app.openConversation(${conv.id}, '${conv.name.replace(/'/g, "\\'")}')">
-                    <div>
-                        <div class="conversation-name">${conv.name}</div>
-                        <div class="conversation-date">${dateStr}</div>
+            container.innerHTML = '<div style="padding: 8px; color: var(--text-secondary); font-size: 0.85rem;">No conversations yet</div>';
+        } else {
+            container.innerHTML = conversations.map(conv => `
+                <div class="conversation-item-wrapper ${conv.id === this.currentConversation ? 'active' : ''}" id="conv-${conv.id}">
+                    <div class="conversation-name-sidebar" onclick="app.openConversation(${conv.id}, '${conv.name.replace(/'/g, "\\'")}')">${conv.name}</div>
+                    <div class="conversation-actions-sidebar">
+                        <button class="icon-btn-small" onclick="app.renameConversationById(${conv.id})" title="Rename">✏️</button>
+                        <button class="icon-btn-small" onclick="app.deleteConversationById(${conv.id})" title="Delete">🗑️</button>
                     </div>
                 </div>
-            `;
-        }).join('');
+            `).join('');
+        }
+    },
+
+    async quickNewChat() {
+        if (!this.currentProject) {
+            if (this.projects.length > 0) {
+                await this.openProject(this.projects[0].id, this.projects[0].name);
+            }
+        }
+        
+        await this.createNewConversation();
     },
 
     async createNewConversation() {
+        if (!this.currentProject) {
+            alert('Please select a project first');
+            return;
+        }
+
         this.showModal('Name your conversation', 'e.g., ENFP-INFJ Golden Pair', async (name) => {
             if (!name || name.trim() === '') {
                 alert('Please enter a conversation name');
@@ -130,14 +182,12 @@ const app = {
                 const response = await fetch('/claude/conversations', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        project: this.currentProject,
-                        name: name
-                    })
+                    body: JSON.stringify({ project: this.currentProject, name })
                 });
 
-                const conversation = await response.json();
-                this.openConversation(conversation.id, conversation.name);
+                const data = await response.json();
+                await this.loadConversations();
+                await this.openConversation(data.id, data.name);
             } catch (error) {
                 console.error('Error creating conversation:', error);
                 alert('Failed to create conversation');
@@ -145,23 +195,29 @@ const app = {
         });
     },
 
-    async openConversation(convId, convName) {
-        this.currentConversation = convId;
-        document.getElementById('chatTitle').textContent = convName;
+    async openConversation(conversationId, conversationName) {
+        this.currentConversation = conversationId;
         
+        document.getElementById('topBarTitle').textContent = conversationName;
+        
+        document.getElementById('welcomeScreen').style.display = 'none';
+        document.getElementById('chatArea').style.display = 'flex';
+
+        document.querySelectorAll('.conversation-item-wrapper').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.getElementById(`conv-${conversationId}`)?.classList.add('active');
+
         try {
-            const response = await fetch(`/claude/conversations/detail/${convId}`);
+            const response = await fetch(`/claude/conversations/detail/${conversationId}`);
             const data = await response.json();
             this.renderMessages(data.messages);
-            this.showView('chatView');
-            
-            setTimeout(() => {
-                const input = document.getElementById('messageInput');
-                if (input) input.focus();
-            }, 100);
         } catch (error) {
             console.error('Error loading conversation:', error);
-            alert('Failed to load conversation');
+        }
+
+        if (window.innerWidth <= 768) {
+            this.toggleSidebar();
         }
     },
 
@@ -193,8 +249,6 @@ const app = {
             container.appendChild(typingIndicator);
         }
 
-        // Scroll instantly to bottom when loading conversation
-        // Use setTimeout to ensure DOM height is fully calculated
         setTimeout(() => {
             const container = document.getElementById('messagesContainer');
             if (container) {
@@ -221,6 +275,11 @@ const app = {
         
         const message = input.value.trim();
         if (!message) return;
+
+        if (!this.currentConversation) {
+            alert('Please select or create a conversation first');
+            return;
+        }
 
         input.value = '';
         input.style.height = 'auto';
@@ -278,10 +337,8 @@ const app = {
         const container = document.getElementById('messagesContainer');
         if (container) {
             if (instant) {
-                // When loading conversations, scroll instantly to bottom
                 container.scrollTop = container.scrollHeight;
             } else {
-                // When sending new messages, scroll smoothly with offset to keep visible
                 const messages = container.querySelectorAll('.message');
                 if (messages.length > 0) {
                     const lastMessage = messages[messages.length - 1];
@@ -292,7 +349,6 @@ const app = {
                     });
                     
                     setTimeout(() => {
-                        // Offset by 100px to keep message comfortably visible
                         container.scrollTop = container.scrollTop - 100;
                     }, 100);
                 } else {
@@ -302,8 +358,12 @@ const app = {
         }
     },
 
-    async renameConversation() {
-        const currentName = document.getElementById('chatTitle').textContent;
+    async renameConversationById(conversationId) {
+        event.stopPropagation();
+        
+        const convElement = document.getElementById(`conv-${conversationId}`);
+        const currentName = convElement?.querySelector('.conversation-name-sidebar')?.textContent || '';
+        
         this.showModal('Rename conversation', currentName, async (name) => {
             if (!name || name.trim() === '') {
                 alert('Please enter a conversation name');
@@ -311,14 +371,18 @@ const app = {
             }
 
             try {
-                const response = await fetch(`/claude/conversations/${this.currentConversation}/rename`, {
+                const response = await fetch(`/claude/conversations/${conversationId}/rename`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name })
                 });
 
-                const data = await response.json();
-                document.getElementById('chatTitle').textContent = data.name;
+                await response.json();
+                await this.loadConversations();
+                
+                if (this.currentConversation === conversationId) {
+                    document.getElementById('topBarTitle').textContent = name;
+                }
             } catch (error) {
                 console.error('Error renaming conversation:', error);
                 alert('Failed to rename conversation');
@@ -326,62 +390,27 @@ const app = {
         });
     },
 
-    async deleteConversation() {
-        if (!confirm('Are you sure you want to delete this conversation? This cannot be undone.')) {
-            return;
-        }
+    async deleteConversationById(conversationId) {
+        event.stopPropagation();
+        
+        if (!confirm('Delete this conversation?')) return;
 
         try {
-            await fetch(`/claude/conversations/${this.currentConversation}`, {
+            await fetch(`/claude/conversations/${conversationId}`, {
                 method: 'DELETE'
             });
 
-            this.showConversations();
+            await this.loadConversations();
+            
+            if (this.currentConversation === conversationId) {
+                this.currentConversation = null;
+                document.getElementById('welcomeScreen').style.display = 'flex';
+                document.getElementById('chatArea').style.display = 'none';
+                document.getElementById('topBarTitle').textContent = 'InnerVerse - MBTI Master';
+            }
         } catch (error) {
             console.error('Error deleting conversation:', error);
             alert('Failed to delete conversation');
-        }
-    },
-
-    async searchGlobal(query) {
-        if (!query || query.trim() === '') {
-            this.renderProjects();
-            return;
-        }
-
-        try {
-            const response = await fetch(`/claude/search?q=${encodeURIComponent(query)}`);
-            const data = await response.json();
-            
-            const grid = document.getElementById('projectGrid');
-            if (!grid) return;
-
-            if (data.results.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🔍</div>
-                        <p>No results found for "${query}"</p>
-                    </div>
-                `;
-                return;
-            }
-
-            grid.innerHTML = data.results.map(result => {
-                const project = this.projects.find(p => p.id === result.project);
-                const date = new Date(result.updated_at);
-                const dateStr = date.toLocaleDateString();
-                
-                return `
-                    <div class="project-card" onclick="app.openConversation(${result.id}, '${result.name.replace(/'/g, "\\'")}')">
-                        <div class="emoji">${project ? project.emoji : '💬'}</div>
-                        <h3>${result.name}</h3>
-                        <p>${result.preview ? result.preview.substring(0, 100) + '...' : ''}</p>
-                        <p style="font-size: 0.85rem; color: #6B7280; margin-top: 8px;">${dateStr}</p>
-                    </div>
-                `;
-            }).join('');
-        } catch (error) {
-            console.error('Error searching:', error);
         }
     },
 
@@ -419,29 +448,6 @@ const app = {
             await this.modalCallback(value);
         }
         this.closeModal();
-    },
-
-    showView(viewId) {
-        document.querySelectorAll('.view').forEach(view => {
-            view.classList.remove('active');
-        });
-        
-        const view = document.getElementById(viewId);
-        if (view) view.classList.add('active');
-    },
-
-    showHome() {
-        this.currentProject = null;
-        this.currentConversation = null;
-        this.showView('homeView');
-        this.renderProjects();
-        document.getElementById('globalSearch').value = '';
-    },
-
-    async showConversations() {
-        this.currentConversation = null;
-        await this.loadConversations();
-        this.showView('conversationsView');
     }
 };
 
