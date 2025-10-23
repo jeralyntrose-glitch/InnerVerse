@@ -2361,41 +2361,12 @@ async def transcript_youtube_smart(request: YouTubeTranscribeRequest):
         
         # Step 2: Fetch YouTube transcript (FREE)
         try:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            transcript_data = None
-            language = 'unknown'
-            
-            # Try manual transcripts first (any language)
-            try:
-                for transcript in transcript_list:
-                    if not transcript.is_generated:
-                        transcript_data = transcript.fetch()
-                        language = transcript.language
-                        print(f"📝 Found manual transcript in {language}")
-                        break
-            except:
-                pass
-            
-            # If no manual transcript, try auto-generated
-            if not transcript_data:
-                try:
-                    for transcript in transcript_list:
-                        if transcript.is_generated:
-                            transcript_data = transcript.fetch()
-                            language = f"{transcript.language} (auto)"
-                            print(f"🤖 Found auto-generated transcript in {language}")
-                            break
-                except:
-                    pass
-            
-            # Fallback: try simple fetch
-            if not transcript_data:
-                transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi'])
-                language = 'fallback'
+            # Try to get transcript (tries multiple languages automatically)
+            transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru', 'ar', 'hi'])
             
             # Combine all transcript segments
             raw_transcript = ' '.join([entry['text'] for entry in transcript_data])
-            print(f"✅ Raw transcript retrieved ({len(raw_transcript)} characters, {language})")
+            print(f"✅ Raw transcript retrieved ({len(raw_transcript)} characters)")
             
         except Exception as e:
             error_str = str(e).lower()
