@@ -13,7 +13,6 @@ yt-dlp
 pydub
 psycopg2-binary
 pytz
-youtube-transcript-api
 pdf2image
 pillow
 pytesseract
