@@ -3151,6 +3151,18 @@ def serve_privacy():
 def serve_claude():
     return FileResponse("claude.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+@app.get("/claude-app.js", include_in_schema=False)
+def serve_claude_js():
+    return FileResponse("claude-app.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+@app.get("/sw.js", include_in_schema=False)
+def serve_service_worker():
+    return FileResponse("sw.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+@app.get("/manifest.json", include_in_schema=False)
+def serve_manifest():
+    return FileResponse("manifest.json", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="."), name="static")
 
