@@ -193,7 +193,8 @@ const app = {
             container.appendChild(typingIndicator);
         }
 
-        this.scrollToBottom();
+        // Scroll instantly to bottom when loading conversation
+        this.scrollToBottom(true);
     },
 
     formatMessage(content) {
@@ -267,28 +268,30 @@ const app = {
         }
     },
 
-    scrollToBottom() {
+    scrollToBottom(instant = false) {
         const container = document.getElementById('messagesContainer');
         if (container) {
-            // Get all messages
-            const messages = container.querySelectorAll('.message');
-            if (messages.length > 0) {
-                // Scroll to the last message with smooth behavior and proper alignment
-                const lastMessage = messages[messages.length - 1];
-                lastMessage.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'end',
-                    inline: 'nearest' 
-                });
-                
-                // Small timeout to adjust position after smooth scroll
-                setTimeout(() => {
-                    // Offset by 100px to keep message comfortably visible
-                    container.scrollTop = container.scrollTop - 100;
-                }, 100);
-            } else {
-                // Fallback to old behavior if no messages
+            if (instant) {
+                // When loading conversations, scroll instantly to bottom
                 container.scrollTop = container.scrollHeight;
+            } else {
+                // When sending new messages, scroll smoothly with offset to keep visible
+                const messages = container.querySelectorAll('.message');
+                if (messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    lastMessage.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'end',
+                        inline: 'nearest' 
+                    });
+                    
+                    setTimeout(() => {
+                        // Offset by 100px to keep message comfortably visible
+                        container.scrollTop = container.scrollTop - 100;
+                    }, 100);
+                } else {
+                    container.scrollTop = container.scrollHeight;
+                }
             }
         }
     },
