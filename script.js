@@ -1307,11 +1307,9 @@ async function handleReprocessPDF(file) {
     
     updateReprocessProgress('📄 Creating enhanced PDF...', 80);
     
-    // Download the improved PDF
+    // Download the improved PDF (mobile-friendly)
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = downloadUrl;
     
     // Extract filename from Content-Disposition header
     const contentDisposition = response.headers.get('Content-Disposition');
@@ -1323,11 +1321,24 @@ async function handleReprocessPDF(file) {
       }
     }
     
+    // Mobile Safari-friendly download
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = downloadUrl;
     a.download = filename;
+    a.target = '_blank'; // Help with mobile Safari
     document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(downloadUrl);
-    document.body.removeChild(a);
+    
+    // Trigger download with slight delay for mobile Safari
+    setTimeout(() => {
+      a.click();
+      
+      // Clean up after delay (give time for download to start)
+      setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+        document.body.removeChild(a);
+      }, 500);
+    }, 100);
     
     updateReprocessProgress('✅ Enhanced PDF downloaded! Ready to upload to InnerVerse.', 100);
     playNotificationSound(); // Play notification ping
