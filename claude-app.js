@@ -194,7 +194,12 @@ const app = {
         }
 
         // Scroll instantly to bottom when loading conversation
-        this.scrollToBottom(true);
+        // Use requestAnimationFrame to ensure DOM is fully rendered first
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this.scrollToBottom(true);
+            });
+        });
     },
 
     formatMessage(content) {
