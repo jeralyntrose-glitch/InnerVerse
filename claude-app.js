@@ -84,24 +84,58 @@ const app = {
         const container = document.getElementById('sidebarProjects');
         if (!container) return;
 
-        container.innerHTML = this.projects.map(project => `
-            <div class="project-item" onclick="app.openProject('${project.id}', '${project.name}')">
-                <div class="project-emoji">${project.emoji}</div>
-                <div class="project-name">${project.name.replace(project.emoji, '').trim()}</div>
-            </div>
-        `).join('');
+        container.innerHTML = '';
+
+        this.projects.forEach(project => {
+            const projectItem = document.createElement('div');
+            projectItem.className = 'project-item';
+            
+            const emojiDiv = document.createElement('div');
+            emojiDiv.className = 'project-emoji';
+            emojiDiv.textContent = project.emoji;
+            
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'project-name';
+            nameDiv.textContent = project.name.replace(project.emoji, '').trim();
+            
+            projectItem.appendChild(emojiDiv);
+            projectItem.appendChild(nameDiv);
+            
+            projectItem.addEventListener('click', () => {
+                this.openProject(project.id, project.name);
+            });
+            
+            container.appendChild(projectItem);
+        });
     },
 
     renderWelcomeCards() {
         const container = document.getElementById('welcomeCards');
         if (!container) return;
 
-        container.innerHTML = this.projects.slice(0, 6).map(project => `
-            <div class="welcome-card" onclick="app.openProject('${project.id}', '${project.name}')">
-                <div class="welcome-card-emoji">${project.emoji}</div>
-                <div class="welcome-card-title">${project.name.replace(project.emoji, '').trim()}</div>
-            </div>
-        `).join('');
+        container.innerHTML = '';
+
+        this.projects.slice(0, 6).forEach(project => {
+            const card = document.createElement('div');
+            card.className = 'welcome-card';
+            
+            const emojiDiv = document.createElement('div');
+            emojiDiv.className = 'welcome-card-emoji';
+            emojiDiv.textContent = project.emoji;
+            
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'welcome-card-title';
+            titleDiv.textContent = project.name.replace(project.emoji, '').trim();
+            
+            card.appendChild(emojiDiv);
+            card.appendChild(titleDiv);
+            
+            card.addEventListener('click', () => {
+                this.openProject(project.id, project.name);
+            });
+            
+            container.appendChild(card);
+        });
     },
 
     async openProject(projectId, projectName) {
@@ -111,14 +145,21 @@ const app = {
         
         await this.loadConversations();
         
-        document.querySelectorAll('.project-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        event.target.closest('.project-item')?.classList.add('active');
+        this.updateActiveProject();
         
         if (window.innerWidth <= 768) {
             this.toggleSidebar();
         }
+    },
+
+    updateActiveProject() {
+        document.querySelectorAll('.project-item').forEach((item, index) => {
+            if (this.projects[index]?.id === this.currentProject) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
     },
 
     async loadConversations() {
@@ -140,19 +181,59 @@ const app = {
         if (!container) return;
 
         section.style.display = 'block';
+        container.innerHTML = '';
 
         if (conversations.length === 0) {
-            container.innerHTML = '<div style="padding: 8px; color: var(--text-secondary); font-size: 0.85rem;">No conversations yet</div>';
+            const emptyDiv = document.createElement('div');
+            emptyDiv.style.padding = '8px';
+            emptyDiv.style.color = 'var(--text-secondary)';
+            emptyDiv.style.fontSize = '0.85rem';
+            emptyDiv.textContent = 'No conversations yet';
+            container.appendChild(emptyDiv);
         } else {
-            container.innerHTML = conversations.map(conv => `
-                <div class="conversation-item-wrapper ${conv.id === this.currentConversation ? 'active' : ''}" id="conv-${conv.id}">
-                    <div class="conversation-name-sidebar" onclick="app.openConversation(${conv.id}, '${conv.name.replace(/'/g, "\\'")}')">${conv.name}</div>
-                    <div class="conversation-actions-sidebar">
-                        <button class="icon-btn-small" onclick="app.renameConversationById(${conv.id})" title="Rename">✏️</button>
-                        <button class="icon-btn-small" onclick="app.deleteConversationById(${conv.id})" title="Delete">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
+            conversations.forEach(conv => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'conversation-item-wrapper';
+                wrapper.id = `conv-${conv.id}`;
+                if (conv.id === this.currentConversation) {
+                    wrapper.classList.add('active');
+                }
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'conversation-name-sidebar';
+                nameDiv.textContent = conv.name;
+                nameDiv.addEventListener('click', () => {
+                    this.openConversation(conv.id, conv.name);
+                });
+                
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'conversation-actions-sidebar';
+                
+                const renameBtn = document.createElement('button');
+                renameBtn.className = 'icon-btn-small';
+                renameBtn.title = 'Rename';
+                renameBtn.textContent = '✏️';
+                renameBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.renameConversationById(conv.id);
+                });
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'icon-btn-small';
+                deleteBtn.title = 'Delete';
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.deleteConversationById(conv.id);
+                });
+                
+                actionsDiv.appendChild(renameBtn);
+                actionsDiv.appendChild(deleteBtn);
+                
+                wrapper.appendChild(nameDiv);
+                wrapper.appendChild(actionsDiv);
+                container.appendChild(wrapper);
+            });
         }
     },
 
@@ -257,7 +338,20 @@ const app = {
         }, 100);
     },
 
+    escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    },
+
     formatMessage(content) {
+        content = this.escapeHtml(content);
+        
         content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
         content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
         content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -359,8 +453,6 @@ const app = {
     },
 
     async renameConversationById(conversationId) {
-        event.stopPropagation();
-        
         const convElement = document.getElementById(`conv-${conversationId}`);
         const currentName = convElement?.querySelector('.conversation-name-sidebar')?.textContent || '';
         
@@ -391,8 +483,6 @@ const app = {
     },
 
     async deleteConversationById(conversationId) {
-        event.stopPropagation();
-        
         if (!confirm('Delete this conversation?')) return;
 
         try {
