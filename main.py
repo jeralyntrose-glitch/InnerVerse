@@ -3147,6 +3147,10 @@ def serve_frontend():
 def serve_privacy():
     return FileResponse("privacy.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+@app.get("/claude", include_in_schema=False)
+def serve_claude():
+    return FileResponse("claude.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="."), name="static")
 
