@@ -270,7 +270,26 @@ const app = {
     scrollToBottom() {
         const container = document.getElementById('messagesContainer');
         if (container) {
-            container.scrollTop = container.scrollHeight;
+            // Get all messages
+            const messages = container.querySelectorAll('.message');
+            if (messages.length > 0) {
+                // Scroll to the last message with smooth behavior and proper alignment
+                const lastMessage = messages[messages.length - 1];
+                lastMessage.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'end',
+                    inline: 'nearest' 
+                });
+                
+                // Small timeout to adjust position after smooth scroll
+                setTimeout(() => {
+                    // Offset by 100px to keep message comfortably visible
+                    container.scrollTop = container.scrollTop - 100;
+                }, 100);
+            } else {
+                // Fallback to old behavior if no messages
+                container.scrollTop = container.scrollHeight;
+            }
         }
     },
 

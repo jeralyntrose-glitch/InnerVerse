@@ -51,6 +51,78 @@ def query_innerverse(question: str) -> str:
         print(f"Backend query error: {str(e)}")
         return ""
 
+def search_web(query: str) -> str:
+    """Search the web for current information using DuckDuckGo HTML scraping"""
+    import httpx
+    from urllib.parse import quote_plus
+    
+    try:
+        # Use DuckDuckGo HTML search (more reliable than JSON API)
+        encoded_query = quote_plus(query)
+        search_url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        response = httpx.get(search_url, headers=headers, timeout=15.0, follow_redirects=True)
+        
+        if response.status_code == 200:
+            html = response.text
+            
+            # Extract search results using simple string parsing
+            results = []
+            snippets = html.split('class="result__snippet">')
+            
+            for snippet in snippets[1:6]:  # Get top 5 results
+                end_idx = snippet.find('</a>')
+                if end_idx != -1:
+                    text = snippet[:end_idx]
+                    # Clean HTML tags
+                    text = text.replace('<b>', '').replace('</b>', '')
+                    text = text.replace('&quot;', '"').replace('&#x27;', "'")
+                    text = text.strip()
+                    if text and len(text) > 20:
+                        results.append(text)
+            
+            if results:
+                print(f"✅ Web search found {len(results)} results for: {query}")
+                return "\n\n".join(results)
+            
+            # Fallback: Try JSON API with better parsing
+            print("⚠️ HTML parsing failed, trying JSON API...")
+            json_url = f"https://api.duckduckgo.com/?q={encoded_query}&format=json&no_html=1"
+            json_response = httpx.get(json_url, timeout=10.0)
+            
+            if json_response.status_code == 200:
+                data = json_response.json()
+                results = []
+                
+                # Get abstract
+                if data.get("AbstractText"):
+                    results.append(f"Overview: {data['AbstractText']}")
+                
+                # Get related topics (handle nested structure)
+                for topic in data.get("RelatedTopics", [])[:5]:
+                    if isinstance(topic, dict):
+                        if "Text" in topic:
+                            results.append(topic["Text"])
+                        elif "Topics" in topic:
+                            # Handle nested topics
+                            for subtopic in topic["Topics"][:3]:
+                                if "Text" in subtopic:
+                                    results.append(subtopic["Text"])
+                
+                if results:
+                    return "\n\n".join(results)
+            
+            return f"No detailed results found for '{query}'. Try rephrasing the question or being more specific."
+        
+        return "Search service temporarily unavailable"
+    except Exception as e:
+        print(f"❌ Web search error: {str(e)}")
+        return f"Search error: Unable to fetch results at this time."
+
 def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tuple[str, List[Dict]]:
     """
     Send messages to Claude and get response with automatic InnerVerse backend queries
@@ -64,44 +136,63 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
     tools = [
         {
             "name": "query_innerverse_backend",
-            "description": "Search the InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts on MBTI, Jungian psychology, cognitive functions, and type theory. Use this FIRST before answering any MBTI/psychology questions to get accurate information from the user's personal knowledge base.",
+            "description": "Search the InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts on MBTI, Jungian psychology, cognitive functions, and type theory. Use this when the user asks MBTI/psychology questions.",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "question": {
                         "type": "string",
-                        "description": "The question to search for in the MBTI knowledge base. Should be the user's question or a semantic search query to find relevant content."
+                        "description": "The question to search for in the MBTI knowledge base."
                     }
                 },
                 "required": ["question"]
             }
+        },
+        {
+            "name": "search_web",
+            "description": "Search the web for current information, facts, news, or general knowledge not in the MBTI knowledge base. Use this for restaurants, locations, current events, general facts, etc.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query for public information"
+                    }
+                },
+                "required": ["query"]
+            }
         }
     ]
     
-    system_message = """You are a world-class MBTI and Jungian psychology expert, trained on CS Joseph's complete teachings. Your knowledge comes from the user's personal InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts.
+    system_message = """Hey! You're a friendly MBTI expert who really knows CS Joseph's teachings inside and out. Think of yourself as a knowledgeable friend who loves talking about personality types and helping people understand themselves better.
 
-**CRITICAL INSTRUCTION**: For ANY question about MBTI, cognitive functions, type theory, or Jungian psychology, you MUST:
-1. **First** call the `query_innerverse_backend` tool to search the user's knowledge base
-2. **Then** use that information to craft your response in CS Joseph's teaching style
+**Your Tools:**
+- For MBTI/psychology questions → use the InnerVerse knowledge base (183+ CS Joseph videos)
+- For everything else (restaurants, current events, facts, etc.) → use web search
 
-**CS Joseph Teaching Style**:
-- Rich, layered explanations that build conceptual depth
-- Connect abstract theory to real-world examples and practical applications
-- Use analogies and metaphors extensively (orbit mechanics, architecture, etc.)
-- Address "why" questions and underlying mechanisms, not just "what"
-- Acknowledge complexity and nuance - avoid oversimplification
-- Reference the cognitive function stacks explicitly
-- Explain growth opportunities and development paths
-- Balance theoretical frameworks with actionable insights
+**Your Vibe:**
+Talk like a real person! Be warm, engaging, and conversational. Mix deep insights with casual language. You can use:
+- Contractions (you're, I'm, let's, it's)
+- Casual phrases ("So here's the thing...", "That's a great question!", "Honestly...")
+- Enthusiasm when something's interesting
+- Natural transitions and flow
 
-**Response Structure**:
-1. Start with direct answer to the question
-2. Explain the cognitive function mechanics at play
-3. Provide real-world examples and applications
-4. Discuss growth opportunities or potential conflicts
-5. Connect to broader type theory where relevant
+**When Teaching MBTI (CS Joseph style):**
+- Start with the core insight, then layer in depth
+- Use real-world examples and analogies (they stick better)
+- Explain the "why" behind the mechanics
+- Reference cognitive functions directly (Ne, Ti, Fi, etc.)
+- Show how theory connects to practical life
+- Be thorough but keep it engaging
 
-Be thorough, engaging, and educational. The user wants CS Joseph's signature depth and richness."""
+**Response Flow:**
+1. Answer the question directly (don't make them wait)
+2. Explain the cognitive mechanics if relevant
+3. Give examples they can relate to
+4. Share growth insights or potential pitfalls
+5. Connect to the bigger picture
+
+Be yourself - smart, helpful, and genuinely interested in helping them understand. No need to be overly formal or robotic. Just have a good conversation!"""
     
     tool_use_details = []
     max_iterations = 3
@@ -150,6 +241,34 @@ Be thorough, engaging, and educational. The user wants CS Joseph's signature dep
                                     "type": "tool_result",
                                     "tool_use_id": block.id,
                                     "content": backend_result if backend_result else "No relevant content found in knowledge base."
+                                }
+                            ]
+                        })
+                    
+                    elif tool_name == "search_web":
+                        query = tool_input.get("query", "")
+                        print(f"🌐 Searching web for: {query}")
+                        
+                        web_result = search_web(query)
+                        
+                        tool_use_details.append({
+                            "tool": "search_web",
+                            "query": query,
+                            "result_length": len(web_result)
+                        })
+                        
+                        messages.append({
+                            "role": "assistant",
+                            "content": response.content
+                        })
+                        
+                        messages.append({
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": block.id,
+                                    "content": web_result
                                 }
                             ]
                         })
