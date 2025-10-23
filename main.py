@@ -2783,6 +2783,266 @@ Return ONLY the cleaned transcript with proper formatting, nothing else."""
         })
 
 
+# === Claude Chat Endpoints ===
+from claude_api import PROJECTS, chat_with_claude
+
+@app.get("/claude/projects")
+async def get_projects():
+    """Get all project categories"""
+    return {"projects": PROJECTS}
+
+@app.post("/claude/conversations")
+async def create_conversation(request: Request):
+    """Create a new conversation in a project"""
+    try:
+        data = await request.json()
+        project = data.get("project")
+        name = data.get("name", "New Conversation")
+        
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            INSERT INTO conversations (project, name) 
+            VALUES (%s, %s) 
+            RETURNING id, project, name, created_at, updated_at
+        """, (project, name))
+        
+        conversation = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return dict(conversation)
+    except Exception as e:
+        print(f"❌ Error creating conversation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/claude/conversations/{project}")
+async def get_conversations(project: str):
+    """Get all conversations in a project, sorted by most recent"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return {"conversations": []}
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT id, project, name, created_at, updated_at
+            FROM conversations
+            WHERE project = %s
+            ORDER BY updated_at DESC
+        """, (project,))
+        
+        conversations = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {"conversations": [dict(c) for c in conversations]}
+    except Exception as e:
+        print(f"❌ Error fetching conversations: {str(e)}")
+        return {"conversations": []}
+
+@app.get("/claude/conversations/detail/{conversation_id}")
+async def get_conversation_detail(conversation_id: int):
+    """Get conversation with all messages"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("""
+            SELECT id, project, name, created_at, updated_at
+            FROM conversations
+            WHERE id = %s
+        """, (conversation_id,))
+        conversation = cursor.fetchone()
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        cursor.execute("""
+            SELECT id, role, content, created_at
+            FROM messages
+            WHERE conversation_id = %s
+            ORDER BY created_at ASC
+        """, (conversation_id,))
+        messages = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "conversation": dict(conversation),
+            "messages": [dict(m) for m in messages]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error fetching conversation detail: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/claude/conversations/{conversation_id}/message")
+async def send_message(conversation_id: int, request: Request):
+    """Send a message and get Claude's response"""
+    try:
+        data = await request.json()
+        user_message = data.get("message")
+        
+        if not user_message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("""
+            INSERT INTO messages (conversation_id, role, content)
+            VALUES (%s, 'user', %s)
+            RETURNING id, role, content, created_at
+        """, (conversation_id, user_message))
+        user_msg = cursor.fetchone()
+        conn.commit()
+        
+        cursor.execute("""
+            SELECT role, content
+            FROM messages
+            WHERE conversation_id = %s
+            ORDER BY created_at ASC
+        """, (conversation_id,))
+        message_history = cursor.fetchall()
+        
+        claude_messages = []
+        for msg in message_history:
+            claude_messages.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+        
+        assistant_response, tool_details = chat_with_claude(claude_messages, conversation_id)
+        
+        cursor.execute("""
+            INSERT INTO messages (conversation_id, role, content)
+            VALUES (%s, 'assistant', %s)
+            RETURNING id, role, content, created_at
+        """, (conversation_id, assistant_response))
+        assistant_msg = cursor.fetchone()
+        
+        cursor.execute("""
+            UPDATE conversations
+            SET updated_at = NOW()
+            WHERE id = %s
+        """, (conversation_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return {
+            "user_message": dict(user_msg),
+            "assistant_message": dict(assistant_msg),
+            "tool_use": tool_details
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error sending message: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/claude/conversations/{conversation_id}/rename")
+async def rename_conversation(conversation_id: int, request: Request):
+    """Rename a conversation"""
+    try:
+        data = await request.json()
+        new_name = data.get("name")
+        
+        if not new_name:
+            raise HTTPException(status_code=400, detail="Name is required")
+        
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            UPDATE conversations
+            SET name = %s, updated_at = NOW()
+            WHERE id = %s
+            RETURNING id, project, name, created_at, updated_at
+        """, (new_name, conversation_id))
+        
+        conversation = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        return dict(conversation)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error renaming conversation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/claude/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: int):
+    """Delete a conversation and all its messages"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM conversations WHERE id = %s", (conversation_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return {"message": "Conversation deleted successfully"}
+    except Exception as e:
+        print(f"❌ Error deleting conversation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/claude/search")
+async def search_conversations(q: str = ""):
+    """Search across all conversations and messages"""
+    try:
+        if not q:
+            return {"results": []}
+        
+        conn = get_db_connection()
+        if not conn:
+            return {"results": []}
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT DISTINCT c.id, c.project, c.name, c.updated_at,
+                   m.content as preview
+            FROM conversations c
+            JOIN messages m ON m.conversation_id = c.id
+            WHERE c.name ILIKE %s OR m.content ILIKE %s
+            ORDER BY c.updated_at DESC
+            LIMIT 20
+        """, (f"%{q}%", f"%{q}%"))
+        
+        results = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {"results": [dict(r) for r in results]}
+    except Exception as e:
+        print(f"❌ Error searching: {str(e)}")
+        return {"results": []}
+
+
 # === API Usage Endpoint ===
 @app.get("/api/usage")
 async def get_usage_stats():
