@@ -1233,6 +1233,143 @@ function showTextPdfError(message) {
   }, 5000);
 }
 
+// === Reprocess PDF Feature ===
+const reprocessDropArea = document.getElementById('reprocess-drop-area');
+const reprocessFileInput = document.getElementById('reprocess-file-input');
+const reprocessProgress = document.getElementById('reprocess-progress');
+
+// Click to upload
+reprocessDropArea.addEventListener('click', () => {
+  reprocessFileInput.click();
+});
+
+// Drag and drop
+['dragenter', 'dragover'].forEach(event => {
+  reprocessDropArea.addEventListener(event, e => {
+    e.preventDefault();
+    reprocessDropArea.classList.add('dragover');
+  });
+});
+
+['dragleave', 'drop'].forEach(event => {
+  reprocessDropArea.addEventListener(event, e => {
+    e.preventDefault();
+    reprocessDropArea.classList.remove('dragover');
+  });
+});
+
+reprocessDropArea.addEventListener('drop', e => {
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) {
+    handleReprocessPDF(files[0]);
+  }
+});
+
+reprocessFileInput.addEventListener('change', e => {
+  const files = Array.from(e.target.files);
+  if (files.length > 0) {
+    handleReprocessPDF(files[0]);
+  }
+});
+
+async function handleReprocessPDF(file) {
+  // Initialize audio context for notification (iOS compatibility)
+  initAudioContext();
+  
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    showReprocessError('Please upload a PDF file');
+    return;
+  }
+  
+  try {
+    // Show progress
+    reprocessProgress.classList.remove('hidden');
+    updateReprocessProgress('📖 Extracting text from PDF...', 20);
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Small delay for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 300));
+    updateReprocessProgress('✨ Enhancing with GPT-3.5 (removing filler words)...', 50);
+    
+    // Upload to backend
+    const response = await fetch('/reprocess-pdf', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'PDF reprocessing failed');
+    }
+    
+    updateReprocessProgress('📄 Creating enhanced PDF...', 80);
+    
+    // Download the improved PDF
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    
+    // Extract filename from Content-Disposition header
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = file.name.replace('.pdf', '_enhanced.pdf');
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(a);
+    
+    updateReprocessProgress('✅ Enhanced PDF downloaded! Ready to upload to InnerVerse.', 100);
+    playNotificationSound(); // Play notification ping
+    
+    // Clear input and hide progress after delay
+    setTimeout(() => {
+      reprocessProgress.classList.add('hidden');
+      reprocessFileInput.value = '';
+    }, 4000);
+    
+    // Update cost tracker
+    updateCostTracker();
+    
+  } catch (error) {
+    console.error('Reprocess PDF error:', error);
+    showReprocessError(error.message || 'Failed to reprocess PDF');
+    reprocessFileInput.value = '';
+  }
+}
+
+function updateReprocessProgress(message, percentage) {
+  const statusText = reprocessProgress.querySelector('.reprocess-status-text');
+  const progressBar = reprocessProgress.querySelector('.reprocess-progress-bar');
+  
+  statusText.textContent = message;
+  progressBar.style.width = percentage + '%';
+}
+
+function showReprocessError(message) {
+  reprocessProgress.classList.add('hidden');
+  
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'text-pdf-status error';
+  errorDiv.textContent = message;
+  
+  reprocessDropArea.after(errorDiv);
+  
+  setTimeout(() => {
+    errorDiv.remove();
+  }, 5000);
+}
+
 // === Cost Tracker ===
 async function updateCostTracker() {
   console.log('💰 updateCostTracker called!');
