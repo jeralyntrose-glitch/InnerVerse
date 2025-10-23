@@ -5,37 +5,86 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>InnerVerse - MBTI Master</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#7C3AED">
+    <meta name="theme-color" content="#6366f1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="InnerVerse">
     <link rel="apple-touch-icon" href="/brain-icon-180.png">
     <style>
+        :root {
+            --bg-color: #f5f5f0;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --btn-primary-bg: #6366f1;
+            --btn-primary-hover: #4f46e5;
+            --btn-secondary-bg: #ffffff;
+            --btn-secondary-hover: #f9fafb;
+            --theme-toggle-bg: #ffffff;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --gradient-from: #8b5cf6;
+            --gradient-to: #06b6d4;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --card-bg: #1f2937;
+            --border-color: #374151;
+            --btn-primary-bg: #6366f1;
+            --btn-primary-hover: #4f46e5;
+            --btn-secondary-bg: #1f2937;
+            --btn-secondary-hover: #374151;
+            --theme-toggle-bg: #1f2937;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        :root {
-            --purple-600: #7C3AED;
-            --purple-700: #6D28D9;
-            --purple-800: #5B21B6;
-            --gray-50: #F9FAFB;
-            --gray-100: #F3F4F6;
-            --gray-200: #E5E7EB;
-            --gray-300: #D1D5DB;
-            --gray-600: #4B5563;
-            --gray-700: #374151;
-            --gray-800: #1F2937;
-            --gray-900: #111827;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            background: var(--bg-color);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: var(--gray-900);
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            background: var(--theme-toggle-bg);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 1px 3px var(--shadow-color);
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px var(--shadow-color);
+            background: var(--btn-secondary-hover);
+        }
+
+        .theme-toggle svg {
+            color: var(--text-primary);
+        }
+
+        .sun-icon.hidden, .moon-icon.hidden {
+            display: none;
         }
 
         .container {
@@ -46,19 +95,34 @@
 
         .header {
             text-align: center;
-            color: white;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
+            margin-top: 40px;
+        }
+
+        .brain-icon-small {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            display: block;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: 1px;
             margin-bottom: 10px;
+            color: var(--text-primary);
         }
 
         .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
+            font-size: 1rem;
+            color: var(--text-secondary);
         }
 
         .view {
@@ -77,17 +141,18 @@
         }
 
         .project-card {
-            background: white;
+            background: var(--card-bg);
             border-radius: 16px;
             padding: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px var(--shadow-color);
             cursor: pointer;
             transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
         }
 
         .project-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 12px 24px var(--shadow-color);
         }
 
         .project-card .emoji {
@@ -98,19 +163,19 @@
         .project-card h3 {
             font-size: 1.4rem;
             margin-bottom: 8px;
-            color: var(--gray-900);
+            color: var(--text-primary);
         }
 
         .project-card p {
-            color: var(--gray-600);
+            color: var(--text-secondary);
             font-size: 0.95rem;
             line-height: 1.5;
         }
 
         .back-button {
-            background: white;
-            color: var(--purple-700);
-            border: none;
+            background: var(--btn-secondary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
             padding: 12px 24px;
             border-radius: 8px;
             font-size: 1rem;
@@ -121,7 +186,7 @@
         }
 
         .back-button:hover {
-            background: var(--gray-100);
+            background: var(--btn-secondary-hover);
         }
 
         .conversations-header {
@@ -132,13 +197,13 @@
         }
 
         .conversations-header h2 {
-            color: white;
+            color: var(--text-primary);
             font-size: 1.8rem;
         }
 
         .new-chat-btn {
-            background: white;
-            color: var(--purple-700);
+            background: var(--btn-primary-bg);
+            color: white;
             border: none;
             padding: 12px 24px;
             border-radius: 8px;
@@ -149,19 +214,20 @@
         }
 
         .new-chat-btn:hover {
-            background: var(--gray-100);
+            background: var(--btn-primary-hover);
         }
 
         .conversation-list {
-            background: white;
+            background: var(--card-bg);
             border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px var(--shadow-color);
+            border: 1px solid var(--border-color);
         }
 
         .conversation-item {
             padding: 16px;
-            border-bottom: 1px solid var(--gray-200);
+            border-bottom: 1px solid var(--border-color);
             cursor: pointer;
             transition: background 0.2s ease;
             display: flex;
@@ -170,7 +236,7 @@
         }
 
         .conversation-item:hover {
-            background: var(--gray-50);
+            background: var(--btn-secondary-hover);
         }
 
         .conversation-item:last-child {
@@ -179,13 +245,13 @@
 
         .conversation-name {
             font-weight: 600;
-            color: var(--gray-900);
+            color: var(--text-primary);
             margin-bottom: 4px;
         }
 
         .conversation-date {
             font-size: 0.85rem;
-            color: var(--gray-600);
+            color: var(--text-secondary);
         }
 
         .conversation-actions {
@@ -199,27 +265,28 @@
             cursor: pointer;
             padding: 4px 8px;
             border-radius: 4px;
-            color: var(--gray-600);
+            color: var(--text-secondary);
             transition: all 0.2s ease;
         }
 
         .icon-btn:hover {
-            background: var(--gray-200);
-            color: var(--gray-900);
+            background: var(--border-color);
+            color: var(--text-primary);
         }
 
         .chat-container {
-            background: white;
+            background: var(--card-bg);
             border-radius: 16px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px var(--shadow-color);
             height: calc(100vh - 200px);
             display: flex;
             flex-direction: column;
+            border: 1px solid var(--border-color);
         }
 
         .chat-header {
             padding: 20px;
-            border-bottom: 1px solid var(--gray-200);
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -228,7 +295,7 @@
         .chat-title {
             font-size: 1.2rem;
             font-weight: 600;
-            color: var(--gray-900);
+            color: var(--text-primary);
         }
 
         .messages-container {
@@ -250,20 +317,21 @@
 
         .message.user {
             align-self: flex-end;
-            background: var(--purple-600);
+            background: var(--btn-primary-bg);
             color: white;
             border-bottom-right-radius: 4px;
         }
 
         .message.assistant {
             align-self: flex-start;
-            background: var(--gray-100);
-            color: var(--gray-900);
+            background: var(--btn-secondary-hover);
+            color: var(--text-primary);
             border-bottom-left-radius: 4px;
+            border: 1px solid var(--border-color);
         }
 
         .message.assistant pre {
-            background: var(--gray-200);
+            background: var(--border-color);
             padding: 12px;
             border-radius: 8px;
             overflow-x: auto;
@@ -271,7 +339,7 @@
         }
 
         .message.assistant code {
-            background: var(--gray-200);
+            background: var(--border-color);
             padding: 2px 6px;
             border-radius: 4px;
             font-family: 'Courier New', monospace;
@@ -279,11 +347,12 @@
 
         .typing-indicator {
             align-self: flex-start;
-            background: var(--gray-100);
+            background: var(--btn-secondary-hover);
             padding: 12px 16px;
             border-radius: 16px;
             border-bottom-left-radius: 4px;
             display: none;
+            border: 1px solid var(--border-color);
         }
 
         .typing-indicator.active {
@@ -294,7 +363,7 @@
             display: inline-block;
             width: 8px;
             height: 8px;
-            background: var(--gray-600);
+            background: var(--text-secondary);
             border-radius: 50%;
             margin: 0 2px;
             animation: typing 1.4s infinite;
@@ -315,7 +384,7 @@
 
         .input-container {
             padding: 20px;
-            border-top: 1px solid var(--gray-200);
+            border-top: 1px solid var(--border-color);
             display: flex;
             gap: 12px;
         }
@@ -323,21 +392,23 @@
         .message-input {
             flex: 1;
             padding: 12px 16px;
-            border: 2px solid var(--gray-300);
+            border: 2px solid var(--border-color);
             border-radius: 24px;
             font-size: 1rem;
             outline: none;
             transition: border-color 0.2s ease;
             resize: none;
             max-height: 120px;
+            background: var(--card-bg);
+            color: var(--text-primary);
         }
 
         .message-input:focus {
-            border-color: var(--purple-600);
+            border-color: var(--btn-primary-bg);
         }
 
         .send-btn {
-            background: var(--purple-600);
+            background: var(--btn-primary-bg);
             color: white;
             border: none;
             padding: 12px 24px;
@@ -349,7 +420,7 @@
         }
 
         .send-btn:hover:not(:disabled) {
-            background: var(--purple-700);
+            background: var(--btn-primary-hover);
         }
 
         .send-btn:disabled {
@@ -360,7 +431,7 @@
         .empty-state {
             text-align: center;
             padding: 40px;
-            color: var(--gray-600);
+            color: var(--text-secondary);
         }
 
         .empty-state-icon {
@@ -375,16 +446,17 @@
         .search-input {
             width: 100%;
             padding: 12px 16px;
-            border: 2px solid white;
+            border: 2px solid var(--border-color);
             border-radius: 12px;
             font-size: 1rem;
             outline: none;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--card-bg);
+            color: var(--text-primary);
+            transition: border-color 0.2s ease;
         }
 
         .search-input:focus {
-            background: white;
-            border-color: white;
+            border-color: var(--btn-primary-bg);
         }
 
         @media (max-width: 768px) {
@@ -423,26 +495,35 @@
         }
 
         .modal-content {
-            background: white;
+            background: var(--card-bg);
             padding: 24px;
             border-radius: 16px;
             max-width: 400px;
             width: 90%;
+            border: 1px solid var(--border-color);
         }
 
         .modal-header {
             font-size: 1.4rem;
             font-weight: 600;
             margin-bottom: 16px;
+            color: var(--text-primary);
         }
 
         .modal-input {
             width: 100%;
             padding: 12px;
-            border: 2px solid var(--gray-300);
+            border: 2px solid var(--border-color);
             border-radius: 8px;
             font-size: 1rem;
             margin-bottom: 16px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--btn-primary-bg);
         }
 
         .modal-buttons {
@@ -461,21 +542,75 @@
         }
 
         .modal-btn.primary {
-            background: var(--purple-600);
+            background: var(--btn-primary-bg);
             color: white;
         }
 
+        .modal-btn.primary:hover {
+            background: var(--btn-primary-hover);
+        }
+
         .modal-btn.secondary {
-            background: var(--gray-200);
-            color: var(--gray-700);
+            background: var(--btn-secondary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-btn.secondary:hover {
+            background: var(--btn-secondary-hover);
         }
     </style>
 </head>
 <body>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+        <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="moon-icon hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+    </button>
+
     <div class="container">
         <div class="header">
-            <h1>🧠 InnerVerse - MBTI Master</h1>
-            <p>Your personal MBTI knowledge workspace powered by Claude</p>
+            <svg class="brain-icon-small" width="80" height="80" viewBox="0 0 200 200">
+                <defs>
+                    <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <g class="brain-network">
+                    <line x1="60" y1="50" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <line x1="140" y1="50" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <line x1="60" y1="50" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <line x1="140" y1="50" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <line x1="40" y1="100" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <line x1="160" y1="100" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <line x1="40" y1="100" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <line x1="160" y1="100" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <line x1="60" y1="150" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <line x1="140" y1="150" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                    <circle cx="60" cy="50" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                    <circle cx="140" cy="50" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                    <circle cx="40" cy="100" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                    <circle cx="100" cy="80" r="10" fill="url(#brainGradient)"/>
+                    <circle cx="100" cy="120" r="10" fill="url(#brainGradient)"/>
+                    <circle cx="160" cy="100" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                    <circle cx="60" cy="150" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                    <circle cx="140" cy="150" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                </g>
+            </svg>
+            <h1>INNERVERSE - MBTI Master</h1>
+            <p>Your personal MBTI knowledge workspace</p>
         </div>
 
         <div id="homeView" class="view active">
@@ -534,6 +669,36 @@
     </div>
 
     <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+        const sunIcon = document.querySelector('.sun-icon');
+        const moonIcon = document.querySelector('.moon-icon');
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        htmlElement.setAttribute('data-theme', currentTheme);
+        if (currentTheme === 'dark') {
+            sunIcon.classList.add('hidden');
+            moonIcon.classList.remove('hidden');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            if (newTheme === 'dark') {
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            } else {
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            }
+        });
+
+        // Service Worker Registration
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
                 .then(reg => console.log('Service Worker registered'))
