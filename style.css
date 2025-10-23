@@ -259,24 +259,25 @@ input[type="file"] {
 .youtube-chevron {
   color: var(--text-secondary);
   transition: transform 0.3s ease;
-}
-
-.youtube-toggle.collapsed .youtube-chevron {
   transform: rotate(-90deg);
 }
 
-.youtube-content {
-  max-height: 1000px;
-  overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
-  opacity: 1;
-  margin-top: 16px;
+.youtube-toggle:not(.collapsed) .youtube-chevron {
+  transform: rotate(0deg);
 }
 
-.youtube-content.collapsed {
+.youtube-content {
   max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
   opacity: 0;
   margin-top: 0;
+}
+
+.youtube-content:not(.collapsed) {
+  max-height: 1000px;
+  opacity: 1;
+  margin-top: 16px;
 }
 
 .youtube-header {
