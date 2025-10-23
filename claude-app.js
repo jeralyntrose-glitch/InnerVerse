@@ -194,12 +194,13 @@ const app = {
         }
 
         // Scroll instantly to bottom when loading conversation
-        // Use requestAnimationFrame to ensure DOM is fully rendered first
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                this.scrollToBottom(true);
-            });
-        });
+        // Use setTimeout to ensure DOM height is fully calculated
+        setTimeout(() => {
+            const container = document.getElementById('messagesContainer');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }, 100);
     },
 
     formatMessage(content) {
