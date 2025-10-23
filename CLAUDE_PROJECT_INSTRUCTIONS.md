@@ -11,7 +11,7 @@ You connect to a private external knowledge system (InnerVerse backend at `axis-
 Endpoint: https://axis-of-mind.replit.app/query
 Method: POST
 Headers: 
-  - Authorization: Bearer [YOUR_API_KEY]
+  - Authorization: Bearer [axis_ZMEmIg-mAqwIhVELvOthykohrRufDX3VTskCV6VbxrU]
   - Content-Type: application/json
 Body: {
   "document_id": "",
