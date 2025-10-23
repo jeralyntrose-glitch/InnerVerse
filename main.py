@@ -2381,6 +2381,10 @@ async def transcript_youtube_smart(request: YouTubeTranscribeRequest):
                 return JSONResponse(status_code=403, content={
                     "error": "Video is private or unavailable."
                 })
+            elif 'blocking' in error_str or 'ip has been blocked' in error_str or 'cloud provider' in error_str:
+                return JSONResponse(status_code=403, content={
+                    "error": "YouTube is currently blocking this server's IP address. Please try again later, or use the Audio Upload method instead: Download the video's audio using a browser extension (Video DownloadHelper, 4K Video Downloader), then upload the MP3/M4A file via the 'Audio Upload' tab."
+                })
             else:
                 return JSONResponse(status_code=404, content={
                     "error": f"Could not get captions: {str(e)}"
