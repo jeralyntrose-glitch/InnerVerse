@@ -8,12 +8,19 @@ const app = {
     async init() {
         await this.loadProjects();
         this.renderSidebarProjects();
-        this.renderWelcomeCards();
+        this.showDefaultChatView();
         this.setupEventListeners();
         this.loadSidebarState();
     },
 
     setupEventListeners() {
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', () => {
+                this.toggleSidebar();
+            });
+        }
+
         const messageInput = document.getElementById('messageInput');
         if (messageInput) {
             messageInput.addEventListener('keydown', (e) => {
@@ -107,6 +114,26 @@ const app = {
             
             container.appendChild(projectItem);
         });
+    },
+
+    showDefaultChatView() {
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const chatContainer = document.getElementById('chatContainer');
+        
+        if (welcomeScreen && chatContainer) {
+            welcomeScreen.style.display = 'none';
+            chatContainer.style.display = 'flex';
+        }
+        
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (messagesContainer) {
+            messagesContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🧠</div>
+                    <p>Select a project from the sidebar to start chatting about MBTI, cognitive functions, and type theory!</p>
+                </div>
+            `;
+        }
     },
 
     renderWelcomeCards() {
