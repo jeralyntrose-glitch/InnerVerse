@@ -1704,7 +1704,7 @@ async def text_to_pdf(request: TextToPDFRequest):
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a professional editor. Fix all punctuation, grammar, and formatting errors in the text. Preserve the original meaning and tone. Add proper paragraph breaks where appropriate. Return only the corrected text, no explanations or comments."
+                        "content": "You are a professional editor optimizing text for semantic search and vector embeddings. Your tasks: 1) Fix all punctuation, grammar, and formatting errors. 2) Remove speech filler words (so, yeah, anyway, basically, um, you know, etc.) only when they add no meaning. Preserve 'like' when used for comparisons or analogies. 3) Remove only the redundant clauses of meta-commentary (e.g., 'we'll get into that later', 'as I mentioned before') while keeping the substantive content of those sentences. 4) Normalize conversational tone to clear, direct statements while preserving all conceptual content, examples, and technical terminology. 5) Add proper paragraph breaks at topic transitions. Return only the cleaned text with NO explanations or comments."
                     },
                     {
                         "role": "user",
