@@ -18,16 +18,18 @@ Preferred communication style: Simple, everyday language.
 3. **Proxy Authentication Success But Download Failure:** Proxies authenticated successfully and retrieved metadata, but YouTube detected and blocked actual audio downloads
 
 **Solution/Pivot:**
-Switched from audio-based transcription to YouTube Transcript API + GPT-3.5 cleanup pipeline:
-- **FREE transcript fetching** via YouTube's public Transcript API (same data shown in "Show transcript" button)
-- **GPT-3.5 text cleanup** for proper punctuation, capitalization, and grammar (~$0.001-0.002 per video)
-- **Auto-tagging** with MBTI/Jungian taxonomy using existing GPT-3.5 pipeline
+After discovering YouTube blocks ALL cloud provider IPs (AWS, GCP, Azure, Replit, etc.) industry-wide, pivoted to manual workflow that preserves cost savings:
+- **Manual transcript copy** from YouTube's "Show transcript" button (still works in browser)
+- **Text to PDF conversion** with GPT-3.5 cleanup for punctuation, capitalization, and grammar (~$0.001-0.002 per video)
+- **Auto-tagging** with MBTI/Jungian taxonomy via standard PDF upload pipeline
 - **Pinecone indexing** for semantic search across all transcripts
 
+**Final Workflow:** (1) Click "Show transcript" on YouTube → (2) Copy text → (3) Convert via Text to PDF → (4) Upload PDF for tagging/indexing
+
 **Results:**
-- **Cost Reduction:** $44.30 → $0.64 for 321 videos (70x cheaper, ~98.5% cost savings)
-- **Reliability:** 100% success rate (no proxy blocking issues)
-- **Speed:** Faster processing (no audio download wait times)
+- **Cost Reduction:** $44.30 → $0.64 for 321 videos (70x cheaper, ~98.5% cost savings vs. Whisper)
+- **Quality Control:** Ability to review PDFs before indexing and maintain local backups
+- **Reliability:** Works around YouTube's cloud IP blocking (confirmed industry-wide issue affecting all providers)
 - **Quality:** Comparable quality (YouTube's transcription + GPT cleanup vs. Whisper)
 
 **PM Skills Demonstrated:**

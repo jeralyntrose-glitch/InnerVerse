@@ -2383,7 +2383,7 @@ async def transcript_youtube_smart(request: YouTubeTranscribeRequest):
                 })
             elif 'blocking' in error_str or 'ip has been blocked' in error_str or 'cloud provider' in error_str:
                 return JSONResponse(status_code=403, content={
-                    "error": "YouTube is currently blocking this server's IP address. Please try again later, or use the Audio Upload method instead: Download the video's audio using a browser extension (Video DownloadHelper, 4K Video Downloader), then upload the MP3/M4A file via the 'Audio Upload' tab."
+                    "error": "YouTube is blocking cloud server IPs. Manual workaround: (1) Click 'Show transcript' on the YouTube video, (2) Copy the text, (3) Use the 'Text to PDF' tab to convert it, (4) Upload the PDF to get auto-tagging and search indexing."
                 })
             else:
                 return JSONResponse(status_code=404, content={
