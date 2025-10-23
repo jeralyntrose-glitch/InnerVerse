@@ -21,6 +21,29 @@ const app = {
             });
         }
 
+        const overlay = document.getElementById('sidebarOverlay');
+        if (overlay) {
+            overlay.addEventListener('click', () => {
+                this.toggleSidebar();
+            });
+        }
+
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('fileInput');
+        if (uploadBtn && fileInput) {
+            uploadBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                    console.log('Files selected:', Array.from(files).map(f => f.name));
+                    alert(`Selected ${files.length} file(s): ${Array.from(files).map(f => f.name).join(', ')}\n\nFile upload functionality coming soon!`);
+                }
+            });
+        }
+
         const messageInput = document.getElementById('messageInput');
         if (messageInput) {
             messageInput.addEventListener('keydown', (e) => {
@@ -66,11 +89,16 @@ const app = {
     toggleSidebar() {
         this.sidebarOpen = !this.sidebarOpen;
         const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
         
         if (this.sidebarOpen) {
             sidebar.classList.remove('hidden');
+            if (window.innerWidth <= 768) {
+                overlay.classList.add('active');
+            }
         } else {
             sidebar.classList.add('hidden');
+            overlay.classList.remove('active');
         }
         
         localStorage.setItem('sidebarOpen', this.sidebarOpen);
@@ -119,27 +147,107 @@ const app = {
     showDefaultChatView() {
         const messagesContainer = document.getElementById('messagesContainer');
         if (messagesContainer) {
-            messagesContainer.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">🧠</div>
-                    <p>Select a project from the sidebar to start chatting about MBTI, cognitive functions, and type theory!</p>
-                </div>
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-state';
+            
+            const brainContainer = document.createElement('div');
+            brainContainer.className = 'empty-state-icon';
+            brainContainer.innerHTML = `
+                <svg width="80" height="80" viewBox="0 0 200 200" class="brain-icon-animated">
+                    <defs>
+                        <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <g class="brain-network">
+                        <line x1="60" y1="50" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="140" y1="50" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="60" y1="50" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="140" y1="50" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="40" y1="100" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="160" y1="100" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="40" y1="100" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="160" y1="100" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="60" y1="150" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="140" y1="150" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
+                        <circle cx="60" cy="50" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                        <circle cx="140" cy="50" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                        <circle cx="40" cy="100" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                        <circle cx="100" cy="80" r="10" fill="url(#brainGradient)"/>
+                        <circle cx="100" cy="120" r="10" fill="url(#brainGradient)"/>
+                        <circle cx="160" cy="100" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                        <circle cx="60" cy="150" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                        <circle cx="140" cy="150" r="8" fill="url(#brainGradient)" opacity="0.9"/>
+                    </g>
+                </svg>
             `;
+            
+            const message = document.createElement('p');
+            message.textContent = 'Select a project from the sidebar to start chatting about MBTI, cognitive functions, and type theory!';
+            
+            emptyState.appendChild(brainContainer);
+            emptyState.appendChild(message);
+            messagesContainer.innerHTML = '';
+            messagesContainer.appendChild(emptyState);
         }
     },
 
     async openProject(projectId, projectName) {
         this.currentProject = projectId;
+        this.currentConversation = null;
         
         document.getElementById('topBarTitle').textContent = projectName.split(' ').slice(1).join(' ');
         
         await this.loadConversations();
+        this.renderProjectChatView();
         
         this.updateActiveProject();
         
         if (window.innerWidth <= 768) {
             this.toggleSidebar();
         }
+    },
+
+    renderProjectChatView() {
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (!messagesContainer) return;
+
+        messagesContainer.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <svg width="80" height="80" viewBox="0 0 200 200" class="brain-icon-animated">
+                        <defs>
+                            <linearGradient id="brainGradientProject" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <g class="brain-network">
+                            <line x1="60" y1="50" x2="100" y2="80" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <line x1="140" y1="50" x2="100" y2="80" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <line x1="60" y1="50" x2="100" y2="120" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <line x1="140" y1="50" x2="100" y2="120" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <line x1="40" y1="100" x2="100" y2="80" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <line x1="160" y1="100" x2="100" y2="80" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <line x1="40" y1="100" x2="100" y2="120" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <line x1="160" y1="100" x2="100" y2="120" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <line x1="60" y1="150" x2="100" y2="120" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <line x1="140" y1="150" x2="100" y2="120" stroke="url(#brainGradientProject)" stroke-width="2" opacity="0.6"/>
+                            <circle cx="60" cy="50" r="8" fill="url(#brainGradientProject)" opacity="0.9"/>
+                            <circle cx="140" cy="50" r="8" fill="url(#brainGradientProject)" opacity="0.9"/>
+                            <circle cx="40" cy="100" r="8" fill="url(#brainGradientProject)" opacity="0.9"/>
+                            <circle cx="100" cy="80" r="10" fill="url(#brainGradientProject)"/>
+                            <circle cx="100" cy="120" r="10" fill="url(#brainGradientProject)"/>
+                            <circle cx="160" cy="100" r="8" fill="url(#brainGradientProject)" opacity="0.9"/>
+                            <circle cx="60" cy="150" r="8" fill="url(#brainGradientProject)" opacity="0.9"/>
+                            <circle cx="140" cy="150" r="8" fill="url(#brainGradientProject)" opacity="0.9"/>
+                        </g>
+                    </svg>
+                </div>
+                <p>Start a new conversation or select one from the sidebar!</p>
+            </div>
+        `;
     },
 
     updateActiveProject() {

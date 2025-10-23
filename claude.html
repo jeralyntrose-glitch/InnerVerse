@@ -78,6 +78,22 @@
             transform: translateX(-100%);
         }
 
+        /* Sidebar Overlay for Mobile */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
         .sidebar-header {
             padding: 16px;
             border-bottom: 1px solid var(--border-color);
@@ -362,7 +378,25 @@
             border-top: 1px solid var(--border-color);
             background: var(--card-bg);
             display: flex;
-            gap: 12px;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .upload-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            transition: color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-btn:hover {
+            color: var(--btn-primary-bg);
         }
 
         .message-input {
@@ -411,8 +445,18 @@
         }
 
         .empty-state-icon {
-            font-size: 4rem;
             margin-bottom: 16px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .brain-icon-animated {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
 
         .empty-state h2 {
@@ -573,6 +617,9 @@
     </style>
 </head>
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="app-container">
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
@@ -646,6 +693,10 @@
                     </div>
                 </div>
                 <div class="input-container">
+                    <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.txt" style="display: none;" multiple>
+                    <button class="upload-btn" id="uploadBtn" title="Upload file or image">
+                        <span>+</span>
+                    </button>
                     <textarea 
                         class="message-input" 
                         id="messageInput" 
@@ -700,6 +751,6 @@
             }
         });
     </script>
-    <script src="/claude-app.js?v=2.2"></script>
+    <script src="/claude-app.js?v=2.4"></script>
 </body>
 </html>
