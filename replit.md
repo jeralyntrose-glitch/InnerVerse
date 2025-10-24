@@ -20,6 +20,7 @@ Preferred communication style: Simple, everyday language.
   - **Streaming Responses**: Typewriter effect displays AI responses in 5-character chunks every 8ms with optimized scrolling (every 10 chunks) for engaging, performant UX.
   - **iOS Optimization**: iPhone 14 Pro optimized with viewport locking (position: fixed + overscroll-behavior) to prevent page sliding while preserving native scrolling in message containers. Input bar positioned with `calc(12px + env(safe-area-inset-bottom))` for proper safe area handling.
   - **Thinking Indicator**: Subtle breathing/pulsing indicator (8px blue dot with "thinking" text) appears bottom-right during AI processing to maintain user engagement (ADHD-friendly design).
+  - **Offline Resilience**: PWA-optimized message persistence handles interrupted API calls gracefully. Messages are saved to localStorage before sending with unique IDs, marked as failed on error, and automatically present retry UI on app resume. Handles iOS app backgrounding, duplicate messages (e.g., "Yes", "OK"), and includes XSS protection via textContent rendering. Visibility change and pageshow listeners detect app resume to restore failed messages.
   - **Performance**: DOM element caching, parallel API fetches, debounced input handlers, and optimized rendering with fade-in effects.
 
 ## Backend Architecture
