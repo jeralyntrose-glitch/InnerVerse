@@ -990,20 +990,12 @@ const app = {
             const data = await response.json();
             const conversations = data.conversations || [];
             
-            console.log(`📊 loadConversationsAndRender: Project ${this.currentProject}, ${conversations.length} conversations found`);
-            console.log('Conversations:', conversations);
-            
             // Update sidebar
             this.renderSidebarConversations(conversations);
             
             // Render main chat area instantly
             const messagesContainer = this.getElement('messagesContainer');
-            if (!messagesContainer) {
-                console.error('❌ messagesContainer not found!');
-                return;
-            }
-            
-            console.log(`✅ messagesContainer found, rendering ${conversations.length} conversations`);
+            if (!messagesContainer) return;
             
             if (conversations.length === 0) {
                 messagesContainer.innerHTML = `
@@ -1357,7 +1349,10 @@ const app = {
             const messagesContainer = document.getElementById('messagesContainer');
             const inputSuggestions = document.getElementById('inputSuggestions');
             if (welcomeScreen) welcomeScreen.classList.add('hidden');
-            if (messagesContainer) messagesContainer.classList.remove('hidden');
+            if (messagesContainer) {
+                messagesContainer.classList.remove('hidden');
+                messagesContainer.innerHTML = ''; // Clear any error messages or old content
+            }
             if (inputSuggestions) inputSuggestions.classList.add('hidden');
             
             return true;
