@@ -148,10 +148,15 @@ const app = {
         if (sidebar) sidebar.style.opacity = '0';
         
         await this.loadProjects();
+        
+        // PERFORMANCE FIX: Preload all project conversations for instant folder expansion
+        await this.preloadAllProjectConversations();
+        
         this.renderSidebarProjects();
         this.showDefaultChatView();
         this.setupEventListeners();
         this.setupSidebarEventDelegation();
+        this.setupLongPressHandlers();
         this.loadSidebarState();
         
         // Setup browser history navigation (back button support)
@@ -734,7 +739,7 @@ const app = {
         }
     },
 
-    async toggleProject(projectId) {
+    toggleProject(projectId) {
         const projectItem = document.querySelector(`[data-project-id="${projectId}"]`);
         if (!projectItem) return;
         
@@ -751,14 +756,13 @@ const app = {
             conversationsList.classList.add('collapsed');
             if (chevron) chevron.classList.remove('expanded');
         } else {
-            // Expand - load conversations if not already loaded
+            // Expand - INSTANT (data already preloaded)
             this.expandedProjects[projectId] = true;
             conversationsList.classList.remove('collapsed');
             if (chevron) chevron.classList.add('expanded');
             
-            // Load conversations for this project if not already loaded
-            if (!this.projectConversations[projectId]) {
-                await this.loadProjectConversations(projectId);
+            // Render conversations (data already loaded during init)
+            if (this.projectConversations[projectId]) {
                 this.renderProjectConversations(projectId);
             }
         }
@@ -980,6 +984,14 @@ const app = {
             console.error(`Error loading conversations for project ${projectId}:`, error);
             this.projectConversations[projectId] = [];
         }
+    },
+
+    async preloadAllProjectConversations() {
+        // PERFORMANCE: Load all conversations for all projects in parallel
+        // This makes folder expansion instant (<200ms) since data is already loaded
+        const promises = this.projects.map(project => this.loadProjectConversations(project.id));
+        await Promise.all(promises);
+        console.log(`✅ Preloaded conversations for ${this.projects.length} projects`);
     },
 
     renderProjectConversations(projectId) {
@@ -1851,6 +1863,483 @@ const app = {
             "'": '&#039;'
         };
         return text.replace(/[&<>"']/g, m => map[m]);
+    },
+
+    // LONG-PRESS MENU SYSTEM
+    longPressTimer: null,
+    longPressTarget: null,
+    longPressStartY: 0,
+    
+    setupLongPressHandlers() {
+        // Touch event handlers for long-press detection
+        const sidebar = document.getElementById('sidebarContent');
+        if (!sidebar) return;
+        
+        sidebar.addEventListener('touchstart', (e) => {
+            const convItem = e.target.closest('.sidebar-conversation-item, .chat-item-content');
+            if (!convItem) return;
+            
+            this.longPressTarget = convItem;
+            this.longPressStartY = e.touches[0].clientY;
+            
+            // 550ms threshold for long press (industry standard)
+            this.longPressTimer = setTimeout(() => {
+                // Check if user hasn't scrolled
+                if (this.longPressTarget === convItem) {
+                    e.preventDefault();
+                    const convId = convItem.getAttribute('data-click-conv-id');
+                    const convName = convItem.getAttribute('data-click-conv-name');
+                    if (convId) {
+                        this.showLongPressMenu(convId, convName, e.touches[0].clientX, e.touches[0].clientY);
+                        // Haptic feedback if available
+                        if (navigator.vibrate) {
+                            navigator.vibrate(50);
+                        }
+                    }
+                }
+            }, 550);
+        }, { passive: false });
+        
+        sidebar.addEventListener('touchmove', (e) => {
+            // Cancel long press if user scrolls
+            if (this.longPressTimer) {
+                const moveY = e.touches[0].clientY;
+                if (Math.abs(moveY - this.longPressStartY) > 10) {
+                    clearTimeout(this.longPressTimer);
+                    this.longPressTimer = null;
+                    this.longPressTarget = null;
+                }
+            }
+        }, { passive: true });
+        
+        sidebar.addEventListener('touchend', () => {
+            if (this.longPressTimer) {
+                clearTimeout(this.longPressTimer);
+                this.longPressTimer = null;
+                this.longPressTarget = null;
+            }
+        }, { passive: true });
+    },
+    
+    showLongPressMenu(convId, convName, x, y) {
+        // Remove any existing menu
+        this.closeLongPressMenu();
+        
+        // Create menu overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'longPressMenuOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            animation: fadeIn 150ms ease;
+        `;
+        
+        // Create menu popup
+        const menu = document.createElement('div');
+        menu.id = 'longPressMenu';
+        menu.style.cssText = `
+            position: fixed;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            z-index: 10001;
+            min-width: 200px;
+            animation: scaleIn 150ms ease;
+        `;
+        
+        // Position menu (center of screen for mobile)
+        menu.style.left = '50%';
+        menu.style.top = '50%';
+        menu.style.transform = 'translate(-50%, -50%)';
+        
+        // Menu options
+        const options = [
+            { label: 'Move to folder', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4', action: () => this.showMoveToFolderMenu(convId, convName) },
+            { label: 'Delete', icon: 'M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2', action: () => this.showDeleteConfirmation(convId, convName), color: 'var(--error)' }
+        ];
+        
+        options.forEach((opt) => {
+            const button = document.createElement('button');
+            button.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                padding: 12px 16px;
+                border: none;
+                background: transparent;
+                color: ${opt.color || 'var(--text-primary)'};
+                font-size: 0.9375rem;
+                font-weight: 500;
+                text-align: left;
+                cursor: pointer;
+                border-radius: 8px;
+                transition: background 100ms ease;
+            `;
+            
+            button.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="${opt.icon}"></path>
+                </svg>
+                ${opt.label}
+            `;
+            
+            button.onmousedown = button.ontouchstart = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                button.style.background = 'var(--bg-hover)';
+            };
+            
+            button.onmouseup = button.ontouchend = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                button.style.background = 'transparent';
+                opt.action();
+            };
+            
+            button.onmouseover = () => button.style.background = 'var(--bg-hover)';
+            button.onmouseout = () => button.style.background = 'transparent';
+            
+            menu.appendChild(button);
+        });
+        
+        overlay.onclick = overlay.ontouchend = (e) => {
+            e.preventDefault();
+            this.closeLongPressMenu();
+        };
+        
+        document.body.appendChild(overlay);
+        document.body.appendChild(menu);
+    },
+    
+    closeLongPressMenu() {
+        const overlay = document.getElementById('longPressMenuOverlay');
+        const menu = document.getElementById('longPressMenu');
+        const folderMenu = document.getElementById('moveFolderMenu');
+        const folderOverlay = document.getElementById('moveFolderOverlay');
+        
+        if (overlay) overlay.remove();
+        if (menu) menu.remove();
+        if (folderMenu) folderMenu.remove();
+        if (folderOverlay) folderOverlay.remove();
+    },
+    
+    showMoveToFolderMenu(convId, convName) {
+        // Close long-press menu
+        const overlay = document.getElementById('longPressMenuOverlay');
+        const menu = document.getElementById('longPressMenu');
+        if (overlay) overlay.remove();
+        if (menu) menu.remove();
+        
+        // Create new overlay for folder selection
+        const folderOverlay = document.createElement('div');
+        folderOverlay.id = 'moveFolderOverlay';
+        folderOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            animation: fadeIn 150ms ease;
+        `;
+        
+        // Create folder selection menu
+        const folderMenu = document.createElement('div');
+        folderMenu.id = 'moveFolderMenu';
+        folderMenu.style.cssText = `
+            position: fixed;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            z-index: 10001;
+            max-width: 320px;
+            width: 90%;
+            max-height: 70vh;
+            overflow-y: auto;
+            animation: scaleIn 150ms ease;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        `;
+        
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = 'font-size: 1.125rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);';
+        header.textContent = 'Move to folder';
+        folderMenu.appendChild(header);
+        
+        // Project list
+        this.projects.forEach(project => {
+            const projectBtn = document.createElement('button');
+            projectBtn.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                padding: 12px 16px;
+                border: none;
+                background: transparent;
+                color: var(--text-primary);
+                font-size: 0.9375rem;
+                font-weight: 500;
+                text-align: left;
+                cursor: pointer;
+                border-radius: 8px;
+                transition: background 100ms ease;
+                margin-bottom: 4px;
+            `;
+            
+            projectBtn.innerHTML = `
+                <span style="font-size: 1.25rem;">${project.emoji}</span>
+                <span>${this.escapeHtml(project.name)}</span>
+            `;
+            
+            projectBtn.onmousedown = projectBtn.ontouchstart = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                projectBtn.style.background = 'var(--bg-hover)';
+            };
+            
+            projectBtn.onmouseup = projectBtn.ontouchend = async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                await this.moveConversationToProject(convId, project.id, project.name);
+                this.closeLongPressMenu();
+            };
+            
+            projectBtn.onmouseover = () => projectBtn.style.background = 'var(--bg-hover)';
+            projectBtn.onmouseout = () => projectBtn.style.background = 'transparent';
+            
+            folderMenu.appendChild(projectBtn);
+        });
+        
+        folderOverlay.onclick = folderOverlay.ontouchend = (e) => {
+            e.preventDefault();
+            this.closeLongPressMenu();
+        };
+        
+        document.body.appendChild(folderOverlay);
+        document.body.appendChild(folderMenu);
+    },
+    
+    async moveConversationToProject(convId, projectId, projectName) {
+        // Optimistic UI update - find conversation in current data
+        let conversation = null;
+        
+        // Find in allConversations
+        const allConvIndex = this.allConversations.findIndex(c => c.id === convId);
+        if (allConvIndex !== -1) {
+            conversation = this.allConversations[allConvIndex];
+            // Update project_id
+            conversation.project_id = projectId;
+            conversation.projectName = projectName;
+        }
+        
+        // Find in projectConversations and remove from old project
+        for (const [pid, convs] of Object.entries(this.projectConversations)) {
+            const index = convs.findIndex(c => c.id === convId);
+            if (index !== -1) {
+                conversation = convs[index];
+                conversation.project_id = projectId;
+                conversation.projectName = projectName;
+                // Remove from old project
+                convs.splice(index, 1);
+                break;
+            }
+        }
+        
+        // Add to new project
+        if (!this.projectConversations[projectId]) {
+            this.projectConversations[projectId] = [];
+        }
+        if (conversation && !this.projectConversations[projectId].find(c => c.id === convId)) {
+            this.projectConversations[projectId].unshift(conversation);
+        }
+        
+        // Update UI immediately
+        this.renderAllChats();
+        this.projects.forEach(p => {
+            if (this.expandedProjects[p.id]) {
+                this.renderProjectConversations(p.id);
+            }
+        });
+        
+        // Show toast notification
+        this.showToast(`Moved to ${projectName}`);
+        
+        // Sync to backend asynchronously
+        try {
+            const response = await fetch(`/claude/conversations/${convId}/move`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project: projectId })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to move conversation');
+            }
+        } catch (error) {
+            console.error('Error moving conversation:', error);
+            // Revert UI on error
+            await this.preloadAllProjectConversations();
+            await this.loadAllConversations();
+            this.renderAllChats();
+            this.projects.forEach(p => {
+                if (this.expandedProjects[p.id]) {
+                    this.renderProjectConversations(p.id);
+                }
+            });
+            this.showToast('Failed to move conversation', true);
+        }
+    },
+    
+    showDeleteConfirmation(convId, convName) {
+        // Close long-press menu
+        const overlay = document.getElementById('longPressMenuOverlay');
+        const menu = document.getElementById('longPressMenu');
+        if (overlay) overlay.remove();
+        if (menu) menu.remove();
+        
+        // Create confirmation overlay
+        const confirmOverlay = document.createElement('div');
+        confirmOverlay.id = 'deleteConfirmOverlay';
+        confirmOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            animation: fadeIn 150ms ease;
+        `;
+        
+        // Create confirmation dialog
+        const confirmDialog = document.createElement('div');
+        confirmDialog.style.cssText = `
+            position: fixed;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            z-index: 10001;
+            max-width: 320px;
+            width: 90%;
+            animation: scaleIn 150ms ease;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        `;
+        
+        confirmDialog.innerHTML = `
+            <div style="font-size: 1.125rem; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Delete this chat?</div>
+            <div style="font-size: 0.9375rem; color: var(--text-secondary); margin-bottom: 24px;">This cannot be undone.</div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button id="cancelDeleteBtn" style="padding: 10px 20px; border: none; background: var(--bg-secondary); color: var(--text-primary); font-size: 0.9375rem; font-weight: 500; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button id="confirmDeleteBtn" style="padding: 10px 20px; border: none; background: var(--error); color: white; font-size: 0.9375rem; font-weight: 500; border-radius: 8px; cursor: pointer;">Delete</button>
+            </div>
+        `;
+        
+        document.body.appendChild(confirmOverlay);
+        document.body.appendChild(confirmDialog);
+        
+        document.getElementById('cancelDeleteBtn').onclick = () => {
+            confirmOverlay.remove();
+            confirmDialog.remove();
+        };
+        
+        document.getElementById('confirmDeleteBtn').onclick = async () => {
+            confirmOverlay.remove();
+            confirmDialog.remove();
+            await this.deleteConversationOptimistic(convId);
+        };
+        
+        confirmOverlay.onclick = () => {
+            confirmOverlay.remove();
+            confirmDialog.remove();
+        };
+    },
+    
+    async deleteConversationOptimistic(conversationId) {
+        // Optimistic UI update - remove from all lists
+        this.allConversations = this.allConversations.filter(c => c.id !== conversationId);
+        
+        for (const [pid, convs] of Object.entries(this.projectConversations)) {
+            this.projectConversations[pid] = convs.filter(c => c.id !== conversationId);
+        }
+        
+        // Update UI immediately
+        this.renderAllChats();
+        this.projects.forEach(p => {
+            if (this.expandedProjects[p.id]) {
+                this.renderProjectConversations(p.id);
+            }
+        });
+        
+        // If we deleted the current conversation, go back to welcome
+        if (this.currentConversation === conversationId) {
+            this.currentConversation = null;
+            this.showDefaultChatView();
+        }
+        
+        // Sync to backend
+        try {
+            await fetch(`/claude/conversations/${conversationId}`, {
+                method: 'DELETE'
+            });
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+            // Reload data on error
+            await this.preloadAllProjectConversations();
+            await this.loadAllConversations();
+            this.renderAllChats();
+            this.projects.forEach(p => {
+                if (this.expandedProjects[p.id]) {
+                    this.renderProjectConversations(p.id);
+                }
+            });
+            this.showToast('Failed to delete conversation', true);
+        }
+    },
+    
+    showToast(message, isError = false) {
+        // Simple toast notification
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: ${isError ? 'var(--error)' : 'var(--accent)'};
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 10002;
+            animation: slideUp 150ms ease;
+        `;
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 150ms ease';
+            setTimeout(() => toast.remove(), 150);
+        }, 2000);
     },
 
     formatMessage(content) {
