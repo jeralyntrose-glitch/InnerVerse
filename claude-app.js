@@ -210,51 +210,16 @@ const app = {
     },
 
     showDefaultChatView() {
+        // Show welcome screen, hide messages container
+        const welcomeScreen = document.getElementById('welcomeScreen');
         const messagesContainer = document.getElementById('messagesContainer');
+        
+        if (welcomeScreen) {
+            welcomeScreen.classList.remove('hidden');
+        }
         if (messagesContainer) {
-            const emptyState = document.createElement('div');
-            emptyState.className = 'empty-state';
-            
-            const brainContainer = document.createElement('div');
-            brainContainer.className = 'empty-state-icon';
-            brainContainer.innerHTML = `
-                <svg width="80" height="80" viewBox="0 0 200 200" class="brain-icon-animated">
-                    <defs>
-                        <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
-                        </linearGradient>
-                    </defs>
-                    <g class="brain-network">
-                        <line x1="60" y1="50" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <line x1="140" y1="50" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <line x1="60" y1="50" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <line x1="140" y1="50" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <line x1="40" y1="100" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <line x1="160" y1="100" x2="100" y2="80" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <line x1="40" y1="100" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <line x1="160" y1="100" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <line x1="60" y1="150" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <line x1="140" y1="150" x2="100" y2="120" stroke="url(#brainGradient)" stroke-width="2" opacity="0.6"/>
-                        <circle cx="60" cy="50" r="8" fill="url(#brainGradient)" opacity="0.9"/>
-                        <circle cx="140" cy="50" r="8" fill="url(#brainGradient)" opacity="0.9"/>
-                        <circle cx="40" cy="100" r="8" fill="url(#brainGradient)" opacity="0.9"/>
-                        <circle cx="100" cy="80" r="10" fill="url(#brainGradient)"/>
-                        <circle cx="100" cy="120" r="10" fill="url(#brainGradient)"/>
-                        <circle cx="160" cy="100" r="8" fill="url(#brainGradient)" opacity="0.9"/>
-                        <circle cx="60" cy="150" r="8" fill="url(#brainGradient)" opacity="0.9"/>
-                        <circle cx="140" cy="150" r="8" fill="url(#brainGradient)" opacity="0.9"/>
-                    </g>
-                </svg>
-            `;
-            
-            const message = document.createElement('p');
-            message.textContent = 'Select a project from the sidebar to start chatting about MBTI, cognitive functions, and type theory!';
-            
-            emptyState.appendChild(brainContainer);
-            emptyState.appendChild(message);
+            messagesContainer.classList.add('hidden');
             messagesContainer.innerHTML = '';
-            messagesContainer.appendChild(emptyState);
         }
     },
 
@@ -275,6 +240,20 @@ const app = {
     },
 
     renderProjectChatView() {
+        // When opening a project without selecting a conversation, show welcome screen
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const messagesContainer = document.getElementById('messagesContainer');
+        
+        if (welcomeScreen) {
+            welcomeScreen.classList.remove('hidden');
+        }
+        if (messagesContainer) {
+            messagesContainer.classList.add('hidden');
+            messagesContainer.innerHTML = '';
+        }
+    },
+
+    renderProjectChatViewOLD() {
         const messagesContainer = document.getElementById('messagesContainer');
         if (!messagesContainer) return;
 
@@ -544,8 +523,16 @@ const app = {
         
         document.getElementById('topBarTitle').textContent = conversationName;
         
-        document.getElementById('welcomeScreen').style.display = 'none';
-        document.getElementById('chatArea').style.display = 'flex';
+        // Hide welcome screen, show messages container
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const messagesContainer = document.getElementById('messagesContainer');
+        
+        if (welcomeScreen) {
+            welcomeScreen.classList.add('hidden');
+        }
+        if (messagesContainer) {
+            messagesContainer.classList.remove('hidden');
+        }
 
         document.querySelectorAll('.conversation-item-wrapper').forEach(item => {
             item.classList.remove('active');

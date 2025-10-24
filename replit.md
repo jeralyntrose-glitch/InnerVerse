@@ -1,131 +1,78 @@
 # Overview
 
-InnerVerse is a FastAPI-based PDF Q&A application that provides intelligent answers from uploaded PDF documents. It features a modern web interface with drag-and-drop upload capabilities, processes documents by chunking and embedding their content, stores these embeddings in Pinecone, and leverages OpenAI's GPT models for answering user queries based on the document content. The application aims to offer an intuitive user experience for document interaction and knowledge retrieval, including the ability to transcribe audio files and YouTube videos into searchable PDFs and generate document reports. The project also includes robust API usage monitoring with real-time cost tracking and rate limiting.
+InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowledge retrieval from uploaded documents. It enables users to upload PDFs via a modern web interface, transcribe audio and YouTube videos into searchable PDFs, and generate document reports. The core functionality involves chunking, embedding, and storing document content in Pinecone, then leveraging OpenAI's GPT models for answering user queries. The application also provides robust API usage monitoring with real-time cost tracking and rate limiting, offering an intuitive and efficient experience for document interaction.
 
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
 
-# Portfolio-Worthy Project Stories
-
-## YouTube Transcription: Smart Pivot Under Technical Constraints
-
-**Challenge:** Need to transcribe 321 CS Joseph YouTube videos on MBTI/Jungian psychology for a knowledge base project. Initial approach using Whisper API ($0.006/min) worked for ~160 videos before hitting YouTube's aggressive anti-bot detection systems.
-
-**Technical Blockers Encountered:**
-1. **Datacenter IP Blocking:** YouTube blocks Replit's cloud IPs from downloading videos
-2. **Residential Proxy Detection:** Tested Decodo residential proxies with HTTP, HTTPS, and SOCKS5 protocols - all blocked with 403 Forbidden errors during download phase
-3. **Proxy Authentication Success But Download Failure:** Proxies authenticated successfully and retrieved metadata, but YouTube detected and blocked actual audio downloads
-
-**Solution/Pivot:**
-After discovering YouTube blocks ALL cloud provider IPs (AWS, GCP, Azure, Replit, etc.) industry-wide, pivoted to manual workflow that preserves cost savings:
-- **Manual transcript copy** from YouTube's "Show transcript" button (still works in browser)
-- **Text to PDF conversion** with GPT-3.5 cleanup for punctuation, capitalization, and grammar (~$0.001-0.002 per video)
-- **Auto-tagging** with MBTI/Jungian taxonomy via standard PDF upload pipeline
-- **Pinecone indexing** for semantic search across all transcripts
-
-**Final Workflow:** (1) Click "Show transcript" on YouTube → (2) Copy text → (3) Convert via Text to PDF → (4) Upload PDF for tagging/indexing
-
-**Results:**
-- **Cost Reduction:** $44.30 → $0.64 for 321 videos (70x cheaper, ~98.5% cost savings vs. Whisper)
-- **Quality Control:** Ability to review PDFs before indexing and maintain local backups
-- **Reliability:** Works around YouTube's cloud IP blocking (confirmed industry-wide issue affecting all providers)
-- **Quality:** Comparable quality (YouTube's transcription + GPT cleanup vs. Whisper)
-
-**PM Skills Demonstrated:**
-- Technical problem-solving and creative pivoting when blocked
-- Cost optimization through architectural changes
-- Managing third-party API constraints and limitations
-- Risk mitigation (documented proxy blocking across multiple protocols)
-- Data-driven decision making (cost/benefit analysis of alternatives)
-
 # System Architecture
 
 ## Frontend Architecture
-- **Interface**: Single-page application with a modern, glassmorphic UI, animated SVG brain icon, and a purple gradient theme. Includes a live visual cost tracker with a golden theme.
-- **Theme System**: Light/Dark mode toggle with persistence via localStorage.
-- **Upload Flow**: Supports drag-and-drop PDF uploads, Google Drive integration, and YouTube MP3 transcription (upload audio files extracted from YouTube). Provides progress tracking, real-time status updates, and persistent error notifications. Mobile-optimized upload boxes and progress bars.
-- **Tag Library**: Cloud-based visual tag library section showing all uploaded documents with their extracted MBTI/Jungian tags. Features interactive tag cloud with frequency counts and document browsing by tags. Tags are loaded from Pinecone via `/api/tagged-documents` API, ensuring cross-device sync. Includes document rename feature with edit icon (✏️) next to each document name. **Smart Tag Interactions**: Single-click a tag to filter the document list (shows only docs with that tag, with visual feedback via green highlight and filter banner); double-click a tag to auto-fill chat with a pre-written question about that tag. Clicking the same tag again or the clear button removes the filter.
-- **Chat Flow**: Integrates a chat interface with iPhone-style bubbles, allowing users to ask questions about uploaded documents and manage them via chat commands (`list docs`, `delete doc [id]`, `delete all`, `show doc [id]`, `help`). Answers are generated by GPT models, searching across all uploaded documents.
-- **Claude Master Interface** (`/claude`): Advanced conversational workspace powered by **Claude Sonnet 4** (Anthropic's newest, smartest model) with a modern **ChatGPT/Claude-style sidebar layout**. Features 7 organized project categories (💕 Relationship Lab, 🎓 MBTI Academy, 🔍 Type Detective, 📈 Trading Psychology, 💼 PM Playbook, ⚡ Quick Hits, 🧠 Brain Dump) displayed in a collapsible sidebar. Each project contains multiple persistent conversations stored in PostgreSQL. **UI Design**: Collapsible sidebar (280px) with hamburger menu toggle, projects list, conversations list with inline rename/delete actions, welcome screen with quick-access project cards, full-screen chat area with iPhone-style message bubbles, and mobile-responsive breakpoints (sidebar auto-hides on <768px). **Security**: All rendering uses proper DOM APIs with HTML escaping to prevent XSS (createElement + textContent for navigation, escapeHtml() before markdown formatting in messages). Features automatic InnerVerse backend queries and web search capabilities via Claude API with function calling, highly conversational and engaging responses (casual language, contractions, enthusiasm), conversation history, smart auto-scroll (instant to bottom when loading, smooth with offset for new messages), sidebar state persistence via localStorage, and PWA support for mobile installation. Designed for deep, structured MBTI learning sessions with CS Joseph's teaching style built into the system prompts. Requires Anthropic API Build Tier 2+ for Sonnet model access.
-- **Features**: Auto-clipboard copy for document IDs, responsive design for mobile, and various UI enhancements for user interaction. Upload completion sound notification.
+- **Interface**: Single-page application with a glassmorphic UI, animated SVG brain icon, purple gradient theme, and a live visual cost tracker.
+- **Theme System**: Light/Dark mode toggle with persistence.
+- **Upload Flow**: Supports drag-and-drop PDF uploads, Google Drive integration, and YouTube MP3 transcription with progress tracking and persistent error notifications. Mobile-optimized.
+- **Tag Library**: Cloud-based visual tag library with interactive tag clouds, frequency counts, document browsing by tags, and a document rename feature. Supports filtering by single-clicking tags and auto-filling chat with questions by double-clicking.
+- **Chat Flow**: iPhone-style chat interface for document Q&A and management via commands (e.g., `list docs`, `delete doc [id]`). Answers are generated by GPT models across all uploaded documents.
+- **Claude Master Interface** (`/claude`): Advanced conversational workspace powered by Claude Sonnet 4 with a production-ready Claude.ai-style interface. Features 7 organized project categories, persistent conversations stored in PostgreSQL, and a collapsible sidebar. Responsive design (PUSH mode for desktop, OVERLAY mode for mobile). Includes a welcome screen with suggested prompts and robust state management. Security features include HTML escaping to prevent XSS. Integrates automatic InnerVerse backend queries and web search capabilities via Claude API function calling. Supports PWA for mobile installation.
 
 ## Backend Architecture
-- **Framework**: FastAPI with asynchronous operations and modern lifespan event handlers.
+- **Framework**: FastAPI with asynchronous operations.
 - **Runtime**: Python with Uvicorn ASGI server.
-- **Design Pattern**: Stateless API where the frontend manages `document_id` and the backend uses it for Pinecone queries.
-- **Deployment**: VM deployment to ensure inclusion of system packages like `ffmpeg`. Includes production-ready features:
-  - Health check endpoint at `/health` for deployment monitoring
-  - Robust database initialization with 3-retry logic and graceful degradation
-  - Detailed startup logging for debugging deployment issues
-  - Proper binding to 0.0.0.0:5000 for all network interfaces
-  - Lifespan context manager for clean startup/shutdown handling
+- **Design Pattern**: Stateless API where `document_id` is managed by the frontend.
+- **Deployment**: VM deployment with health checks, robust database initialization, and detailed logging.
+- **API Usage and Cost Tracking**: Logs and persists OpenAI API call costs to PostgreSQL, accessible via `/api/usage`, with a rate limit of 100 requests per hour.
 
 ## Document Processing Pipeline
-- **PDF Parsing**: Uses PyPDF2 for text extraction from text-based PDFs. Supports encrypted PDFs via PyCryptodome.
-- **Text Chunking**: Employs LangChain's `RecursiveCharacterTextSplitter` to break documents into overlapping chunks (1000 characters with 200 character overlap).
-- **InnerVerse Intelligence Layer**: Automatic MBTI/Jungian taxonomy tagging system using GPT-3.5. Analyzes uploaded documents and extracts relevant tags across 6 layers: Cognitive Architecture, Typological Structures, Type-Specific Indexing, Depth Psychology & Jungian Theory, Behavioral & Expression Layers, and Integration & Meta Layers. Tags are stored in Pinecone metadata for advanced filtering and retrieval.
-- **YouTube MP3 Transcription**: Users download MP3, M4A, or WAV files from YouTube videos using browser extensions (Video DownloadHelper, 4K Video Downloader), then upload them to InnerVerse. Accepts audio files up to 24MB (Whisper API limit). Transcribes using OpenAI Whisper API (~$0.006/min), generates formatted PDFs using ReportLab, auto-tags with MBTI/Jungian taxonomy, and indexes in Pinecone. This workflow bypasses YouTube's datacenter IP blocking that prevents direct URL transcription from Replit's servers.
-- **Text to PDF**: Converts text to formatted PDFs with automatic punctuation and grammar fixes using GPT-3.5.
-- **Reprocess PDF**: Allows users to upload existing Whisper-transcribed PDFs and enhance them with the same GPT-3.5 cleanup pipeline used in Text to PDF. Extracts text from uploaded PDFs, removes filler words and meta-commentary, optimizes for embeddings, and returns an improved PDF for download. This enables users to upgrade their 160 old Whisper PDFs (5-6/10 quality) to the new 9.5/10 embedding quality standard.
-- **Large File Support**: Efficient binary uploads (multipart/form-data), batch processing for Pinecone upserts (batches of 50), and increased embedding timeouts for large files.
+- **PDF Parsing**: Uses PyPDF2 for text extraction, supporting encrypted PDFs.
+- **Text Chunking**: LangChain's `RecursiveCharacterTextSplitter` for overlapping text chunks.
+- **InnerVerse Intelligence Layer**: Automatic MBTI/Jungian taxonomy tagging using GPT-3.5, storing tags in Pinecone metadata.
+- **YouTube MP3 Transcription**: Processes uploaded audio (MP3, M4A, WAV, MP4) up to 24MB via OpenAI Whisper API, generates formatted PDFs using ReportLab, auto-tags, and indexes in Pinecone.
+- **Text to PDF**: Converts text to formatted PDFs with GPT-3.5 for punctuation and grammar fixes.
+- **Reprocess PDF**: Enhances existing Whisper-transcribed PDFs by extracting text, cleaning with GPT-3.5, and returning an improved PDF.
+- **Large File Support**: Efficient binary uploads and batch processing for Pinecone upserts.
 
 ## Vector Storage Strategy
-- **Database**: Pinecone vector database (index: "mbti-knowledge") for storing document embeddings.
-- **Query Strategy**: Filters by `document_id` for document-specific queries, and performs global searches across all documents when no specific ID is provided.
+- **Database**: Pinecone vector database ("mbti-knowledge" index).
+- **Query Strategy**: Filters by `document_id` for specific documents or performs global searches.
 
 ## Embedding Generation
-- **Provider**: OpenAI API (`text-embedding-ada-002` model) for generating embeddings.
-- **Performance**: Embeddings are batch processed before upserting to Pinecone.
+- **Provider**: OpenAI API (`text-embedding-ada-002`) for batch-processed embeddings.
 
 ## API Structure
-- **Upload**: `POST /upload` (multipart/form-data) and `POST /upload-base64` (JSON) for PDF uploads.
-- **YouTube MP3 Upload**: `POST /upload-audio` (multipart/form-data) for audio file uploads (MP3, M4A, WAV, MP4). Transcribes with Whisper API, generates PDF, auto-tags, and indexes in Pinecone.
-- **Query**: `POST /query` for document Q&A.
-- **Text to PDF**: `POST /text-to-pdf`.
-- **Reprocess PDF**: `POST /reprocess-pdf` (multipart/form-data) for uploading existing PDFs, extracting text, enhancing with GPT-3.5 cleanup, and returning improved PDFs.
-- **Document Report**: `GET /documents/report` (CSV export with Hawaii timezone timestamps).
-- **Document Management**: `DELETE /documents/{document_id}` for removing single document; `DELETE /documents/all` for removing all documents; `PATCH /documents/{document_id}/rename` for renaming documents (updates metadata in all Pinecone vectors); chat commands for `list docs`, `delete doc [id]`, `delete all`, `show doc [id]`, `help`.
-- **Claude Chat API**:
-  - `GET /claude/projects` - List all project categories
-  - `POST /claude/conversations` - Create new conversation
-  - `GET /claude/conversations/{project}` - List conversations in project
-  - `GET /claude/conversations/detail/{conversation_id}` - Get conversation with messages
-  - `POST /claude/conversations/{conversation_id}/message` - Send message, get Claude response with automatic backend queries
-  - `PATCH /claude/conversations/{conversation_id}/rename` - Rename conversation
-  - `DELETE /claude/conversations/{conversation_id}` - Delete conversation
-  - `GET /claude/search?q={query}` - Search across all conversations
-- **Usage Monitoring**: `/api/usage` for detailed spending statistics.
-- **Static Files**: Serves frontend assets and documentation (`/docs` for Swagger UI).
-- **PWA Support**: Service worker (`/sw.js`), manifest (`/manifest.json`), and installable icons for mobile app experience.
+- **Upload**: `POST /upload`, `POST /upload-base64` (PDFs), `POST /upload-audio` (audio).
+- **Query**: `POST /query`.
+- **Text/PDF Processing**: `POST /text-to-pdf`, `POST /reprocess-pdf`.
+- **Document Management**: `GET /documents/report`, `DELETE /documents/{document_id}`, `DELETE /documents/all`, `PATCH /documents/{document_id}/rename`, chat commands.
+- **Claude Chat API**: Endpoints for managing project categories, conversations, messages, and searching.
+- **Usage Monitoring**: `/api/usage`.
+- **Static Files**: Serves frontend assets and Swagger UI documentation.
+- **PWA Support**: Service worker, manifest, and icons for mobile installation.
 - **CORS**: Enabled for all origins.
 
 ## Configuration Management
-- **Environment Variables**: API keys (OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX) are managed via Replit Secrets.
-- **YouTube Cookies**: Stored in `youtube_cookies.txt` file for easier updates and to bypass size limits.
-- **Client Initialization**: Lazy initialization pattern is used for API clients.
-
-## API Usage and Cost Tracking
-- **Tracking**: Logs every OpenAI API call (embeddings, chat, Whisper) with token counts and costs.
-- **Persistence**: Cost data is saved to a PostgreSQL database, ensuring persistence across restarts.
-- **Monitoring**: `/api/usage` endpoint provides detailed spending statistics in Hawaii time.
-- **Rate Limiting**: Maximum 100 requests per hour to prevent cost spikes.
-- **Visual Tracker**: Real-time visual display of total cost, last 24 hours, and breakdown by operation type.
+- **Environment Variables**: API keys managed via Replit Secrets.
+- **Client Initialization**: Lazy initialization for API clients.
 
 # External Dependencies
 
 ## Vector Database
-- **Pinecone**: Cloud-based vector database for storing and querying embeddings.
+- **Pinecone**: Vector database.
 
 ## AI/ML Services
-- **OpenAI API**: Used for text embeddings (text-embedding-ada-002), GPT-3.5-turbo for Q&A and text fixes, and Whisper API for audio transcription.
+- **OpenAI API**: For text embeddings (`text-embedding-ada-002`), GPT-3.5-turbo (Q&A, text fixes), and Whisper API (audio transcription).
+- **Anthropic API**: Claude Sonnet 4 for the Claude Master Interface.
 
 ## Document Processing
-- **PyPDF2**: For PDF parsing and text extraction.
-- **LangChain**: For text splitting utilities.
-- **yt-dlp**: For downloading audio from YouTube videos.
-- **ReportLab**: For generating formatted PDFs.
-- **PostgreSQL**: For persistent cost tracking.
+- **PyPDF2**: PDF parsing.
+- **LangChain**: Text splitting.
+- **ReportLab**: PDF generation.
+- **ffmpeg**: System dependency for audio processing.
+- **poppler**: System dependency for PDF rendering.
+- **tesseract**: System dependency for OCR.
+
+## Data Storage
+- **PostgreSQL**: For persistent cost tracking and Claude conversation history.
 
 ## Web Framework
 - **FastAPI**: Python web framework.
@@ -133,7 +80,5 @@ After discovering YouTube blocks ALL cloud provider IPs (AWS, GCP, Azure, Replit
 - **Pydantic**: Data validation.
 
 ## Integrations
-- **Google Drive Picker API**: For seamless integration with Google Drive.
-- **ffmpeg**: System dependency for audio processing with `yt-dlp`.
-- **poppler**: System dependency for PDF rendering (used by pdf2image for OCR).
-- **tesseract**: System dependency for optical character recognition.
+- **Google Drive Picker API**: Google Drive integration.
+- **yt-dlp**: YouTube video downloading.
