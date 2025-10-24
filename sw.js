@@ -1,4 +1,4 @@
-const CACHE_NAME = 'innerverse-v2-fresh';
+const CACHE_NAME = 'innerverse-v23-chatgpt-sidebar';
 const urlsToCache = [
   '/manifest.json'
 ];
