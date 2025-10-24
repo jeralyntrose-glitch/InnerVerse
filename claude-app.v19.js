@@ -292,6 +292,11 @@ const app = {
     switchTab(tabName) {
         this.currentTab = tabName;
         
+        // Close sidebar on mobile when switching tabs
+        if (this.isMobile && this.sidebarOpen) {
+            this.toggleSidebar();
+        }
+        
         // Update tab buttons - add instant visual feedback
         document.querySelectorAll('.sidebar-tab').forEach(tab => {
             tab.classList.remove('active');
