@@ -456,6 +456,15 @@ const app = {
                     this.renameConversationById(conv.id);
                 });
                 
+                const moveBtn = document.createElement('button');
+                moveBtn.className = 'icon-btn-small';
+                moveBtn.title = 'Move to Project';
+                moveBtn.textContent = '📁';
+                moveBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showMoveToProjectModal(conv.id, conv.name);
+                });
+                
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'icon-btn-small';
                 deleteBtn.title = 'Delete';
@@ -466,6 +475,7 @@ const app = {
                 });
                 
                 actionsDiv.appendChild(renameBtn);
+                actionsDiv.appendChild(moveBtn);
                 actionsDiv.appendChild(deleteBtn);
                 
                 wrapper.appendChild(nameDiv);
@@ -797,6 +807,96 @@ const app = {
             console.error('Error deleting conversation:', error);
             alert('Failed to delete conversation');
         }
+    },
+
+    showMoveToProjectModal(conversationId, conversationName) {
+        // Create project selection dropdown
+        const projectsHtml = this.projects.map(proj => 
+            `<button class="project-option" data-project-id="${proj.id}" onclick="app.moveConversationToProject(${conversationId}, '${proj.id}', '${proj.name}')">
+                ${proj.emoji} ${proj.name.split(' ').slice(1).join(' ')}
+            </button>`
+        ).join('');
+        
+        const modalHtml = `
+            <div class="modal active" id="moveModal" onclick="if(event.target.id==='moveModal') app.closeMoveModal()">
+                <div class="modal-content" onclick="event.stopPropagation()">
+                    <div class="modal-header">Move "${conversationName}" to Project</div>
+                    <div class="project-list">
+                        ${projectsHtml}
+                    </div>
+                    <div class="modal-buttons">
+                        <button class="modal-btn secondary" onclick="app.closeMoveModal()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing move modal if present
+        const existing = document.getElementById('moveModal');
+        if (existing) existing.remove();
+        
+        // Add new modal
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    closeMoveModal() {
+        const modal = document.getElementById('moveModal');
+        if (modal) modal.remove();
+    },
+
+    async moveConversationToProject(conversationId, projectId, projectName) {
+        try {
+            await fetch(`/claude/conversations/${conversationId}/move`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project: projectId })
+            });
+
+            this.closeMoveModal();
+            await this.loadConversations();
+            
+            // Show success toast
+            this.showToast(`Moved to ${projectName.split(' ').slice(1).join(' ')} ✓`);
+            
+            // If viewing this conversation, update top bar
+            if (this.currentConversation === conversationId) {
+                // Update project context
+                this.currentProject = projectId;
+                document.getElementById('topBarTitle').textContent = projectName.split(' ').slice(1).join(' ');
+            }
+        } catch (error) {
+            console.error('Error moving conversation:', error);
+            alert('Failed to move conversation');
+        }
+    },
+
+    showToast(message) {
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10000;
+            animation: slideUp 0.3s ease;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.style.animation = 'slideDown 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     },
 
     showModal(title, placeholder, callback) {
