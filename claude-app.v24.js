@@ -808,9 +808,20 @@ const app = {
     setupEventListeners() {
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         if (hamburgerBtn) {
+            // Standard click handler (don't prevent default - allows keyboard activation)
             hamburgerBtn.addEventListener('click', () => {
+                console.log('🍔 Hamburger button clicked');
                 this.toggleSidebar();
             });
+            
+            // Touch handler for instant mobile response (prevents 300ms delay)
+            hamburgerBtn.addEventListener('touchend', (e) => {
+                e.preventDefault(); // Only prevent on touch to stop click delay
+                console.log('🍔 Hamburger button touched');
+                this.toggleSidebar();
+            }, { passive: false });
+        } else {
+            console.error('❌ Hamburger button not found!');
         }
 
         // Close button for mobile
@@ -1876,29 +1887,36 @@ const app = {
         if (!sidebar) return;
         
         sidebar.addEventListener('touchstart', (e) => {
+            // Find the conversation item - check both parent and child elements
             const convItem = e.target.closest('.sidebar-conversation-item, .chat-item-content');
             if (!convItem) return;
             
+            // Find the element with data attributes (could be child span)
+            const dataElement = convItem.querySelector('[data-click-conv-id]') || convItem;
+            const convId = dataElement.getAttribute('data-click-conv-id');
+            const convName = dataElement.getAttribute('data-click-conv-name');
+            
+            if (!convId) return; // No valid conversation item
+            
             this.longPressTarget = convItem;
             this.longPressStartY = e.touches[0].clientY;
+            
+            // Save touch coordinates BEFORE setTimeout (event will be gone later)
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
             
             // 550ms threshold for long press (industry standard)
             this.longPressTimer = setTimeout(() => {
                 // Check if user hasn't scrolled
                 if (this.longPressTarget === convItem) {
-                    e.preventDefault();
-                    const convId = convItem.getAttribute('data-click-conv-id');
-                    const convName = convItem.getAttribute('data-click-conv-name');
-                    if (convId) {
-                        this.showLongPressMenu(convId, convName, e.touches[0].clientX, e.touches[0].clientY);
-                        // Haptic feedback if available
-                        if (navigator.vibrate) {
-                            navigator.vibrate(50);
-                        }
+                    this.showLongPressMenu(convId, convName, touchX, touchY);
+                    // Haptic feedback if available
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
                     }
                 }
             }, 550);
-        }, { passive: false });
+        }, { passive: true });
         
         sidebar.addEventListener('touchmove', (e) => {
             // Cancel long press if user scrolls
