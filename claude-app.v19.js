@@ -1102,60 +1102,38 @@ const app = {
 
             convs.forEach(conv => {
                 const wrapper = document.createElement('div');
-                wrapper.className = 'conversation-item-wrapper';
+                wrapper.className = 'conversation-item-compact';
                 wrapper.id = `conv-${conv.id}`;
                 if (conv.id === this.currentConversation) {
                     wrapper.classList.add('active');
                 }
-
-                const nameDiv = document.createElement('div');
-                nameDiv.className = 'conversation-name-sidebar';
-                nameDiv.textContent = conv.name || 'New Chat';
-                nameDiv.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.openConversation(conv.id, conv.name);
-                });
                 
                 wrapper.addEventListener('click', () => {
                     this.openConversation(conv.id, conv.name);
                 });
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'conversation-name-compact';
+                nameDiv.textContent = conv.name || 'New Chat';
                 
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'conversation-actions-sidebar';
-                
-                const renameBtn = document.createElement('button');
-                renameBtn.className = 'icon-btn-small';
-                renameBtn.title = 'Rename';
-                renameBtn.textContent = '✏️';
-                renameBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.renameConversationById(conv.id);
-                });
-                
-                const moveBtn = document.createElement('button');
-                moveBtn.className = 'icon-btn-small';
-                moveBtn.title = 'Move to Project';
-                moveBtn.textContent = '📁';
-                moveBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.showMoveToProjectModal(conv.id, conv.name);
-                });
+                const timestampDiv = document.createElement('div');
+                timestampDiv.className = 'conversation-timestamp';
+                timestampDiv.textContent = this.formatTimestamp(conv.updated_at || conv.created_at);
                 
                 const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'icon-btn-small';
+                deleteBtn.className = 'delete-btn-compact';
+                deleteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
                 deleteBtn.title = 'Delete';
-                deleteBtn.textContent = '🗑️';
                 deleteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    this.deleteConversationById(conv.id);
+                    if (confirm(`Delete "${conv.name}"?`)) {
+                        this.deleteConversationById(conv.id);
+                    }
                 });
                 
-                actionsDiv.appendChild(renameBtn);
-                actionsDiv.appendChild(moveBtn);
-                actionsDiv.appendChild(deleteBtn);
-                
                 wrapper.appendChild(nameDiv);
-                wrapper.appendChild(actionsDiv);
+                wrapper.appendChild(timestampDiv);
+                wrapper.appendChild(deleteBtn);
 
                 dateGroup.appendChild(wrapper);
             });

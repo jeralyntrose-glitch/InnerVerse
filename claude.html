@@ -1234,6 +1234,81 @@
             opacity: 1;
             background: var(--bg-hover);
         }
+
+        /* Compact Conversation List (Activity Tab) */
+        .conversation-item-compact {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 150ms ease;
+            margin-bottom: 2px;
+            position: relative;
+        }
+
+        .conversation-item-compact:hover {
+            background: var(--bg-hover);
+        }
+
+        .conversation-item-compact.active {
+            background: var(--bg-active);
+        }
+
+        .conversation-item-compact.active:hover {
+            background: var(--bg-active);
+        }
+
+        .conversation-name-compact {
+            flex: 1;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 400;
+        }
+
+        .conversation-timestamp {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            margin-right: 4px;
+        }
+
+        .delete-btn-compact {
+            opacity: 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: var(--text-secondary);
+            transition: opacity 150ms ease, color 150ms ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .conversation-item-compact:hover .delete-btn-compact {
+            opacity: 1;
+        }
+
+        .delete-btn-compact:hover {
+            color: #ef4444;
+        }
+
+        @media (max-width: 768px) {
+            .conversation-item-compact {
+                min-height: 44px;
+                padding: 10px 12px;
+            }
+            
+            .delete-btn-compact {
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
