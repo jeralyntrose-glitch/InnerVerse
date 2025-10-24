@@ -1589,25 +1589,8 @@ const app = {
     scrollToBottom(instant = false) {
         const container = document.getElementById('messagesContainer');
         if (container) {
-            if (instant) {
-                container.scrollTop = container.scrollHeight;
-            } else {
-                const messages = container.querySelectorAll('.message');
-                if (messages.length > 0) {
-                    const lastMessage = messages[messages.length - 1];
-                    lastMessage.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'end',
-                        inline: 'nearest' 
-                    });
-                    
-                    setTimeout(() => {
-                        container.scrollTop = container.scrollTop - 100;
-                    }, 100);
-                } else {
-                    container.scrollTop = container.scrollHeight;
-                }
-            }
+            // Always use instant scroll to prevent bouncing during streaming
+            container.scrollTop = container.scrollHeight;
         }
     },
 
