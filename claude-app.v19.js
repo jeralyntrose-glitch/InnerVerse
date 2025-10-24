@@ -148,8 +148,14 @@ const app = {
         this.setupEventListeners();
         this.loadSidebarState();
         
+        // Setup browser history navigation (back button support)
+        this.setupBrowserHistory();
+        
         // Setup app resume detection for PWA offline resilience
         this.setupAppResumeDetection();
+        
+        // Set initial history state
+        history.replaceState({ view: 'home' }, '', '/claude');
         
         // Fade in sidebar after loading
         if (sidebar) {
@@ -164,6 +170,83 @@ const app = {
                 messageInput.focus();
             }
         }, 100); // Reduced from 300ms
+    },
+
+    setupBrowserHistory() {
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', async (event) => {
+            if (!event.state) return;
+            
+            const state = event.state;
+            
+            if (state.view === 'home') {
+                this.currentConversation = null;
+                this.currentProject = null;
+                document.getElementById('topBarTitle').textContent = 'InnerVerse - MBTI Master';
+                this.showDefaultChatView();
+            } else if (state.view === 'project') {
+                this.currentProject = state.projectId;
+                this.currentConversation = null;
+                
+                const topBarTitle = this.getElement('topBarTitle');
+                if (topBarTitle) {
+                    topBarTitle.textContent = state.projectName.split(' ').slice(1).join(' ');
+                }
+                
+                const messagesContainer = this.getElement('messagesContainer');
+                const welcomeScreen = this.getElement('welcomeScreen');
+                const inputSuggestions = this.getElement('inputSuggestions');
+                
+                if (welcomeScreen) welcomeScreen.classList.add('hidden');
+                if (inputSuggestions) inputSuggestions.classList.add('hidden');
+                if (messagesContainer) {
+                    messagesContainer.classList.remove('hidden');
+                    messagesContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <div style="width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                            </div>
+                            <p style="color: var(--text-secondary); margin-top: 16px;">Loading conversations...</p>
+                        </div>
+                    `;
+                }
+                
+                await this.loadConversationsAndRender();
+                this.updateActiveProject();
+            } else if (state.view === 'conversation') {
+                this.currentConversation = state.conversationId;
+                this.currentProject = state.projectId;
+                
+                const currentProjectObj = this.projects.find(p => p.id === state.projectId);
+                const projectPrefix = currentProjectObj ? `${currentProjectObj.emoji} ` : '';
+                document.getElementById('topBarTitle').textContent = `${projectPrefix}${state.conversationName}`;
+                
+                const welcomeScreen = document.getElementById('welcomeScreen');
+                const messagesContainer = document.getElementById('messagesContainer');
+                
+                if (welcomeScreen) welcomeScreen.classList.add('hidden');
+                if (messagesContainer) {
+                    messagesContainer.classList.remove('hidden');
+                    messagesContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <div style="width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                            </div>
+                            <p style="color: var(--text-secondary); margin-top: 16px;">Loading...</p>
+                        </div>
+                    `;
+                }
+                
+                try {
+                    const response = await fetch(`/claude/conversations/detail/${state.conversationId}`);
+                    const data = await response.json();
+                    this.renderMessages(data.messages);
+                    this.checkPendingMessages();
+                } catch (error) {
+                    console.error('Error loading conversation:', error);
+                }
+            }
+        });
     },
 
     setupAppResumeDetection() {
@@ -239,6 +322,10 @@ const app = {
         this.currentConversation = null;
         this.currentProject = null;
         document.getElementById('topBarTitle').textContent = 'InnerVerse - MBTI Master';
+        
+        // Push browser history state
+        history.pushState({ view: 'home' }, '', '/claude');
+        
         this.showDefaultChatView();
     },
     
@@ -623,22 +710,42 @@ const app = {
         this.currentProject = projectId;
         this.currentConversation = null;
         
+        // Push browser history state
+        history.pushState({ view: 'project', projectId, projectName }, '', `/claude?project=${projectId}`);
+        
         // Instant visual feedback
         const topBarTitle = this.getElement('topBarTitle');
         if (topBarTitle) {
             topBarTitle.textContent = projectName.split(' ').slice(1).join(' ');
         }
         
-        // Load and render in parallel
-        const loadPromise = this.loadConversations();
-        const renderPromise = this.renderProjectChatView();
+        // Show loading state immediately
+        const messagesContainer = this.getElement('messagesContainer');
+        const welcomeScreen = this.getElement('welcomeScreen');
+        const inputSuggestions = this.getElement('inputSuggestions');
         
-        await Promise.all([loadPromise, renderPromise]);
+        if (welcomeScreen) welcomeScreen.classList.add('hidden');
+        if (inputSuggestions) inputSuggestions.classList.add('hidden');
+        if (messagesContainer) {
+            messagesContainer.classList.remove('hidden');
+            messagesContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <div style="width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-top: 16px;">Loading conversations...</p>
+                </div>
+            `;
+        }
+        
+        // Load conversations (single fetch, instant render)
+        await this.loadConversationsAndRender();
         
         this.updateActiveProject();
         
-        if (window.innerWidth <= 768) {
-            this.toggleSidebar();
+        // Close sidebar on mobile after opening project
+        if (window.innerWidth <= 768 && this.sidebarOpen) {
+            this.closeSidebar();
         }
     },
 
@@ -804,6 +911,107 @@ const app = {
             this.renderSidebarConversations(data.conversations);
         } catch (error) {
             console.error('Error loading conversations:', error);
+        }
+    },
+
+    async loadConversationsAndRender() {
+        if (!this.currentProject) return;
+
+        try {
+            const response = await fetch(`/claude/conversations/${this.currentProject}`);
+            const data = await response.json();
+            const conversations = data.conversations || [];
+            
+            // Update sidebar
+            this.renderSidebarConversations(conversations);
+            
+            // Render main chat area instantly
+            const messagesContainer = this.getElement('messagesContainer');
+            if (!messagesContainer) return;
+            
+            if (conversations.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                        </div>
+                        <h2>No conversations yet</h2>
+                        <p style="color: var(--text-secondary); margin-top: 8px;">Start a new conversation to begin chatting!</p>
+                    </div>
+                `;
+            } else {
+                // ChatGPT-style conversation list - compact and clean
+                const grouped = this.groupConversationsByDate(conversations);
+                
+                let html = '<div style="padding: 12px 8px; max-width: 800px; margin: 0 auto;">';
+                
+                Object.entries(grouped).forEach(([dateLabel, convs]) => {
+                    if (convs.length === 0) return;
+                    
+                    html += `<div style="margin-bottom: 16px;">`;
+                    html += `<div style="font-size: 0.75rem; color: var(--text-tertiary); font-weight: 600; padding: 0 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">${dateLabel}</div>`;
+                    
+                    convs.forEach(conv => {
+                        const timestamp = this.formatTimestamp(conv.updated_at);
+                        const preview = conv.name.length > 60 ? conv.name.substring(0, 60) + '...' : conv.name;
+                        const isActive = this.currentConversation === conv.id;
+                        const activeClass = isActive ? ' active-chat' : '';
+                        const activeBg = isActive ? 'var(--bg-active)' : 'transparent';
+                        
+                        html += `
+                            <div class="chat-list-item${activeClass}" 
+                                 data-conv-id="${conv.id}"
+                                 data-conv-name="${this.escapeHtml(conv.name)}"
+                                 style="padding: 10px 12px; margin-bottom: 4px; background: ${activeBg}; border-radius: 8px; cursor: pointer; transition: background-color 100ms ease; position: relative; overflow: hidden;">
+                                <div class="chat-item-content" 
+                                     onclick='app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)})'
+                                     style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: relative; z-index: 2;">
+                                    <div style="flex: 1; min-width: 0; overflow: hidden;">
+                                        <div style="font-size: 0.9375rem; color: var(--text-primary); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            ${this.escapeHtml(preview)}
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                                        <span style="font-size: 0.75rem; color: var(--text-tertiary); white-space: nowrap;">${timestamp}</span>
+                                        <button class="chat-delete-btn" 
+                                                onclick="event.stopPropagation(); app.deleteConversationWithConfirm('${conv.id}', '${this.escapeHtml(conv.name).replace(/'/g, "\\'")}')"
+                                                style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: none; background: transparent; color: var(--text-tertiary); cursor: pointer; transition: all 100ms ease; padding: 0;"
+                                                onmouseover="this.style.background='var(--bg-hover)'; this.style.color='var(--error)';"
+                                                onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary)';">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                });
+                
+                html += '</div>';
+                messagesContainer.innerHTML = html;
+                
+                // Add hover effects via event delegation
+                this.setupChatListHoverEffects();
+            }
+        } catch (error) {
+            console.error('Error loading conversations:', error);
+            const messagesContainer = this.getElement('messagesContainer');
+            if (messagesContainer) {
+                messagesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h2>Error loading conversations</h2>
+                        <p style="color: var(--text-secondary); margin-top: 8px;">Please try again.</p>
+                    </div>
+                `;
+            }
         }
     },
 
@@ -1108,11 +1316,20 @@ const app = {
     async openConversation(conversationId, conversationName) {
         this.currentConversation = conversationId;
         
+        // Push browser history state
+        const currentProjectObj = this.projects.find(p => p.id === this.currentProject);
+        history.pushState({ 
+            view: 'conversation', 
+            conversationId, 
+            conversationName,
+            projectId: this.currentProject,
+            projectName: currentProjectObj?.name 
+        }, '', `/claude?conversation=${conversationId}`);
+        
         // Instant UI transition - no delays
         const moveBtn = document.getElementById('move-to-project-btn');
         if (moveBtn) moveBtn.style.display = 'flex';
         
-        const currentProjectObj = this.projects.find(p => p.id === this.currentProject);
         const projectPrefix = currentProjectObj ? `${currentProjectObj.emoji} ` : '';
         document.getElementById('topBarTitle').textContent = `${projectPrefix}${conversationName}`;
         
@@ -1139,9 +1356,9 @@ const app = {
         });
         document.getElementById(`conv-${conversationId}`)?.classList.add('active');
 
-        // Close sidebar on mobile immediately
-        if (window.innerWidth <= 768) {
-            this.toggleSidebar();
+        // CLOSE sidebar on mobile (don't toggle - always close)
+        if (window.innerWidth <= 768 && this.sidebarOpen) {
+            this.closeSidebar();
         }
 
         // Load messages in background (non-blocking)
