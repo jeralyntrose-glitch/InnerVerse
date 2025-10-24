@@ -300,7 +300,12 @@ const app = {
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'conversation-name-sidebar';
                 nameDiv.textContent = conv.name;
-                nameDiv.addEventListener('click', () => {
+                nameDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.openConversation(conv.id, conv.name);
+                });
+                
+                wrapper.addEventListener('click', () => {
                     this.openConversation(conv.id, conv.name);
                 });
                 

@@ -552,12 +552,42 @@
         @media (max-width: 768px) {
             .sidebar {
                 position: fixed;
+                width: 100%;
                 height: 100vh;
-                box-shadow: 2px 0 10px var(--shadow-color);
+                left: 0;
+                top: 0;
+                box-shadow: none;
+                z-index: 1000;
+            }
+
+            .sidebar.hidden {
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                width: 100%;
+            }
+
+            .hamburger-btn {
+                display: flex !important;
             }
 
             .message {
                 max-width: 85%;
+            }
+
+            .sidebar-overlay {
+                display: none !important;
+            }
+
+            .input-container {
+                padding: 16px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .hamburger-btn {
+                display: none;
             }
         }
 
@@ -595,8 +625,10 @@
             gap: 4px;
         }
 
-        .conversation-item-wrapper:hover .conversation-actions-sidebar {
-            display: flex;
+        @media (min-width: 769px) {
+            .conversation-item-wrapper:hover .conversation-actions-sidebar {
+                display: flex;
+            }
         }
 
         .icon-btn-small {
@@ -751,6 +783,6 @@
             }
         });
     </script>
-    <script src="/claude-app.js?v=2.4"></script>
+    <script src="/claude-app.js?v=2.5"></script>
 </body>
 </html>
