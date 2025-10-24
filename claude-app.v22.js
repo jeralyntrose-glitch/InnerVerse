@@ -455,16 +455,23 @@ const app = {
                         const escapedProjectName = this.escapeHtml(conv.project_name);
                         
                         html += `
-                            <div class="activity-chat-card" data-search-text="${escapedName.toLowerCase()} ${escapedProjectName.toLowerCase()}"
+                            <div class="activity-chat-card" 
+                                 data-search-text="${escapedName.toLowerCase()} ${escapedProjectName.toLowerCase()}"
+                                 data-conv-id="${conv.id}"
+                                 data-conv-name="${escapedName}"
+                                 data-project-id="${conv.project_id}"
+                                 data-project-name="${this.escapeHtml(projectFullName)}"
                                  style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background-color 100ms ease; gap: 12px;"
                                  onmouseover="this.style.background='var(--bg-hover)';"
                                  onmouseout="this.style.background='transparent';">
-                                <div onclick='app.openProject(${JSON.stringify(conv.project_id)}, ${JSON.stringify(projectFullName)}); setTimeout(() => app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)}), 100);' 
+                                <div class="activity-chat-content"
                                      style="flex: 1; min-width: 0; overflow: hidden; display: flex; align-items: center; gap: 8px;">
                                     <div style="font-size: 0.9375rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapedName}</div>
                                     <span style="font-size: 0.75rem; color: var(--text-tertiary); white-space: nowrap;">${timeAgo}</span>
                                 </div>
-                                <button onclick="event.stopPropagation(); if(confirm('Delete &quot;${escapedName.replace(/"/g, '&quot;')}&quot;?')) app.deleteConversationById(${conv.id});"
+                                <button class="activity-delete-btn"
+                                        data-delete-conv-id="${conv.id}"
+                                        data-delete-conv-name="${escapedName}"
                                         style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: none; background: transparent; color: var(--text-tertiary); cursor: pointer; transition: all 100ms ease; padding: 0; flex-shrink: 0;"
                                         onmouseover="this.style.background='var(--bg-hover)'; this.style.color='var(--error)';"
                                         onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary)';">
@@ -578,6 +585,20 @@ const app = {
         newContainer.addEventListener('click', (e) => {
             const contentDiv = e.target.closest('.chat-item-content');
             const deleteBtn = e.target.closest('.chat-delete-btn');
+            const activityCard = e.target.closest('.activity-chat-card');
+            const activityDeleteBtn = e.target.closest('.activity-delete-btn');
+            
+            // Handle activity delete button clicks
+            if (activityDeleteBtn) {
+                e.stopPropagation();
+                const convId = activityDeleteBtn.getAttribute('data-delete-conv-id');
+                const convName = activityDeleteBtn.getAttribute('data-delete-conv-name');
+                if (convId && convName) {
+                    const decodedName = convName.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+                    this.deleteConversationWithConfirm(convId, decodedName);
+                }
+                return;
+            }
             
             // Handle delete button clicks
             if (deleteBtn) {
@@ -585,9 +606,24 @@ const app = {
                 const convId = deleteBtn.getAttribute('data-delete-conv-id');
                 const convName = deleteBtn.getAttribute('data-delete-conv-name');
                 if (convId && convName) {
-                    // Decode HTML entities
-                    const decodedName = convName.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                    const decodedName = convName.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
                     this.deleteConversationWithConfirm(convId, decodedName);
+                }
+                return;
+            }
+            
+            // Handle activity card clicks (from Activity tab)
+            if (activityCard && !e.target.closest('.activity-delete-btn')) {
+                const projectId = activityCard.getAttribute('data-project-id');
+                const projectName = activityCard.getAttribute('data-project-name');
+                const convId = activityCard.getAttribute('data-conv-id');
+                const convName = activityCard.getAttribute('data-conv-name');
+                
+                if (projectId && convId && convName) {
+                    const decodedProjectName = projectName.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+                    const decodedConvName = convName.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+                    this.openProject(projectId, decodedProjectName);
+                    setTimeout(() => this.openConversation(convId, decodedConvName), 100);
                 }
                 return;
             }
@@ -597,8 +633,7 @@ const app = {
                 const convId = contentDiv.getAttribute('data-click-conv-id');
                 const convName = contentDiv.getAttribute('data-click-conv-name');
                 if (convId && convName) {
-                    // Decode HTML entities
-                    const decodedName = convName.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                    const decodedName = convName.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
                     this.openConversation(convId, decodedName);
                 }
             }
@@ -912,11 +947,10 @@ const app = {
                             
                             html += `
                                 <div class="chat-list-item${activeClass}" 
-                                     data-conv-id="${conv.id}"
-                                     data-conv-name="${this.escapeHtml(conv.name)}"
                                      style="padding: 10px 12px; margin-bottom: 4px; background: ${activeBg}; border-radius: 8px; cursor: pointer; transition: background-color 100ms ease; position: relative; overflow: hidden;">
                                     <div class="chat-item-content" 
-                                         onclick='app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)})'
+                                         data-click-conv-id="${conv.id}"
+                                         data-click-conv-name="${this.escapeHtml(conv.name)}"
                                          style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: relative; z-index: 2;">
                                         <div style="flex: 1; min-width: 0; overflow: hidden;">
                                             <div style="font-size: 0.9375rem; color: var(--text-primary); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -926,7 +960,8 @@ const app = {
                                         <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
                                             <span style="font-size: 0.75rem; color: var(--text-tertiary); white-space: nowrap;">${timestamp}</span>
                                             <button class="chat-delete-btn" 
-                                                    onclick="event.stopPropagation(); app.deleteConversationWithConfirm('${conv.id}', '${this.escapeHtml(conv.name).replace(/'/g, "\\'")}')"
+                                                    data-delete-conv-id="${conv.id}"
+                                                    data-delete-conv-name="${this.escapeHtml(conv.name)}"
                                                     style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: none; background: transparent; color: var(--text-tertiary); cursor: pointer; transition: all 100ms ease; padding: 0;"
                                                     onmouseover="this.style.background='var(--bg-hover)'; this.style.color='var(--error)';"
                                                     onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary)';">
