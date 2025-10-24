@@ -716,19 +716,20 @@ const app = {
         const allChatsList = document.getElementById('allChatsList');
         
         if (allChatsToggle && allChatsList) {
-            const isCurrentlyCollapsed = allChatsToggle.classList.contains('collapsed');
+            // Check if currently collapsed by looking at the list element
+            const isCurrentlyCollapsed = allChatsList.classList.contains('collapsed');
             
             allChatsToggle.classList.toggle('collapsed');
             allChatsList.classList.toggle('collapsed');
             
-            // Load conversations on first expand
+            // Load conversations on expand (when it was collapsed before)
             if (isCurrentlyCollapsed && this.allConversations.length === 0) {
                 await this.loadAllConversations();
                 this.renderAllChats();
             }
             
             // Save state to localStorage
-            const isCollapsed = allChatsToggle.classList.contains('collapsed');
+            const isCollapsed = allChatsList.classList.contains('collapsed');
             localStorage.setItem('allChatsCollapsed', isCollapsed);
         }
     },

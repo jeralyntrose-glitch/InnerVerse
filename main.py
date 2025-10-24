@@ -3287,6 +3287,10 @@ def serve_claude_js_v22():
 def serve_claude_js_v23():
     return FileResponse("claude-app.v23.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+@app.get("/claude-app.v24.js", include_in_schema=False)
+def serve_claude_js_v24():
+    return FileResponse("claude-app.v24.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
 @app.get("/sw.js", include_in_schema=False)
 def serve_service_worker():
     return FileResponse("sw.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
