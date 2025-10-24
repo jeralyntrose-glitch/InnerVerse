@@ -5,6 +5,8 @@ const app = {
     modalCallback: null,
     sidebarOpen: true,
     currentTab: 'home',
+    activityCache: null,
+    activityCacheTime: null,
     isMobile: false,
     // Performance: Cache DOM elements
     cachedElements: {},
@@ -342,14 +344,25 @@ const app = {
         
         if (messagesContainer) {
             messagesContainer.classList.remove('hidden');
+            // Show instant loading spinner
             messagesContainer.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon">⏳</div>
-                    <p>Loading recent activity...</p>
+                    <div class="empty-state-icon">
+                        <div style="width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-top: 16px;">Loading recent activity...</p>
                 </div>
             `;
             
             try {
+                // Check cache first (cache for 30 seconds)
+                const now = Date.now();
+                if (this.activityCache && this.activityCacheTime && (now - this.activityCacheTime < 30000)) {
+                    // Use cached data
+                    messagesContainer.innerHTML = this.activityCache;
+                    return;
+                }
+                
                 // Fetch conversations from all projects in parallel for better performance
                 const fetchPromises = this.projects.map(async (project) => {
                     try {
@@ -429,6 +442,10 @@ const app = {
                     
                     html += '</div>';
                     messagesContainer.innerHTML = html;
+                    
+                    // Cache the result
+                    this.activityCache = html;
+                    this.activityCacheTime = Date.now();
                 }
             } catch (error) {
                 console.error('Error loading activity:', error);
