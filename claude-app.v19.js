@@ -1476,9 +1476,10 @@ const app = {
                 currentIndex += chunk.length;
                 
                 // Scroll less frequently for better performance (every 10 chunks)
+                // Only scroll if user is near bottom (Claude-style smooth scrolling)
                 scrollCounter++;
                 if (scrollCounter % 10 === 0) {
-                    this.scrollToBottom();
+                    this.scrollToBottomIfNeeded();
                 }
                 
                 // Continue streaming with requestAnimationFrame for smoothness
