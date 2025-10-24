@@ -416,14 +416,14 @@ const app = {
                         </div>
                     `;
                 } else {
-                    let html = '<div style="padding: 32px; max-width: 800px; margin: 0 auto;">';
+                    let html = '<div style="padding: 32px 24px; max-width: 800px; margin: 0 auto;">';
                     
-                    // Header section - Claude style
-                    html += '<h1 style="font-size: 2rem; font-weight: 600; margin-bottom: 24px; color: var(--text-primary);">Your chat history</h1>';
+                    // Header section - Claude style with larger, bolder text
+                    html += '<h1 style="font-size: 2.125rem; font-weight: 700; margin-bottom: 32px; color: var(--text-primary); letter-spacing: -0.02em;">Your chat history</h1>';
                     
-                    // Search bar - Claude style
+                    // Search bar - Claude style with blue outline on focus
                     html += `
-                        <div style="margin-bottom: 20px;">
+                        <div style="margin-bottom: 24px;">
                             <div style="position: relative;">
                                 <svg style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-secondary);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="11" cy="11" r="8"></circle>
@@ -432,20 +432,20 @@ const app = {
                                 <input type="text" 
                                        id="activitySearch" 
                                        placeholder="Search your chats..." 
-                                       style="width: 100%; padding: 12px 16px 12px 44px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg-app); color: var(--text-primary); font-size: 0.9375rem; outline: none; transition: border-color 150ms ease;"
-                                       onfocus="this.style.borderColor='var(--accent)';"
-                                       onblur="this.style.borderColor='var(--border)';"
+                                       style="width: 100%; padding: 13px 16px 13px 44px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg-app); color: var(--text-primary); font-size: 0.9375rem; outline: none; transition: all 150ms ease; box-shadow: 0 1px 2px rgba(0,0,0,0.05);"
+                                       onfocus="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 0 0 3px var(--accent-light)';"
+                                       onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='0 1px 2px rgba(0,0,0,0.05)';"
                                        oninput="app.filterActivityChats(this.value)">
                             </div>
                         </div>
                     `;
                     
-                    // Chat count and select
-                    html += `<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--text-secondary); font-size: 0.875rem;">
-                        <span>${recentConversations.length} chats with InnerVerse</span>
+                    // Chat count - cleaner styling
+                    html += `<div style="margin-bottom: 20px; color: var(--text-secondary); font-size: 0.875rem; font-weight: 500;">
+                        ${recentConversations.length} conversation${recentConversations.length !== 1 ? 's' : ''}
                     </div>`;
                     
-                    // Conversation cards - Claude style
+                    // Conversation cards - Claude style with exact specs
                     html += '<div id="activityChatList">';
                     recentConversations.forEach(conv => {
                         const date = new Date(conv.updated_at);
@@ -456,14 +456,14 @@ const app = {
                         html += `
                             <div class="activity-chat-card" data-search-text="${this.escapeHtml(conv.name).toLowerCase()} ${this.escapeHtml(conv.project_name).toLowerCase()}"
                                  onclick='app.openProject(${JSON.stringify(conv.project_id)}, ${JSON.stringify(projectFullName)}); setTimeout(() => app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)}), 100);' 
-                                 style="padding: 20px; margin-bottom: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 150ms ease;"
-                                 onmouseover="this.style.background='var(--bg-hover)'; this.style.borderColor='var(--text-secondary)';" 
-                                 onmouseout="this.style.background='var(--card-bg)'; this.style.borderColor='var(--border)';">
-                                <div style="display: flex; align-items: flex-start; gap: 12px;">
-                                    <span style="font-size: 1.25rem;">${conv.project_emoji}</span>
+                                 style="padding: 16px 20px; margin-bottom: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 150ms ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+                                 onmouseover="this.style.background='var(--bg-hover)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)';" 
+                                 onmouseout="this.style.background='var(--card-bg)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';">
+                                <div style="display: flex; align-items: flex-start; gap: 14px;">
+                                    <span style="font-size: 1.25rem; line-height: 1;">${conv.project_emoji}</span>
                                     <div style="flex: 1; min-width: 0;">
-                                        <div style="font-size: 1rem; font-weight: 500; margin-bottom: 6px; color: var(--text-primary);">${this.escapeHtml(conv.name)}</div>
-                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">Last message ${timeAgo}</div>
+                                        <div style="font-size: 1.0625rem; font-weight: 600; margin-bottom: 5px; color: var(--text-primary); line-height: 1.4;">${this.escapeHtml(conv.name)}</div>
+                                        <div style="font-size: 0.8125rem; color: var(--text-secondary);">Last message ${timeAgo}</div>
                                     </div>
                                 </div>
                             </div>
