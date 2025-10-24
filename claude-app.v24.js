@@ -807,8 +807,20 @@ const app = {
     setupEventListeners() {
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         if (hamburgerBtn) {
-            hamburgerBtn.addEventListener('click', () => {
+            // iOS Safari fix: Use touchend for instant response
+            let touchHandled = false;
+            
+            hamburgerBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchHandled = true;
                 this.toggleSidebar();
+                setTimeout(() => { touchHandled = false; }, 300);
+            }, { passive: false });
+            
+            hamburgerBtn.addEventListener('click', (e) => {
+                if (!touchHandled) {
+                    this.toggleSidebar();
+                }
             });
         }
 

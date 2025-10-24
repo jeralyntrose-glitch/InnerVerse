@@ -633,6 +633,10 @@
             color: var(--text-secondary);
             cursor: pointer;
             transition: all 150ms ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
         }
 
         .hamburger-btn:hover {
