@@ -1,11 +1,10 @@
-const CACHE_NAME = 'innerverse-v1';
+const CACHE_NAME = 'innerverse-v2-fresh';
 const urlsToCache = [
-  '/claude',
-  '/claude-app.js',
   '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -16,13 +15,20 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // NEVER cache JavaScript files - always fetch fresh
+  if (event.request.url.includes('.js')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+  
+  // For other resources, try network first, then cache
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then((response) => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request);
       })
   );
 });
