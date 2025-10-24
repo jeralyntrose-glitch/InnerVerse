@@ -1561,6 +1561,14 @@
         // Prevent default touchmove on non-scrollable elements
         document.addEventListener('touchstart', (e) => {
             lastTouchY = e.touches[0].clientY;
+            
+            // ALWAYS allow input fields and textareas to work normally (for keyboard)
+            const target = e.target;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+                isScrollableElement = true;
+                return;
+            }
+            
             // Check if target or parents allow scrolling
             let el = e.target;
             isScrollableElement = false;
@@ -1577,6 +1585,12 @@
         }, { passive: false });
 
         document.addEventListener('touchmove', (e) => {
+            // NEVER prevent default on input fields and textareas
+            const target = e.target;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+                return;
+            }
+            
             // Only prevent if not in a scrollable element
             if (!isScrollableElement) {
                 e.preventDefault();
