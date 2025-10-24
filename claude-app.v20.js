@@ -553,17 +553,54 @@ const app = {
         const container = this.getElement('messagesContainer');
         if (!container) return;
         
-        container.addEventListener('mouseover', (e) => {
+        // Remove old listeners to prevent duplicates
+        const oldContainer = container.cloneNode(true);
+        container.parentNode.replaceChild(oldContainer, container);
+        const newContainer = this.getElement('messagesContainer');
+        this.cachedElements.messagesContainer = newContainer;
+        
+        // Hover effects
+        newContainer.addEventListener('mouseover', (e) => {
             const item = e.target.closest('.chat-list-item');
             if (item && !item.classList.contains('active-chat')) {
                 item.style.background = 'var(--bg-hover)';
             }
         });
         
-        container.addEventListener('mouseout', (e) => {
+        newContainer.addEventListener('mouseout', (e) => {
             const item = e.target.closest('.chat-list-item');
             if (item && !item.classList.contains('active-chat')) {
                 item.style.background = 'transparent';
+            }
+        });
+        
+        // Click handler for opening conversations
+        newContainer.addEventListener('click', (e) => {
+            const contentDiv = e.target.closest('.chat-item-content');
+            const deleteBtn = e.target.closest('.chat-delete-btn');
+            
+            // Handle delete button clicks
+            if (deleteBtn) {
+                e.stopPropagation();
+                const convId = deleteBtn.getAttribute('data-delete-conv-id');
+                const convName = deleteBtn.getAttribute('data-delete-conv-name');
+                if (convId && convName) {
+                    // Decode HTML entities
+                    const decodedName = convName.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                    this.deleteConversationWithConfirm(convId, decodedName);
+                }
+                return;
+            }
+            
+            // Handle conversation item clicks
+            if (contentDiv) {
+                const convId = contentDiv.getAttribute('data-click-conv-id');
+                const convName = contentDiv.getAttribute('data-click-conv-name');
+                if (convId && convName) {
+                    // Decode HTML entities
+                    const decodedName = convName.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+                    this.openConversation(convId, decodedName);
+                }
             }
         });
     },
@@ -1048,14 +1085,19 @@ const app = {
                         const activeClass = isActive ? ' active-chat' : '';
                         const activeBg = isActive ? 'var(--bg-active)' : 'transparent';
                         
+                        // Safely escape for data attributes and onclick
+                        const escapedId = String(conv.id).replace(/"/g, '&quot;');
+                        const escapedName = conv.name.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                        
                         html += `
                             <div class="chat-list-item${activeClass}" 
-                                 data-conv-id="${conv.id}"
-                                 data-conv-name="${this.escapeHtml(conv.name)}"
+                                 data-conv-id="${escapedId}"
+                                 data-conv-name="${escapedName}"
                                  style="padding: 10px 12px; margin-bottom: 4px; background: ${activeBg}; border-radius: 8px; cursor: pointer; transition: background-color 100ms ease; position: relative; overflow: hidden;">
                                 <div class="chat-item-content" 
-                                     onclick='app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)})'
-                                     style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: relative; z-index: 2;">
+                                     data-click-conv-id="${escapedId}"
+                                     data-click-conv-name="${escapedName}"
+                                     style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: relative; z-index: 2; cursor: pointer;">
                                     <div style="flex: 1; min-width: 0; overflow: hidden;">
                                         <div style="font-size: 0.9375rem; color: var(--text-primary); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                             ${this.escapeHtml(preview)}
@@ -1064,7 +1106,8 @@ const app = {
                                     <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
                                         <span style="font-size: 0.75rem; color: var(--text-tertiary); white-space: nowrap;">${timestamp}</span>
                                         <button class="chat-delete-btn" 
-                                                onclick="event.stopPropagation(); app.deleteConversationWithConfirm('${conv.id}', '${this.escapeHtml(conv.name).replace(/'/g, "\\'")}')"
+                                                data-delete-conv-id="${escapedId}"
+                                                data-delete-conv-name="${escapedName}"
                                                 style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: none; background: transparent; color: var(--text-tertiary); cursor: pointer; transition: all 100ms ease; padding: 0;"
                                                 onmouseover="this.style.background='var(--bg-hover)'; this.style.color='var(--error)';"
                                                 onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary)';">
