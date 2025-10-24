@@ -1301,8 +1301,16 @@ async function handleReprocessPDF(file) {
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'PDF reprocessing failed');
+      let errorMessage = 'PDF reprocessing failed';
+      try {
+        const error = await response.json();
+        errorMessage = error.error || error.detail || errorMessage;
+      } catch (e) {
+        // If response is not JSON, get text
+        const text = await response.text();
+        errorMessage = text || `Server error: ${response.status}`;
+      }
+      throw new Error(errorMessage);
     }
     
     updateReprocessProgress('📄 Creating enhanced PDF...', 80);
