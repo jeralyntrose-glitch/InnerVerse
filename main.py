@@ -3011,6 +3011,43 @@ async def delete_conversation(conversation_id: int):
         print(f"❌ Error deleting conversation: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.patch("/claude/conversations/{conversation_id}/move")
+async def move_conversation(conversation_id: int, request: Request):
+    """Move a conversation to a different project"""
+    try:
+        data = await request.json()
+        new_project = data.get("project")
+        
+        if not new_project:
+            raise HTTPException(status_code=400, detail="Project is required")
+        
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            UPDATE conversations
+            SET project = %s, updated_at = NOW()
+            WHERE id = %s
+            RETURNING id, project, name, created_at, updated_at
+        """, (new_project, conversation_id))
+        
+        conversation = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        return dict(conversation)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error moving conversation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/claude/search")
 async def search_conversations(q: str = ""):
     """Search across all conversations and messages"""
