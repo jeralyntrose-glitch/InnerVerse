@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, interactive-widget=resizes-visual">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -742,6 +742,8 @@
             align-items: flex-end;
             gap: 12px;
             z-index: 100;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
         }
 
         .upload-btn {
@@ -1382,6 +1384,6 @@
             }
         });
     </script>
-    <script src="/claude-app.v17.js"></script>
+    <script src="/claude-app.v18.js"></script>
 </body>
 </html>
