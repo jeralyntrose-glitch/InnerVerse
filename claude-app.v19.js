@@ -445,27 +445,32 @@ const app = {
                         ${recentConversations.length} conversation${recentConversations.length !== 1 ? 's' : ''}
                     </div>`;
                     
-                    // Conversation cards - Claude style with exact specs
-                    html += '<div id="activityChatList">';
+                    // Simple conversation list - ChatGPT style
+                    html += '<div id="activityChatList" style="display: flex; flex-direction: column; gap: 2px;">';
                     recentConversations.forEach(conv => {
                         const date = new Date(conv.updated_at);
                         const timeAgo = this.getTimeAgo(date);
-                        
                         const projectFullName = `${conv.project_emoji} ${conv.project_name}`;
                         
                         html += `
                             <div class="activity-chat-card" data-search-text="${this.escapeHtml(conv.name).toLowerCase()} ${this.escapeHtml(conv.project_name).toLowerCase()}"
-                                 onclick='app.openProject(${JSON.stringify(conv.project_id)}, ${JSON.stringify(projectFullName)}); setTimeout(() => app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)}), 100);' 
-                                 style="padding: 16px 20px; margin-bottom: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 150ms ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
-                                 onmouseover="this.style.background='var(--bg-hover)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)';" 
-                                 onmouseout="this.style.background='var(--card-bg)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';">
-                                <div style="display: flex; align-items: flex-start; gap: 14px;">
-                                    <span style="font-size: 1.25rem; line-height: 1;">${conv.project_emoji}</span>
-                                    <div style="flex: 1; min-width: 0;">
-                                        <div style="font-size: 1.0625rem; font-weight: 600; margin-bottom: 5px; color: var(--text-primary); line-height: 1.4;">${this.escapeHtml(conv.name)}</div>
-                                        <div style="font-size: 0.8125rem; color: var(--text-secondary);">Last message ${timeAgo}</div>
-                                    </div>
+                                 style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background-color 100ms ease; gap: 12px;"
+                                 onmouseover="this.style.background='var(--bg-hover)';"
+                                 onmouseout="this.style.background='transparent';">
+                                <div onclick='app.openProject(${JSON.stringify(conv.project_id)}, ${JSON.stringify(projectFullName)}); setTimeout(() => app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)}), 100);' 
+                                     style="flex: 1; min-width: 0; overflow: hidden; display: flex; align-items: center; gap: 8px;">
+                                    <div style="font-size: 0.9375rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(conv.name)}</div>
+                                    <span style="font-size: 0.75rem; color: var(--text-tertiary); white-space: nowrap;">${timeAgo}</span>
                                 </div>
+                                <button onclick="event.stopPropagation(); if(confirm('Delete \\\"${this.escapeHtml(conv.name).replace(/"/g, '&quot;')}\\\"?')) app.deleteConversationById(${conv.id});"
+                                        style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: none; background: transparent; color: var(--text-tertiary); cursor: pointer; transition: all 100ms ease; padding: 0; flex-shrink: 0;"
+                                        onmouseover="this.style.background='var(--bg-hover)'; this.style.color='var(--error)';"
+                                        onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary)';">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
                             </div>
                         `;
                     });
@@ -983,19 +988,32 @@ const app = {
     },
 
     async loadConversationsAndRender() {
-        if (!this.currentProject) return;
+        if (!this.currentProject) {
+            console.warn('loadConversationsAndRender: No current project set');
+            return;
+        }
+
+        console.log(`🔍 loadConversationsAndRender: Loading conversations for project "${this.currentProject}"`);
 
         try {
             const response = await fetch(`/claude/conversations/${this.currentProject}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             const data = await response.json();
             const conversations = data.conversations || [];
+            
+            console.log(`✅ Loaded ${conversations.length} conversations for project "${this.currentProject}"`);
             
             // Update sidebar
             this.renderSidebarConversations(conversations);
             
             // Render main chat area instantly
             const messagesContainer = this.getElement('messagesContainer');
-            if (!messagesContainer) return;
+            if (!messagesContainer) {
+                console.error('❌ messagesContainer element not found!');
+                return;
+            }
             
             if (conversations.length === 0) {
                 messagesContainer.innerHTML = `
