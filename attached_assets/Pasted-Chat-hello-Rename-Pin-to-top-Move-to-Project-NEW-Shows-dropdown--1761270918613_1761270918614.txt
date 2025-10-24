@@ -1,0 +1,92 @@
+Chat: "hello"
+├── 📝 Rename
+├── 📌 Pin to top  
+├── 📁 Move to Project ← NEW
+│   └── Shows dropdown:
+│       ├── 💕 Relationship Lab
+│       ├── 🎓 MBTI Academy
+│       ├── 🔍 Type Detective
+│       ├── 📈 Trading Psychology
+│       ├── 💼 PM Playbook
+│       ├── ⚡ Quick Hits
+│       └── 🧠 Brain Dump
+├── 🔗 Share
+└── 🗑️ Delete
+```
+
+**Step 2: When user clicks a project:**
+- Chat disappears from "Home" tab
+- Chat appears in that project folder
+- Show toast: "Moved to [Project Name] ✓"
+
+**Step 3: Add a "Move to Project" button in the top bar too**
+
+When you're actively in a chat, add a button next to the dark mode toggle:
+```
+Top bar: [☰] InnerVerse - hello [📁 Move] [🌙]
+                                    ↑
+                                   Click this
+```
+
+Shows same project list dropdown.
+
+---
+
+## How the Flow Would Work
+
+**Current flow:**
+1. User types "hello"
+2. Chat auto-creates in **Home** tab
+3. Chat stays there forever (cluttered)
+
+**New flow:**
+1. User types "hello" 
+2. Chat auto-creates in **Home** tab
+3. User realizes this is relationship advice
+4. User clicks ⋮ → "Move to Project" → "Relationship Lab"
+5. Chat moves to Relationship Lab folder
+6. Home tab stays clean (only active/recent chats)
+
+---
+
+## Additional Feature: "Create New Project" Option
+
+In that dropdown, also add:
+```
+Move to Project:
+├── + Create New Project ← Add this at top
+├── 💕 Relationship Lab
+├── 🎓 MBTI Academy
+└── ...
+```
+
+When clicked:
+1. Shows input field: "Project name?"
+2. Shows emoji picker (or just use default 📁)
+3. Creates new project
+4. Moves chat there
+
+---
+
+## Better UX: Quick Actions
+
+Instead of just a menu, you could add **drag-and-drop**:
+
+1. User clicks and holds a chat in Home tab
+2. Sidebar shows project folders highlighted
+3. User drags chat over "Relationship Lab"
+4. Drops it
+5. Chat moves there
+
+But start with the menu approach - it's simpler to build.
+
+---
+
+## One More Thing: Show Project Badge
+
+When viewing a chat that's in a project, show which project it belongs to:
+```
+Top bar: 
+[☰] InnerVerse - hello [💕 Relationship Lab] [🌙]
+                        ↑
+                        Shows current project
