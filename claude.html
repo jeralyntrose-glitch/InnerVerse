@@ -694,11 +694,15 @@
         .input-area-suggestions {
             padding: 16px;
             padding-bottom: 0;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            display: flex;
             gap: 8px;
-            max-width: 800px;
-            margin: 0 auto;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .input-area-suggestions::-webkit-scrollbar {
+            display: none;
         }
 
         .input-area-suggestions.hidden {
@@ -708,20 +712,21 @@
         .suggestion-btn {
             background: var(--card-bg);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 0.875rem;
+            border-radius: 20px;
+            padding: 10px 16px;
+            font-size: 0.8125rem;
             color: var(--text-primary);
             cursor: pointer;
             transition: all 150ms ease;
-            text-align: left;
+            text-align: center;
             font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .suggestion-btn:hover {
             border-color: var(--accent);
             background: var(--bg-hover);
-            transform: translateY(-1px);
         }
 
         .input-container {
@@ -1377,6 +1382,6 @@
             }
         });
     </script>
-    <script src="/claude-app.v16.js"></script>
+    <script src="/claude-app.v17.js"></script>
 </body>
 </html>
