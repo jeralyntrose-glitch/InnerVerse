@@ -1,0 +1,78 @@
+Chat Item
+├── Rename
+├── Pin to top
+├── Move to Project ← NEW
+│   └── Dropdown shows:
+│       ├── Create New Project...
+│       ├── Project 1
+│       ├── Folder A
+│       │   ├── Project 2
+│       │   └── Project 3
+│       └── Project 4
+├── Share
+└── Delete
+```
+
+**In the top bar (when viewing a chat), add this option:**
+```
+Top Bar > More Options (⋮) menu:
+├── Share chat
+├── Move to Project ← NEW (same dropdown)
+├── Rename chat
+└── Delete chat
+```
+
+### Step 3: Visual Feedback
+- When chat is saved to a project, show a toast: "Moved to [Project Name]"
+- Chat disappears from "Home" tab
+- Chat appears in "Projects" tab under the chosen folder
+- Add a small folder icon next to chat title showing which project it's in
+
+### Step 4: Filters (Nice to Have)
+**In the Home tab, add a filter:**
+```
+[All Chats ▼] [Unsorted Only] [In Projects]
+```
+So users can:
+- See all chats (mixed)
+- See only unsorted chats (need organizing)
+- See only chats already in projects
+
+---
+
+## Alternative Simpler Approach
+
+If the above is too complex for now, start with this:
+
+**Tell Replit:**
+
+"Add a simple 'Save to Project' button in the top bar (next to the dark mode toggle). When clicked:
+
+1. Show a modal/dropdown with list of existing projects
+2. Add 'Create New Project' option at top
+3. User clicks a project
+4. Chat moves from Home to that project
+5. Show confirmation toast
+
+This lets users chat freely, then organize later when they want to save important conversations."
+
+---
+
+## UI Mockup (What It Could Look Like)
+```
+┌─────────────────────────────────────────────┐
+│  ☰  InnerVerse - MBTI Master    📁 💾 🌙   │ ← Add folder/save icon
+└─────────────────────────────────────────────┘
+
+When you click 💾 (save icon):
+
+┌──────────────────────────┐
+│  Save to Project         │
+├──────────────────────────┤
+│  + Create New Project    │
+├──────────────────────────┤
+│  📁 MBTI Deep Dives      │
+│  📁 Cognitive Functions  │
+│  📁 Type Me Sessions     │
+│  📁 General Questions    │
+└──────────────────────────┘

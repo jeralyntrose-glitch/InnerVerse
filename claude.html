@@ -187,38 +187,41 @@
             padding: 16px;
             border-bottom: 1px solid var(--border);
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
+            gap: 12px;
             flex-shrink: 0;
         }
 
         .sidebar-logo {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 1.2rem;
-            font-weight: 700;
+            gap: 10px;
+            font-size: 1.125rem;
+            font-weight: 600;
             color: var(--text-primary);
         }
 
         .sidebar-logo svg {
             width: 24px;
             height: 24px;
+            flex-shrink: 0;
         }
 
         .new-chat-btn-sidebar {
+            width: 100%;
             background: var(--accent);
             color: white;
             border: none;
-            padding: var(--space-2) var(--space-4);
-            border-radius: 6px;
+            padding: 10px 16px;
+            border-radius: 8px;
             font-size: var(--text-sm);
             font-weight: 500;
             cursor: pointer;
             transition: background-color 150ms ease;
             display: flex;
             align-items: center;
-            gap: var(--space-2);
+            justify-content: center;
+            gap: 8px;
         }
 
         .new-chat-btn-sidebar:hover {
@@ -1399,6 +1402,6 @@
             }
         });
     </script>
-    <script src="/claude-app.js?v=6.0"></script>
+    <script src="/claude-app.js?v=7.0"></script>
 </body>
 </html>
