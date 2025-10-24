@@ -1940,6 +1940,16 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             for para in paragraphs:
                 para = para.strip()
                 if para:
+                    # Replace Unicode characters that cause Latin-1 encoding issues
+                    # Smart quotes
+                    para = para.replace('\u2018', "'").replace('\u2019', "'")  # Left and right single quotes
+                    para = para.replace('\u201C', '"').replace('\u201D', '"')  # Left and right double quotes
+                    # Dashes
+                    para = para.replace('\u2013', '-').replace('\u2014', '--')  # En dash and em dash
+                    # Other common Unicode characters
+                    para = para.replace('\u2026', '...')  # Ellipsis
+                    para = para.replace('\u00A0', ' ')  # Non-breaking space
+                    
                     # Escape HTML special characters but preserve text
                     para = para.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
                     story.append(Paragraph(para, body_style))
