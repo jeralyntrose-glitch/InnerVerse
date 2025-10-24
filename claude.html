@@ -12,32 +12,105 @@
     <link rel="apple-touch-icon" href="/brain-icon-180.png">
     <style>
         :root {
-            --bg-color: #f5f5f0;
-            --text-primary: #1f2937;
-            --text-secondary: #6b7280;
+            /* Professional Color Palette - Light Mode */
+            --gray-50: #fafafa;
+            --gray-100: #f5f5f5;
+            --gray-200: #e5e5e5;
+            --gray-300: #d4d4d4;
+            --gray-400: #a3a3a3;
+            --gray-500: #737373;
+            --gray-600: #525252;
+            --gray-700: #404040;
+            --gray-800: #262626;
+            --gray-900: #171717;
+            
+            /* Accent - one primary color, used sparingly */
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --accent-light: #dbeafe;
+            
+            /* Semantic colors */
+            --success: #059669;
+            --error: #dc2626;
+            --warning: #d97706;
+            
+            /* Applied colors */
+            --bg-app: #ffffff;
+            --bg-sidebar: #fafafa;
+            --bg-hover: #f5f5f5;
+            --bg-active: #e5e5e5;
+            --text-primary: #171717;
+            --text-secondary: #525252;
+            --text-tertiary: #a3a3a3;
+            --border: #e5e5e5;
+            
+            /* Legacy aliases for compatibility */
+            --bg-color: #ffffff;
             --card-bg: #ffffff;
-            --border-color: #e5e7eb;
-            --btn-primary-bg: #6366f1;
-            --btn-primary-hover: #4f46e5;
-            --btn-secondary-bg: #ffffff;
-            --btn-secondary-hover: #f9fafb;
-            --sidebar-bg: #ffffff;
+            --border-color: #e5e5e5;
+            --btn-primary-bg: #2563eb;
+            --btn-primary-hover: #1d4ed8;
+            --btn-secondary-bg: #f5f5f5;
+            --btn-secondary-hover: #e5e5e5;
+            
+            /* Professional Typography */
+            --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+            
+            /* Professional sizing */
+            --text-xs: 0.75rem;
+            --text-sm: 0.875rem;
+            --text-base: 0.9375rem;
+            --text-lg: 1.125rem;
+            
+            /* Generous spacing */
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            
+            /* Line heights for readability */
+            --leading-tight: 1.25;
+            --leading-normal: 1.5;
+            --leading-relaxed: 1.625;
+            
+            /* Professional shadows - barely noticeable */
+            --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
             --shadow-color: rgba(0, 0, 0, 0.1);
-            --gradient-from: #8b5cf6;
-            --gradient-to: #06b6d4;
         }
 
         [data-theme="dark"] {
-            --bg-color: #111827;
-            --text-primary: #f9fafb;
-            --text-secondary: #9ca3af;
-            --card-bg: #1f2937;
-            --border-color: #374151;
-            --btn-primary-bg: #6366f1;
-            --btn-primary-hover: #4f46e5;
-            --btn-secondary-bg: #1f2937;
-            --btn-secondary-hover: #374151;
-            --sidebar-bg: #0d1117;
+            --gray-50: #0a0a0a;
+            --gray-100: #171717;
+            --gray-200: #262626;
+            --gray-300: #404040;
+            --gray-400: #525252;
+            --gray-500: #737373;
+            --gray-600: #a3a3a3;
+            --gray-700: #d4d4d4;
+            --gray-800: #e5e5e5;
+            --gray-900: #fafafa;
+            
+            --bg-app: #0a0a0a;
+            --bg-sidebar: #171717;
+            --bg-hover: #262626;
+            --bg-active: #404040;
+            --text-primary: #fafafa;
+            --text-secondary: #a3a3a3;
+            --text-tertiary: #525252;
+            --border: #262626;
+            
+            /* Legacy aliases for dark mode */
+            --bg-color: #0a0a0a;
+            --card-bg: #171717;
+            --border-color: #262626;
+            --btn-secondary-bg: #262626;
+            --btn-secondary-hover: #404040;
+            
             --shadow-color: rgba(0, 0, 0, 0.5);
         }
 
@@ -48,12 +121,24 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
-            background: var(--bg-color);
+            font-family: var(--font-primary);
+            font-size: var(--text-base);
+            line-height: var(--leading-normal);
+            letter-spacing: -0.011em;
+            font-feature-settings: 'kern' 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: var(--bg-app);
             height: 100vh;
             color: var(--text-primary);
-            transition: background 0.3s ease, color 0.3s ease;
+            transition: background-color 150ms ease, color 150ms ease;
             overflow: hidden;
+        }
+        
+        button {
+            font-family: inherit;
+            font-size: inherit;
+            cursor: pointer;
         }
 
         /* Main Layout */
@@ -65,13 +150,14 @@
 
         /* Sidebar */
         .sidebar {
-            width: 280px;
-            background: var(--sidebar-bg);
-            border-right: 1px solid var(--border-color);
+            width: 260px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease;
+            transition: transform 250ms ease-in-out;
             z-index: 100;
+            box-shadow: none;
         }
 
         .sidebar.hidden {
@@ -86,8 +172,16 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.4);
             z-index: 99;
+            transition: opacity 150ms ease;
+        }
+        
+        /* Only add shadow on mobile overlay */
+        @media (max-width: 767px) {
+            .sidebar:not(.hidden) {
+                box-shadow: var(--shadow-md);
+            }
         }
 
         .sidebar-overlay.active {
@@ -117,20 +211,27 @@
         }
 
         .new-chat-btn-sidebar {
-            background: var(--btn-primary-bg);
+            background: var(--accent);
             color: white;
             border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            padding: var(--space-2) var(--space-4);
+            border-radius: 6px;
+            font-size: var(--text-sm);
             font-weight: 500;
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: background-color 150ms ease;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
         }
 
         .new-chat-btn-sidebar:hover {
-            background: var(--btn-primary-hover);
+            background: var(--accent-hover);
+        }
+        
+        .new-chat-btn-sidebar:active {
+            transform: scale(0.98);
+            transition: transform 50ms ease-out;
         }
 
         /* Sidebar Tabs */
@@ -403,17 +504,27 @@
         }
 
         .hamburger-btn {
-            background: none;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
             border: none;
+            background: transparent;
+            color: var(--text-secondary);
             cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
-            transition: background 0.2s ease;
-            color: var(--text-primary);
+            transition: all 150ms ease;
         }
 
         .hamburger-btn:hover {
-            background: var(--btn-secondary-hover);
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .hamburger-btn:active {
+            transform: scale(0.97);
+            transition: transform 50ms ease-out;
         }
 
         .hamburger-icon {
@@ -439,17 +550,27 @@
         }
 
         .theme-toggle {
-            background: none;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
             border: none;
+            background: transparent;
+            color: var(--text-secondary);
             cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
-            transition: background 0.2s ease;
-            color: var(--text-primary);
+            transition: all 150ms ease;
         }
 
         .theme-toggle:hover {
-            background: var(--btn-secondary-hover);
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .theme-toggle:active {
+            transform: scale(0.97);
+            transition: transform 50ms ease-out;
         }
 
         .sun-icon.hidden, .moon-icon.hidden {
@@ -658,20 +779,28 @@
         }
 
         .upload-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 10px;
-            color: var(--text-secondary);
-            font-size: 1.5rem;
-            transition: color 0.2s ease;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 150ms ease;
+            font-size: 1.25rem;
         }
 
         .upload-btn:hover {
-            color: var(--btn-primary-bg);
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .upload-btn:active {
+            transform: scale(0.97);
+            transition: transform 50ms ease-out;
         }
 
         .message-input {
