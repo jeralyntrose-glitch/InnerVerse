@@ -155,7 +155,7 @@
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            transition: transform 250ms ease-in-out;
+            transition: transform 150ms ease;
             z-index: 100;
             box-shadow: none;
         }
@@ -177,12 +177,7 @@
             transition: opacity 150ms ease;
         }
         
-        /* Only add shadow on mobile overlay */
-        @media (max-width: 767px) {
-            .sidebar:not(.hidden) {
-                box-shadow: var(--shadow-md);
-            }
-        }
+        /* Shadow only on overlay, not sidebar */
 
         .sidebar-overlay.active {
             display: block;
@@ -228,11 +223,6 @@
         .new-chat-btn-sidebar:hover {
             background: var(--accent-hover);
         }
-        
-        .new-chat-btn-sidebar:active {
-            transform: scale(0.98);
-            transition: transform 50ms ease-out;
-        }
 
         /* Sidebar Tabs */
         .sidebar-tabs {
@@ -255,11 +245,11 @@
             font-size: var(--text-sm);
             color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 150ms ease;
         }
 
         .sidebar-tab:hover {
-            background: var(--hover-bg);
+            background: var(--bg-hover);
             color: var(--text-primary);
         }
 
@@ -397,20 +387,21 @@
         }
 
         .icon-btn-footer {
-            background: none;
-            border: none;
-            padding: 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            color: var(--text-secondary);
-            transition: all 0.2s ease;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 150ms ease;
         }
 
         .icon-btn-footer:hover {
-            background: var(--hover-bg);
+            background: var(--bg-hover);
             color: var(--text-primary);
         }
 
@@ -461,19 +452,19 @@
         }
 
         .conversation-item-sidebar {
-            padding: 10px 12px;
-            border-radius: 8px;
+            padding: var(--space-2) var(--space-3);
+            border-radius: 6px;
             cursor: pointer;
-            transition: background 0.2s ease;
-            margin-bottom: 4px;
+            transition: background-color 150ms ease;
+            margin-bottom: var(--space-1);
         }
 
         .conversation-item-sidebar:hover {
-            background: var(--btn-secondary-hover);
+            background: var(--bg-hover);
         }
 
         .conversation-item-sidebar.active {
-            background: var(--btn-secondary-hover);
+            background: var(--bg-active);
         }
 
         .conversation-name-sidebar {
@@ -521,11 +512,6 @@
             background: var(--bg-hover);
             color: var(--text-primary);
         }
-        
-        .hamburger-btn:active {
-            transform: scale(0.97);
-            transition: transform 50ms ease-out;
-        }
 
         .hamburger-icon {
             display: flex;
@@ -566,11 +552,6 @@
         .theme-toggle:hover {
             background: var(--bg-hover);
             color: var(--text-primary);
-        }
-        
-        .theme-toggle:active {
-            transform: scale(0.97);
-            transition: transform 50ms ease-out;
         }
 
         .sun-icon.hidden, .moon-icon.hidden {
@@ -658,11 +639,6 @@
         .prompt-card:hover {
             border-color: var(--accent);
             background: var(--bg-hover);
-        }
-        
-        .prompt-card:active {
-            transform: scale(0.98);
-            transition: transform 50ms ease-out;
         }
 
         .prompt-icon {
@@ -803,11 +779,6 @@
             background: var(--bg-hover);
             color: var(--text-primary);
         }
-        
-        .upload-btn:active {
-            transform: scale(0.97);
-            transition: transform 50ms ease-out;
-        }
 
         .message-input {
             flex: 1;
@@ -853,11 +824,6 @@
         .send-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-        }
-        
-        .send-btn:active:not(:disabled) {
-            transform: scale(0.98);
-            transition: transform 50ms ease-out;
         }
 
         .empty-state {
@@ -978,7 +944,7 @@
             background: rgba(0, 0, 0, 0.5);
             z-index: 999;
             opacity: 0;
-            transition: opacity 250ms ease-in-out;
+            transition: opacity 150ms ease;
         }
 
         .sidebar-backdrop.visible {
@@ -1035,7 +1001,6 @@
                 width: 280px;
                 max-width: 85vw;
                 z-index: 1000;
-                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
             }
 
             .sidebar.hidden {
@@ -1071,14 +1036,6 @@
             /* Hide less important elements on mobile */
             .user-email {
                 display: none;
-            }
-
-            /* Active state feedback for touch */
-            .icon-button:active,
-            .conversation-item-wrapper:active,
-            .sidebar-tab:active {
-                transform: scale(0.97);
-                transition: transform 100ms ease-out;
             }
         }
 
@@ -1131,12 +1088,12 @@
             border-radius: 4px;
             font-size: 0.9rem;
             opacity: 0.7;
-            transition: opacity 0.2s ease;
+            transition: opacity 150ms ease, background-color 150ms ease;
         }
 
         .icon-btn-small:hover {
             opacity: 1;
-            background: var(--border-color);
+            background: var(--bg-hover);
         }
     </style>
 </head>
@@ -1410,6 +1367,6 @@
             }
         });
     </script>
-    <script src="/claude-app.js?v=4.0"></script>
+    <script src="/claude-app.js?v=5.0"></script>
 </body>
 </html>
