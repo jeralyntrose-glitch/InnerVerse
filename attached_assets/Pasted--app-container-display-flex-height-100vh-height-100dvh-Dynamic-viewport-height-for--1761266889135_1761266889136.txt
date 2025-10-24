@@ -1,0 +1,150 @@
+.app-container {
+  display: flex;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
+  overflow: hidden;
+  position: relative;
+}
+
+/* SIDEBAR - Desktop */
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  transition: transform 250ms ease-in-out;
+  position: relative;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.sidebar.closed {
+  transform: translateX(-260px);
+}
+
+/* MAIN CONTENT - Desktop */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 250ms ease-in-out;
+  margin-left: 0;
+  min-width: 0; /* Prevents flex overflow */
+  position: relative;
+}
+
+/* When sidebar is open on desktop */
+@media (min-width: 1025px) {
+  .main-content {
+    margin-left: 260px;
+  }
+  
+  .main-content.sidebar-closed {
+    margin-left: 0;
+  }
+}
+
+/* TABLET (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .sidebar {
+    width: 240px;
+  }
+  
+  .sidebar.closed {
+    transform: translateX(-240px);
+  }
+  
+  .main-content {
+    margin-left: 240px;
+  }
+  
+  .main-content.sidebar-closed {
+    margin-left: 0;
+  }
+}
+
+/* MOBILE (< 768px) - OVERLAY MODE */
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 280px;
+    max-width: 85vw; /* Don't take full width, leave space to tap backdrop */
+    z-index: 1000;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .sidebar.closed {
+    transform: translateX(-100%);
+  }
+  
+  /* Main content never shifts on mobile */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+  
+  /* Backdrop overlay */
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 250ms ease-in-out;
+  }
+  
+  .sidebar-backdrop.visible {
+    display: block;
+    opacity: 1;
+  }
+  
+  /* Prevent body scroll when sidebar open on mobile */
+  body.sidebar-open {
+    overflow: hidden;
+  }
+  
+  /* Mobile-specific adjustments */
+  .top-bar {
+    padding: 12px 16px;
+  }
+  
+  .chat-input-area {
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom)); /* iOS safe area */
+  }
+  
+  /* Larger touch targets for mobile */
+  .icon-button,
+  .sidebar .chat-item,
+  .sidebar .project-item {
+    min-height: 48px; /* Recommended touch target size */
+  }
+  
+  /* Mobile: Hide some less important UI */
+  .sidebar-footer .user-email {
+    display: none;
+  }
+  
+  /* Full width prompt cards on mobile */
+  .prompt-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Extra small mobile (< 375px) */
+@media (max-width: 374px) {
+  .sidebar {
+    width: 100%;
+    max-width: 100vw;
+  }
+  
+  .top-bar-title {
+    font-size: 14px;
+  }
+}
