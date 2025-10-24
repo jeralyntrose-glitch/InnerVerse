@@ -292,8 +292,9 @@ const app = {
     switchTab(tabName) {
         this.currentTab = tabName;
         
-        // Close sidebar on mobile when switching tabs
-        if (this.isMobile && this.sidebarOpen) {
+        // Close sidebar on mobile for Home and Activity tabs only
+        // Keep sidebar open for Projects tab so user can pick a project
+        if (this.isMobile && this.sidebarOpen && (tabName === 'home' || tabName === 'activity')) {
             this.toggleSidebar();
         }
         
