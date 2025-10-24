@@ -391,11 +391,51 @@ const app = {
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'conversation-name-sidebar';
                 nameDiv.textContent = conv.name || 'New Chat';
+                nameDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.openConversation(conv.id, conv.name);
+                });
                 
-                wrapper.appendChild(nameDiv);
                 wrapper.addEventListener('click', () => {
                     this.openConversation(conv.id, conv.name);
                 });
+                
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'conversation-actions-sidebar';
+                
+                const renameBtn = document.createElement('button');
+                renameBtn.className = 'icon-btn-small';
+                renameBtn.title = 'Rename';
+                renameBtn.textContent = '✏️';
+                renameBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.renameConversationById(conv.id);
+                });
+                
+                const moveBtn = document.createElement('button');
+                moveBtn.className = 'icon-btn-small';
+                moveBtn.title = 'Move to Project';
+                moveBtn.textContent = '📁';
+                moveBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showMoveToProjectModal(conv.id, conv.name);
+                });
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'icon-btn-small';
+                deleteBtn.title = 'Delete';
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.deleteConversationById(conv.id);
+                });
+                
+                actionsDiv.appendChild(renameBtn);
+                actionsDiv.appendChild(moveBtn);
+                actionsDiv.appendChild(deleteBtn);
+                
+                wrapper.appendChild(nameDiv);
+                wrapper.appendChild(actionsDiv);
 
                 dateGroup.appendChild(wrapper);
             });
