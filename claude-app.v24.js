@@ -1863,10 +1863,6 @@ const app = {
         };
         return text.replace(/[&<>"']/g, m => map[m]);
     },
-
-    formatMessageContent(text) {
-        const sidebar = document.getElementById('sidebarContent');
-
     async sendMessage() {
         const input = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
