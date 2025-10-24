@@ -11,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 from collections import deque
 from contextlib import asynccontextmanager
 from urllib.parse import quote
-from fastapi import FastAPI, UploadFile, File, Request, Header, HTTPException
+from fastapi import FastAPI, UploadFile, File, Request, Header, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -1685,7 +1685,7 @@ async def transcribe_youtube_free(request: YouTubeTranscribeRequest):
 
 # === Text to PDF with Punctuation Fixing ===
 @app.post("/text-to-pdf")
-async def text_to_pdf(request: TextToPDFRequest):
+async def text_to_pdf(request: TextToPDFRequest, background_tasks: BackgroundTasks):
     """Convert text to PDF with AI-powered punctuation and grammar fixes"""
     try:
         openai_client = get_openai_client()
@@ -1774,12 +1774,21 @@ async def text_to_pdf(request: TextToPDFRequest):
             
             # Return the PDF as a download
             safe_filename = request.title[:50].replace('/', '-').replace('\\', '-')
+            # Ensure ASCII-only for HTTP headers
+            safe_filename = safe_filename.encode('ascii', 'ignore').decode('ascii')
+            if not safe_filename:
+                safe_filename = "document"
+            
+            # Schedule cleanup after response is sent
+            background_tasks.add_task(os.remove, pdf_path)
+            
             return FileResponse(
                 pdf_path,
                 media_type="application/pdf",
                 filename=f"{safe_filename}.pdf",
                 headers={
-                    "Content-Disposition": f"attachment; filename=\"{safe_filename}.pdf\""
+                    "Content-Disposition": f"attachment; filename=\"{safe_filename}.pdf\"",
+                    "Cache-Control": "no-cache"
                 }
             )
             
@@ -1798,7 +1807,7 @@ async def text_to_pdf(request: TextToPDFRequest):
 
 # === Reprocess PDF (Extract text, enhance with GPT, return improved PDF) ===
 @app.post("/reprocess-pdf")
-async def reprocess_pdf(file: UploadFile = File(...)):
+async def reprocess_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     """Upload an existing PDF, extract text, enhance with GPT cleanup, return improved PDF"""
     try:
         print(f"📄 Received PDF for reprocessing: {file.filename}")
@@ -1981,22 +1990,33 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             # Return the improved PDF - sanitize filename for HTTP headers
             safe_filename = file.filename.replace('.pdf', '_enhanced.pdf').replace('/', '-').replace('\\', '-')
             safe_filename = sanitize_for_pdf(safe_filename)  # Remove Unicode characters from filename
+            # Ensure ASCII-only for HTTP headers
+            safe_filename = safe_filename.encode('ascii', 'ignore').decode('ascii')
+            if not safe_filename or safe_filename == '_enhanced.pdf':
+                safe_filename = "document_enhanced.pdf"
+            
+            # Schedule cleanup after response is sent
+            background_tasks.add_task(os.remove, output_pdf_path)
+            background_tasks.add_task(os.remove, temp_pdf_path)
+            
             return FileResponse(
                 output_pdf_path,
                 media_type="application/pdf",
                 filename=safe_filename,
                 headers={
-                    "Content-Disposition": f"attachment; filename=\"{safe_filename}\""
+                    "Content-Disposition": f"attachment; filename=\"{safe_filename}\"",
+                    "Cache-Control": "no-cache"
                 }
             )
             
-        finally:
-            # Clean up temp file
+        except Exception as cleanup_error:
+            # Only cleanup temp_pdf_path here, output_pdf_path is handled by background task
             try:
                 if os.path.exists(temp_pdf_path):
                     os.remove(temp_pdf_path)
             except:
                 pass
+            raise cleanup_error
         
     except Exception as e:
         print(f"❌ PDF reprocessing error: {str(e)}")
