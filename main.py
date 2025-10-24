@@ -1893,9 +1893,37 @@ async def reprocess_pdf(file: UploadFile = File(...)):
                 print(f"⚠️ GPT enhancement failed: {e}, using original text")
                 cleaned_text = pdf_text
             
+            # Helper function to sanitize ALL text for Latin-1 encoding
+            def sanitize_for_pdf(text):
+                """Remove all Unicode characters that cause Latin-1 encoding errors"""
+                if not text:
+                    return text
+                # Smart quotes
+                text = text.replace('\u2018', "'").replace('\u2019', "'")  # Single quotes
+                text = text.replace('\u201C', '"').replace('\u201D', '"')  # Double quotes
+                # Dashes
+                text = text.replace('\u2013', '-').replace('\u2014', '--')  # En/em dash
+                # Other common Unicode
+                text = text.replace('\u2026', '...')  # Ellipsis
+                text = text.replace('\u00A0', ' ')  # Non-breaking space
+                text = text.replace('\u2022', '*')  # Bullet point
+                text = text.replace('\u2010', '-')  # Hyphen
+                text = text.replace('\u2011', '-')  # Non-breaking hyphen
+                text = text.replace('\u2012', '-')  # Figure dash
+                text = text.replace('\u2015', '--')  # Horizontal bar
+                # Remove any other non-ASCII characters as last resort
+                text = text.encode('ascii', 'ignore').decode('ascii')
+                return text
+            
             # Generate improved PDF
             print("📄 Creating improved PDF...")
             print(f"   Cleaned text length: {len(cleaned_text)} characters")
+            
+            # SANITIZE ALL TEXT FIRST (GPT often returns smart quotes!)
+            cleaned_text = sanitize_for_pdf(cleaned_text)
+            original_title = file.filename.replace('.pdf', '').replace('_', ' ')
+            original_title = sanitize_for_pdf(original_title)
+            
             output_pdf_path = os.path.join(tempfile.gettempdir(), f"enhanced_{uuid.uuid4().hex[:8]}.pdf")
             
             doc = SimpleDocTemplate(output_pdf_path, pagesize=letter)
@@ -1924,14 +1952,7 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             # Build PDF content
             story = []
             
-            # Title (use original filename) - sanitize Unicode for Latin-1 encoding
-            original_title = file.filename.replace('.pdf', '').replace('_', ' ')
-            # Replace Unicode characters that cause Latin-1 encoding issues
-            original_title = original_title.replace('\u2018', "'").replace('\u2019', "'")  # Smart single quotes
-            original_title = original_title.replace('\u201C', '"').replace('\u201D', '"')  # Smart double quotes
-            original_title = original_title.replace('\u2013', '-').replace('\u2014', '--')  # En/em dashes
-            original_title = original_title.replace('\u2026', '...')  # Ellipsis
-            original_title = original_title.replace('\u00A0', ' ')  # Non-breaking space
+            # Title
             story.append(Paragraph(f"<b>{original_title} (Enhanced)</b>", title_style))
             story.append(Spacer(1, 0.2*inch))
             
@@ -1940,22 +1961,11 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             story.append(Spacer(1, 0.3*inch))
             
             # Content - handle as continuous text with paragraph breaks
-            # Split into actual paragraphs (double newlines) or single lines
             paragraphs = cleaned_text.split('\n')
             paragraph_count = 0
             for para in paragraphs:
                 para = para.strip()
                 if para:
-                    # Replace Unicode characters that cause Latin-1 encoding issues
-                    # Smart quotes
-                    para = para.replace('\u2018', "'").replace('\u2019', "'")  # Left and right single quotes
-                    para = para.replace('\u201C', '"').replace('\u201D', '"')  # Left and right double quotes
-                    # Dashes
-                    para = para.replace('\u2013', '-').replace('\u2014', '--')  # En dash and em dash
-                    # Other common Unicode characters
-                    para = para.replace('\u2026', '...')  # Ellipsis
-                    para = para.replace('\u00A0', ' ')  # Non-breaking space
-                    
                     # Escape HTML special characters but preserve text
                     para = para.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
                     story.append(Paragraph(para, body_style))
