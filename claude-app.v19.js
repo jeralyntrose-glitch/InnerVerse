@@ -1576,6 +1576,10 @@ const app = {
             assistantMessageDiv.className = 'message assistant';
             container.insertBefore(assistantMessageDiv, typingIndicator);
             
+            // Claude-style: Create space by scrolling before streaming starts
+            // This pushes user message up, creating stable room for AI response
+            this.scrollToBottom();
+            
             // Stream the response with typewriter effect
             await this.streamText(assistantMessageDiv, data.assistant_message.content, 10);
             this.scrollToBottom();
@@ -1610,6 +1614,25 @@ const app = {
             requestAnimationFrame(() => {
                 container.scrollTop = container.scrollHeight;
             });
+        }
+    },
+    
+    isNearBottom() {
+        // Check if user is scrolled near the bottom (within 100px threshold)
+        const container = document.getElementById('messagesContainer');
+        if (!container) return true;
+        
+        const threshold = 100;
+        const position = container.scrollTop + container.clientHeight;
+        const bottom = container.scrollHeight;
+        
+        return (bottom - position) < threshold;
+    },
+    
+    scrollToBottomIfNeeded() {
+        // Only scroll if user is already near bottom (prevents erratic jumping)
+        if (this.isNearBottom()) {
+            this.scrollToBottom();
         }
     },
 
