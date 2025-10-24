@@ -1052,6 +1052,12 @@ const app = {
         container.insertBefore(userMessageDiv, typingIndicator);
         this.scrollToBottom();
 
+        // Show thinking indicator
+        const thinkingIndicator = document.getElementById('thinkingIndicator');
+        if (thinkingIndicator) {
+            thinkingIndicator.classList.add('active');
+        }
+
         if (typingIndicator) {
             typingIndicator.classList.add('active');
         }
@@ -1064,6 +1070,11 @@ const app = {
             });
 
             const data = await response.json();
+
+            // Hide thinking indicator
+            if (thinkingIndicator) {
+                thinkingIndicator.classList.remove('active');
+            }
 
             if (typingIndicator) {
                 typingIndicator.classList.remove('active');
@@ -1079,6 +1090,12 @@ const app = {
             this.scrollToBottom();
         } catch (error) {
             console.error('Error sending message:', error);
+            
+            // Hide thinking indicator on error
+            const thinkingIndicator = document.getElementById('thinkingIndicator');
+            if (thinkingIndicator) {
+                thinkingIndicator.classList.remove('active');
+            }
             
             if (typingIndicator) {
                 typingIndicator.classList.remove('active');
