@@ -1978,8 +1978,9 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             doc.build(story)
             print(f"✅ Enhanced PDF created at {output_pdf_path}")
             
-            # Return the improved PDF
+            # Return the improved PDF - sanitize filename for HTTP headers
             safe_filename = file.filename.replace('.pdf', '_enhanced.pdf').replace('/', '-').replace('\\', '-')
+            safe_filename = sanitize_for_pdf(safe_filename)  # Remove Unicode characters from filename
             return FileResponse(
                 output_pdf_path,
                 media_type="application/pdf",
