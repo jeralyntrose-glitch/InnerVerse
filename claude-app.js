@@ -60,6 +60,27 @@ const app = {
         }
     },
 
+    startChatWithPrompt(prompt) {
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            messageInput.value = prompt;
+            messageInput.style.height = 'auto';
+            messageInput.style.height = messageInput.scrollHeight + 'px';
+            messageInput.focus();
+            
+            // Hide welcome screen, show messages
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            const messagesContainer = document.getElementById('messagesContainer');
+            if (welcomeScreen) welcomeScreen.classList.add('hidden');
+            if (messagesContainer) messagesContainer.classList.remove('hidden');
+            
+            // Close sidebar on mobile
+            if (this.isMobile) {
+                this.closeSidebar();
+            }
+        }
+    },
+
     setupEventListeners() {
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         if (hamburgerBtn) {
@@ -316,6 +337,98 @@ const app = {
         }
     },
 
+    groupConversationsByDate(conversations) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const groups = {
+            'Today': [],
+            'Yesterday': [],
+            'Previous 7 days': [],
+            'Previous 30 days': [],
+            'Older': []
+        };
+
+        conversations.forEach(conv => {
+            const convDate = new Date(conv.created_at || conv.updated_at);
+            const convDay = new Date(convDate.getFullYear(), convDate.getMonth(), convDate.getDate());
+
+            if (convDay.getTime() === today.getTime()) {
+                groups['Today'].push(conv);
+            } else if (convDay.getTime() === yesterday.getTime()) {
+                groups['Yesterday'].push(conv);
+            } else if (convDate >= sevenDaysAgo) {
+                groups['Previous 7 days'].push(conv);
+            } else if (convDate >= thirtyDaysAgo) {
+                groups['Previous 30 days'].push(conv);
+            } else {
+                groups['Older'].push(conv);
+            }
+        });
+
+        return groups;
+    },
+
+    renderChatHistory(conversations) {
+        const container = document.getElementById('chatHistoryList');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (conversations.length === 0) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.style.padding = '20px';
+            emptyDiv.style.textAlign = 'center';
+            emptyDiv.style.color = 'var(--text-secondary)';
+            emptyDiv.style.fontSize = '0.9rem';
+            emptyDiv.textContent = 'No conversations yet';
+            container.appendChild(emptyDiv);
+            return;
+        }
+
+        const grouped = this.groupConversationsByDate(conversations);
+
+        Object.entries(grouped).forEach(([dateLabel, convs]) => {
+            if (convs.length === 0) return;
+
+            const dateGroup = document.createElement('div');
+            dateGroup.className = 'date-group';
+
+            const label = document.createElement('div');
+            label.className = 'date-label';
+            label.textContent = dateLabel;
+            dateGroup.appendChild(label);
+
+            convs.forEach(conv => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'conversation-item-wrapper';
+                wrapper.id = `conv-${conv.id}`;
+                if (conv.id === this.currentConversation) {
+                    wrapper.classList.add('active');
+                }
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'conversation-name-sidebar';
+                nameDiv.textContent = conv.name || 'New Chat';
+                
+                wrapper.appendChild(nameDiv);
+                wrapper.addEventListener('click', () => {
+                    this.openConversation(conv.id, conv.name);
+                });
+
+                dateGroup.appendChild(wrapper);
+            });
+
+            container.appendChild(dateGroup);
+        });
+    },
+
     renderSidebarConversations(conversations) {
         const section = document.getElementById('sidebarConversationsSection');
         const container = document.getElementById('sidebarConversations');
@@ -324,6 +437,9 @@ const app = {
 
         section.style.display = 'block';
         container.innerHTML = '';
+
+        // For Activity tab, render chat history with date grouping
+        this.renderChatHistory(conversations);
 
         if (conversations.length === 0) {
             const emptyDiv = document.createElement('div');

@@ -464,6 +464,106 @@
             overflow: hidden;
         }
 
+        /* Welcome Screen */
+        .welcome-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+
+        .welcome-screen.hidden {
+            display: none;
+        }
+
+        .welcome-content {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .welcome-icon {
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        .suggested-prompts {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .prompts-title {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .prompts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .prompt-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .prompt-card:hover {
+            border-color: var(--btn-primary-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+
+        .prompt-icon {
+            font-size: 1.5rem;
+        }
+
+        .prompt-text {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        @media (max-width: 767px) {
+            .prompts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .welcome-title {
+                font-size: 1.5rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 1rem;
+            }
+        }
+
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -1037,7 +1137,68 @@
 
             <!-- Chat Area -->
             <div class="chat-area" id="chatArea">
-                <div class="messages-container" id="messagesContainer">
+                <!-- Welcome Screen -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-content">
+                        <div class="welcome-icon">
+                            <svg width="80" height="80" viewBox="0 0 200 200" class="brain-icon-animated">
+                                <defs>
+                                    <linearGradient id="brainGradientWelcome" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+                                    </linearGradient>
+                                </defs>
+                                <g class="brain-network">
+                                    <line x1="60" y1="50" x2="100" y2="80" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <line x1="140" y1="50" x2="100" y2="80" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <line x1="60" y1="50" x2="100" y2="120" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <line x1="140" y1="50" x2="100" y2="120" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <line x1="40" y1="100" x2="100" y2="80" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <line x1="160" y1="100" x2="100" y2="80" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <line x1="40" y1="100" x2="100" y2="120" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <line x1="160" y1="100" x2="100" y2="120" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <line x1="60" y1="150" x2="100" y2="120" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <line x1="140" y1="150" x2="100" y2="120" stroke="url(#brainGradientWelcome)" stroke-width="2" opacity="0.6"/>
+                                    <circle cx="60" cy="50" r="8" fill="url(#brainGradientWelcome)" opacity="0.9"/>
+                                    <circle cx="140" cy="50" r="8" fill="url(#brainGradientWelcome)" opacity="0.9"/>
+                                    <circle cx="40" cy="100" r="8" fill="url(#brainGradientWelcome)" opacity="0.9"/>
+                                    <circle cx="100" cy="80" r="10" fill="url(#brainGradientWelcome)"/>
+                                    <circle cx="100" cy="120" r="10" fill="url(#brainGradientWelcome)"/>
+                                    <circle cx="160" cy="100" r="8" fill="url(#brainGradientWelcome)" opacity="0.9"/>
+                                    <circle cx="60" cy="150" r="8" fill="url(#brainGradientWelcome)" opacity="0.9"/>
+                                    <circle cx="140" cy="150" r="8" fill="url(#brainGradientWelcome)" opacity="0.9"/>
+                                </g>
+                            </svg>
+                        </div>
+                        <h1 class="welcome-title">Welcome back!</h1>
+                        <p class="welcome-subtitle">How can I help you today?</p>
+                    </div>
+
+                    <div class="suggested-prompts">
+                        <h3 class="prompts-title">Try asking about...</h3>
+                        <div class="prompts-grid">
+                            <button class="prompt-card" onclick="app.startChatWithPrompt('Explain the cognitive functions of an ENFP')">
+                                <div class="prompt-icon">🎨</div>
+                                <div class="prompt-text">MBTI cognitive functions</div>
+                            </button>
+                            <button class="prompt-card" onclick="app.startChatWithPrompt('What is the difference between Fi and Fe?')">
+                                <div class="prompt-icon">🧩</div>
+                                <div class="prompt-text">Function comparisons</div>
+                            </button>
+                            <button class="prompt-card" onclick="app.startChatWithPrompt('How do I determine my type?')">
+                                <div class="prompt-icon">🔍</div>
+                                <div class="prompt-text">Type yourself</div>
+                            </button>
+                            <button class="prompt-card" onclick="app.startChatWithPrompt('Teach me about type interactions')">
+                                <div class="prompt-icon">💕</div>
+                                <div class="prompt-text">Relationship dynamics</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Container (hidden initially) -->
+                <div class="messages-container hidden" id="messagesContainer">
                     <div class="typing-indicator" id="typingIndicator">
                         <span></span><span></span><span></span>
                     </div>
@@ -1101,6 +1262,6 @@
             }
         });
     </script>
-    <script src="/claude-app.js?v=3.0"></script>
+    <script src="/claude-app.js?v=3.1"></script>
 </body>
 </html>
