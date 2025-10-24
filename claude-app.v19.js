@@ -367,6 +367,68 @@ const app = {
         return date.toLocaleDateString();
     },
 
+    formatTimestamp(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        // ChatGPT-style timestamps
+        if (diffMins < 1) return 'now';
+        if (diffMins < 60) return `${diffMins}m`;
+        if (diffHours < 24) return `${diffHours}h`;
+        if (diffDays < 7) return `${diffDays}d`;
+        
+        // Format as MMM D for older dates
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${months[date.getMonth()]} ${date.getDate()}`;
+    },
+
+    setupChatListHoverEffects() {
+        const container = this.getElement('messagesContainer');
+        if (!container) return;
+        
+        container.addEventListener('mouseover', (e) => {
+            const item = e.target.closest('.chat-list-item');
+            if (item && !item.classList.contains('active-chat')) {
+                item.style.background = 'var(--bg-hover)';
+            }
+        });
+        
+        container.addEventListener('mouseout', (e) => {
+            const item = e.target.closest('.chat-list-item');
+            if (item && !item.classList.contains('active-chat')) {
+                item.style.background = 'transparent';
+            }
+        });
+    },
+
+    async deleteConversationWithConfirm(conversationId, conversationName) {
+        const confirmed = confirm(`Delete "${conversationName}"?\n\nThis cannot be undone.`);
+        if (!confirmed) return;
+        
+        try {
+            await fetch(`/claude/conversations/${conversationId}`, {
+                method: 'DELETE'
+            });
+            
+            // Reload conversation list
+            await this.renderProjectChatView();
+            
+            // If we deleted the current conversation, go back to welcome
+            if (this.currentConversation === conversationId) {
+                this.currentConversation = null;
+                this.showDefaultChatView();
+            }
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+            alert('Failed to delete conversation. Please try again.');
+        }
+    },
+
     closeSidebar() {
         if (this.isMobile) {
             this.sidebarOpen = false;
@@ -611,28 +673,51 @@ const app = {
                         </div>
                     `;
                 } else {
-                    // Group conversations by date
+                    // ChatGPT-style conversation list - compact and clean
                     const grouped = this.groupConversationsByDate(conversations);
                     
-                    let html = '<div style="padding: 20px; max-width: 800px; margin: 0 auto;">';
-                    html += '<h2 style="margin-bottom: 24px; font-size: 1.5rem;">Conversations in this Project</h2>';
+                    let html = '<div style="padding: 12px 8px; max-width: 800px; margin: 0 auto;">';
                     
                     Object.entries(grouped).forEach(([dateLabel, convs]) => {
                         if (convs.length === 0) return;
                         
-                        html += `<div style="margin-bottom: 24px;">`;
-                        html += `<div style="font-size: 0.875rem; color: var(--text-tertiary); font-weight: 500; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">${dateLabel}</div>`;
+                        html += `<div style="margin-bottom: 16px;">`;
+                        html += `<div style="font-size: 0.75rem; color: var(--text-tertiary); font-weight: 600; padding: 0 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">${dateLabel}</div>`;
                         
                         convs.forEach(conv => {
+                            const timestamp = this.formatTimestamp(conv.updated_at);
+                            const preview = conv.name.length > 60 ? conv.name.substring(0, 60) + '...' : conv.name;
+                            const isActive = this.currentConversation === conv.id;
+                            const activeClass = isActive ? ' active-chat' : '';
+                            const activeBg = isActive ? 'var(--bg-active)' : 'transparent';
+                            
                             html += `
-                                <div onclick='app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)})' 
-                                     style="padding: 16px; margin-bottom: 8px; background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 150ms ease; display: flex; align-items: center; justify-content: space-between; gap: 12px;"
-                                     onmouseover="this.style.background='var(--bg-hover)'; this.style.borderColor='var(--accent)';" 
-                                     onmouseout="this.style.background='var(--bg-sidebar)'; this.style.borderColor='var(--border)';">
-                                    <div style="flex: 1; font-weight: 500;">${this.escapeHtml(conv.name)}</div>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="9 18 15 12 9 6"></polyline>
-                                    </svg>
+                                <div class="chat-list-item${activeClass}" 
+                                     data-conv-id="${conv.id}"
+                                     data-conv-name="${this.escapeHtml(conv.name)}"
+                                     style="padding: 10px 12px; margin-bottom: 4px; background: ${activeBg}; border-radius: 8px; cursor: pointer; transition: background-color 100ms ease; position: relative; overflow: hidden;">
+                                    <div class="chat-item-content" 
+                                         onclick='app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)})'
+                                         style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: relative; z-index: 2;">
+                                        <div style="flex: 1; min-width: 0; overflow: hidden;">
+                                            <div style="font-size: 0.9375rem; color: var(--text-primary); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                ${this.escapeHtml(preview)}
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                                            <span style="font-size: 0.75rem; color: var(--text-tertiary); white-space: nowrap;">${timestamp}</span>
+                                            <button class="chat-delete-btn" 
+                                                    onclick="event.stopPropagation(); app.deleteConversationWithConfirm('${conv.id}', '${this.escapeHtml(conv.name).replace(/'/g, "\\'")}')"
+                                                    style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: none; background: transparent; color: var(--text-tertiary); cursor: pointer; transition: all 100ms ease; padding: 0;"
+                                                    onmouseover="this.style.background='var(--bg-hover)'; this.style.color='var(--error)';"
+                                                    onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary)';">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             `;
                         });
@@ -642,6 +727,9 @@ const app = {
                     
                     html += '</div>';
                     messagesContainer.innerHTML = html;
+                    
+                    // Add hover effects via event delegation
+                    this.setupChatListHoverEffects();
                 }
             } catch (error) {
                 console.error('Error loading conversations:', error);
@@ -1020,24 +1108,30 @@ const app = {
     async openConversation(conversationId, conversationName) {
         this.currentConversation = conversationId;
         
-        // Show move button when conversation is open
+        // Instant UI transition - no delays
         const moveBtn = document.getElementById('move-to-project-btn');
         if (moveBtn) moveBtn.style.display = 'flex';
         
-        // Display conversation name with project badge if applicable
         const currentProjectObj = this.projects.find(p => p.id === this.currentProject);
         const projectPrefix = currentProjectObj ? `${currentProjectObj.emoji} ` : '';
         document.getElementById('topBarTitle').textContent = `${projectPrefix}${conversationName}`;
         
-        // Hide welcome screen, show messages container
         const welcomeScreen = document.getElementById('welcomeScreen');
         const messagesContainer = document.getElementById('messagesContainer');
         
-        if (welcomeScreen) {
-            welcomeScreen.classList.add('hidden');
-        }
+        // Instant transition
+        if (welcomeScreen) welcomeScreen.classList.add('hidden');
         if (messagesContainer) {
             messagesContainer.classList.remove('hidden');
+            // Show loading state immediately for instant feedback
+            messagesContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <div style="width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-top: 16px;">Loading...</p>
+                </div>
+            `;
         }
 
         document.querySelectorAll('.conversation-item-wrapper').forEach(item => {
@@ -1045,21 +1139,30 @@ const app = {
         });
         document.getElementById(`conv-${conversationId}`)?.classList.add('active');
 
+        // Close sidebar on mobile immediately
+        if (window.innerWidth <= 768) {
+            this.toggleSidebar();
+        }
+
+        // Load messages in background (non-blocking)
         try {
             const response = await fetch(`/claude/conversations/detail/${conversationId}`);
             const data = await response.json();
             this.renderMessages(data.messages);
             
-            // Check for pending/failed messages after loading conversation (PWA resilience)
-            setTimeout(() => {
-                this.checkPendingMessages();
-            }, 500);
+            // Check for pending/failed messages (no delay needed)
+            this.checkPendingMessages();
         } catch (error) {
             console.error('Error loading conversation:', error);
-        }
-
-        if (window.innerWidth <= 768) {
-            this.toggleSidebar();
+            if (messagesContainer) {
+                messagesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h2>Error loading conversation</h2>
+                        <p style="color: var(--text-secondary); margin-top: 8px;">Please try again.</p>
+                    </div>
+                `;
+            }
         }
     },
 
