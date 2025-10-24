@@ -1716,27 +1716,45 @@ const app = {
 
     async moveConversationToProject(conversationId, projectId, projectName) {
         try {
-            await fetch(`/claude/conversations/${conversationId}/move`, {
+            const response = await fetch(`/claude/conversations/${conversationId}/move`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ project: projectId })
             });
 
+            if (!response.ok) {
+                throw new Error(`Failed to move: ${response.status}`);
+            }
+
             this.closeMoveModal();
-            await this.loadConversations();
+            
+            // If we're in a project view, reload conversations for current project
+            if (this.currentProject) {
+                await this.loadConversations();
+            }
+            
+            // If we're in Activity tab, refresh the activity view
+            if (this.currentTab === 'activity') {
+                // Clear activity cache to force refresh
+                this.activityCache = null;
+                this.activityCacheTime = 0;
+                await this.showActivityView();
+            }
             
             // Show success toast
             this.showToast(`Moved to ${projectName.split(' ').slice(1).join(' ')} ✓`);
             
-            // If viewing this conversation, update top bar
+            // If viewing this conversation, navigate to the new project
             if (this.currentConversation === conversationId) {
-                // Update project context
-                this.currentProject = projectId;
-                document.getElementById('topBarTitle').textContent = projectName.split(' ').slice(1).join(' ');
+                // Navigate to the target project and open the conversation there
+                await this.openProject(projectId, projectName);
+                setTimeout(() => {
+                    this.openConversation(conversationId, document.getElementById('topBarTitle').textContent);
+                }, 200);
             }
         } catch (error) {
             console.error('Error moving conversation:', error);
-            alert('Failed to move conversation');
+            alert('Failed to move conversation. Please try again.');
         }
     },
 
