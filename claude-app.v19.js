@@ -1774,25 +1774,25 @@ const app = {
 
             this.closeMoveModal();
             
-            // If we're in a project view, reload conversations for current project
+            // Clear activity cache to force refresh next time Activity is opened
+            this.activityCache = null;
+            this.activityCacheTime = 0;
+            
+            // If we're currently viewing a project, reload it to show updated list
             if (this.currentProject) {
                 await this.loadConversations();
             }
             
-            // If we're in Activity tab, refresh the activity view
+            // If we're currently in Activity tab, refresh the activity view
             if (this.currentTab === 'activity') {
-                // Clear activity cache to force refresh
-                this.activityCache = null;
-                this.activityCacheTime = 0;
                 await this.showActivityView();
             }
             
             // Show success toast
             this.showToast(`Moved to ${projectName.split(' ').slice(1).join(' ')} ✓`);
             
-            // If viewing this conversation, navigate to the new project
+            // If viewing this conversation, navigate to the target project and open it there
             if (this.currentConversation === conversationId) {
-                // Navigate to the target project and open the conversation there
                 await this.openProject(projectId, projectName);
                 setTimeout(() => {
                     this.openConversation(conversationId, document.getElementById('topBarTitle').textContent);
