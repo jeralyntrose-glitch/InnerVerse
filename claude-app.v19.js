@@ -20,6 +20,122 @@ const app = {
         this.cachedElements = {};
     },
 
+    // Offline resilience - localStorage persistence for PWA
+    savePendingMessage(conversationId, message) {
+        const pending = this.getPendingMessages();
+        const messageId = `${conversationId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        pending.push({
+            id: messageId,
+            conversationId,
+            message,
+            timestamp: Date.now(),
+            status: 'pending'
+        });
+        localStorage.setItem('innerverse_pending_messages', JSON.stringify(pending));
+        return messageId;
+    },
+
+    markMessageFailed(messageId) {
+        const pending = this.getPendingMessages();
+        const item = pending.find(p => p.id === messageId);
+        if (item) {
+            item.status = 'failed';
+            localStorage.setItem('innerverse_pending_messages', JSON.stringify(pending));
+        }
+    },
+
+    removePendingMessage(messageId) {
+        let pending = this.getPendingMessages();
+        pending = pending.filter(p => p.id !== messageId);
+        localStorage.setItem('innerverse_pending_messages', JSON.stringify(pending));
+    },
+
+    getPendingMessages() {
+        try {
+            const data = localStorage.getItem('innerverse_pending_messages');
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('Error reading pending messages:', e);
+            return [];
+        }
+    },
+
+    async checkPendingMessages() {
+        const pending = this.getPendingMessages();
+        const failed = pending.filter(p => p.status === 'failed' && p.conversationId === this.currentConversation);
+        
+        // Show retry UI for failed messages
+        if (failed.length > 0 && this.currentConversation) {
+            failed.forEach(item => {
+                this.showRetryUI(item.id, item.message);
+            });
+        }
+    },
+
+    showRetryUI(messageId, message) {
+        const container = this.getElement('messagesContainer');
+        const typingIndicator = this.getElement('typingIndicator');
+        
+        if (!container) return;
+
+        // Check if retry UI already exists for this specific message ID
+        const existing = container.querySelector(`[data-message-id="${messageId}"]`);
+        if (existing) return; // Don't duplicate
+
+        const retryDiv = document.createElement('div');
+        retryDiv.className = 'message-retry';
+        retryDiv.dataset.messageId = messageId;
+        
+        // Build the retry UI safely
+        const innerDiv = document.createElement('div');
+        innerDiv.style.cssText = 'padding: 16px; background: var(--bg-sidebar); border: 1px solid var(--error); border-radius: 12px; margin: 8px 0;';
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.style.cssText = 'color: var(--error); font-weight: 500; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;';
+        headerDiv.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            Message failed to send
+        `;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = 'color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 12px;';
+        // Use textContent to prevent XSS
+        messageDiv.textContent = message.length > 50 ? message.substring(0, 50) + '...' : message;
+        
+        const retryButton = document.createElement('button');
+        retryButton.style.cssText = 'background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.875rem; cursor: pointer; font-weight: 500;';
+        retryButton.textContent = 'Retry sending';
+        retryButton.onclick = () => this.retryMessage(messageId, message, retryDiv);
+        
+        innerDiv.appendChild(headerDiv);
+        innerDiv.appendChild(messageDiv);
+        innerDiv.appendChild(retryButton);
+        retryDiv.appendChild(innerDiv);
+        
+        container.insertBefore(retryDiv, typingIndicator);
+    },
+
+    async retryMessage(messageId, message, retryElement) {
+        // Remove retry UI
+        if (retryElement) {
+            retryElement.remove();
+        }
+        
+        // Remove from localStorage
+        this.removePendingMessage(messageId);
+        
+        // Set input value and trigger send
+        const input = this.getElement('messageInput');
+        if (input) {
+            input.value = message;
+            await this.sendMessage();
+        }
+    },
+
     async init() {
         this.detectMobile();
         // Show loading state immediately
@@ -31,6 +147,9 @@ const app = {
         this.showDefaultChatView();
         this.setupEventListeners();
         this.loadSidebarState();
+        
+        // Setup app resume detection for PWA offline resilience
+        this.setupAppResumeDetection();
         
         // Fade in sidebar after loading
         if (sidebar) {
@@ -45,6 +164,26 @@ const app = {
                 messageInput.focus();
             }
         }, 100); // Reduced from 300ms
+    },
+
+    setupAppResumeDetection() {
+        // Detect when user returns to app (critical for iOS PWA)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.currentConversation) {
+                // User returned to app - check for failed messages
+                setTimeout(() => {
+                    this.checkPendingMessages();
+                }, 500); // Small delay to let UI settle
+            }
+        });
+
+        // Also check on page load/reload
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted && this.currentConversation) {
+                // Page restored from cache
+                this.checkPendingMessages();
+            }
+        });
     },
 
     detectMobile() {
@@ -910,6 +1049,11 @@ const app = {
             const response = await fetch(`/claude/conversations/detail/${conversationId}`);
             const data = await response.json();
             this.renderMessages(data.messages);
+            
+            // Check for pending/failed messages after loading conversation (PWA resilience)
+            setTimeout(() => {
+                this.checkPendingMessages();
+            }, 500);
         } catch (error) {
             console.error('Error loading conversation:', error);
         }
@@ -1039,6 +1183,9 @@ const app = {
             }
         }
 
+        // Save to localStorage BEFORE sending (PWA offline resilience)
+        const messageId = this.savePendingMessage(this.currentConversation, message);
+
         input.value = '';
         input.style.height = '40px'; // Reset to min-height
         input.style.overflowY = 'hidden';
@@ -1069,7 +1216,14 @@ const app = {
                 body: JSON.stringify({ message })
             });
 
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
             const data = await response.json();
+
+            // Success - remove from localStorage
+            this.removePendingMessage(messageId);
 
             // Hide thinking indicator
             if (thinkingIndicator) {
@@ -1091,6 +1245,9 @@ const app = {
         } catch (error) {
             console.error('Error sending message:', error);
             
+            // Mark as failed in localStorage for retry
+            this.markMessageFailed(messageId);
+            
             // Hide thinking indicator on error
             const thinkingIndicator = document.getElementById('thinkingIndicator');
             if (thinkingIndicator) {
@@ -1101,10 +1258,8 @@ const app = {
                 typingIndicator.classList.remove('active');
             }
 
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'message assistant';
-            errorDiv.textContent = 'Sorry, I encountered an error. Please try again.';
-            container.insertBefore(errorDiv, typingIndicator);
+            // Show retry UI instead of generic error
+            this.showRetryUI(messageId, message);
         } finally {
             sendBtn.disabled = false;
             input.focus();
