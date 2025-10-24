@@ -1863,6 +1863,48 @@ const app = {
         };
         return text.replace(/[&<>"']/g, m => map[m]);
     },
+
+    formatMessage(content) {
+        content = this.escapeHtml(content);
+        
+        content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+        content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
+        content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        content = content.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        content = content.replace(/\n/g, '<br>');
+        return content;
+    },
+    
+    async streamText(element, text, speed = 8) {
+        const formatted = this.formatMessage(text);
+        element.innerHTML = '';
+        
+        let currentIndex = 0;
+        let scrollCounter = 0;
+        
+        const displayChunk = () => {
+            if (currentIndex < formatted.length) {
+                const chunkSize = 5;
+                const chunk = formatted.substring(currentIndex, currentIndex + chunkSize);
+                element.innerHTML = formatted.substring(0, currentIndex + chunk.length);
+                currentIndex += chunk.length;
+                
+                scrollCounter++;
+                if (scrollCounter % 10 === 0) {
+                    this.scrollToBottomIfNeeded();
+                }
+                
+                requestAnimationFrame(() => {
+                    setTimeout(displayChunk, speed);
+                });
+            } else {
+                this.scrollToBottom();
+            }
+        };
+        
+        displayChunk();
+    },
+
     async sendMessage() {
         const input = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
