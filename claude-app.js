@@ -60,24 +60,20 @@ const app = {
         }
     },
 
-    startChatWithPrompt(prompt) {
+    async startChatWithPrompt(prompt) {
         const messageInput = document.getElementById('messageInput');
         if (messageInput) {
             messageInput.value = prompt;
             messageInput.style.height = 'auto';
             messageInput.style.height = messageInput.scrollHeight + 'px';
-            messageInput.focus();
-            
-            // Hide welcome screen, show messages
-            const welcomeScreen = document.getElementById('welcomeScreen');
-            const messagesContainer = document.getElementById('messagesContainer');
-            if (welcomeScreen) welcomeScreen.classList.add('hidden');
-            if (messagesContainer) messagesContainer.classList.remove('hidden');
             
             // Close sidebar on mobile
             if (this.isMobile) {
                 this.closeSidebar();
             }
+            
+            // Auto-send the message
+            await this.sendMessage();
         }
     },
 
@@ -518,6 +514,50 @@ const app = {
         });
     },
 
+    async autoCreateConversation(firstMessage) {
+        // If no project, select the first one or use a default
+        if (!this.currentProject) {
+            if (this.projects.length > 0) {
+                await this.openProject(this.projects[0].id, this.projects[0].name);
+            } else {
+                // No projects exist, can't create conversation
+                console.error('No projects available');
+                return false;
+            }
+        }
+
+        // Generate conversation name from first message (first 30 chars)
+        const autoName = firstMessage.length > 30 
+            ? firstMessage.substring(0, 30) + '...' 
+            : firstMessage;
+
+        try {
+            const response = await fetch('/claude/conversations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project: this.currentProject, name: autoName })
+            });
+
+            const data = await response.json();
+            await this.loadConversations();
+            
+            // Set as current conversation
+            this.currentConversation = data.id;
+            document.getElementById('topBarTitle').textContent = data.name;
+            
+            // Show messages container, hide welcome screen
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            const messagesContainer = document.getElementById('messagesContainer');
+            if (welcomeScreen) welcomeScreen.classList.add('hidden');
+            if (messagesContainer) messagesContainer.classList.remove('hidden');
+            
+            return true;
+        } catch (error) {
+            console.error('Error auto-creating conversation:', error);
+            return false;
+        }
+    },
+
     async openConversation(conversationId, conversationName) {
         this.currentConversation = conversationId;
         
@@ -620,9 +660,14 @@ const app = {
         const message = input.value.trim();
         if (!message) return;
 
+        // Auto-create conversation if none exists
         if (!this.currentConversation) {
-            alert('Please select or create a conversation first');
-            return;
+            await this.autoCreateConversation(message);
+            if (!this.currentConversation) {
+                // If auto-create failed, show error
+                alert('Failed to create conversation. Please try again.');
+                return;
+            }
         }
 
         input.value = '';
