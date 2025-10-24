@@ -1924,8 +1924,14 @@ async def reprocess_pdf(file: UploadFile = File(...)):
             # Build PDF content
             story = []
             
-            # Title (use original filename)
+            # Title (use original filename) - sanitize Unicode for Latin-1 encoding
             original_title = file.filename.replace('.pdf', '').replace('_', ' ')
+            # Replace Unicode characters that cause Latin-1 encoding issues
+            original_title = original_title.replace('\u2018', "'").replace('\u2019', "'")  # Smart single quotes
+            original_title = original_title.replace('\u201C', '"').replace('\u201D', '"')  # Smart double quotes
+            original_title = original_title.replace('\u2013', '-').replace('\u2014', '--')  # En/em dashes
+            original_title = original_title.replace('\u2026', '...')  # Ellipsis
+            original_title = original_title.replace('\u00A0', ' ')  # Non-breaking space
             story.append(Paragraph(f"<b>{original_title} (Enhanced)</b>", title_style))
             story.append(Spacer(1, 0.2*inch))
             
