@@ -181,161 +181,98 @@
             overscroll-behavior: none;
         }
 
-        /* Sidebar */
+        /* Sidebar - ChatGPT Style */
         .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
             width: 260px;
-            background: var(--bg-sidebar);
-            border-right: 1px solid var(--border);
+            height: 100dvh;
+            background: #f7f7f8;
+            border-right: 1px solid #e5e5e5;
             display: flex;
             flex-direction: column;
-            transition: transform 150ms ease;
+            transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 100;
-            box-shadow: none;
+            overflow: hidden;
         }
 
         .sidebar.hidden {
             transform: translateX(-100%);
         }
 
-        /* Sidebar Overlay for Mobile */
-        .sidebar-overlay {
+        /* Close button - only visible on mobile */
+        .sidebar-close-btn {
+            display: none;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 150ms ease;
+            z-index: 101;
+        }
+
+        .sidebar-close-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        /* Sidebar Backdrop */
+        .sidebar-backdrop {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.5);
             z-index: 99;
-            transition: opacity 150ms ease;
+            transition: opacity 250ms ease;
         }
-        
-        /* Shadow only on overlay, not sidebar */
 
-        .sidebar-overlay.active {
+        .sidebar-backdrop.visible {
             display: block;
         }
 
-        .sidebar-header {
-            padding: 16px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        /* Top Section */
+        .sidebar-top {
+            padding: 12px;
+            border-bottom: 1px solid #e5e5e5;
             flex-shrink: 0;
         }
 
-        .sidebar-logo {
+        .sidebar-search-row {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .sidebar-logo svg {
-            width: 24px;
-            height: 24px;
-            flex-shrink: 0;
-        }
-
-        .new-chat-btn-sidebar {
-            width: 100%;
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-size: var(--text-sm);
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 150ms ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             gap: 8px;
+            align-items: center;
         }
 
-        .new-chat-btn-sidebar:hover {
-            background: var(--accent-hover);
-        }
-
-        /* Sidebar Tabs */
-        .sidebar-tabs {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-
-        .sidebar-tab {
+        .sidebar-search {
+            flex: 1;
             display: flex;
             align-items: center;
-            min-height: 44px;
-            justify-content: flex-start;
-            gap: var(--space-2);
-            padding: var(--space-2) var(--space-3);
-            background: none;
-            border: none;
-            border-radius: 6px;
-            font-size: var(--text-sm);
-            color: var(--text-secondary);
-            cursor: pointer;
+            gap: 8px;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #d4d4d4;
+            border-radius: 8px;
             transition: all 150ms ease;
         }
 
-        .sidebar-tab:hover {
-            background: var(--bg-hover);
-            color: var(--text-primary);
-        }
-
-        .sidebar-tab.active {
-            background: var(--btn-secondary-bg);
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .sidebar-tab svg {
-            opacity: 0.7;
-        }
-
-        .sidebar-tab.active svg {
-            opacity: 1;
-        }
-
-        /* Sidebar Content Area */
-        .sidebar-content {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            min-height: 0;
-        }
-
-        .sidebar-tab-content {
-            padding: 16px;
-        }
-
-        .sidebar-tab-content.hidden {
-            display: none;
-        }
-
-        /* Search Bar */
-        .sidebar-search {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 12px;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-bottom: 16px;
+        .sidebar-search:focus-within {
+            border-color: #a3a3a3;
         }
 
         .sidebar-search svg {
-            color: var(--text-secondary);
+            color: #737373;
             flex-shrink: 0;
         }
 
@@ -343,13 +280,180 @@
             flex: 1;
             border: none;
             background: none;
-            color: var(--text-primary);
-            font-size: 0.9rem;
+            color: #171717;
+            font-size: 0.875rem;
             outline: none;
         }
 
         .sidebar-search input::placeholder {
-            color: var(--text-secondary);
+            color: #a3a3a3;
+        }
+
+        .new-chat-icon-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 150ms ease;
+            color: #525252;
+            flex-shrink: 0;
+        }
+
+        .new-chat-icon-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: #171717;
+        }
+
+        /* Sidebar Content */
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 8px 12px;
+        }
+
+        /* Navigation Items */
+        .sidebar-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 150ms ease;
+            color: #171717;
+            font-size: 0.875rem;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-nav-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .sidebar-nav-item svg {
+            color: #525252;
+            flex-shrink: 0;
+        }
+
+        /* Projects Section */
+        .sidebar-section {
+            margin-top: 8px;
+        }
+
+        .sidebar-section-header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 150ms ease;
+            color: #171717;
+        }
+
+        .sidebar-section-header:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .sidebar-section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.875rem;
+        }
+
+        .sidebar-section-title svg {
+            color: #525252;
+        }
+
+        .sidebar-section-header .chevron {
+            color: #525252;
+            transition: transform 200ms ease;
+        }
+
+        .sidebar-section-header.collapsed .chevron {
+            transform: rotate(-90deg);
+        }
+
+        .sidebar-section-content {
+            padding-left: 16px;
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 200ms ease;
+        }
+
+        .sidebar-section-content.collapsed {
+            max-height: 0;
+        }
+
+        /* Project Item */
+        .project-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 150ms ease;
+            color: #171717;
+            font-size: 0.875rem;
+            margin-bottom: 2px;
+        }
+
+        .project-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .project-item svg {
+            color: #525252;
+            flex-shrink: 0;
+        }
+
+        /* User Profile Footer */
+        .sidebar-footer {
+            border-top: 1px solid #e5e5e5;
+            padding: 12px;
+            flex-shrink: 0;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 150ms ease;
+        }
+
+        .user-profile:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e5e5e5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #525252;
+            flex-shrink: 0;
+        }
+
+        .user-name {
+            font-size: 0.875rem;
+            color: #171717;
+            font-weight: 500;
         }
 
         /* Chat History */
@@ -445,6 +549,12 @@
             position: relative;
             overflow: hidden;
             max-width: 100vw;
+            margin-left: 260px; /* Account for fixed sidebar */
+            transition: margin-left 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar.hidden + .sidebar-backdrop + .main-content {
+            margin-left: 0;
         }
 
         /* Top Bar */
@@ -1133,6 +1243,11 @@
                 transform: translateX(-100%);
             }
 
+            /* Show close button on mobile */
+            .sidebar-close-btn {
+                display: flex !important;
+            }
+
             /* Main content never shifts on mobile */
             .main-content {
                 margin-left: 0 !important;
@@ -1145,7 +1260,6 @@
 
             /* Touch-friendly sizing */
             .icon-button,
-            .sidebar-tab,
             .conversation-item-wrapper {
                 min-height: 48px;
             }
@@ -1315,78 +1429,73 @@
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <!-- Sidebar Header -->
-            <div class="sidebar-header">
-                <div class="sidebar-logo">
-                    <svg width="24" height="24" viewBox="0 0 200 200">
-                        <defs>
-                            <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
-                            </linearGradient>
-                        </defs>
-                        <circle cx="60" cy="50" r="8" fill="url(#brainGradient)"/>
-                        <circle cx="140" cy="50" r="8" fill="url(#brainGradient)"/>
-                        <circle cx="100" cy="100" r="10" fill="url(#brainGradient)"/>
-                        <circle cx="60" cy="150" r="8" fill="url(#brainGradient)"/>
-                        <circle cx="140" cy="150" r="8" fill="url(#brainGradient)"/>
-                    </svg>
-                    InnerVerse
-                </div>
-                <button class="new-chat-btn-sidebar" onclick="app.quickNewChat()">
-                    <span>+</span> New Chat
-                </button>
-            </div>
+            <!-- Close button for mobile -->
+            <button class="sidebar-close-btn" id="sidebarCloseBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
 
-            <!-- Navigation Tabs -->
-            <div class="sidebar-tabs">
-                <button class="sidebar-tab active" id="tabHome" onclick="app.switchTab('home')">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                    </svg>
-                    <span>Home</span>
-                </button>
-                <button class="sidebar-tab" id="tabProjects" onclick="app.switchTab('projects')">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    <span>Projects</span>
-                </button>
-                <button class="sidebar-tab" id="tabActivity" onclick="app.switchTab('activity')">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    <span>Activity</span>
-                </button>
-            </div>
-            
-            <!-- Scrollable Content -->
-            <div class="sidebar-content" id="sidebarContentArea">
-                <!-- Home Tab Content -->
-                <div class="sidebar-tab-content" id="tabContentHome">
-                    <!-- Search Bar -->
+            <!-- Top Section: Search + New Chat -->
+            <div class="sidebar-top">
+                <div class="sidebar-search-row">
                     <div class="sidebar-search">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8"></circle>
                             <path d="m21 21-4.35-4.35"></path>
                         </svg>
-                        <input type="text" placeholder="Search conversations..." id="searchInput">
+                        <input type="text" placeholder="Search..." id="searchInput">
                     </div>
-
-                    <!-- Chat History (Date-grouped) -->
-                    <div id="chatHistoryList"></div>
+                    <button class="new-chat-icon-btn" onclick="app.quickNewChat()" title="New chat">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Scrollable Content -->
+            <div class="sidebar-content" id="sidebarContent">
+                <!-- ChatGPT / Home -->
+                <div class="sidebar-nav-item" onclick="app.showHomeView()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>ChatGPT</span>
                 </div>
 
-                <!-- Projects Tab Content -->
-                <div class="sidebar-tab-content hidden" id="tabContentProjects">
-                    <div id="sidebarProjects"></div>
+                <!-- Projects Section (Collapsible) -->
+                <div class="sidebar-section">
+                    <button class="sidebar-section-header" id="projectsToggle" onclick="app.toggleProjects()">
+                        <div class="sidebar-section-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span>Projects</span>
+                        </div>
+                        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    <div class="sidebar-section-content" id="projectsList">
+                        <!-- Projects will be dynamically loaded here -->
+                    </div>
                 </div>
+            </div>
 
-                <!-- Activity Tab Content -->
-                <div class="sidebar-tab-content hidden" id="tabContentActivity">
-                    <div id="sidebarConversations"></div>
+            <!-- User Profile at Bottom -->
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <span class="user-name">User</span>
                 </div>
             </div>
         </aside>
