@@ -247,12 +247,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            padding: 8px 12px;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
             background: none;
             border: none;
             border-radius: 6px;
-            font-size: 0.85rem;
+            font-size: var(--text-sm);
             color: var(--text-secondary);
             cursor: pointer;
             transition: all 0.2s ease;
@@ -429,22 +429,22 @@
         }
 
         .project-item {
-            padding: 10px 12px;
-            border-radius: 8px;
+            padding: var(--space-2) var(--space-3);
+            border-radius: 6px;
             cursor: pointer;
-            transition: background 0.2s ease;
-            margin-bottom: 4px;
+            transition: background-color 150ms ease;
+            margin-bottom: var(--space-1);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: var(--space-2);
         }
 
         .project-item:hover {
-            background: var(--btn-secondary-hover);
+            background: var(--bg-hover);
         }
 
         .project-item.active {
-            background: var(--btn-secondary-hover);
+            background: var(--bg-hover);
         }
 
         .project-emoji {
@@ -644,21 +644,25 @@
 
         .prompt-card {
             background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: var(--space-4);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 150ms ease;
             text-align: left;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: var(--space-2);
         }
 
         .prompt-card:hover {
-            border-color: var(--btn-primary-bg);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px var(--shadow-color);
+            border-color: var(--accent);
+            background: var(--bg-hover);
+        }
+        
+        .prompt-card:active {
+            transform: scale(0.98);
+            transition: transform 50ms ease-out;
         }
 
         .prompt-icon {
@@ -695,51 +699,53 @@
         }
 
         .message {
-            max-width: 70%;
+            max-width: 80%;
             padding: 12px 16px;
-            border-radius: 16px;
-            line-height: 1.6;
+            border-radius: 12px;
+            line-height: var(--leading-relaxed);
             word-wrap: break-word;
+            font-size: var(--text-base);
         }
 
         .message.user {
             align-self: flex-end;
-            background: var(--btn-primary-bg);
-            color: white;
-            border-bottom-right-radius: 4px;
+            background: var(--bg-sidebar);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
         }
 
         .message.assistant {
             align-self: flex-start;
-            background: var(--btn-secondary-hover);
+            background: transparent;
             color: var(--text-primary);
-            border-bottom-left-radius: 4px;
-            border: 1px solid var(--border-color);
+            max-width: 100%;
         }
 
         .message.assistant pre {
-            background: var(--border-color);
+            background: var(--bg-sidebar);
+            border: 1px solid var(--border);
             padding: 12px;
-            border-radius: 8px;
+            border-radius: 6px;
             overflow-x: auto;
             margin: 8px 0;
+            font-family: var(--font-mono);
+            font-size: var(--text-sm);
         }
 
         .message.assistant code {
-            background: var(--border-color);
+            background: var(--bg-sidebar);
             padding: 2px 6px;
             border-radius: 4px;
-            font-family: 'Courier New', monospace;
+            font-family: var(--font-mono);
+            font-size: var(--text-sm);
         }
 
         .typing-indicator {
             align-self: flex-start;
-            background: var(--btn-secondary-hover);
+            background: transparent;
             padding: 12px 16px;
-            border-radius: 16px;
-            border-bottom-left-radius: 4px;
+            border-radius: 12px;
             display: none;
-            border: 1px solid var(--border-color);
         }
 
         .typing-indicator.active {
@@ -806,40 +812,52 @@
         .message-input {
             flex: 1;
             padding: 12px 16px;
-            border: 2px solid var(--border-color);
-            border-radius: 24px;
-            font-size: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: var(--text-base);
+            line-height: var(--leading-normal);
+            font-family: inherit;
             outline: none;
-            transition: border-color 0.2s ease;
+            transition: border-color 150ms ease, box-shadow 150ms ease;
             resize: none;
             max-height: 120px;
-            background: var(--bg-color);
+            background: var(--bg-sidebar);
             color: var(--text-primary);
         }
 
         .message-input:focus {
-            border-color: var(--btn-primary-bg);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+        
+        .message-input::placeholder {
+            color: var(--text-tertiary);
         }
 
         .send-btn {
-            background: var(--btn-primary-bg);
+            background: var(--accent);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 24px;
-            font-size: 1rem;
-            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: var(--text-sm);
+            font-weight: 500;
             cursor: pointer;
-            transition: background 0.2s ease;
+            transition: background-color 150ms ease;
         }
 
         .send-btn:hover:not(:disabled) {
-            background: var(--btn-primary-hover);
+            background: var(--accent-hover);
         }
 
         .send-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+        
+        .send-btn:active:not(:disabled) {
+            transform: scale(0.98);
+            transition: transform 50ms ease-out;
         }
 
         .empty-state {
@@ -1068,19 +1086,20 @@
         .conversation-item-wrapper {
             display: flex;
             align-items: center;
-            gap: 4px;
-            padding: 10px 12px;
-            border-radius: 8px;
-            transition: background 0.2s ease;
-            margin-bottom: 4px;
+            gap: var(--space-1);
+            padding: var(--space-2) var(--space-3);
+            border-radius: 6px;
+            transition: background-color 150ms ease;
+            margin-bottom: var(--space-1);
+            cursor: pointer;
         }
 
         .conversation-item-wrapper:hover {
-            background: var(--btn-secondary-hover);
+            background: var(--bg-hover);
         }
 
         .conversation-item-wrapper.active {
-            background: var(--btn-secondary-hover);
+            background: var(--bg-active);
         }
 
         .conversation-name-sidebar {
@@ -1391,6 +1410,6 @@
             }
         });
     </script>
-    <script src="/claude-app.js?v=3.2"></script>
+    <script src="/claude-app.js?v=4.0"></script>
 </body>
 </html>
