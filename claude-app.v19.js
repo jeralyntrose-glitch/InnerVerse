@@ -6,22 +6,45 @@ const app = {
     sidebarOpen: true,
     currentTab: 'home',
     isMobile: false,
+    // Performance: Cache DOM elements
+    cachedElements: {},
+    
+    getElement(id) {
+        if (!this.cachedElements[id]) {
+            this.cachedElements[id] = document.getElementById(id);
+        }
+        return this.cachedElements[id];
+    },
+    
+    clearElementCache() {
+        this.cachedElements = {};
+    },
 
     async init() {
         this.detectMobile();
+        // Show loading state immediately
+        const sidebar = this.getElement('sidebar');
+        if (sidebar) sidebar.style.opacity = '0';
+        
         await this.loadProjects();
         this.renderSidebarProjects();
         this.showDefaultChatView();
         this.setupEventListeners();
         this.loadSidebarState();
         
+        // Fade in sidebar after loading
+        if (sidebar) {
+            sidebar.style.transition = 'opacity 200ms ease';
+            sidebar.style.opacity = '1';
+        }
+        
         // Auto-focus input on load (like ChatGPT/Claude)
         setTimeout(() => {
-            const messageInput = document.getElementById('messageInput');
+            const messageInput = this.getElement('messageInput');
             if (messageInput) {
                 messageInput.focus();
             }
-        }, 300);
+        }, 100); // Reduced from 300ms
     },
 
     detectMobile() {
@@ -45,17 +68,164 @@ const app = {
     switchTab(tabName) {
         this.currentTab = tabName;
         
-        // Update tab buttons
+        // Update tab buttons - add instant visual feedback
         document.querySelectorAll('.sidebar-tab').forEach(tab => {
             tab.classList.remove('active');
         });
-        document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+        const activeTab = document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+        if (activeTab) {
+            activeTab.classList.add('active');
+            // Instant visual feedback
+            activeTab.style.transform = 'scale(0.95)';
+            setTimeout(() => { activeTab.style.transform = ''; }, 100);
+        }
         
-        // Update tab content
+        // Update sidebar tab content
         document.querySelectorAll('.sidebar-tab-content').forEach(content => {
             content.classList.add('hidden');
         });
         document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.remove('hidden');
+        
+        // Update main chat area based on tab
+        if (tabName === 'home') {
+            this.showHomeView();
+        } else if (tabName === 'activity') {
+            this.showActivityView();
+        }
+        // 'projects' tab just switches sidebar content, doesn't change main area
+    },
+    
+    showHomeView() {
+        // Reset to home: clear current conversation and project, show welcome screen
+        this.currentConversation = null;
+        this.currentProject = null;
+        document.getElementById('topBarTitle').textContent = 'InnerVerse - MBTI Master';
+        this.showDefaultChatView();
+    },
+    
+    async showActivityView() {
+        // Show recent activity across all projects
+        const messagesContainer = this.getElement('messagesContainer');
+        const welcomeScreen = this.getElement('welcomeScreen');
+        const inputSuggestions = this.getElement('inputSuggestions');
+        const topBarTitle = this.getElement('topBarTitle');
+        
+        if (welcomeScreen) welcomeScreen.classList.add('hidden');
+        if (inputSuggestions) inputSuggestions.classList.add('hidden');
+        if (topBarTitle) topBarTitle.textContent = 'Recent Activity';
+        
+        if (messagesContainer) {
+            messagesContainer.classList.remove('hidden');
+            messagesContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⏳</div>
+                    <p>Loading recent activity...</p>
+                </div>
+            `;
+            
+            try {
+                // Fetch conversations from all projects in parallel for better performance
+                const fetchPromises = this.projects.map(async (project) => {
+                    try {
+                        const response = await fetch(`/claude/conversations/${project.id}`);
+                        const data = await response.json();
+                        const conversations = data.conversations || [];
+                        
+                        // Add project info to each conversation
+                        conversations.forEach(conv => {
+                            conv.project_emoji = project.emoji;
+                            conv.project_name = project.name.replace(project.emoji, '').trim();
+                            conv.project_id = project.id;
+                        });
+                        
+                        return conversations;
+                    } catch (err) {
+                        console.error(`Error loading conversations for ${project.name}:`, err);
+                        return []; // Return empty array on error to keep Promise.all working
+                    }
+                });
+                
+                // Wait for all fetches to complete in parallel
+                const projectConversations = await Promise.all(fetchPromises);
+                
+                // Flatten the array of arrays
+                const allConversations = projectConversations.flat();
+                
+                // Sort by updated_at (most recent first)
+                allConversations.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+                
+                // Take only the 20 most recent
+                const recentConversations = allConversations.slice(0, 20);
+                
+                if (recentConversations.length === 0) {
+                    messagesContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                            <h2>No Recent Activity</h2>
+                            <p style="color: var(--text-secondary); margin-top: 8px;">Start a conversation to see activity here!</p>
+                        </div>
+                    `;
+                } else {
+                    let html = '<div style="padding: 20px; max-width: 800px; margin: 0 auto;">';
+                    html += '<h2 style="margin-bottom: 24px; font-size: 1.5rem;">Recent Conversations</h2>';
+                    
+                    recentConversations.forEach(conv => {
+                        const date = new Date(conv.updated_at);
+                        const timeAgo = this.getTimeAgo(date);
+                        
+                        // Use JSON.stringify for proper JavaScript string escaping
+                        // Use single quotes for onclick to avoid conflicts with JSON.stringify's double quotes
+                        const projectFullName = `${conv.project_emoji} ${conv.project_name}`;
+                        
+                        html += `
+                            <div onclick='app.openProject(${JSON.stringify(conv.project_id)}, ${JSON.stringify(projectFullName)}); setTimeout(() => app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)}), 100);' 
+                                 style="padding: 16px; margin-bottom: 12px; background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 150ms ease;"
+                                 onmouseover="this.style.background='var(--bg-hover)'; this.style.borderColor='var(--accent)';" 
+                                 onmouseout="this.style.background='var(--bg-sidebar)'; this.style.borderColor='var(--border)';">
+                                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                    <span style="font-size: 1.25rem;">${conv.project_emoji}</span>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 500; margin-bottom: 4px;">${this.escapeHtml(conv.name)}</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">${this.escapeHtml(conv.project_name)}</div>
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: var(--text-tertiary); text-align: right;">
+                                        ${timeAgo}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    messagesContainer.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading activity:', error);
+                messagesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h2>Error loading activity</h2>
+                        <p style="color: var(--text-secondary); margin-top: 8px;">Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+    },
+    
+    getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        
+        if (seconds < 60) return 'Just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+        if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+        
+        return date.toLocaleDateString();
     },
 
     closeSidebar() {
@@ -73,7 +243,8 @@ const app = {
         if (messageInput) {
             messageInput.value = prompt;
             messageInput.style.height = 'auto';
-            messageInput.style.height = messageInput.scrollHeight + 'px';
+            const newHeight = Math.min(messageInput.scrollHeight, 120);
+            messageInput.style.height = newHeight + 'px';
             
             // Close sidebar on mobile
             if (this.isMobile) {
@@ -118,9 +289,25 @@ const app = {
                 }
             });
 
+            // Debounced auto-expand for better performance
+            let resizeTimeout;
             messageInput.addEventListener('input', () => {
+                // Clear previous timeout
+                clearTimeout(resizeTimeout);
+                
+                // Immediate resize for better UX
                 messageInput.style.height = 'auto';
-                messageInput.style.height = messageInput.scrollHeight + 'px';
+                const newHeight = Math.min(messageInput.scrollHeight, 120);
+                messageInput.style.height = newHeight + 'px';
+                
+                // Debounced scrollbar update
+                resizeTimeout = setTimeout(() => {
+                    if (messageInput.scrollHeight > 120) {
+                        messageInput.style.overflowY = 'auto';
+                    } else {
+                        messageInput.style.overflowY = 'hidden';
+                    }
+                }, 50);
             });
         }
 
@@ -235,10 +422,17 @@ const app = {
         this.currentProject = projectId;
         this.currentConversation = null;
         
-        document.getElementById('topBarTitle').textContent = projectName.split(' ').slice(1).join(' ');
+        // Instant visual feedback
+        const topBarTitle = this.getElement('topBarTitle');
+        if (topBarTitle) {
+            topBarTitle.textContent = projectName.split(' ').slice(1).join(' ');
+        }
         
-        await this.loadConversations();
-        this.renderProjectChatView();
+        // Load and render in parallel
+        const loadPromise = this.loadConversations();
+        const renderPromise = this.renderProjectChatView();
+        
+        await Promise.all([loadPromise, renderPromise]);
         
         this.updateActiveProject();
         
@@ -247,17 +441,79 @@ const app = {
         }
     },
 
-    renderProjectChatView() {
-        // When opening a project without selecting a conversation, show welcome screen
+    async renderProjectChatView() {
+        // When opening a project, show conversation list
         const welcomeScreen = document.getElementById('welcomeScreen');
         const messagesContainer = document.getElementById('messagesContainer');
+        const inputSuggestions = document.getElementById('inputSuggestions');
         
-        if (welcomeScreen) {
-            welcomeScreen.classList.remove('hidden');
-        }
+        if (welcomeScreen) welcomeScreen.classList.add('hidden');
+        if (inputSuggestions) inputSuggestions.classList.add('hidden');
         if (messagesContainer) {
-            messagesContainer.classList.add('hidden');
-            messagesContainer.innerHTML = '';
+            messagesContainer.classList.remove('hidden');
+            
+            // Fetch conversations for this project
+            try {
+                const response = await fetch(`/claude/conversations/${this.currentProject}`);
+                const data = await response.json();
+                const conversations = data.conversations || [];
+                
+                // Show conversation list view
+                if (conversations.length === 0) {
+                    messagesContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                            </div>
+                            <h2>No conversations yet</h2>
+                            <p style="color: var(--text-secondary); margin-top: 8px;">Start a new conversation to begin chatting!</p>
+                        </div>
+                    `;
+                } else {
+                    // Group conversations by date
+                    const grouped = this.groupConversationsByDate(conversations);
+                    
+                    let html = '<div style="padding: 20px; max-width: 800px; margin: 0 auto;">';
+                    html += '<h2 style="margin-bottom: 24px; font-size: 1.5rem;">Conversations in this Project</h2>';
+                    
+                    Object.entries(grouped).forEach(([dateLabel, convs]) => {
+                        if (convs.length === 0) return;
+                        
+                        html += `<div style="margin-bottom: 24px;">`;
+                        html += `<div style="font-size: 0.875rem; color: var(--text-tertiary); font-weight: 500; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">${dateLabel}</div>`;
+                        
+                        convs.forEach(conv => {
+                            html += `
+                                <div onclick='app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)})' 
+                                     style="padding: 16px; margin-bottom: 8px; background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 150ms ease; display: flex; align-items: center; justify-content: space-between; gap: 12px;"
+                                     onmouseover="this.style.background='var(--bg-hover)'; this.style.borderColor='var(--accent)';" 
+                                     onmouseout="this.style.background='var(--bg-sidebar)'; this.style.borderColor='var(--border)';">
+                                    <div style="flex: 1; font-weight: 500;">${this.escapeHtml(conv.name)}</div>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="9 18 15 12 9 6"></polyline>
+                                    </svg>
+                                </div>
+                            `;
+                        });
+                        
+                        html += '</div>';
+                    });
+                    
+                    html += '</div>';
+                    messagesContainer.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+                messagesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h2>Error loading conversations</h2>
+                        <p style="color: var(--text-secondary); margin-top: 8px;">Please try again.</p>
+                    </div>
+                `;
+            }
         }
     },
 
@@ -682,6 +938,7 @@ const app = {
             messages.forEach(msg => {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${msg.role}`;
+                // For existing messages, show immediately without streaming
                 messageDiv.innerHTML = this.formatMessage(msg.content);
                 container.appendChild(messageDiv);
             });
@@ -720,6 +977,41 @@ const app = {
         content = content.replace(/\n/g, '<br>');
         return content;
     },
+    
+    async streamText(element, text, speed = 8) {
+        // Display text with typewriter effect (like Claude/ChatGPT) - optimized
+        const formatted = this.formatMessage(text);
+        element.innerHTML = '';
+        
+        let currentIndex = 0;
+        let scrollCounter = 0;
+        
+        const displayChunk = () => {
+            if (currentIndex < formatted.length) {
+                // Add characters in larger chunks for faster display
+                const chunkSize = 5; // Increased from 3 to 5 for faster streaming
+                const chunk = formatted.substring(currentIndex, currentIndex + chunkSize);
+                element.innerHTML = formatted.substring(0, currentIndex + chunk.length);
+                currentIndex += chunk.length;
+                
+                // Scroll less frequently for better performance (every 10 chunks)
+                scrollCounter++;
+                if (scrollCounter % 10 === 0) {
+                    this.scrollToBottom();
+                }
+                
+                // Continue streaming with requestAnimationFrame for smoothness
+                requestAnimationFrame(() => {
+                    setTimeout(displayChunk, speed);
+                });
+            } else {
+                // Final scroll when done
+                this.scrollToBottom();
+            }
+        };
+        
+        displayChunk();
+    },
 
     async sendMessage() {
         const input = document.getElementById('messageInput');
@@ -748,7 +1040,8 @@ const app = {
         }
 
         input.value = '';
-        input.style.height = 'auto';
+        input.style.height = '40px'; // Reset to min-height
+        input.style.overflowY = 'hidden';
         sendBtn.disabled = true;
 
         const userMessageDiv = document.createElement('div');
@@ -776,11 +1069,13 @@ const app = {
                 typingIndicator.classList.remove('active');
             }
 
+            // Create assistant message div and stream text into it
             const assistantMessageDiv = document.createElement('div');
             assistantMessageDiv.className = 'message assistant';
-            assistantMessageDiv.innerHTML = this.formatMessage(data.assistant_message.content);
             container.insertBefore(assistantMessageDiv, typingIndicator);
             
+            // Stream the response with typewriter effect
+            await this.streamText(assistantMessageDiv, data.assistant_message.content, 10);
             this.scrollToBottom();
         } catch (error) {
             console.error('Error sending message:', error);

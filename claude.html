@@ -760,12 +760,13 @@
             border-top: 1px solid var(--border);
             background: var(--bg-app);
             display: flex;
-            align-items: center;
+            align-items: flex-end;
             gap: 8px;
             z-index: 100;
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
-            max-height: 72px;
+            min-height: 64px;
+            max-height: 160px;
         }
 
         .upload-btn {
@@ -794,13 +795,14 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             font-size: var(--text-base);
-            line-height: 1.4;
+            line-height: 1.5;
             font-family: inherit;
             outline: none;
-            transition: border-color 150ms ease, box-shadow 150ms ease;
+            transition: border-color 150ms ease, box-shadow 150ms ease, height 150ms ease;
             resize: none;
             min-height: 40px;
-            max-height: 48px;
+            max-height: 120px;
+            overflow-y: auto;
             background: var(--bg-sidebar);
             color: var(--text-primary);
         }
