@@ -120,9 +120,10 @@
             background: var(--btn-primary-bg);
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 10px 16px;
             border-radius: 8px;
             font-size: 0.9rem;
+            font-weight: 500;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -132,10 +133,184 @@
             background: var(--btn-primary-hover);
         }
 
+        /* Sidebar Tabs */
+        .sidebar-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-tab:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+
+        .sidebar-tab.active {
+            background: var(--btn-secondary-bg);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .sidebar-tab svg {
+            opacity: 0.7;
+        }
+
+        .sidebar-tab.active svg {
+            opacity: 1;
+        }
+
+        /* Sidebar Content Area */
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        .sidebar-tab-content {
+            padding: 12px;
+        }
+
+        .sidebar-tab-content.hidden {
+            display: none;
+        }
+
+        /* Search Bar */
+        .sidebar-search {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .sidebar-search svg {
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .sidebar-search input {
+            flex: 1;
+            border: none;
+            background: none;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .sidebar-search input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* Chat History */
+        .date-group {
+            margin-bottom: 20px;
+        }
+
+        .date-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 8px 4px 4px;
+        }
+
+        /* Sidebar Footer */
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--sidebar-bg);
+        }
+
+        .user-profile {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .user-avatar svg {
+            color: var(--text-secondary);
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-email {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn-footer {
+            background: none;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn-footer:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
         }
 
         .sidebar-section {
@@ -548,23 +723,81 @@
             background: var(--btn-secondary-hover);
         }
 
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
+        /* Sidebar Backdrop (Mobile only) */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 250ms ease-in-out;
+        }
+
+        .sidebar-backdrop.visible {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Prevent body scroll when sidebar open on mobile */
+        body.sidebar-open {
+            overflow: hidden;
+        }
+
+        /* Desktop (> 1024px) - PUSH MODE */
+        @media (min-width: 1025px) {
+            .sidebar {
+                position: relative;
+                flex-shrink: 0;
+            }
+
+            .main-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .hamburger-btn {
+                display: none;
+            }
+        }
+
+        /* Tablet (768px - 1024px) - PUSH MODE */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+                position: relative;
+                flex-shrink: 0;
+            }
+
+            .sidebar.hidden {
+                transform: translateX(-100%);
+                width: 0;
+            }
+
+            .hamburger-btn {
+                display: flex !important;
+            }
+        }
+
+        /* Mobile (< 768px) - OVERLAY MODE */
+        @media (max-width: 767px) {
             .sidebar {
                 position: fixed;
-                width: 100%;
-                height: 100vh;
                 left: 0;
                 top: 0;
-                box-shadow: none;
+                width: 280px;
+                max-width: 85vw;
                 z-index: 1000;
+                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
             }
 
             .sidebar.hidden {
                 transform: translateX(-100%);
             }
 
+            /* Main content never shifts on mobile */
             .main-content {
+                margin-left: 0 !important;
                 width: 100%;
             }
 
@@ -572,22 +805,33 @@
                 display: flex !important;
             }
 
-            .message {
-                max-width: 85%;
-            }
-
-            .sidebar-overlay {
-                display: none !important;
+            /* Touch-friendly sizing */
+            .icon-button,
+            .sidebar-tab,
+            .conversation-item-wrapper {
+                min-height: 48px;
             }
 
             .input-container {
                 padding: 16px;
+                padding-bottom: calc(16px + env(safe-area-inset-bottom));
             }
-        }
 
-        @media (min-width: 769px) {
-            .hamburger-btn {
+            .message {
+                max-width: 85%;
+            }
+
+            /* Hide less important elements on mobile */
+            .user-email {
                 display: none;
+            }
+
+            /* Active state feedback for touch */
+            .icon-button:active,
+            .conversation-item-wrapper:active,
+            .sidebar-tab:active {
+                transform: scale(0.97);
+                transition: transform 100ms ease-out;
             }
         }
 
@@ -649,12 +893,10 @@
     </style>
 </head>
 <body>
-    <!-- Sidebar Overlay -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
     <div class="app-container">
         <!-- Sidebar -->
-        <div class="sidebar" id="sidebar">
+        <aside class="sidebar" id="sidebar">
+            <!-- Sidebar Header -->
             <div class="sidebar-header">
                 <div class="sidebar-logo">
                     <svg width="24" height="24" viewBox="0 0 200 200">
@@ -672,21 +914,97 @@
                     </svg>
                     InnerVerse
                 </div>
-                <button class="new-chat-btn-sidebar" onclick="app.quickNewChat()">+ New</button>
+                <button class="new-chat-btn-sidebar" onclick="app.quickNewChat()">
+                    <span>+</span> New Chat
+                </button>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="sidebar-tabs">
+                <button class="sidebar-tab active" id="tabHome" onclick="app.switchTab('home')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>Home</span>
+                </button>
+                <button class="sidebar-tab" id="tabProjects" onclick="app.switchTab('projects')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span>Projects</span>
+                </button>
+                <button class="sidebar-tab" id="tabActivity" onclick="app.switchTab('activity')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>Activity</span>
+                </button>
             </div>
             
-            <div class="sidebar-content">
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">Projects</div>
+            <!-- Scrollable Content -->
+            <div class="sidebar-content" id="sidebarContentArea">
+                <!-- Home Tab Content -->
+                <div class="sidebar-tab-content" id="tabContentHome">
+                    <!-- Search Bar -->
+                    <div class="sidebar-search">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" placeholder="Search conversations..." id="searchInput">
+                    </div>
+
+                    <!-- Chat History (Date-grouped) -->
+                    <div id="chatHistoryList"></div>
+                </div>
+
+                <!-- Projects Tab Content -->
+                <div class="sidebar-tab-content hidden" id="tabContentProjects">
                     <div id="sidebarProjects"></div>
                 </div>
 
-                <div class="sidebar-section" id="sidebarConversationsSection" style="display: none;">
-                    <div class="sidebar-section-title">Conversations</div>
+                <!-- Activity Tab Content -->
+                <div class="sidebar-tab-content hidden" id="tabContentActivity">
                     <div id="sidebarConversations"></div>
                 </div>
             </div>
-        </div>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">User</div>
+                        <div class="user-email">Free Plan</div>
+                    </div>
+                </div>
+                <div class="footer-actions">
+                    <button class="icon-btn-footer" title="Settings">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6m5.196-14.804 4.243 4.243M2.561 17.56l4.243 4.243m0-15.607L2.561 2.439m15.196 15.196 4.243 4.243"></path>
+                        </svg>
+                    </button>
+                    <button class="icon-btn-footer" title="Help">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Sidebar Backdrop (Mobile only) -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="app.closeSidebar()"></div>
 
         <!-- Main Content -->
         <div class="main-content">
@@ -783,6 +1101,6 @@
             }
         });
     </script>
-    <script src="/claude-app.js?v=2.5"></script>
+    <script src="/claude-app.js?v=3.0"></script>
 </body>
 </html>
