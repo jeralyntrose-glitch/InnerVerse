@@ -415,35 +415,60 @@ const app = {
                         </div>
                     `;
                 } else {
-                    let html = '<div style="padding: 20px; max-width: 800px; margin: 0 auto;">';
-                    html += '<h2 style="margin-bottom: 24px; font-size: 1.5rem;">Recent Conversations</h2>';
+                    let html = '<div style="padding: 32px; max-width: 800px; margin: 0 auto;">';
                     
+                    // Header section - Claude style
+                    html += '<h1 style="font-size: 2rem; font-weight: 600; margin-bottom: 24px; color: var(--text-primary);">Your chat history</h1>';
+                    
+                    // Search bar - Claude style
+                    html += `
+                        <div style="margin-bottom: 20px;">
+                            <div style="position: relative;">
+                                <svg style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-secondary);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <path d="m21 21-4.35-4.35"></path>
+                                </svg>
+                                <input type="text" 
+                                       id="activitySearch" 
+                                       placeholder="Search your chats..." 
+                                       style="width: 100%; padding: 12px 16px 12px 44px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg-app); color: var(--text-primary); font-size: 0.9375rem; outline: none; transition: border-color 150ms ease;"
+                                       onfocus="this.style.borderColor='var(--accent)';"
+                                       onblur="this.style.borderColor='var(--border)';"
+                                       oninput="app.filterActivityChats(this.value)">
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Chat count and select
+                    html += `<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--text-secondary); font-size: 0.875rem;">
+                        <span>${recentConversations.length} chats with InnerVerse</span>
+                    </div>`;
+                    
+                    // Conversation cards - Claude style
+                    html += '<div id="activityChatList">';
                     recentConversations.forEach(conv => {
                         const date = new Date(conv.updated_at);
                         const timeAgo = this.getTimeAgo(date);
                         
-                        // Use JSON.stringify for proper JavaScript string escaping
-                        // Use single quotes for onclick to avoid conflicts with JSON.stringify's double quotes
                         const projectFullName = `${conv.project_emoji} ${conv.project_name}`;
                         
                         html += `
-                            <div onclick='app.openProject(${JSON.stringify(conv.project_id)}, ${JSON.stringify(projectFullName)}); setTimeout(() => app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)}), 100);' 
-                                 style="padding: 16px; margin-bottom: 12px; background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 150ms ease;"
-                                 onmouseover="this.style.background='var(--bg-hover)'; this.style.borderColor='var(--accent)';" 
-                                 onmouseout="this.style.background='var(--bg-sidebar)'; this.style.borderColor='var(--border)';">
-                                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                            <div class="activity-chat-card" data-search-text="${this.escapeHtml(conv.name).toLowerCase()} ${this.escapeHtml(conv.project_name).toLowerCase()}"
+                                 onclick='app.openProject(${JSON.stringify(conv.project_id)}, ${JSON.stringify(projectFullName)}); setTimeout(() => app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)}), 100);' 
+                                 style="padding: 20px; margin-bottom: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 150ms ease;"
+                                 onmouseover="this.style.background='var(--bg-hover)'; this.style.borderColor='var(--text-secondary)';" 
+                                 onmouseout="this.style.background='var(--card-bg)'; this.style.borderColor='var(--border)';">
+                                <div style="display: flex; align-items: flex-start; gap: 12px;">
                                     <span style="font-size: 1.25rem;">${conv.project_emoji}</span>
-                                    <div style="flex: 1;">
-                                        <div style="font-weight: 500; margin-bottom: 4px;">${this.escapeHtml(conv.name)}</div>
-                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">${this.escapeHtml(conv.project_name)}</div>
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--text-tertiary); text-align: right;">
-                                        ${timeAgo}
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 1rem; font-weight: 500; margin-bottom: 6px; color: var(--text-primary);">${this.escapeHtml(conv.name)}</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">Last message ${timeAgo}</div>
                                     </div>
                                 </div>
                             </div>
                         `;
                     });
+                    html += '</div>'; // Close activityChatList
                     
                     html += '</div>';
                     messagesContainer.innerHTML = html;
@@ -467,13 +492,33 @@ const app = {
     
     getTimeAgo(date) {
         const seconds = Math.floor((new Date() - date) / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(seconds / 3600);
+        const days = Math.floor(seconds / 86400);
         
-        if (seconds < 60) return 'Just now';
-        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-        if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+        if (seconds < 60) return 'just now';
+        if (minutes === 1) return '1 minute ago';
+        if (minutes < 60) return `${minutes} minutes ago`;
+        if (hours === 1) return '1 hour ago';
+        if (hours < 24) return `${hours} hours ago`;
+        if (days === 1) return '1 day ago';
+        if (days < 7) return `${days} days ago`;
         
         return date.toLocaleDateString();
+    },
+    
+    filterActivityChats(searchText) {
+        const chatCards = document.querySelectorAll('.activity-chat-card');
+        const lowerSearch = searchText.toLowerCase();
+        
+        chatCards.forEach(card => {
+            const cardText = card.getAttribute('data-search-text') || '';
+            if (cardText.includes(lowerSearch)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
     },
 
     formatTimestamp(dateString) {
