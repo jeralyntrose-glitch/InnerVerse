@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>InnerVerse - MBTI Master</title>
+    <title>InnerVerse</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -234,6 +234,7 @@
         /* Sidebar Tabs */
         .sidebar-tabs {
             display: flex;
+            flex-direction: column;
             gap: 4px;
             padding: 12px 16px;
             border-bottom: 1px solid var(--border);
@@ -241,11 +242,10 @@
         }
 
         .sidebar-tab {
-            flex: 1;
             display: flex;
             align-items: center;
             min-height: 44px;
-            justify-content: center;
+            justify-content: flex-start;
             gap: var(--space-2);
             padding: var(--space-2) var(--space-3);
             background: none;
@@ -334,86 +334,6 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             padding: 8px 4px 4px;
-        }
-
-        /* Sidebar Footer */
-        .sidebar-footer {
-            padding: 16px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: var(--bg-sidebar);
-            flex-shrink: 0;
-        }
-
-        .user-profile {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 0;
-        }
-
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            background: var(--bg-color);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .user-avatar svg {
-            color: var(--text-secondary);
-        }
-
-        .user-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .user-name {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .user-email {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .footer-actions {
-            display: flex;
-            gap: 4px;
-        }
-
-        .icon-btn-footer {
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 6px;
-            border: none;
-            background: transparent;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 150ms ease;
-        }
-
-        .icon-btn-footer:hover {
-            background: var(--bg-hover);
-            color: var(--text-primary);
         }
 
         .sidebar-section {
@@ -644,8 +564,8 @@
             background: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 16px;
-            min-height: 80px;
+            padding: 12px;
+            min-height: 60px;
             cursor: pointer;
             transition: all 150ms ease;
             text-align: left;
@@ -664,7 +584,7 @@
         }
 
         .prompt-text {
-            font-size: 0.9rem;
+            font-size: 0.875rem;
             color: var(--text-primary);
             font-weight: 500;
         }
@@ -1264,37 +1184,6 @@
                     <div id="sidebarConversations"></div>
                 </div>
             </div>
-
-            <!-- Sidebar Footer -->
-            <div class="sidebar-footer">
-                <div class="user-profile">
-                    <div class="user-avatar">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name">User</div>
-                        <div class="user-email">Free Plan</div>
-                    </div>
-                </div>
-                <div class="footer-actions">
-                    <button class="icon-btn-footer" title="Settings">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M12 1v6m0 6v6m5.196-14.804 4.243 4.243M2.561 17.56l4.243 4.243m0-15.607L2.561 2.439m15.196 15.196 4.243 4.243"></path>
-                        </svg>
-                    </button>
-                    <button class="icon-btn-footer" title="Help">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        </svg>
-                    </button>
-                </div>
-            </div>
         </aside>
 
         <!-- Sidebar Backdrop (Mobile only) -->
@@ -1310,7 +1199,7 @@
                         <span></span>
                     </div>
                 </button>
-                <div class="top-bar-title" id="topBarTitle">InnerVerse - MBTI Master</div>
+                <div class="top-bar-title" id="topBarTitle">InnerVerse</div>
                 <button id="move-to-project-btn" class="icon-btn" title="Move to Project" style="display: none;" onclick="app.showMoveModalForCurrent()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -1410,7 +1299,7 @@
                     <textarea 
                         class="message-input" 
                         id="messageInput" 
-                        placeholder="Ask me anything about MBTI..."
+                        placeholder="Chat with InnerVerse"
                         rows="1"
                     ></textarea>
                     <button class="send-btn" id="sendBtn" onclick="app.sendMessage()">Send</button>
@@ -1461,6 +1350,6 @@
             }
         });
     </script>
-    <script src="/claude-app.v13.js"></script>
+    <script src="/claude-app.v14.js"></script>
 </body>
 </html>
