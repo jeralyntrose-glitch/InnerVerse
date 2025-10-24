@@ -571,7 +571,14 @@ const app = {
     async openConversation(conversationId, conversationName) {
         this.currentConversation = conversationId;
         
-        document.getElementById('topBarTitle').textContent = conversationName;
+        // Show move button when conversation is open
+        const moveBtn = document.getElementById('move-to-project-btn');
+        if (moveBtn) moveBtn.style.display = 'flex';
+        
+        // Display conversation name with project badge if applicable
+        const currentProjectObj = this.projects.find(p => p.id === this.currentProject);
+        const projectPrefix = currentProjectObj ? `${currentProjectObj.emoji} ` : '';
+        document.getElementById('topBarTitle').textContent = `${projectPrefix}${conversationName}`;
         
         // Hide welcome screen, show messages container
         const welcomeScreen = document.getElementById('welcomeScreen');
@@ -806,6 +813,13 @@ const app = {
         } catch (error) {
             console.error('Error deleting conversation:', error);
             alert('Failed to delete conversation');
+        }
+    },
+
+    showMoveModalForCurrent() {
+        if (this.currentConversation) {
+            const convName = document.getElementById('topBarTitle').textContent;
+            this.showMoveToProjectModal(this.currentConversation, convName);
         }
     },
 
