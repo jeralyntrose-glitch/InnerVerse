@@ -451,18 +451,20 @@ const app = {
                         const date = new Date(conv.updated_at);
                         const timeAgo = this.getTimeAgo(date);
                         const projectFullName = `${conv.project_emoji} ${conv.project_name}`;
+                        const escapedName = this.escapeHtml(conv.name);
+                        const escapedProjectName = this.escapeHtml(conv.project_name);
                         
                         html += `
-                            <div class="activity-chat-card" data-search-text="${this.escapeHtml(conv.name).toLowerCase()} ${this.escapeHtml(conv.project_name).toLowerCase()}"
+                            <div class="activity-chat-card" data-search-text="${escapedName.toLowerCase()} ${escapedProjectName.toLowerCase()}"
                                  style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background-color 100ms ease; gap: 12px;"
                                  onmouseover="this.style.background='var(--bg-hover)';"
                                  onmouseout="this.style.background='transparent';">
                                 <div onclick='app.openProject(${JSON.stringify(conv.project_id)}, ${JSON.stringify(projectFullName)}); setTimeout(() => app.openConversation(${JSON.stringify(conv.id)}, ${JSON.stringify(conv.name)}), 100);' 
                                      style="flex: 1; min-width: 0; overflow: hidden; display: flex; align-items: center; gap: 8px;">
-                                    <div style="font-size: 0.9375rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(conv.name)}</div>
+                                    <div style="font-size: 0.9375rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapedName}</div>
                                     <span style="font-size: 0.75rem; color: var(--text-tertiary); white-space: nowrap;">${timeAgo}</span>
                                 </div>
-                                <button onclick="event.stopPropagation(); if(confirm('Delete \\\"${this.escapeHtml(conv.name).replace(/"/g, '&quot;')}\\\"?')) app.deleteConversationById(${conv.id});"
+                                <button onclick="event.stopPropagation(); if(confirm('Delete &quot;${escapedName.replace(/"/g, '&quot;')}&quot;?')) app.deleteConversationById(${conv.id});"
                                         style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: none; background: transparent; color: var(--text-tertiary); cursor: pointer; transition: all 100ms ease; padding: 0; flex-shrink: 0;"
                                         onmouseover="this.style.background='var(--bg-hover)'; this.style.color='var(--error)';"
                                         onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary)';">
