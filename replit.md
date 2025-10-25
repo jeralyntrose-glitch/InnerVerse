@@ -6,7 +6,10 @@ InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowl
 
 **Hamburger Menu Fix**
 - Fixed unresponsive hamburger menu requiring 4-5 taps on iOS
-- Simplified from complex dual-listener (touchend + click) to single click handler
+- ROOT CAUSE: iOS Safari has 300ms delay on click events (to detect double-tap zoom)
+- SOLUTION: Use touchstart event with preventDefault to bypass the delay entirely
+- Dual-listener setup: touchstart for mobile (instant), click for desktop (fallback)
+- Flag prevents double-firing when both touchstart and click fire
 - Increased tap target from 44px to 48px for better touch accuracy
 - Fixed z-index layering: hamburger (z-index: 50) now goes behind sidebar (z-index: 1000) when open
 - Added explicit pointer-events: none to all hamburger child elements (icon, spans) so only parent button catches taps
