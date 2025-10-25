@@ -242,6 +242,74 @@
             display: block;
         }
 
+        /* Top Section */
+        .sidebar-top {
+            padding: 12px;
+            border-bottom: 1px solid #e5e5e5;
+            flex-shrink: 0;
+        }
+
+        .sidebar-search {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #d4d4d4;
+            border-radius: 8px;
+            transition: all 150ms ease;
+        }
+
+        .sidebar-search:focus-within {
+            border-color: #a3a3a3;
+        }
+
+        .sidebar-search svg:first-child {
+            color: #737373;
+            flex-shrink: 0;
+        }
+
+        .sidebar-search input {
+            flex: 1;
+            border: none;
+            background: none;
+            color: #171717;
+            font-size: 0.875rem;
+            outline: none;
+        }
+
+        .sidebar-search input::placeholder {
+            color: #a3a3a3;
+        }
+
+        .search-clear-btn {
+            display: none;
+            width: 28px;
+            height: 28px;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #737373;
+            flex-shrink: 0;
+            padding: 0;
+            transition: all 150ms ease;
+        }
+
+        .search-clear-btn:hover {
+            background: #f5f5f5;
+            color: #171717;
+        }
+
+        .search-clear-btn:active {
+            background: #e5e5e5;
+        }
+
+        .search-clear-btn.visible {
+            display: flex;
+        }
 
         .new-chat-icon-btn {
             width: 36px;
@@ -1567,6 +1635,23 @@
                 </svg>
             </button>
 
+            <!-- Top Section: Search -->
+            <div class="sidebar-top">
+                <div class="sidebar-search">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" placeholder="Search..." id="searchInput">
+                    <button class="search-clear-btn" id="searchClearBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
             <!-- Scrollable Content -->
             <div class="sidebar-content" id="sidebarContent">
                 <!-- InnerVerse / Home -->
@@ -1837,6 +1922,6 @@
             }
         }, { passive: false });
     </script>
-    <script src="/claude-app.v24.js?v=53"></script>
+    <script src="/claude-app.v24.js?v=54"></script>
 </body>
 </html>

@@ -932,6 +932,44 @@ const app = {
             });
         }
 
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const searchClearBtn = document.getElementById('searchClearBtn');
+        
+        if (searchInput && searchClearBtn) {
+            let searchTimeout;
+            const handleSearch = () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.performSearch(searchInput.value.trim());
+                }, 150);
+                
+                if (searchInput.value.trim()) {
+                    searchClearBtn.classList.add('visible');
+                } else {
+                    searchClearBtn.classList.remove('visible');
+                }
+            };
+            
+            searchInput.addEventListener('input', handleSearch);
+            
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    clearTimeout(searchTimeout);
+                    this.performSearch(searchInput.value.trim());
+                }
+            });
+            
+            searchClearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                searchInput.value = '';
+                searchClearBtn.classList.remove('visible');
+                this.renderSidebarProjects();
+                searchInput.blur();
+            });
+        }
 
         if (window.innerWidth <= 768) {
             this.sidebarOpen = false;
