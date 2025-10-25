@@ -1049,16 +1049,43 @@ const app = {
             convItem.classList.add('active');
         }
         
+        // Clickable name area
         const nameSpan = document.createElement('span');
         nameSpan.className = 'conversation-name';
         nameSpan.textContent = conv.name.length > 40 ? conv.name.substring(0, 40) + '...' : conv.name;
-        nameSpan.setAttribute('data-click-conv-id', conv.id);
-        nameSpan.setAttribute('data-click-conv-name', this.escapeHtml(conv.name));
+        nameSpan.addEventListener('click', () => {
+            this.openConversation(conv.id, conv.name);
+        });
+        
+        // Actions container
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'conversation-actions-inline';
+        
+        // Rename button
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'action-icon-btn';
+        renameBtn.title = 'Rename';
+        renameBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+        renameBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.renameConversationById(conv.id);
+        });
+        
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'action-icon-btn';
+        deleteBtn.title = 'Delete';
+        deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteConversationById(conv.id);
+        });
+        
+        actionsDiv.appendChild(renameBtn);
+        actionsDiv.appendChild(deleteBtn);
         
         convItem.appendChild(nameSpan);
-        
-        // Add long-press detection for context menu
-        this.setupLongPress(convItem, conv.id, conv.name);
+        convItem.appendChild(actionsDiv);
         
         return convItem;
     },

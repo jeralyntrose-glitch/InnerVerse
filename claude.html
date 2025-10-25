@@ -531,9 +531,12 @@
 
         /* Sidebar Conversation Item */
         .sidebar-conversation-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
             padding: 6px 12px;
             border-radius: 6px;
-            cursor: pointer;
             transition: background 100ms ease;
             margin-bottom: 2px;
             font-size: 0.8125rem;
@@ -555,13 +558,47 @@
         }
 
         .conversation-name {
-            display: block;
+            flex: 1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: pointer;
             -webkit-user-select: none;
             user-select: none;
+        }
+
+        .conversation-actions-inline {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 150ms ease;
+        }
+
+        .sidebar-conversation-item:hover .conversation-actions-inline {
+            opacity: 1;
+        }
+
+        .action-icon-btn {
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 100ms ease;
+        }
+
+        .action-icon-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .action-icon-btn:active {
+            background: var(--bg-active);
+            transform: scale(0.95);
         }
 
         .project-emoji {
@@ -1857,6 +1894,6 @@
             }
         }, { passive: false });
     </script>
-    <script src="/claude-app.v24.js?v=38"></script>
+    <script src="/claude-app.v24.js?v=39"></script>
 </body>
 </html>
