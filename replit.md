@@ -4,6 +4,14 @@ InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowl
 
 # Recent Changes (October 25, 2025)
 
+**Hamburger Menu Fix**
+- Fixed unresponsive hamburger menu requiring 4-5 taps on iOS
+- Simplified from complex dual-listener (touchend + click) to single click handler
+- Increased tap target from 44px to 48px for better touch accuracy
+- Increased z-index to 1000 and added pointer-events CSS to prevent blocking
+- Hamburger icon children now have pointer-events: none to ensure parent catches all taps
+- Instant response on first tap - no more frustrating multi-tap requirement
+
 **Smooth Streaming UX Optimization**
 - Pre-allocates space (60px min-height) for Claude's response before text starts appearing
 - Scrolls to bottom ONCE when response container is created (no more jumpy scrolling)
