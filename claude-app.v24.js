@@ -145,6 +145,7 @@ const app = {
     },
 
     async init() {
+        console.log('🚀🚀🚀 CLAUDE APP v52 INITIALIZED - Clear button + Search ALL conversations active');
         this.detectMobile();
         // Show loading state immediately
         const sidebar = this.getElement('sidebar');
@@ -935,8 +936,10 @@ const app = {
         // Search functionality
         const searchInput = document.getElementById('searchInput');
         const searchClearBtn = document.getElementById('searchClearBtn');
+        console.log('🔍 Search setup - input:', !!searchInput, 'clearBtn:', !!searchClearBtn);
         
         if (searchInput && searchClearBtn) {
+            console.log('✅ Search input and clear button found, setting up event listeners...');
             // Debounce search for performance
             let searchTimeout;
             const handleSearch = () => {
@@ -966,6 +969,7 @@ const app = {
             
             // Clear button functionality
             searchClearBtn.addEventListener('click', (e) => {
+                console.log('❌ Clear button clicked!');
                 e.preventDefault();
                 e.stopPropagation();
                 searchInput.value = '';
@@ -973,6 +977,7 @@ const app = {
                 this.renderSidebarProjects(); // Reset to normal view
                 searchInput.blur(); // Hide keyboard on mobile
             });
+            console.log('✅ Search and clear button fully configured');
         }
 
         if (window.innerWidth <= 768) {
