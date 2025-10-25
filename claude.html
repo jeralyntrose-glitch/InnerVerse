@@ -811,10 +811,42 @@
             padding-bottom: 100px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 0;
             -webkit-overflow-scrolling: touch;
             touch-action: pan-y;
             overscroll-behavior-y: contain;
+        }
+
+        .message-wrapper {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .message-wrapper:hover .message-delete-btn {
+            opacity: 1;
+        }
+
+        .message-delete-btn {
+            opacity: 0;
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: opacity 0.2s, transform 0.1s;
+            flex-shrink: 0;
+            margin-top: 8px;
+        }
+
+        .message-delete-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .message-delete-btn:active {
+            transform: scale(0.95);
         }
 
         .message {

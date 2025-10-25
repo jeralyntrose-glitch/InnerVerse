@@ -1758,6 +1758,28 @@ const app = {
         }
     },
 
+    async deleteMessage(messageId) {
+        if (!confirm('Delete this message?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/claude/messages/${messageId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Reload the conversation to show updated messages
+                await this.openConversation(this.currentConversation, document.getElementById('topBarTitle').textContent);
+            } else {
+                alert('Failed to delete message');
+            }
+        } catch (error) {
+            console.error('Error deleting message:', error);
+            alert('Failed to delete message');
+        }
+    },
+
     async openConversation(conversationId, conversationName) {
         this.currentConversation = conversationId;
         
@@ -1845,11 +1867,24 @@ const app = {
             `;
         } else {
             messages.forEach(msg => {
+                const messageWrapper = document.createElement('div');
+                messageWrapper.className = 'message-wrapper';
+                messageWrapper.dataset.messageId = msg.id;
+                
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${msg.role}`;
-                // For existing messages, show immediately without streaming
                 messageDiv.innerHTML = this.formatMessage(msg.content);
-                container.appendChild(messageDiv);
+                
+                // Add delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'message-delete-btn';
+                deleteBtn.innerHTML = '🗑️';
+                deleteBtn.title = 'Delete message';
+                deleteBtn.onclick = () => this.deleteMessage(msg.id);
+                
+                messageWrapper.appendChild(messageDiv);
+                messageWrapper.appendChild(deleteBtn);
+                container.appendChild(messageWrapper);
             });
         }
 
