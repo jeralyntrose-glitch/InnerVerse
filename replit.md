@@ -2,6 +2,16 @@
 
 InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowledge retrieval from uploaded documents. It enables users to upload PDFs via a modern web interface, transcribe audio and YouTube videos into searchable PDFs, and generate document reports. The core functionality involves chunking, embedding, and storing document content in Pinecone, then leveraging OpenAI's GPT models for answering user queries. The application also provides robust API usage monitoring with real-time cost tracking and rate limiting, offering an intuitive and efficient experience for document interaction.
 
+# Recent Changes (October 25, 2025)
+
+**Performance Optimization: Real-Time Streaming Implementation**
+- Replaced external API call (`axis-of-mind.replit.app`) with local Pinecone vector search for faster response times
+- Implemented real Claude Sonnet 4 streaming using Server-Sent Events (SSE) via Anthropic's streaming API
+- Created new `/claude/conversations/{id}/message/stream` endpoint for streaming responses
+- Updated frontend to consume SSE streams and display text in real-time as it arrives from Claude
+- Added visual search indicator (🔍 Searching knowledge base...) during Pinecone queries
+- Performance improvement: Sub-500ms Pinecone queries + real-time word-by-word streaming (ADHD-friendly)
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
