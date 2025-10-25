@@ -1408,7 +1408,7 @@ input[type="file"] {
   background: var(--drop-area-bg);
 }
 
-.chat-input-area input {
+.chat-input-area textarea {
   flex: 1;
   padding: 12px 16px;
   border: 1px solid var(--border-color);
@@ -1418,9 +1418,14 @@ input[type="file"] {
   color: var(--text-primary);
   outline: none;
   transition: all 0.2s;
+  font-family: inherit;
+  resize: none;
+  min-height: 44px;
+  max-height: 150px;
+  overflow-y: auto;
 }
 
-.chat-input-area input:focus {
+.chat-input-area textarea:focus {
   border-color: var(--btn-primary-bg);
 }
 
@@ -1618,7 +1623,7 @@ label,
     gap: 8px;
   }
 
-  .chat-input-area input {
+  .chat-input-area textarea {
     padding: 10px;
     font-size: 13px;
   }

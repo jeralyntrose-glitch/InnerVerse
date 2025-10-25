@@ -710,8 +710,13 @@ chatClose.addEventListener('click', () => {
 });
 
 sendBtn.addEventListener('click', sendMessage);
-chatInput.addEventListener('keypress', e => {
-  if (e.key === 'Enter') sendMessage();
+chatInput.addEventListener('keydown', e => {
+  // Shift+Enter sends the message, plain Enter creates a new line
+  if (e.key === 'Enter' && e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+  // Plain Enter just creates a new line (default textarea behavior)
 });
 
 async function sendMessage() {
