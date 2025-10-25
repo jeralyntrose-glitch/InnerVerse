@@ -2011,9 +2011,13 @@ const app = {
             }
 
             // Create assistant message div BEFORE streaming starts
+            // Pre-allocate space to prevent jumpy scrolling
             const assistantMessageDiv = document.createElement('div');
             assistantMessageDiv.className = 'message assistant';
+            assistantMessageDiv.style.minHeight = '60px'; // Reserve space for incoming response
             container.insertBefore(assistantMessageDiv, typingIndicator);
+            
+            // Scroll to bottom ONCE before text starts appearing
             this.scrollToBottom();
 
             // Use fetch with streaming response
@@ -2056,7 +2060,7 @@ const app = {
                     
                     fullText += batch;
                     assistantMessageDiv.textContent = fullText;
-                    this.scrollToBottomIfNeeded();
+                    // NO scrolling here - space is pre-allocated, just fill it in
                     
                     // Small delay between batches for smooth typing effect
                     if (displayQueue.length > 0) {
@@ -2090,12 +2094,14 @@ const app = {
                                 if (!isSearching) {
                                     isSearching = true;
                                     assistantMessageDiv.innerHTML = '<span style="opacity: 0.6;">🔍 Searching knowledge base...</span>';
+                                    // No need to scroll - already scrolled when div was created
                                 }
                             } else if (data.status === 'searching_web') {
                                 // Show web search indicator
                                 if (!isSearching) {
                                     isSearching = true;
                                     assistantMessageDiv.innerHTML = '<span style="opacity: 0.6;">🌐 Searching the web...</span>';
+                                    // No need to scroll - already scrolled when div was created
                                 }
                             } else if (data.status === 'searching') {
                                 // Continue showing search indicator
@@ -2105,6 +2111,10 @@ const app = {
                                 if (fullText) {
                                     assistantMessageDiv.innerHTML = this.formatMessage(fullText);
                                 }
+                                // Remove min-height constraint now that content is complete
+                                assistantMessageDiv.style.minHeight = '';
+                                // Final scroll to ensure everything is visible
+                                this.scrollToBottom();
                                 break;
                             } else if (data.error) {
                                 throw new Error(data.error);
