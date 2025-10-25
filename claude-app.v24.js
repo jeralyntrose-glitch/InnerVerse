@@ -2073,7 +2073,8 @@ const app = {
                     displayQueue = displayQueue.substring(batchSize);
                     
                     fullText += batch;
-                    assistantMessageDiv.textContent = fullText;
+                    // Apply markdown formatting in real-time as text streams in
+                    assistantMessageDiv.innerHTML = this.formatMessage(fullText);
                     // NO scrolling here - space is pre-allocated, just fill it in
                     
                     // Small delay between batches for smooth typing effect
