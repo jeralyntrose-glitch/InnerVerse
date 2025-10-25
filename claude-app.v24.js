@@ -1922,11 +1922,31 @@ const app = {
     formatMessage(content) {
         content = this.escapeHtml(content);
         
+        // Code blocks (must be first to avoid conflicts)
         content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+        
+        // Inline code
         content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        // Headings (# ## ###)
+        content = content.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+        content = content.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+        content = content.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+        
+        // Bold and italic
         content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         content = content.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        
+        // Bullet lists (- or *)
+        content = content.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+        content = content.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+        
+        // Numbered lists (1. 2. 3.)
+        content = content.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+        
+        // Line breaks (emojis work automatically as unicode)
         content = content.replace(/\n/g, '<br>');
+        
         return content;
     },
     
@@ -2025,8 +2045,14 @@ const app = {
             assistantMessageDiv.style.minHeight = '60px'; // Reserve space for incoming response
             container.insertBefore(assistantMessageDiv, typingIndicator);
             
-            // Scroll to bottom ONCE before text starts appearing
-            this.scrollToBottom();
+            // CRITICAL: Wait for browser to paint the element before scrolling
+            // This ensures scroll happens AFTER the container is positioned, not before
+            await new Promise(resolve => {
+                requestAnimationFrame(() => {
+                    this.scrollToBottom();
+                    resolve();
+                });
+            });
 
             // Use fetch with streaming response (with timeout for mobile reliability)
             const controller = new AbortController();
