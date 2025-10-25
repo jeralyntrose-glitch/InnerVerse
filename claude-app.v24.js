@@ -934,7 +934,9 @@ const app = {
 
         // Search functionality
         const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
+        const searchClearBtn = document.getElementById('searchClearBtn');
+        
+        if (searchInput && searchClearBtn) {
             // Debounce search for performance
             let searchTimeout;
             const handleSearch = () => {
@@ -942,6 +944,13 @@ const app = {
                 searchTimeout = setTimeout(() => {
                     this.performSearch(searchInput.value.trim());
                 }, 150); // Debounce 150ms for snappy feel
+                
+                // Show/hide clear button
+                if (searchInput.value.trim()) {
+                    searchClearBtn.classList.add('visible');
+                } else {
+                    searchClearBtn.classList.remove('visible');
+                }
             };
             
             searchInput.addEventListener('input', handleSearch);
@@ -953,6 +962,16 @@ const app = {
                     clearTimeout(searchTimeout);
                     this.performSearch(searchInput.value.trim());
                 }
+            });
+            
+            // Clear button functionality
+            searchClearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                searchInput.value = '';
+                searchClearBtn.classList.remove('visible');
+                this.renderSidebarProjects(); // Reset to normal view
+                searchInput.blur(); // Hide keyboard on mobile
             });
         }
 
