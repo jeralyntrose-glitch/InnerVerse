@@ -169,6 +169,23 @@ const app = {
         // Set initial history state
         history.replaceState({ view: 'home' }, '', '/claude');
         
+        // DEFAULT SIDEBAR STATE: Ensure "All Chats" is ALWAYS open (user preference)
+        setTimeout(() => {
+            const allChatsToggle = document.getElementById('allChatsToggle');
+            const allChatsList = document.getElementById('allChatsList');
+            if (allChatsToggle && allChatsList) {
+                console.log('🔧 FORCING All Chats to be OPEN');
+                allChatsToggle.classList.remove('collapsed');
+                allChatsList.classList.remove('collapsed');
+                localStorage.setItem('allChatsCollapsed', 'false');
+                
+                // Load and render All Chats conversations immediately
+                this.loadAllConversations().then(() => {
+                    this.renderAllChats();
+                });
+            }
+        }, 50);
+        
         // Fade in sidebar after loading
         if (sidebar) {
             sidebar.style.transition = 'opacity 200ms ease';
@@ -1237,7 +1254,7 @@ const app = {
             container.appendChild(projectContainer);
         });
 
-        // DEFAULT SIDEBAR STATE: Projects COLLAPSED, All Chats OPEN
+        // DEFAULT SIDEBAR STATE: Projects COLLAPSED
         const projectsToggle = document.getElementById('projectsToggle');
         const projectsList = document.getElementById('projectsList');
         
@@ -1246,20 +1263,6 @@ const app = {
             projectsToggle.classList.add('collapsed');
             projectsList.classList.add('collapsed');
             localStorage.setItem('projectsCollapsed', 'true');
-        }
-
-        // ALWAYS start with "All Chats" section OPEN
-        const allChatsToggle = document.getElementById('allChatsToggle');
-        const allChatsList = document.getElementById('allChatsList');
-        if (allChatsToggle && allChatsList) {
-            allChatsToggle.classList.remove('collapsed');
-            allChatsList.classList.remove('collapsed');
-            localStorage.setItem('allChatsCollapsed', 'false');
-            
-            // Load and render All Chats conversations immediately
-            this.loadAllConversations().then(() => {
-                this.renderAllChats();
-            });
         }
 
         // Restore expanded projects state
