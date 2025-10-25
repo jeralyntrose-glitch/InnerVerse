@@ -4,6 +4,13 @@ InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowl
 
 # Recent Changes (October 25, 2025)
 
+**Smooth Streaming UX Optimization**
+- Pre-allocates space (60px min-height) for Claude's response before text starts appearing
+- Scrolls to bottom ONCE when response container is created (no more jumpy scrolling)
+- Text fills in smoothly without pushing the screen up continuously
+- Creates smooth, polished typing effect - reserve space first, then fill it in
+- Significantly improves ADHD-friendly experience by eliminating visual jumpiness
+
 **Message Deletion Feature**
 - Added delete button (🗑️) to each message in Claude chat interface
 - Delete buttons appear on hover with smooth opacity transition
