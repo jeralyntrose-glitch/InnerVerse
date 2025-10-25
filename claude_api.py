@@ -381,7 +381,7 @@ Be yourself - smart, direct, and genuinely interested in helping them understand
                     
                 elif event.type == "content_block_delta":
                     if hasattr(event.delta, "text"):
-                        # Stream text chunks to frontend in real-time
+                        # Stream text chunks to frontend immediately (no batching for max speed)
                         import json
                         yield "data: " + json.dumps({"chunk": event.delta.text}) + "\n\n"
                         

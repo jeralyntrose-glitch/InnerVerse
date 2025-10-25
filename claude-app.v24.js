@@ -1993,6 +1993,7 @@ const app = {
             let buffer = '';
             let fullText = '';
             let isSearching = false;
+            let chunkCount = 0;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -2009,12 +2010,13 @@ const app = {
                             const data = JSON.parse(jsonStr);
 
                             if (data.chunk) {
-                                // Real-time text chunk from Claude!
+                                // Real-time text chunk from Claude - use textContent for SPEED!
                                 fullText += data.chunk;
-                                assistantMessageDiv.innerHTML = this.formatMessage(fullText);
+                                assistantMessageDiv.textContent = fullText;
+                                chunkCount++;
                                 
-                                // Auto-scroll every 10 chunks for smooth performance
-                                if (fullText.length % 50 === 0) {
+                                // Auto-scroll frequently for smooth experience
+                                if (chunkCount % 3 === 0) {
                                     this.scrollToBottomIfNeeded();
                                 }
                             } else if (data.status === 'searching_pinecone') {
@@ -2033,7 +2035,10 @@ const app = {
                                 // Continue showing search indicator
                                 isSearching = true;
                             } else if (data.done) {
-                                // Stream complete!
+                                // Stream complete - NOW format for markdown/code blocks
+                                if (fullText) {
+                                    assistantMessageDiv.innerHTML = this.formatMessage(fullText);
+                                }
                                 break;
                             } else if (data.error) {
                                 throw new Error(data.error);
