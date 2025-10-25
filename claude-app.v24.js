@@ -2187,12 +2187,20 @@ const app = {
             // Try to reload the conversation to check if response was saved
             try {
                 console.log('🔄 Connection lost - checking if message was saved on server...');
+                
+                // Get current message count BEFORE checking server
+                const currentMessagesContainer = document.getElementById('messagesContainer');
+                const currentMessageCount = currentMessagesContainer ? 
+                    currentMessagesContainer.querySelectorAll('.message').length : 0;
+                
                 const checkResponse = await fetch(`/claude/conversations/detail/${this.currentConversation}`);
                 if (checkResponse.ok) {
                     const conversation = await checkResponse.json();
-                    // If new messages were added, reload the conversation instead of showing error
-                    if (conversation.messages && conversation.messages.length > 0) {
-                        console.log('✅ Message was saved! Reloading conversation...');
+                    // If server has MORE messages than we currently show, it means the message was saved
+                    const serverMessageCount = conversation.messages ? conversation.messages.length : 0;
+                    
+                    if (serverMessageCount > currentMessageCount) {
+                        console.log(`✅ Message was saved! Server has ${serverMessageCount} messages, we have ${currentMessageCount}. Reloading...`);
                         await this.loadConversation(this.currentConversation);
                         this.removePendingMessage(messageId);
                         
@@ -2208,6 +2216,8 @@ const app = {
                         sendBtn.disabled = false;
                         input.focus();
                         return; // Success!
+                    } else {
+                        console.log(`❌ Message NOT saved. Server has ${serverMessageCount}, we have ${currentMessageCount}`);
                     }
                 }
             } catch (reloadError) {
