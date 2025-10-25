@@ -726,9 +726,13 @@ const app = {
             allChatsToggle.classList.toggle('collapsed');
             allChatsList.classList.toggle('collapsed');
             
-            // Load conversations on expand (when it was collapsed before)
-            if (isCurrentlyCollapsed && this.allConversations.length === 0) {
-                await this.loadAllConversations();
+            // When expanding, load and render conversations
+            if (isCurrentlyCollapsed) {
+                // Load data if not already loaded
+                if (this.allConversations.length === 0) {
+                    await this.loadAllConversations();
+                }
+                // Always render when expanding
                 this.renderAllChats();
             }
             
