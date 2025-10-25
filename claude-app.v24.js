@@ -1970,6 +1970,11 @@ const app = {
         }
 
         try {
+            // Validate conversation exists before sending
+            if (!this.currentConversation || this.currentConversation === null) {
+                throw new Error('No conversation selected. Please try again.');
+            }
+
             // Create assistant message div BEFORE streaming starts
             const assistantMessageDiv = document.createElement('div');
             assistantMessageDiv.className = 'message assistant';
@@ -1984,6 +1989,13 @@ const app = {
             });
 
             if (!response.ok) {
+                // Handle foreign key errors (conversation doesn't exist)
+                const errorText = await response.text();
+                if (errorText.includes('foreign key constraint') || errorText.includes('not present')) {
+                    // Conversation was deleted - clear it and retry with auto-create
+                    this.currentConversation = null;
+                    throw new Error('Conversation no longer exists. Please try sending your message again.');
+                }
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
