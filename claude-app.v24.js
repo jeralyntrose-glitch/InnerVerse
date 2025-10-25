@@ -2320,11 +2320,8 @@ const app = {
                     // Apply markdown formatting in real-time as text streams in
                     assistantMessageDiv.innerHTML = this.formatMessage(fullText);
                     
-                    // Smooth auto-scroll every few chunks to keep content visible
-                    chunkCounter++;
-                    if (chunkCounter % 8 === 0) {
-                        this.scrollToBottomIfNeeded();
-                    }
+                    // NO auto-scroll during streaming - let user read from the start
+                    // Text appears in the pre-positioned space without jumping around
                     
                     // Small delay between batches for smooth typing effect
                     if (displayQueue.length > 0) {
@@ -2377,8 +2374,7 @@ const app = {
                                 }
                                 // Remove min-height constraint now that content is complete
                                 assistantMessageDiv.style.minHeight = '';
-                                // Final scroll to ensure everything is visible
-                                this.scrollToBottom();
+                                // NO final scroll - keep user at the START of the message
                                 break;
                             } else if (data.error) {
                                 throw new Error(data.error);
@@ -2402,7 +2398,7 @@ const app = {
                 typingIndicator.classList.remove('active');
             }
 
-            this.scrollToBottom();
+            // NO scroll after completion - user stays at the start of the message
         } catch (error) {
             console.error('Error sending message:', error);
             
