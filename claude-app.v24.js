@@ -2005,7 +2005,32 @@ const app = {
             let buffer = '';
             let fullText = '';
             let isSearching = false;
-            let chunkCount = 0;
+            let displayQueue = '';
+            let isDisplaying = false;
+
+            // Function to smoothly display queued text character-by-character
+            const displayQueuedText = async () => {
+                if (isDisplaying) return;
+                isDisplaying = true;
+                
+                while (displayQueue.length > 0) {
+                    // Take characters in small batches for smooth effect
+                    const batchSize = Math.min(3, displayQueue.length);
+                    const batch = displayQueue.substring(0, batchSize);
+                    displayQueue = displayQueue.substring(batchSize);
+                    
+                    fullText += batch;
+                    assistantMessageDiv.textContent = fullText;
+                    this.scrollToBottomIfNeeded();
+                    
+                    // Small delay between batches for smooth typing effect
+                    if (displayQueue.length > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 15));
+                    }
+                }
+                
+                isDisplaying = false;
+            };
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -2022,15 +2047,9 @@ const app = {
                             const data = JSON.parse(jsonStr);
 
                             if (data.chunk) {
-                                // Real-time text chunk from Claude - use textContent for SPEED!
-                                fullText += data.chunk;
-                                assistantMessageDiv.textContent = fullText;
-                                chunkCount++;
-                                
-                                // Auto-scroll frequently for smooth experience
-                                if (chunkCount % 3 === 0) {
-                                    this.scrollToBottomIfNeeded();
-                                }
+                                // Queue chunk for smooth character-by-character display
+                                displayQueue += data.chunk;
+                                displayQueuedText(); // Non-blocking async display
                             } else if (data.status === 'searching_pinecone') {
                                 // Show Pinecone search indicator
                                 if (!isSearching) {
