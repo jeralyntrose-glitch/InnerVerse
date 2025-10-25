@@ -1714,7 +1714,25 @@ async def text_to_pdf(request: TextToPDFRequest, background_tasks: BackgroundTas
                 paragraphs = request.text.split('\n')
                 
                 for para in paragraphs:
-                    if len(current_chunk) + len(para) < 10000:
+                    # Handle very long single paragraphs (>10k chars)
+                    if len(para) > 10000:
+                        # If current chunk has content, save it first
+                        if current_chunk:
+                            chunks.append(current_chunk)
+                            current_chunk = ""
+                        
+                        # Split oversized paragraph by sentences
+                        sentences = para.split('. ')
+                        for sentence in sentences:
+                            if len(current_chunk) + len(sentence) < 10000:
+                                current_chunk += sentence + '. '
+                            else:
+                                if current_chunk:
+                                    chunks.append(current_chunk)
+                                current_chunk = sentence + '. '
+                    
+                    # Normal paragraph processing
+                    elif len(current_chunk) + len(para) < 10000:
                         current_chunk += para + '\n'
                     else:
                         if current_chunk:
