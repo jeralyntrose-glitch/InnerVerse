@@ -3048,34 +3048,43 @@ async def send_message_streaming(conversation_id: int, request: Request):
         def generate():
             full_response = []
             
-            for chunk in chat_with_claude_streaming(claude_messages, conversation_id):
-                yield chunk
+            try:
+                for chunk in chat_with_claude_streaming(claude_messages, conversation_id):
+                    yield chunk
+                    
+                    # Collect text chunks for database storage
+                    if '"chunk"' in chunk:
+                        import json
+                        try:
+                            chunk_data = json.loads(chunk.replace("data: ", ""))
+                            if "chunk" in chunk_data:
+                                full_response.append(chunk_data["chunk"])
+                        except:
+                            pass
                 
-                # Collect text chunks for database storage
-                if '"chunk"' in chunk:
-                    import json
-                    try:
-                        chunk_data = json.loads(chunk.replace("data: ", ""))
-                        if "chunk" in chunk_data:
-                            full_response.append(chunk_data["chunk"])
-                    except:
-                        pass
-            
-            # Save assistant response to database
-            if full_response:
-                assistant_text = "".join(full_response)
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO messages (conversation_id, role, content)
-                    VALUES (%s, 'assistant', %s)
-                """, (conversation_id, assistant_text))
-                cursor.execute("""
-                    UPDATE conversations SET updated_at = NOW() WHERE id = %s
-                """, (conversation_id,))
-                conn.commit()
-                cursor.close()
-            
-            conn.close()
+                # Save assistant response to database (need new connection in generator)
+                if full_response:
+                    assistant_text = "".join(full_response)
+                    save_conn = get_db_connection()
+                    if save_conn:
+                        save_cursor = save_conn.cursor()
+                        save_cursor.execute("""
+                            INSERT INTO messages (conversation_id, role, content)
+                            VALUES (%s, 'assistant', %s)
+                        """, (conversation_id, assistant_text))
+                        save_cursor.execute("""
+                            UPDATE conversations SET updated_at = NOW() WHERE id = %s
+                        """, (conversation_id,))
+                        save_conn.commit()
+                        save_cursor.close()
+                        save_conn.close()
+            except Exception as e:
+                print(f"❌ Error in streaming generator: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                yield f'data: {{"error": "{str(e)}"}}\n\n'
+            finally:
+                conn.close()
         
         return StreamingResponse(
             generate(),
