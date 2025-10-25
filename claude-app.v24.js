@@ -11,6 +11,9 @@ const app = {
     expandedProjects: {},
     allConversations: [],
     projectConversations: {},
+    longPressTimer: null,
+    longPressTarget: null,
+    contextMenuConversationId: null,
     // Performance: Cache DOM elements
     cachedElements: {},
     
@@ -1637,6 +1640,9 @@ const app = {
                     this.openConversation(conv.id, conv.name);
                 });
                 
+                // Add long-press detection for context menu
+                this.setupLongPress(wrapper, conv.id, conv.name);
+                
                 const actionsDiv = document.createElement('div');
                 actionsDiv.className = 'conversation-actions-sidebar';
                 
@@ -2475,6 +2481,123 @@ const app = {
             await this.modalCallback(value);
         }
         this.closeModal();
+    },
+
+    // Context Menu for Long Press
+    setupLongPress(element, conversationId, conversationName) {
+        let pressTimer = null;
+        let moved = false;
+        let startX = 0;
+        let startY = 0;
+
+        const startPress = (e) => {
+            moved = false;
+            if (e.type === 'touchstart') {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            }
+            
+            pressTimer = setTimeout(() => {
+                if (!moved) {
+                    // Trigger long press
+                    this.showContextMenu(e, conversationId, conversationName);
+                    // Haptic feedback on mobile
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                }
+            }, 500); // 500ms for long press
+        };
+
+        const movePress = (e) => {
+            if (e.type === 'touchmove') {
+                const deltaX = Math.abs(e.touches[0].clientX - startX);
+                const deltaY = Math.abs(e.touches[0].clientY - startY);
+                if (deltaX > 10 || deltaY > 10) {
+                    moved = true;
+                    clearTimeout(pressTimer);
+                }
+            }
+        };
+
+        const endPress = () => {
+            clearTimeout(pressTimer);
+        };
+
+        element.addEventListener('touchstart', startPress, { passive: true });
+        element.addEventListener('touchmove', movePress, { passive: true });
+        element.addEventListener('touchend', endPress);
+        element.addEventListener('touchcancel', endPress);
+        
+        // Also support mouse for desktop testing
+        element.addEventListener('mousedown', startPress);
+        element.addEventListener('mousemove', movePress);
+        element.addEventListener('mouseup', endPress);
+        element.addEventListener('mouseleave', endPress);
+    },
+
+    showContextMenu(e, conversationId, conversationName) {
+        const contextMenu = document.getElementById('contextMenu');
+        if (!contextMenu) return;
+
+        this.contextMenuConversationId = conversationId;
+        
+        // Position the menu
+        let x, y;
+        if (e.type === 'touchstart' || e.type === 'touchend') {
+            const touch = e.touches?.[0] || e.changedTouches?.[0];
+            x = touch?.clientX || e.clientX;
+            y = touch?.clientY || e.clientY;
+        } else {
+            x = e.clientX;
+            y = e.clientY;
+        }
+        
+        // Show menu first to get dimensions
+        contextMenu.style.display = 'block';
+        const menuRect = contextMenu.getBoundingClientRect();
+        
+        // Adjust position to keep menu on screen
+        if (x + menuRect.width > window.innerWidth) {
+            x = window.innerWidth - menuRect.width - 10;
+        }
+        if (y + menuRect.height > window.innerHeight) {
+            y = window.innerHeight - menuRect.height - 10;
+        }
+        
+        contextMenu.style.left = x + 'px';
+        contextMenu.style.top = y + 'px';
+        contextMenu.classList.add('active');
+        
+        // Close menu when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', this.closeContextMenu.bind(this), { once: true });
+            document.addEventListener('touchstart', this.closeContextMenu.bind(this), { once: true });
+        }, 100);
+    },
+
+    closeContextMenu() {
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) {
+            contextMenu.classList.remove('active');
+            setTimeout(() => {
+                contextMenu.style.display = 'none';
+            }, 150);
+        }
+    },
+
+    contextMenuRename() {
+        if (this.contextMenuConversationId) {
+            this.renameConversationById(this.contextMenuConversationId);
+        }
+        this.closeContextMenu();
+    },
+
+    contextMenuDelete() {
+        if (this.contextMenuConversationId) {
+            this.deleteConversationById(this.contextMenuConversationId);
+        }
+        this.closeContextMenu();
     }
 };
 
