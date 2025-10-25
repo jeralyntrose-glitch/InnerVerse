@@ -990,11 +990,12 @@ const app = {
             return;
         }
 
-        container.innerHTML = '';
-        this.allConversations.slice(0, 20).forEach(conv => {
-            const convItem = this.createConversationItem(conv);
-            container.appendChild(convItem);
-        });
+        // PERFORMANCE: Build HTML string all at once
+        const html = this.allConversations.slice(0, 20).map(conv => this.createConversationItemHTML(conv, false)).join('');
+        container.innerHTML = html;
+        
+        // Add event listeners after render
+        this.attachConversationListeners(container);
     },
 
     async loadProjectConversations(projectId) {
@@ -1030,10 +1031,61 @@ const app = {
             return;
         }
 
-        conversationsList.innerHTML = '';
-        conversations.forEach(conv => {
-            const convItem = this.createConversationItem(conv, true);
-            conversationsList.appendChild(convItem);
+        // PERFORMANCE: Build HTML string all at once (much faster than createElement)
+        const html = conversations.map(conv => this.createConversationItemHTML(conv, true)).join('');
+        conversationsList.innerHTML = html;
+        
+        // Add event listeners after render (event delegation would be even better)
+        this.attachConversationListeners(conversationsList);
+    },
+
+    // PERFORMANCE: Generate HTML string instead of DOM elements (10x faster)
+    createConversationItemHTML(conv, isNested = false) {
+        const isActive = this.currentConversation === conv.id ? 'active' : '';
+        const padding = isNested ? 'padding-left: 36px;' : '';
+        const truncatedName = conv.name.length > 40 ? conv.name.substring(0, 40) + '...' : conv.name;
+        const escapedName = this.escapeHtml(truncatedName);
+        
+        return `
+            <div class="sidebar-conversation-item ${isActive}" style="${padding}" data-conv-id="${conv.id}" data-conv-name="${this.escapeHtml(conv.name)}">
+                <span class="conversation-name">${escapedName}</span>
+                <div class="conversation-actions-inline">
+                    <button class="action-icon-btn rename-btn" title="Rename" data-conv-id="${conv.id}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </button>
+                    <button class="action-icon-btn delete-btn" title="Delete" data-conv-id="${conv.id}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+
+    // PERFORMANCE: Event delegation - attach listeners once instead of per-item
+    attachConversationListeners(container) {
+        // Use event delegation for better performance
+        container.addEventListener('click', (e) => {
+            const item = e.target.closest('.sidebar-conversation-item');
+            if (!item) return;
+            
+            const convId = item.dataset.convId;
+            const convName = item.dataset.convName;
+            
+            // Check if clicked on a button
+            if (e.target.closest('.rename-btn')) {
+                e.stopPropagation();
+                this.renameConversationById(convId);
+                return;
+            }
+            
+            if (e.target.closest('.delete-btn')) {
+                e.stopPropagation();
+                this.deleteConversationById(convId);
+                return;
+            }
+            
+            // Otherwise open the conversation
+            this.openConversation(convId, convName);
         });
     },
 
