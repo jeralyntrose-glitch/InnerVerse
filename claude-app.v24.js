@@ -152,8 +152,7 @@ const app = {
         
         await this.loadProjects();
         
-        // PERFORMANCE FIX: Preload all project conversations for instant folder expansion
-        await this.preloadAllProjectConversations();
+        // PERFORMANCE: Conversations load lazily when you open folders (instant page load!)
         
         this.renderSidebarProjects();
         this.showDefaultChatView();
@@ -745,7 +744,7 @@ const app = {
         }
     },
 
-    toggleProject(projectId) {
+    async toggleProject(projectId) {
         const projectItem = document.querySelector(`[data-project-id="${projectId}"]`);
         if (!projectItem) return;
         
@@ -762,15 +761,21 @@ const app = {
             conversationsList.classList.add('collapsed');
             if (chevron) chevron.classList.remove('expanded');
         } else {
-            // Expand - INSTANT (data already preloaded)
+            // Expand - Load conversations lazily on first expand
             this.expandedProjects[projectId] = true;
             conversationsList.classList.remove('collapsed');
             if (chevron) chevron.classList.add('expanded');
             
-            // Render conversations (data already loaded during init)
-            if (this.projectConversations[projectId]) {
-                this.renderProjectConversations(projectId);
+            // Load conversations if not already loaded (lazy loading)
+            if (!this.projectConversations[projectId]) {
+                // Show loading state
+                conversationsList.innerHTML = '<div style="padding: 8px 12px; color: var(--text-secondary); font-size: 0.8125rem;">Loading...</div>';
+                
+                await this.loadProjectConversations(projectId);
             }
+            
+            // Render conversations
+            this.renderProjectConversations(projectId);
         }
         
         // Save state to localStorage
