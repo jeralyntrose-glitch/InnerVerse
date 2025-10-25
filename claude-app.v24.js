@@ -2321,22 +2321,40 @@ const app = {
                 return;
             }
 
+            // OPTIMISTIC UPDATE - Update UI immediately
+            const nameElements = document.querySelectorAll(`[data-conversation-id="${conversationId}"] .conversation-name, [data-conversation-id="${conversationId}"] .conversation-name-sidebar, .sidebar-conversation-item .conversation-name`);
+            nameElements.forEach(el => {
+                if (el.closest(`[data-conversation-id="${conversationId}"]`) || el.parentElement?.id === `conv-${conversationId}`) {
+                    el.textContent = name;
+                }
+            });
+            
+            if (this.currentConversation === conversationId) {
+                document.getElementById('topBarTitle').textContent = name;
+            }
+
+            // Update in cached data
+            if (this.currentProject && this.projectConversations[this.currentProject]) {
+                const conv = this.projectConversations[this.currentProject].find(c => c.id === conversationId);
+                if (conv) conv.name = name;
+            }
+            if (this.allConversations.length > 0) {
+                const conv = this.allConversations.find(c => c.id === conversationId);
+                if (conv) conv.name = name;
+            }
+
             try {
-                const response = await fetch(`/claude/conversations/${conversationId}/rename`, {
+                // Background API call
+                await fetch(`/claude/conversations/${conversationId}/rename`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name })
                 });
-
-                await response.json();
-                await this.loadConversations();
-                
-                if (this.currentConversation === conversationId) {
-                    document.getElementById('topBarTitle').textContent = name;
-                }
             } catch (error) {
                 console.error('Error renaming conversation:', error);
                 alert('Failed to rename conversation');
+                // Reload to revert if failed
+                await this.loadConversations();
             }
         });
     },
@@ -2344,22 +2362,57 @@ const app = {
     async deleteConversationById(conversationId) {
         if (!confirm('Delete this conversation?')) return;
 
+        // OPTIMISTIC UPDATE - Remove from UI immediately
+        const convElement = document.getElementById(`conv-${conversationId}`);
+        if (convElement) {
+            convElement.style.opacity = '0';
+            convElement.style.transition = 'opacity 150ms';
+            setTimeout(() => convElement.remove(), 150);
+        }
+        
+        // Remove from sidebar conversations
+        document.querySelectorAll(`[data-conversation-id="${conversationId}"]`).forEach(el => {
+            el.style.opacity = '0';
+            el.style.transition = 'opacity 150ms';
+            setTimeout(() => el.remove(), 150);
+        });
+
+        // Remove from All Chats list
+        document.querySelectorAll('.sidebar-conversation-item').forEach(item => {
+            const nameSpan = item.querySelector('.conversation-name');
+            if (nameSpan && nameSpan.dataset.clickConvId === conversationId) {
+                item.style.opacity = '0';
+                item.style.transition = 'opacity 150ms';
+                setTimeout(() => item.remove(), 150);
+            }
+        });
+
+        // Remove from cached data
+        if (this.currentProject && this.projectConversations[this.currentProject]) {
+            this.projectConversations[this.currentProject] = 
+                this.projectConversations[this.currentProject].filter(c => c.id !== conversationId);
+        }
+        if (this.allConversations.length > 0) {
+            this.allConversations = this.allConversations.filter(c => c.id !== conversationId);
+        }
+        
+        if (this.currentConversation === conversationId) {
+            this.currentConversation = null;
+            document.getElementById('welcomeScreen').style.display = 'flex';
+            document.getElementById('chatArea').style.display = 'none';
+            document.getElementById('topBarTitle').textContent = 'InnerVerse - MBTI Master';
+        }
+
         try {
+            // Background API call
             await fetch(`/claude/conversations/${conversationId}`, {
                 method: 'DELETE'
             });
-
-            await this.loadConversations();
-            
-            if (this.currentConversation === conversationId) {
-                this.currentConversation = null;
-                document.getElementById('welcomeScreen').style.display = 'flex';
-                document.getElementById('chatArea').style.display = 'none';
-                document.getElementById('topBarTitle').textContent = 'InnerVerse - MBTI Master';
-            }
         } catch (error) {
             console.error('Error deleting conversation:', error);
             alert('Failed to delete conversation');
+            // Reload to restore if failed
+            await this.loadConversations();
         }
     },
 
@@ -2406,7 +2459,27 @@ const app = {
     },
 
     async moveConversationToProject(conversationId, projectId, projectName) {
+        // OPTIMISTIC UPDATE - Close modal immediately
+        this.closeMoveModal();
+        
+        // Update cached data immediately
+        if (this.currentProject && this.projectConversations[this.currentProject]) {
+            const conv = this.projectConversations[this.currentProject].find(c => c.id === conversationId);
+            if (conv) {
+                // Remove from current project
+                this.projectConversations[this.currentProject] = 
+                    this.projectConversations[this.currentProject].filter(c => c.id !== conversationId);
+                // Re-render current project to remove it from view
+                this.renderProjectConversations(this.currentProject);
+            }
+        }
+        
+        // Clear activity cache to force refresh next time Activity is opened
+        this.activityCache = null;
+        this.activityCacheTime = 0;
+
         try {
+            // Background API call
             const response = await fetch(`/claude/conversations/${conversationId}/move`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -2416,16 +2489,11 @@ const app = {
             if (!response.ok) {
                 throw new Error(`Failed to move: ${response.status}`);
             }
-
-            this.closeMoveModal();
             
-            // Clear activity cache to force refresh next time Activity is opened
-            this.activityCache = null;
-            this.activityCacheTime = 0;
-            
-            // If we're currently viewing a project, reload it to show updated list
-            if (this.currentProject) {
-                await this.loadConversations();
+            // Reload the target project's conversations if we have it cached
+            if (this.projectConversations[projectId]) {
+                await this.loadProjectConversations(projectId);
+                this.renderProjectConversations(projectId);
             }
             
             // If we're currently in Activity tab, refresh the activity view
