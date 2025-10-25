@@ -807,20 +807,11 @@ const app = {
     setupEventListeners() {
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         if (hamburgerBtn) {
-            // iOS Safari fix: Use touchend for instant response
-            let touchHandled = false;
-            
-            hamburgerBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                touchHandled = true;
-                this.toggleSidebar();
-                setTimeout(() => { touchHandled = false; }, 300);
-            }, { passive: false });
-            
+            // Simplified: Single click handler works for both touch and mouse
+            // No complex dual-listener setup that causes iOS issues
             hamburgerBtn.addEventListener('click', (e) => {
-                if (!touchHandled) {
-                    this.toggleSidebar();
-                }
+                e.stopPropagation();
+                this.toggleSidebar();
             });
         }
 
