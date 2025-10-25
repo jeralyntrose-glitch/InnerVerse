@@ -3036,6 +3036,7 @@ async def send_message_streaming(conversation_id: int, request: Request):
         """, (conversation_id,))
         message_history = cursor.fetchall()
         cursor.close()
+        conn.close()  # Close connection NOW - generator will create its own
         
         claude_messages = []
         for msg in message_history:
@@ -3067,24 +3068,28 @@ async def send_message_streaming(conversation_id: int, request: Request):
                     assistant_text = "".join(full_response)
                     save_conn = get_db_connection()
                     if save_conn:
-                        save_cursor = save_conn.cursor()
-                        save_cursor.execute("""
-                            INSERT INTO messages (conversation_id, role, content)
-                            VALUES (%s, 'assistant', %s)
-                        """, (conversation_id, assistant_text))
-                        save_cursor.execute("""
-                            UPDATE conversations SET updated_at = NOW() WHERE id = %s
-                        """, (conversation_id,))
-                        save_conn.commit()
-                        save_cursor.close()
-                        save_conn.close()
+                        try:
+                            save_cursor = save_conn.cursor()
+                            save_cursor.execute("""
+                                INSERT INTO messages (conversation_id, role, content)
+                                VALUES (%s, 'assistant', %s)
+                            """, (conversation_id, assistant_text))
+                            save_cursor.execute("""
+                                UPDATE conversations SET updated_at = NOW() WHERE id = %s
+                            """, (conversation_id,))
+                            save_conn.commit()
+                            save_cursor.close()
+                        except Exception as db_error:
+                            print(f"❌ Error saving response to database: {str(db_error)}")
+                            import traceback
+                            traceback.print_exc()
+                        finally:
+                            save_conn.close()
             except Exception as e:
                 print(f"❌ Error in streaming generator: {str(e)}")
                 import traceback
                 traceback.print_exc()
                 yield f'data: {{"error": "{str(e)}"}}\n\n'
-            finally:
-                conn.close()
         
         return StreamingResponse(
             generate(),
