@@ -1256,6 +1256,15 @@ const app = {
         } catch (e) {
             this.expandedProjects = {};
         }
+
+        // IMPORTANT: Ensure "All Chats" section always starts OPEN (user preference)
+        const allChatsToggle = document.getElementById('allChatsToggle');
+        const allChatsList = document.getElementById('allChatsList');
+        if (allChatsToggle && allChatsList) {
+            allChatsToggle.classList.remove('collapsed');
+            allChatsList.classList.remove('collapsed');
+            localStorage.setItem('allChatsCollapsed', 'false');
+        }
     },
 
     showDefaultChatView() {
