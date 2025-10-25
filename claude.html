@@ -577,6 +577,7 @@
 
         .sidebar-conversation-item.active {
             background: var(--bg-active);
+            color: var(--text-primary);
         }
 
         .conversation-name {
@@ -585,6 +586,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: pointer;
+            color: inherit;
             -webkit-user-select: none;
             user-select: none;
         }
@@ -650,11 +652,12 @@
 
         .conversation-item-sidebar.active {
             background: var(--bg-active);
+            color: var(--text-primary);
         }
 
         .conversation-name-sidebar {
             font-size: 0.9rem;
-            color: var(--text-primary);
+            color: inherit;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
