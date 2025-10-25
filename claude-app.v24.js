@@ -2227,23 +2227,14 @@ const app = {
         input.style.overflowY = 'hidden';
         sendBtn.disabled = true;
 
+        // Get container reference
+        const container = document.getElementById('messagesContainer');
+        
+        // Create user message div
         const userMessageDiv = document.createElement('div');
         userMessageDiv.className = 'message user';
         userMessageDiv.textContent = message;
-        
-        const container = document.getElementById('messagesContainer');
         container.insertBefore(userMessageDiv, typingIndicator);
-        this.scrollToBottom();
-
-        // Show thinking indicator
-        const thinkingIndicator = document.getElementById('thinkingIndicator');
-        if (thinkingIndicator) {
-            thinkingIndicator.classList.add('active');
-        }
-
-        if (typingIndicator) {
-            typingIndicator.classList.add('active');
-        }
 
         try {
             // Validate conversation exists before sending
@@ -2251,19 +2242,32 @@ const app = {
                 throw new Error('No conversation selected. Please try again.');
             }
 
-            // Create assistant message div BEFORE streaming starts
-            // Pre-allocate space to prevent jumpy scrolling
+            // IMMEDIATELY create assistant message div BEFORE streaming starts
+            // Pre-allocate generous space to prevent jumpy scrolling
             const assistantMessageDiv = document.createElement('div');
             assistantMessageDiv.className = 'message assistant';
-            assistantMessageDiv.style.minHeight = '60px'; // Reserve space for incoming response
+            assistantMessageDiv.style.minHeight = '200px'; // Reserve generous space for incoming response
+            assistantMessageDiv.innerHTML = ''; // Empty but taking up space
             container.insertBefore(assistantMessageDiv, typingIndicator);
             
-            // CRITICAL: Wait for browser to paint the element before scrolling
-            // This ensures scroll happens AFTER the container is positioned, not before
+            // Show thinking indicator inside the assistant message
+            const thinkingIndicator = document.getElementById('thinkingIndicator');
+            if (thinkingIndicator) {
+                thinkingIndicator.classList.add('active');
+            }
+
+            if (typingIndicator) {
+                typingIndicator.classList.add('active');
+            }
+            
+            // CRITICAL: Scroll to bottom ONCE after both messages are in DOM
+            // Use double requestAnimationFrame for reliability across browsers
             await new Promise(resolve => {
                 requestAnimationFrame(() => {
-                    this.scrollToBottom();
-                    resolve();
+                    requestAnimationFrame(() => {
+                        this.scrollToBottom();
+                        resolve();
+                    });
                 });
             });
 
@@ -2305,6 +2309,7 @@ const app = {
                 if (isDisplaying) return;
                 isDisplaying = true;
                 
+                let chunkCounter = 0;
                 while (displayQueue.length > 0) {
                     // Take characters in small batches for smooth effect
                     const batchSize = Math.min(3, displayQueue.length);
@@ -2314,7 +2319,12 @@ const app = {
                     fullText += batch;
                     // Apply markdown formatting in real-time as text streams in
                     assistantMessageDiv.innerHTML = this.formatMessage(fullText);
-                    // NO scrolling here - space is pre-allocated, just fill it in
+                    
+                    // Smooth auto-scroll every few chunks to keep content visible
+                    chunkCounter++;
+                    if (chunkCounter % 8 === 0) {
+                        this.scrollToBottomIfNeeded();
+                    }
                     
                     // Small delay between batches for smooth typing effect
                     if (displayQueue.length > 0) {
