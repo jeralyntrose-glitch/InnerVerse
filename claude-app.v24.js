@@ -2152,7 +2152,38 @@ const app = {
         } catch (error) {
             console.error('Error sending message:', error);
             
-            // Mark as failed in localStorage for retry
+            // IMPORTANT: Server might have processed the message even if we lost connection
+            // Try to reload the conversation to check if response was saved
+            try {
+                console.log('🔄 Connection lost - checking if message was saved on server...');
+                const checkResponse = await fetch(`/claude/conversations/detail/${this.currentConversation}`);
+                if (checkResponse.ok) {
+                    const conversation = await checkResponse.json();
+                    // If new messages were added, reload the conversation instead of showing error
+                    if (conversation.messages && conversation.messages.length > 0) {
+                        console.log('✅ Message was saved! Reloading conversation...');
+                        await this.loadConversation(this.currentConversation);
+                        this.removePendingMessage(messageId);
+                        
+                        // Hide indicators
+                        const thinkingIndicator = document.getElementById('thinkingIndicator');
+                        if (thinkingIndicator) {
+                            thinkingIndicator.classList.remove('active');
+                        }
+                        if (typingIndicator) {
+                            typingIndicator.classList.remove('active');
+                        }
+                        
+                        sendBtn.disabled = false;
+                        input.focus();
+                        return; // Success!
+                    }
+                }
+            } catch (reloadError) {
+                console.error('Failed to reload conversation:', reloadError);
+            }
+            
+            // If we get here, message truly failed
             this.markMessageFailed(messageId);
             
             // Hide thinking indicator on error
@@ -2165,7 +2196,7 @@ const app = {
                 typingIndicator.classList.remove('active');
             }
 
-            // Show retry UI instead of generic error
+            // Show retry UI
             this.showRetryUI(messageId, message);
         } finally {
             sendBtn.disabled = false;

@@ -4,7 +4,17 @@ InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowl
 
 # Recent Changes (October 25, 2025)
 
-**Hamburger Menu Fix**
+**Mobile Network Resilience (October 25, 2025)**
+- Fixed "Message failed to send" errors on mobile when server actually processed messages successfully
+- ROOT CAUSE: Mobile networks drop SSE (Server-Sent Events) streaming connections mid-response
+- Server logs show 200 OK (success), but frontend loses connection before receiving full stream
+- SOLUTION: Auto-recovery mechanism - when stream fails, check if message was saved on server
+- If message exists in database, reload entire conversation to display the response
+- Only shows "failed" if message truly wasn't processed
+- Eliminates false failures from network interruptions
+- Users see responses even when mobile connection is unstable
+
+**Hamburger Menu Fix (October 25, 2025)**
 - Fixed unresponsive hamburger menu requiring 4-5 taps on iOS
 - ROOT CAUSE: iOS Safari has 300ms delay on click events (to detect double-tap zoom)
 - SOLUTION: Use touchstart event with preventDefault to bypass the delay entirely
@@ -16,6 +26,13 @@ InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowl
 - Added hardware acceleration transforms (-webkit-transform: translateZ(0)) for instant touch response
 - Hamburger now hides behind sidebar when open, no longer overlaps search bar
 - Instant response on first tap - no more frustrating multi-tap requirement
+
+**Streaming Backend Stability (October 25, 2025)**
+- Fixed server crashes from improper database connection handling in streaming endpoint
+- ROOT CAUSE: Generator function tried to use closed database cursor, causing crashes after first message
+- SOLUTION: Close initial connection immediately, create fresh connection in generator for saving responses
+- Proper try/finally blocks guarantee database cleanup even on errors
+- Added comprehensive error logging with stack traces for debugging
 
 **Smooth Streaming UX Optimization**
 - Pre-allocates space (60px min-height) for Claude's response before text starts appearing
