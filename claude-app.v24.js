@@ -1237,14 +1237,29 @@ const app = {
             container.appendChild(projectContainer);
         });
 
-        // Restore collapsed state from localStorage
-        const isCollapsed = localStorage.getItem('projectsCollapsed') === 'true';
+        // DEFAULT SIDEBAR STATE: Projects COLLAPSED, All Chats OPEN
         const projectsToggle = document.getElementById('projectsToggle');
         const projectsList = document.getElementById('projectsList');
         
-        if (isCollapsed && projectsToggle && projectsList) {
+        // ALWAYS start with Projects section COLLAPSED
+        if (projectsToggle && projectsList) {
             projectsToggle.classList.add('collapsed');
             projectsList.classList.add('collapsed');
+            localStorage.setItem('projectsCollapsed', 'true');
+        }
+
+        // ALWAYS start with "All Chats" section OPEN
+        const allChatsToggle = document.getElementById('allChatsToggle');
+        const allChatsList = document.getElementById('allChatsList');
+        if (allChatsToggle && allChatsList) {
+            allChatsToggle.classList.remove('collapsed');
+            allChatsList.classList.remove('collapsed');
+            localStorage.setItem('allChatsCollapsed', 'false');
+            
+            // Load and render All Chats conversations immediately
+            this.loadAllConversations().then(() => {
+                this.renderAllChats();
+            });
         }
 
         // Restore expanded projects state
@@ -1255,15 +1270,6 @@ const app = {
             }
         } catch (e) {
             this.expandedProjects = {};
-        }
-
-        // IMPORTANT: Ensure "All Chats" section always starts OPEN (user preference)
-        const allChatsToggle = document.getElementById('allChatsToggle');
-        const allChatsList = document.getElementById('allChatsList');
-        if (allChatsToggle && allChatsList) {
-            allChatsToggle.classList.remove('collapsed');
-            allChatsList.classList.remove('collapsed');
-            localStorage.setItem('allChatsCollapsed', 'false');
         }
     },
 
