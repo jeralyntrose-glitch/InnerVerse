@@ -538,6 +538,12 @@
             margin-bottom: 2px;
             font-size: 0.8125rem;
             color: var(--text-primary);
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
         }
 
         .sidebar-conversation-item:hover {
@@ -554,6 +560,8 @@
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .project-emoji {
@@ -1849,6 +1857,6 @@
             }
         }, { passive: false });
     </script>
-    <script src="/claude-app.v24.js?v=37"></script>
+    <script src="/claude-app.v24.js?v=38"></script>
 </body>
 </html>

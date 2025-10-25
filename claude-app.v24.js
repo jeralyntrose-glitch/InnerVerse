@@ -1056,6 +1056,10 @@ const app = {
         nameSpan.setAttribute('data-click-conv-name', this.escapeHtml(conv.name));
         
         convItem.appendChild(nameSpan);
+        
+        // Add long-press detection for context menu
+        this.setupLongPress(convItem, conv.id, conv.name);
+        
         return convItem;
     },
 
