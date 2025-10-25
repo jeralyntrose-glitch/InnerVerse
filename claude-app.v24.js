@@ -2809,21 +2809,50 @@ const app = {
 
         const lowerQuery = query.toLowerCase();
         
-        // Search through all conversations across all projects
-        const searchResults = [];
+        // Load all conversations if not loaded yet
+        if (this.allConversations.length === 0) {
+            this.loadAllConversations().then(() => {
+                this.performSearch(query); // Retry after loading
+            });
+            return;
+        }
         
-        // Search in each project's conversations
-        for (const [projectId, conversations] of Object.entries(this.projectConversations)) {
-            const matchingConvs = conversations.filter(conv => 
-                conv.name.toLowerCase().includes(lowerQuery)
-            );
-            
-            if (matchingConvs.length > 0) {
-                const project = this.projects.find(p => p.id === projectId);
-                searchResults.push({
+        // Search through ALL conversations (not just expanded folders)
+        const matchingConvs = this.allConversations.filter(conv => 
+            conv.name.toLowerCase().includes(lowerQuery)
+        );
+        
+        if (matchingConvs.length === 0) {
+            const container = document.getElementById('sidebarContent');
+            if (container) {
+                container.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                        No conversations found for "${query}"
+                    </div>
+                `;
+            }
+            return;
+        }
+        
+        // Group matching conversations by project
+        const searchResults = [];
+        const groupedByProject = {};
+        
+        matchingConvs.forEach(conv => {
+            if (!groupedByProject[conv.projectId]) {
+                const project = this.projects.find(p => p.id === conv.projectId);
+                groupedByProject[conv.projectId] = {
                     project,
-                    conversations: matchingConvs
-                });
+                    conversations: []
+                };
+            }
+            groupedByProject[conv.projectId].conversations.push(conv);
+        });
+        
+        // Convert to array
+        for (const group of Object.values(groupedByProject)) {
+            if (group.project) {
+                searchResults.push(group);
             }
         }
         
