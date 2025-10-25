@@ -2831,7 +2831,7 @@ Return ONLY the cleaned transcript with proper formatting, nothing else."""
 
 
 # === Claude Chat Endpoints ===
-from claude_api import PROJECTS, chat_with_claude
+from claude_api import PROJECTS, chat_with_claude, chat_with_claude_streaming
 
 @app.get("/claude/projects")
 async def get_projects():
@@ -3001,6 +3001,98 @@ async def send_message(conversation_id: int, request: Request):
     except Exception as e:
         print(f"❌ Error sending message: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/claude/conversations/{conversation_id}/message/stream")
+async def send_message_streaming(conversation_id: int, request: Request):
+    """Send a message and get Claude's STREAMING response in real-time"""
+    try:
+        data = await request.json()
+        user_message = data.get("message")
+        
+        if not user_message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Save user message
+        cursor.execute("""
+            INSERT INTO messages (conversation_id, role, content)
+            VALUES (%s, 'user', %s)
+            RETURNING id
+        """, (conversation_id, user_message))
+        conn.commit()
+        
+        # Get message history
+        cursor.execute("""
+            SELECT role, content
+            FROM messages
+            WHERE conversation_id = %s
+            ORDER BY created_at ASC
+        """, (conversation_id,))
+        message_history = cursor.fetchall()
+        cursor.close()
+        
+        claude_messages = []
+        for msg in message_history:
+            claude_messages.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+        
+        # Create generator for streaming
+        def generate():
+            full_response = []
+            
+            for chunk in chat_with_claude_streaming(claude_messages, conversation_id):
+                yield chunk
+                
+                # Collect text chunks for database storage
+                if '"chunk"' in chunk:
+                    import json
+                    try:
+                        chunk_data = json.loads(chunk.replace("data: ", ""))
+                        if "chunk" in chunk_data:
+                            full_response.append(chunk_data["chunk"])
+                    except:
+                        pass
+            
+            # Save assistant response to database
+            if full_response:
+                assistant_text = "".join(full_response)
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO messages (conversation_id, role, content)
+                    VALUES (%s, 'assistant', %s)
+                """, (conversation_id, assistant_text))
+                cursor.execute("""
+                    UPDATE conversations SET updated_at = NOW() WHERE id = %s
+                """, (conversation_id,))
+                conn.commit()
+                cursor.close()
+            
+            conn.close()
+        
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error streaming message: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.patch("/claude/conversations/{conversation_id}/rename")
 async def rename_conversation(conversation_id: int, request: Request):
