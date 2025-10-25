@@ -823,6 +823,15 @@
             gap: 8px;
             margin-bottom: 16px;
             position: relative;
+            width: 100%;
+        }
+
+        .message-wrapper:has(.message.user) {
+            justify-content: flex-end;
+        }
+
+        .message-wrapper:has(.message.assistant) {
+            justify-content: flex-start;
         }
 
         .message-wrapper:hover .message-delete-btn {
@@ -859,14 +868,12 @@
         }
 
         .message.user {
-            align-self: flex-end;
             background: var(--bg-sidebar);
             color: var(--text-primary);
             border: 1px solid var(--border);
         }
 
         .message.assistant {
-            align-self: flex-start;
             background: transparent;
             color: var(--text-primary);
             max-width: 100%;

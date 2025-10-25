@@ -4,6 +4,14 @@ InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowl
 
 # Recent Changes (October 25, 2025)
 
+**Message Deletion Feature**
+- Added delete button (🗑️) to each message in Claude chat interface
+- Delete buttons appear on hover with smooth opacity transition
+- Confirmation dialog prevents accidental deletions
+- Backend endpoint `DELETE /claude/messages/{id}` handles message removal
+- Conversation reloads automatically after deletion to show updated state
+- Clean UI with proper alignment for both user and assistant messages
+
 **Performance Optimization: Real-Time Streaming Implementation**
 - Replaced external API call (`axis-of-mind.replit.app`) with local Pinecone vector search for faster response times
 - Implemented real Claude Sonnet 4 streaming using Server-Sent Events (SSE) via Anthropic's streaming API
