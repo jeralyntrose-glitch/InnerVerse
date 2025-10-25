@@ -2820,26 +2820,38 @@ const app = {
     },
 
     performSearch(query) {
+        console.log('🔍 performSearch called with query:', query);
+        
         // If empty query, show everything normally
         if (!query) {
+            console.log('📋 Query is empty, resetting to normal view');
             this.renderSidebarProjects();
             return;
         }
 
         const lowerQuery = query.toLowerCase();
+        console.log('🔍 Searching for:', lowerQuery);
+        console.log('📊 Current allConversations length:', this.allConversations.length);
         
         // Load all conversations if not loaded yet
         if (this.allConversations.length === 0) {
+            console.log('⚠️ allConversations is empty, loading now...');
             this.loadAllConversations().then(() => {
+                console.log('✅ Loaded conversations, retrying search');
                 this.performSearch(query); // Retry after loading
             });
             return;
         }
         
+        // Debug: Log first few conversation names
+        console.log('📝 Sample conversation names:', this.allConversations.slice(0, 5).map(c => c.name));
+        
         // Search through ALL conversations (not just expanded folders)
         const matchingConvs = this.allConversations.filter(conv => 
             conv.name.toLowerCase().includes(lowerQuery)
         );
+        
+        console.log('✅ Found', matchingConvs.length, 'matching conversations:', matchingConvs.map(c => c.name));
         
         if (matchingConvs.length === 0) {
             const container = document.getElementById('sidebarContent');
