@@ -2023,6 +2023,12 @@ const app = {
                                     isSearching = true;
                                     assistantMessageDiv.innerHTML = '<span style="opacity: 0.6;">🔍 Searching knowledge base...</span>';
                                 }
+                            } else if (data.status === 'searching_web') {
+                                // Show web search indicator
+                                if (!isSearching) {
+                                    isSearching = true;
+                                    assistantMessageDiv.innerHTML = '<span style="opacity: 0.6;">🌐 Searching the web...</span>';
+                                }
                             } else if (data.status === 'searching') {
                                 // Continue showing search indicator
                                 isSearching = true;

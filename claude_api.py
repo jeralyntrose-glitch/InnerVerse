@@ -12,6 +12,7 @@ API_KEY = os.getenv("API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX")
+BRAVE_API_KEY = os.getenv("BRAVE_API_KEY")
 
 PROJECTS = [
     {"id": "relationship-lab", "name": "💕 Relationship Lab", "emoji": "💕", "description": "Deep focus on golden pairs, compatibility, relationship dynamics"},
@@ -84,77 +85,70 @@ def query_innerverse_local(question: str) -> str:
         print(f"❌ Pinecone query error: {str(e)}")
         return ""
 
-def search_web(query: str) -> str:
-    """Search the web for current information using DuckDuckGo HTML scraping"""
+def search_web_brave(query: str) -> str:
+    """Search the web using Brave Search API for current information"""
     import httpx
-    from urllib.parse import quote_plus
+    
+    if not BRAVE_API_KEY:
+        print("⚠️ BRAVE_API_KEY not set, web search unavailable")
+        return "Web search is not configured. Please add a Brave Search API key."
     
     try:
-        # Use DuckDuckGo HTML search (more reliable than JSON API)
-        encoded_query = quote_plus(query)
-        search_url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
+        print(f"🌐 Searching web via Brave API: {query}")
         
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'X-Subscription-Token': BRAVE_API_KEY,
+            'Accept': 'application/json'
         }
         
-        response = httpx.get(search_url, headers=headers, timeout=15.0, follow_redirects=True)
+        params = {
+            'q': query,
+            'count': 5,
+            'text_decorations': False,
+            'search_lang': 'en'
+        }
+        
+        response = httpx.get(
+            'https://api.search.brave.com/res/v1/web/search',
+            headers=headers,
+            params=params,
+            timeout=10.0
+        )
         
         if response.status_code == 200:
-            html = response.text
-            
-            # Extract search results using simple string parsing
+            data = response.json()
             results = []
-            snippets = html.split('class="result__snippet">')
             
-            for snippet in snippets[1:6]:  # Get top 5 results
-                end_idx = snippet.find('</a>')
-                if end_idx != -1:
-                    text = snippet[:end_idx]
-                    # Clean HTML tags
-                    text = text.replace('<b>', '').replace('</b>', '')
-                    text = text.replace('&quot;', '"').replace('&#x27;', "'")
-                    text = text.strip()
-                    if text and len(text) > 20:
-                        results.append(text)
+            # Extract web results
+            web_results = data.get('web', {}).get('results', [])
+            
+            for result in web_results[:5]:
+                title = result.get('title', '')
+                description = result.get('description', '')
+                url = result.get('url', '')
+                
+                if description:
+                    results.append(f"{title}\n{description}\nSource: {url}")
             
             if results:
-                print(f"✅ Web search found {len(results)} results for: {query}")
-                return "\n\n".join(results)
-            
-            # Fallback: Try JSON API with better parsing
-            print("⚠️ HTML parsing failed, trying JSON API...")
-            json_url = f"https://api.duckduckgo.com/?q={encoded_query}&format=json&no_html=1"
-            json_response = httpx.get(json_url, timeout=10.0)
-            
-            if json_response.status_code == 200:
-                data = json_response.json()
-                results = []
-                
-                # Get abstract
-                if data.get("AbstractText"):
-                    results.append(f"Overview: {data['AbstractText']}")
-                
-                # Get related topics (handle nested structure)
-                for topic in data.get("RelatedTopics", [])[:5]:
-                    if isinstance(topic, dict):
-                        if "Text" in topic:
-                            results.append(topic["Text"])
-                        elif "Topics" in topic:
-                            # Handle nested topics
-                            for subtopic in topic["Topics"][:3]:
-                                if "Text" in subtopic:
-                                    results.append(subtopic["Text"])
-                
-                if results:
-                    return "\n\n".join(results)
-            
-            return f"No detailed results found for '{query}'. Try rephrasing the question or being more specific."
+                print(f"✅ Brave Search found {len(results)} results")
+                return "\n\n---\n\n".join(results)
+            else:
+                return f"No web results found for '{query}'."
         
-        return "Search service temporarily unavailable"
+        elif response.status_code == 429:
+            return "Rate limit reached. Please try again in a moment."
+        
+        elif response.status_code == 401:
+            return "API key invalid. Please check your Brave Search API key."
+        
+        else:
+            print(f"❌ Brave API error {response.status_code}: {response.text}")
+            return f"Web search temporarily unavailable (Error {response.status_code})."
+    
     except Exception as e:
         print(f"❌ Web search error: {str(e)}")
-        return f"Search error: Unable to fetch results at this time."
+        return "Unable to perform web search at this time."
 
 def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tuple[str, List[Dict]]:
     """
@@ -273,7 +267,7 @@ Be yourself - smart, direct, and genuinely interested in helping them understand
                         query = tool_input.get("query", "")
                         print(f"🌐 Searching web for: {query}")
                         
-                        web_result = search_web(query)
+                        web_result = search_web_brave(query)
                         
                         tool_use_details.append({
                             "tool": "search_web",
@@ -329,6 +323,20 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                 },
                 "required": ["question"]
             }
+        },
+        {
+            "name": "search_web",
+            "description": "Search the web for current information, facts, news, or general knowledge not in the MBTI knowledge base. Use this for restaurants, locations, current events, general facts, etc.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query for public information"
+                    }
+                },
+                "required": ["query"]
+            }
         }
     ]
     
@@ -349,6 +357,7 @@ Your goal is to help users develop better self-awareness and understanding of ot
 
 **Your Tools:**
 - For MBTI/psychology questions → use the InnerVerse knowledge base (183+ CS Joseph videos on MBTI and Jungian psychology)
+- For everything else (restaurants, current events, facts, etc.) → use web search
 
 Be yourself - smart, direct, and genuinely interested in helping them understand. Challenge them when needed. Have real conversations."""
     
@@ -381,32 +390,58 @@ Be yourself - smart, direct, and genuinely interested in helping them understand
                     final_message = stream.get_final_message()
                     
                     if final_message.stop_reason == "tool_use":
-                        # Handle tool use (Pinecone search)
+                        # Handle tool use (Pinecone search or web search)
                         for block in final_message.content:
-                            if block.type == "tool_use" and block.name == "query_innerverse_backend":
-                                question = block.input.get("question", "")
-                                
-                                # Query Pinecone locally (FAST!)
-                                yield "data: " + '{"status": "searching_pinecone"}\n\n'
-                                backend_result = query_innerverse_local(question)
-                                
-                                # Add tool result to messages and continue streaming
-                                messages.append({
-                                    "role": "assistant",
-                                    "content": final_message.content
-                                })
-                                
-                                messages.append({
-                                    "role": "user",
-                                    "content": [
-                                        {
-                                            "type": "tool_result",
-                                            "tool_use_id": block.id,
-                                            "content": backend_result if backend_result else "No relevant content found in knowledge base."
-                                        }
-                                    ]
-                                })
-                                break
+                            if block.type == "tool_use":
+                                if block.name == "query_innerverse_backend":
+                                    question = block.input.get("question", "")
+                                    
+                                    # Query Pinecone locally (FAST!)
+                                    yield "data: " + '{"status": "searching_pinecone"}\n\n'
+                                    backend_result = query_innerverse_local(question)
+                                    
+                                    # Add tool result to messages and continue streaming
+                                    messages.append({
+                                        "role": "assistant",
+                                        "content": final_message.content
+                                    })
+                                    
+                                    messages.append({
+                                        "role": "user",
+                                        "content": [
+                                            {
+                                                "type": "tool_result",
+                                                "tool_use_id": block.id,
+                                                "content": backend_result if backend_result else "No relevant content found in knowledge base."
+                                            }
+                                        ]
+                                    })
+                                    break
+                                    
+                                elif block.name == "search_web":
+                                    query = block.input.get("query", "")
+                                    
+                                    # Search web with Brave API
+                                    yield "data: " + '{"status": "searching_web"}\n\n'
+                                    web_result = search_web_brave(query)
+                                    
+                                    # Add tool result to messages and continue streaming
+                                    messages.append({
+                                        "role": "assistant",
+                                        "content": final_message.content
+                                    })
+                                    
+                                    messages.append({
+                                        "role": "user",
+                                        "content": [
+                                            {
+                                                "type": "tool_result",
+                                                "tool_use_id": block.id,
+                                                "content": web_result
+                                            }
+                                        ]
+                                    })
+                                    break
                         # Continue to next iteration to get final response with context
                         continue
                     else:
