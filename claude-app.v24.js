@@ -807,11 +807,24 @@ const app = {
     setupEventListeners() {
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         if (hamburgerBtn) {
-            // Simplified: Single click handler works for both touch and mouse
-            // No complex dual-listener setup that causes iOS issues
-            hamburgerBtn.addEventListener('click', (e) => {
+            // iOS Safari has 300ms click delay - use touchstart for instant response
+            let touchFired = false;
+            
+            hamburgerBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
+                touchFired = true;
                 this.toggleSidebar();
+                // Reset flag after potential click event
+                setTimeout(() => { touchFired = false; }, 400);
+            }, { passive: false });
+            
+            // Fallback for desktop/mouse users
+            hamburgerBtn.addEventListener('click', (e) => {
+                if (!touchFired) {
+                    e.stopPropagation();
+                    this.toggleSidebar();
+                }
             });
         }
 
