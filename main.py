@@ -1697,26 +1697,89 @@ async def text_to_pdf(request: TextToPDFRequest, background_tasks: BackgroundTas
         print(f"📝 Processing text for PDF generation...")
         
         # Use GPT to fix punctuation and grammar
+        # For very long texts (>10k chars), process in chunks to avoid truncation
         print("🔧 Fixing punctuation and grammar with AI...")
+        
+        input_length = len(request.text)
+        print(f"📏 Input text length: {input_length:,} characters")
+        
         try:
-            completion = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a professional editor optimizing text for semantic search and vector embeddings. Your tasks: 1) Fix all punctuation, grammar, and formatting errors. 2) Remove speech filler words (so, yeah, anyway, basically, um, you know, etc.) only when they add no meaning. Preserve 'like' when used for comparisons or analogies. 3) Remove only the redundant clauses of meta-commentary (e.g., 'we'll get into that later', 'as I mentioned before') while keeping the substantive content of those sentences. 4) Normalize conversational tone to clear, direct statements while preserving all conceptual content, examples, and technical terminology. 5) Add proper paragraph breaks at topic transitions. Return only the cleaned text with NO explanations or comments."
-                    },
-                    {
-                        "role": "user",
-                        "content": request.text
-                    }
-                ],
-                temperature=0.3
-            )
-            
-            content = completion.choices[0].message.content
-            cleaned_text = content.strip() if content else request.text
-            print("✅ Text cleaned and formatted")
+            # If text is very long (>12,000 chars), process in chunks
+            if input_length > 12000:
+                print(f"⚠️ Text is long ({input_length:,} chars). Processing in chunks to avoid truncation...")
+                
+                # Split into chunks of ~10k characters at paragraph boundaries
+                chunks = []
+                current_chunk = ""
+                paragraphs = request.text.split('\n')
+                
+                for para in paragraphs:
+                    if len(current_chunk) + len(para) < 10000:
+                        current_chunk += para + '\n'
+                    else:
+                        if current_chunk:
+                            chunks.append(current_chunk)
+                        current_chunk = para + '\n'
+                
+                if current_chunk:
+                    chunks.append(current_chunk)
+                
+                print(f"📦 Split into {len(chunks)} chunks")
+                
+                # Process each chunk
+                cleaned_chunks = []
+                for i, chunk in enumerate(chunks):
+                    print(f"  Processing chunk {i+1}/{len(chunks)}...")
+                    try:
+                        completion = openai_client.chat.completions.create(
+                            model="gpt-3.5-turbo",
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": "You are a professional editor optimizing text for semantic search and vector embeddings. Your tasks: 1) Fix all punctuation, grammar, and formatting errors. 2) Remove speech filler words (so, yeah, anyway, basically, um, you know, etc.) only when they add no meaning. Preserve 'like' when used for comparisons or analogies. 3) Remove only the redundant clauses of meta-commentary (e.g., 'we'll get into that later', 'as I mentioned before') while keeping the substantive content of those sentences. 4) Normalize conversational tone to clear, direct statements while preserving all conceptual content, examples, and technical terminology. 5) Add proper paragraph breaks at topic transitions. Return only the cleaned text with NO explanations or comments."
+                                },
+                                {
+                                    "role": "user",
+                                    "content": chunk
+                                }
+                            ],
+                            temperature=0.3,
+                            max_tokens=4096
+                        )
+                        
+                        content = completion.choices[0].message.content
+                        if content:
+                            cleaned_chunks.append(content.strip())
+                        else:
+                            cleaned_chunks.append(chunk)
+                    except Exception as chunk_error:
+                        print(f"  ⚠️ Chunk {i+1} failed: {str(chunk_error)}, using original")
+                        cleaned_chunks.append(chunk)
+                
+                cleaned_text = '\n\n'.join(cleaned_chunks)
+                print(f"✅ All chunks processed. Final length: {len(cleaned_text):,} chars")
+                
+            else:
+                # Normal processing for shorter texts
+                completion = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a professional editor optimizing text for semantic search and vector embeddings. Your tasks: 1) Fix all punctuation, grammar, and formatting errors. 2) Remove speech filler words (so, yeah, anyway, basically, um, you know, etc.) only when they add no meaning. Preserve 'like' when used for comparisons or analogies. 3) Remove only the redundant clauses of meta-commentary (e.g., 'we'll get into that later', 'as I mentioned before') while keeping the substantive content of those sentences. 4) Normalize conversational tone to clear, direct statements while preserving all conceptual content, examples, and technical terminology. 5) Add proper paragraph breaks at topic transitions. Return only the cleaned text with NO explanations or comments."
+                        },
+                        {
+                            "role": "user",
+                            "content": request.text
+                        }
+                    ],
+                    temperature=0.3,
+                    max_tokens=4096
+                )
+                
+                content = completion.choices[0].message.content
+                cleaned_text = content.strip() if content else request.text
+                print("✅ Text cleaned and formatted")
             
         except Exception as e:
             print(f"⚠️ Punctuation fix failed: {str(e)}, using original text")
