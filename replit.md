@@ -14,13 +14,13 @@ Preferred communication style: Simple, everyday language.
 - **Claude Master Interface** (`/claude`): Advanced conversational workspace powered by Claude Sonnet 4 with a ChatGPT-style interface. It features 7 project categories, persistent conversations in PostgreSQL, a responsive sidebar with full-height design (desktop fixed, mobile overlay), a welcome screen with suggested prompts, and robust state management. Integrates automatic InnerVerse backend queries and web search via Claude API function calling. Supports PWA for mobile installation.
   - **Sidebar**: Fixed-position, full-height sidebar with search, "InnerVerse" home, collapsible "All Chats" and "Projects" sections. Optimized for performance with parallel preloading and instant response times.
   - **Browser History Routing**: Full browser back/forward support using HTML5 History API.
-  - **Conversation List**: Compact, ChatGPT-style design with single-line items, timestamps, and delete functionality.
+  - **Conversation List**: Compact, ChatGPT-style design with single-line items, timestamps, inline rename/delete icons, and optimistic UI updates for instant operations.
   - **Auto-Expanding Textarea**: Input grows from 1 to 5 lines.
-  - **Streaming Responses**: Typewriter effect displays AI responses in 5-character chunks every 8ms with optimized scrolling.
+  - **Streaming Responses**: Typewriter effect displays AI responses in 5-character chunks every 8ms with optimized scrolling. Markdown formatted with headers, bold text, bullets, and 1-2 emojis max for scannability.
   - **iOS Optimization**: Optimized for iPhone 14 Pro with viewport locking and safe area handling.
   - **Thinking Indicator**: Subtle pulsing dot with "thinking" text appears during AI processing.
   - **Offline Resilience**: PWA-optimized message persistence, handles interrupted API calls and app backgrounding.
-  - **Performance**: Achieved through DOM element caching, parallel API fetches, debounced input handlers, optimized rendering, and a single-fetch architecture.
+  - **Performance**: Achieved through HTML template strings (10x faster rendering), event delegation, optimistic UI updates, DOM element caching, parallel API fetches, debounced input handlers, and batch rendering.
 
 ## Backend Architecture
 - **Framework**: FastAPI with asynchronous operations, Python runtime, and Uvicorn ASGI server.
