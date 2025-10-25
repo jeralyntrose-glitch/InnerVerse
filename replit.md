@@ -12,6 +12,14 @@ InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowl
 - Added visual search indicator (🔍 Searching knowledge base...) during Pinecone queries
 - Performance improvement: Sub-500ms Pinecone queries + real-time word-by-word streaming (ADHD-friendly)
 
+**Web Search Integration**
+- Integrated Brave Search API for accessing current information and public knowledge
+- Added `search_web_brave()` function in `claude_api.py` for web searches
+- Claude automatically determines when to use Pinecone (MBTI content), web search (current events/facts), or both
+- System prompt updated to include web search tool alongside InnerVerse knowledge base
+- Visual indicator (🌐 Searching the web...) shows when web searches are happening
+- Supports hybrid queries combining CS Joseph content with current public information
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
