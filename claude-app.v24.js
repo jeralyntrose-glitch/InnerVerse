@@ -913,6 +913,30 @@ const app = {
             });
         }
 
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            // Debounce search for performance
+            let searchTimeout;
+            const handleSearch = () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.performSearch(searchInput.value.trim());
+                }, 150); // Debounce 150ms for snappy feel
+            };
+            
+            searchInput.addEventListener('input', handleSearch);
+            
+            // Mobile: Enter key also triggers search
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    clearTimeout(searchTimeout);
+                    this.performSearch(searchInput.value.trim());
+                }
+            });
+        }
+
         if (window.innerWidth <= 768) {
             this.sidebarOpen = false;
             document.getElementById('sidebar').classList.add('hidden');
@@ -2754,6 +2778,71 @@ const app = {
             this.deleteConversationById(this.contextMenuConversationId);
         }
         this.closeContextMenu();
+    },
+
+    performSearch(query) {
+        // If empty query, show everything normally
+        if (!query) {
+            this.renderSidebarProjects();
+            return;
+        }
+
+        const lowerQuery = query.toLowerCase();
+        
+        // Search through all conversations across all projects
+        const searchResults = [];
+        
+        // Search in each project's conversations
+        for (const [projectId, conversations] of Object.entries(this.projectConversations)) {
+            const matchingConvs = conversations.filter(conv => 
+                conv.name.toLowerCase().includes(lowerQuery)
+            );
+            
+            if (matchingConvs.length > 0) {
+                const project = this.projects.find(p => p.id === projectId);
+                searchResults.push({
+                    project,
+                    conversations: matchingConvs
+                });
+            }
+        }
+        
+        // Render search results
+        const container = document.getElementById('sidebarContent');
+        if (!container) return;
+        
+        if (searchResults.length === 0) {
+            container.innerHTML = `
+                <div style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                    No conversations found for "${query}"
+                </div>
+            `;
+            return;
+        }
+        
+        // Build search results HTML
+        let html = `<div style="padding: 12px; font-size: 0.8125rem; color: var(--text-secondary); font-weight: 500;">
+            ${searchResults.reduce((sum, r) => sum + r.conversations.length, 0)} result(s)
+        </div>`;
+        
+        searchResults.forEach(result => {
+            html += `
+                <div style="margin-bottom: 16px;">
+                    <div style="padding: 8px 12px; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">
+                        ${result.project.emoji} ${result.project.name.split(' ').slice(1).join(' ')}
+                    </div>
+                    <div class="project-conversations">
+                        ${result.conversations.map(conv => this.createConversationItemHTML(conv, false)).join('')}
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+        // Add event listeners to search results
+        const convContainers = container.querySelectorAll('.project-conversations');
+        convContainers.forEach(c => this.attachConversationListeners(c));
     }
 };
 
