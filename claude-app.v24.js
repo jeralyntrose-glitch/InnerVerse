@@ -2024,12 +2024,18 @@ const app = {
             // Scroll to bottom ONCE before text starts appearing
             this.scrollToBottom();
 
-            // Use fetch with streaming response
+            // Use fetch with streaming response (with timeout for mobile reliability)
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+            
             const response = await fetch(`/claude/conversations/${this.currentConversation}/message/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message })
+                body: JSON.stringify({ message }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeout);
 
             if (!response.ok) {
                 // Handle foreign key errors (conversation doesn't exist)
