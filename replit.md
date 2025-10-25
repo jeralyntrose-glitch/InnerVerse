@@ -8,8 +8,10 @@ InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowl
 - Fixed unresponsive hamburger menu requiring 4-5 taps on iOS
 - Simplified from complex dual-listener (touchend + click) to single click handler
 - Increased tap target from 44px to 48px for better touch accuracy
-- Increased z-index to 1000 and added pointer-events CSS to prevent blocking
-- Hamburger icon children now have pointer-events: none to ensure parent catches all taps
+- Fixed z-index layering: hamburger (z-index: 50) now goes behind sidebar (z-index: 1000) when open
+- Added explicit pointer-events: none to all hamburger child elements (icon, spans) so only parent button catches taps
+- Added hardware acceleration transforms (-webkit-transform: translateZ(0)) for instant touch response
+- Hamburger now hides behind sidebar when open, no longer overlaps search bar
 - Instant response on first tap - no more frustrating multi-tap requirement
 
 **Smooth Streaming UX Optimization**
