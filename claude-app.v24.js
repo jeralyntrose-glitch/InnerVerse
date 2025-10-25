@@ -1970,7 +1970,14 @@ const app = {
         }
 
         try {
-            const response = await fetch(`/claude/conversations/${this.currentConversation}/message`, {
+            // Create assistant message div BEFORE streaming starts
+            const assistantMessageDiv = document.createElement('div');
+            assistantMessageDiv.className = 'message assistant';
+            container.insertBefore(assistantMessageDiv, typingIndicator);
+            this.scrollToBottom();
+
+            // Use fetch with streaming response
+            const response = await fetch(`/claude/conversations/${this.currentConversation}/message/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message })
@@ -1980,7 +1987,57 @@ const app = {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            // Read streaming response
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let fullText = '';
+            let isSearching = false;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const jsonStr = line.substring(6);
+                        try {
+                            const data = JSON.parse(jsonStr);
+
+                            if (data.chunk) {
+                                // Real-time text chunk from Claude!
+                                fullText += data.chunk;
+                                assistantMessageDiv.innerHTML = this.formatMessage(fullText);
+                                
+                                // Auto-scroll every 10 chunks for smooth performance
+                                if (fullText.length % 50 === 0) {
+                                    this.scrollToBottomIfNeeded();
+                                }
+                            } else if (data.status === 'searching_pinecone') {
+                                // Show Pinecone search indicator
+                                if (!isSearching) {
+                                    isSearching = true;
+                                    assistantMessageDiv.innerHTML = '<span style="opacity: 0.6;">🔍 Searching knowledge base...</span>';
+                                }
+                            } else if (data.status === 'searching') {
+                                // Continue showing search indicator
+                                isSearching = true;
+                            } else if (data.done) {
+                                // Stream complete!
+                                break;
+                            } else if (data.error) {
+                                throw new Error(data.error);
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse SSE:', e, jsonStr);
+                        }
+                    }
+                }
+            }
 
             // Success - remove from localStorage
             this.removePendingMessage(messageId);
@@ -1994,17 +2051,6 @@ const app = {
                 typingIndicator.classList.remove('active');
             }
 
-            // Create assistant message div and stream text into it
-            const assistantMessageDiv = document.createElement('div');
-            assistantMessageDiv.className = 'message assistant';
-            container.insertBefore(assistantMessageDiv, typingIndicator);
-            
-            // Claude-style: Create space by scrolling before streaming starts
-            // This pushes user message up, creating stable room for AI response
-            this.scrollToBottom();
-            
-            // Stream the response with typewriter effect
-            await this.streamText(assistantMessageDiv, data.assistant_message.content, 10);
             this.scrollToBottom();
         } catch (error) {
             console.error('Error sending message:', error);
