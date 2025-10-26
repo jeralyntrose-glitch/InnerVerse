@@ -3433,6 +3433,126 @@ async def search_conversations(q: str = ""):
         return {"results": []}
 
 
+# === Migration API Endpoints ===
+migration_status = {
+    "running": False,
+    "completed": 0,
+    "failed": 0,
+    "total_docs": 245,
+    "total_new_chunks": 0,
+    "start_time": None,
+    "end_time": None,
+    "current_file": ""
+}
+
+@app.get("/api/migration-status")
+async def get_migration_status():
+    """Get current migration status"""
+    return migration_status
+
+@app.post("/api/start-migration")
+async def start_migration_api(background_tasks: BackgroundTasks):
+    """Start the embedding migration process in background"""
+    global migration_status
+    
+    if migration_status["running"]:
+        return {"error": "Migration already running"}
+    
+    # Import migration functions
+    import migrate_embeddings as mig
+    
+    async def run_migration():
+        global migration_status
+        migration_status["running"] = True
+        migration_status["start_time"] = datetime.now().isoformat()
+        migration_status["completed"] = 0
+        migration_status["failed"] = 0
+        migration_status["total_new_chunks"] = 0
+        migration_status["error"] = None
+        
+        try:
+            print("🚀 Starting migration process...")
+            
+            # Step 1: Fetch documents from old index
+            try:
+                documents = mig.fetch_all_documents_from_old_index()
+                migration_status["total_docs"] = len(documents)
+            except Exception as e:
+                error_msg = f"Failed to fetch documents from old index: {str(e)}"
+                print(f"❌ {error_msg}")
+                migration_status["error"] = error_msg
+                migration_status["running"] = False
+                migration_status["end_time"] = datetime.now().isoformat()
+                return
+            
+            # Step 2: Migrate documents
+            for i, doc in enumerate(documents, 1):
+                try:
+                    migration_status["current_file"] = doc['filename']
+                    
+                    # Re-chunk
+                    new_chunks = mig.chunk_text_improved(doc['text'])
+                    
+                    # Re-embed and upload
+                    enriched_meta = mig.extract_enriched_metadata(doc['filename'], doc['text'][:2000])
+                    
+                    openai.api_key = OPENAI_API_KEY
+                    pc = Pinecone(api_key=PINECONE_API_KEY)
+                    new_index_name = os.getenv("NEW_PINECONE_INDEX", "mbti-knowledge-v2")
+                    new_index = pc.Index(new_index_name)
+                    
+                    vectors_to_upsert = []
+                    for chunk_idx, chunk in enumerate(new_chunks):
+                        response = openai.embeddings.create(
+                            input=chunk,
+                            model="text-embedding-3-large"
+                        )
+                        vector = response.data[0].embedding
+                        
+                        chunk_metadata = {
+                            "text": chunk,
+                            "doc_id": doc['doc_id'],
+                            "filename": doc['filename'],
+                            "upload_timestamp": doc['upload_timestamp'],
+                            "tags": doc['tags'],
+                            "chunk_index": chunk_idx,
+                            "source": doc.get('source', 'migration'),
+                            "migration_date": datetime.now().isoformat()
+                        }
+                        chunk_metadata.update(enriched_meta)
+                        
+                        vectors_to_upsert.append((f"{doc['doc_id']}-{chunk_idx}", vector, chunk_metadata))
+                    
+                    # Upload in batches
+                    batch_size = 50
+                    for batch_start in range(0, len(vectors_to_upsert), batch_size):
+                        batch = vectors_to_upsert[batch_start:batch_start + batch_size]
+                        new_index.upsert(vectors=batch)
+                    
+                    migration_status["completed"] += 1
+                    migration_status["total_new_chunks"] += len(new_chunks)
+                    
+                    print(f"✅ Migrated {i}/{len(documents)}: {doc['filename']}")
+                    
+                except Exception as e:
+                    print(f"❌ Error migrating {doc['filename']}: {str(e)}")
+                    migration_status["failed"] += 1
+            
+            migration_status["end_time"] = datetime.now().isoformat()
+            migration_status["running"] = False
+            print(f"🎉 Migration complete! {migration_status['completed']}/{migration_status['total_docs']}")
+            
+        except Exception as e:
+            error_msg = f"Migration error: {str(e)}"
+            print(f"❌ {error_msg}")
+            migration_status["error"] = error_msg
+            migration_status["running"] = False
+            migration_status["end_time"] = datetime.now().isoformat()
+    
+    background_tasks.add_task(run_migration)
+    return {"message": "Migration started", "status": migration_status}
+
+
 # === API Usage Endpoint ===
 @app.get("/api/usage")
 async def get_usage_stats():
@@ -3596,6 +3716,10 @@ def serve_claude_js_v23():
 @app.get("/claude-app.v24.js", include_in_schema=False)
 def serve_claude_js_v24():
     return FileResponse("claude-app.v24.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+@app.get("/migration", include_in_schema=False)
+def serve_migration_dashboard():
+    return FileResponse("migration.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/sw.js", include_in_schema=False)
 def serve_service_worker():

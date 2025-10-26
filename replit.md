@@ -2,6 +2,12 @@
 
 InnerVerse is a FastAPI-based PDF Q&A application for intelligent knowledge retrieval. It allows users to upload PDFs, transcribe audio and YouTube videos into searchable documents, and generate reports. It chunks, embeds, and stores document content in Pinecone, leveraging OpenAI's GPT models for query answering. The application also monitors API usage, tracks costs, and applies rate limiting, providing an intuitive experience for document interaction.
 
+# Recent Changes
+
+- **Hybrid Search System Upgrade (Oct 26, 2025)**: Upgraded to text-embedding-3-large (3072 dims) with improved chunking (2500 chars, 20% overlap), enriched metadata extraction (season/episode, MBTI types, cognitive functions), smart query rewriting with MBTI ontology, and hybrid retrieval (top_k=30 → re-rank to 12). Migration tool available at `/migration`.
+- Enhanced Pinecone search: doubled results from 5 to 10 chunks, added query expansion with 2 variations for better intent matching
+- Fixed Enter key behavior: plain Enter creates new line, Shift+Enter sends message (iPhone-optimized)
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -21,28 +27,40 @@ Preferred communication style: Simple, everyday language.
   - **Thinking Indicator**: Subtle pulsing dot with "thinking" text appears during AI processing.
   - **Offline Resilience**: PWA-optimized message persistence, handles interrupted API calls and app backgrounding.
   - **Performance**: Achieved through HTML template strings (10x faster rendering), event delegation, optimistic UI updates, DOM element caching, parallel API fetches, debounced input handlers, and batch rendering.
+- **Migration Dashboard** (`/migration`): Real-time dashboard for upgrading embeddings from ada-002 to 3-large with progress tracking, stats visualization, and live console logs.
 
 ## Backend Architecture
 - **Framework**: FastAPI with asynchronous operations, Python runtime, and Uvicorn ASGI server.
 - **Design Pattern**: Stateless API where `document_id` is managed by the frontend.
 - **Deployment**: VM deployment with health checks, robust database initialization, and detailed logging.
 - **API Usage and Cost Tracking**: Logs and persists OpenAI API call costs to PostgreSQL, accessible via `/api/usage`, with a rate limit of 100 requests per hour.
+- **Migration System**: Background task-based migration API (`/api/start-migration`, `/api/migration-status`) for live embedding upgrades without downtime.
 
 ## Document Processing Pipeline
 - **PDF Parsing**: PyPDF2 for text extraction, including encrypted PDFs.
-- **Text Chunking**: LangChain's `RecursiveCharacterTextSplitter` for overlapping text chunks.
+- **Text Chunking**: LangChain's `RecursiveCharacterTextSplitter` with improved parameters (2500 chars, 500 overlap, paragraph-aware) for CS Joseph transcripts.
 - **InnerVerse Intelligence Layer**: Automatic MBTI/Jungian taxonomy tagging using GPT-3.5, storing tags in Pinecone metadata.
+- **Enriched Metadata Extraction**: Automatically extracts season/episode numbers, MBTI types mentioned, and cognitive functions from filenames and content.
 - **YouTube MP3 Transcription**: Processes audio (MP3, M4A, WAV, MP4) up to 24MB via OpenAI Whisper API, generates formatted PDFs using ReportLab, auto-tags, and indexes in Pinecone.
 - **Text to PDF**: Converts text to formatted PDFs with GPT-3.5 for punctuation and grammar fixes.
 - **Reprocess PDF**: Enhances existing Whisper-transcribed PDFs.
 - **Large File Support**: Efficient binary uploads and batch processing for Pinecone upserts.
 
 ## Vector Storage Strategy
-- **Database**: Pinecone vector database ("mbti-knowledge" index).
-- **Query Strategy**: Filters by `document_id` or performs global searches.
+- **Database**: Pinecone vector database.
+  - **Production Index**: `mbti-knowledge` (1536 dims, ada-002) - 245 documents
+  - **New Index**: `mbti-knowledge-v2` (3072 dims, 3-large) - migration target
+- **Query Strategy**: Hybrid search with vector similarity + metadata filters + smart re-ranking.
 
 ## Embedding Generation
-- **Provider**: OpenAI API (`text-embedding-ada-002`) for batch-processed embeddings.
+- **Current**: OpenAI `text-embedding-3-large` (3072 dimensions) for superior semantic matching
+- **Legacy**: `text-embedding-ada-002` (1536 dimensions) - being phased out via migration
+
+## Hybrid Search System
+- **Query Rewriting**: MBTI ontology-aware with type synonyms (ESTP → "Se-Ti extraverted sensing")
+- **Retrieval**: top_k=30 initial fetch → metadata filtering → re-rank to 12 best chunks
+- **Semantic Expansion**: Auto-expands negative behavior queries, relationship queries, and function-based queries
+- **Context Length**: 12 chunks × ~2500 chars = ~30,000 chars of context for Claude
 
 ## API Structure
 - **Upload**: `POST /upload`, `POST /upload-base64` (PDFs), `POST /upload-audio` (audio).
@@ -50,6 +68,7 @@ Preferred communication style: Simple, everyday language.
 - **Text/PDF Processing**: `POST /text-to-pdf`, `POST /reprocess-pdf`.
 - **Document Management**: `GET /documents/report`, `DELETE /documents/{document_id}`, `DELETE /documents/all`, `PATCH /documents/{document_id}/rename`, chat commands.
 - **Claude Chat API**: Endpoints for managing project categories, conversations, messages, and searching.
+- **Migration API**: `POST /api/start-migration`, `GET /api/migration-status`.
 - **Usage Monitoring**: `/api/usage`.
 - **Static Files**: Serves frontend assets and Swagger UI documentation.
 - **PWA Support**: Service worker, manifest, and icons.
@@ -57,15 +76,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Configuration Management
 - **Environment Variables**: API keys managed via Replit Secrets.
+  - `PINECONE_INDEX`: Current production index name
+  - `NEW_PINECONE_INDEX`: Migration target index name (mbti-knowledge-v2)
 - **Client Initialization**: Lazy initialization for API clients.
 
 # External Dependencies
 
 ## Vector Database
-- **Pinecone**: Vector database.
+- **Pinecone**: Vector database for document embeddings.
 
 ## AI/ML Services
-- **OpenAI API**: For text embeddings (`text-embedding-ada-002`), GPT-3.5-turbo (Q&A, text fixes), and Whisper API (audio transcription).
+- **OpenAI API**: For text embeddings (`text-embedding-3-large`), GPT-3.5-turbo (Q&A, text fixes), and Whisper API (audio transcription).
 - **Anthropic API**: Claude Sonnet 4 for the Claude Master Interface.
 
 ## Document Processing
@@ -88,3 +109,30 @@ Preferred communication style: Simple, everyday language.
 - **Google Drive Picker API**: Google Drive integration.
 - **yt-dlp**: YouTube video downloading.
 - **Brave Search API**: Web search integration.
+
+# Migration Guide
+
+To upgrade from ada-002 to 3-large embeddings:
+
+1. **Create New Pinecone Index**:
+   - Dimensions: 3072
+   - Metric: cosine
+   - Name: `mbti-knowledge-v2`
+
+2. **Set Environment Variable**:
+   ```
+   NEW_PINECONE_INDEX=mbti-knowledge-v2
+   ```
+
+3. **Run Migration**:
+   - Visit `/migration` dashboard
+   - Click "Start Migration"
+   - Monitor real-time progress
+
+4. **Switch to New Index**:
+   - After successful migration, update `PINECONE_INDEX=mbti-knowledge-v2`
+   - Restart application
+
+5. **Verify & Cleanup**:
+   - Test search quality
+   - Delete old `mbti-knowledge` index once verified
