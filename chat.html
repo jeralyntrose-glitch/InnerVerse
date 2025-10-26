@@ -392,20 +392,31 @@
                     if (done) break;
                     
                     const chunk = decoder.decode(value);
-                    const lines = chunk.split('\\n');
+                    const lines = chunk.split('\n');
                     
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
                             try {
                                 const data = JSON.parse(line.slice(6));
                                 
+                                // Handle different event types
+                                if (data.event === 'start') {
+                                    // Backend is starting - do nothing
+                                    continue;
+                                }
+                                
                                 if (data.chunk) {
                                     fullResponse += data.chunk;
                                     aiMessageContent.textContent = fullResponse;
                                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                                 }
+                                
+                                if (data.done) {
+                                    // Stream finished
+                                    break;
+                                }
                             } catch (e) {
-                                console.error('Error parsing chunk:', e);
+                                // Silently ignore parse errors for malformed chunks
                             }
                         }
                     }
@@ -414,6 +425,12 @@
             } catch (error) {
                 console.error('Error:', error);
                 hideTypingIndicator();
+                
+                // Remove empty AI message if it exists
+                if (aiMessageContent && !fullResponse) {
+                    aiMessageContent.closest('.message').remove();
+                }
+                
                 addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
             } finally {
                 // Re-enable input
