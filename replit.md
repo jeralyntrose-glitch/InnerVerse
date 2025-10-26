@@ -4,6 +4,7 @@ InnerVerse is a FastAPI-based PDF Q&A application for intelligent knowledge retr
 
 # Recent Changes
 
+- **LibreChat Integration (Oct 26, 2025)**: Added OpenAI-compatible API endpoints (`/v1/chat/completions` and `/v1/models`) that wrap InnerVerse Claude + Pinecone functionality. This allows using professional chat UIs like LibreChat while keeping all CS Joseph typology intelligence. Endpoints convert OpenAI message format to Claude, handle SSE streaming, and return responses in OpenAI format. See `LIBRECHAT_SETUP_GUIDE.md` for setup instructions.
 - **v2 Optimized Prompt Working Perfectly (Oct 26, 2025)**: Confirmed that v2 "CS Joseph Typology Expert (Optimized)" prompt is working perfectly - delivers exactly the quality responses needed. Version history: v1 = original "Jungian-MBTI Integration System", v2 = lighter/optimized (CURRENT), v3 = deeper/comprehensive (too complex, caused hanging). Simplified 3-step workflow (Query → Build → Teach) with CS Joseph teaching style. Backup saved in `SYSTEM_PROMPT_V2_WORKING.md`. Timeouts remain in place (10s Pinecone, 60s Claude) for safety.
 - **Fixed Pinecone Query Timeout Issue (Oct 26, 2025)**: Added 10-second timeout protection to all Pinecone queries in both `claude_api.py` and `main.py`. Queries now fail gracefully with user-friendly error messages instead of hanging indefinitely when knowledge base searches stall.
 - **Hybrid Search System Upgrade (Oct 26, 2025)**: Upgraded to text-embedding-3-large (3072 dims) with improved chunking (2500 chars, 20% overlap), enriched metadata extraction (season/episode, MBTI types, cognitive functions), smart query rewriting with MBTI ontology, and hybrid retrieval (top_k=30 → re-rank to 12). Migration tool available at `/migration`.
@@ -71,6 +72,7 @@ Preferred communication style: Simple, everyday language.
 - **Text/PDF Processing**: `POST /text-to-pdf`, `POST /reprocess-pdf`.
 - **Document Management**: `GET /documents/report`, `DELETE /documents/{document_id}`, `DELETE /documents/all`, `PATCH /documents/{document_id}/rename`, chat commands.
 - **Claude Chat API**: Endpoints for managing project categories, conversations, messages, and searching.
+- **OpenAI-Compatible API**: `GET /v1/models`, `POST /v1/chat/completions` - Wraps Claude + Pinecone in OpenAI format for LibreChat integration.
 - **Migration API**: `POST /api/start-migration`, `GET /api/migration-status`.
 - **Usage Monitoring**: `/api/usage`.
 - **Static Files**: Serves frontend assets and Swagger UI documentation.
