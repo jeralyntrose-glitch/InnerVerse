@@ -4,7 +4,7 @@ InnerVerse is a FastAPI-based PDF Q&A application for intelligent knowledge retr
 
 # Recent Changes
 
-- **v2 Optimized Prompt Working Perfectly (Oct 26, 2025)**: Confirmed that the v2 "CS Joseph Typology Expert (Optimized)" prompt is working perfectly - delivers exactly the quality responses needed. Simplified 3-step workflow (Query → Build → Teach) with CS Joseph teaching style. Timeouts remain in place (10s Pinecone, 60s Claude) for safety.
+- **v2 Optimized Prompt Working Perfectly (Oct 26, 2025)**: Confirmed that v2 "CS Joseph Typology Expert (Optimized)" prompt is working perfectly - delivers exactly the quality responses needed. Version history: v1 = original "Jungian-MBTI Integration System", v2 = lighter/optimized (CURRENT), v3 = deeper/comprehensive (too complex, caused hanging). Simplified 3-step workflow (Query → Build → Teach) with CS Joseph teaching style. Backup saved in `SYSTEM_PROMPT_V2_WORKING.md`. Timeouts remain in place (10s Pinecone, 60s Claude) for safety.
 - **Fixed Pinecone Query Timeout Issue (Oct 26, 2025)**: Added 10-second timeout protection to all Pinecone queries in both `claude_api.py` and `main.py`. Queries now fail gracefully with user-friendly error messages instead of hanging indefinitely when knowledge base searches stall.
 - **Hybrid Search System Upgrade (Oct 26, 2025)**: Upgraded to text-embedding-3-large (3072 dims) with improved chunking (2500 chars, 20% overlap), enriched metadata extraction (season/episode, MBTI types, cognitive functions), smart query rewriting with MBTI ontology, and hybrid retrieval (top_k=30 → re-rank to 12). Migration tool available at `/migration`.
 - Enhanced Pinecone search: doubled results from 5 to 10 chunks, added query expansion with 2 variations for better intent matching

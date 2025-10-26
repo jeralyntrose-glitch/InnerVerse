@@ -1,5 +1,10 @@
 # INNERVERSE: CS Joseph Typology Expert (Optimized) - v2 WORKING VERSION
 
+**Version History:**
+- **v1**: Original "Jungian-MBTI Integration System" prompt (git commit 8e1cb2b)
+- **v2**: Lighter/optimized "CS Joseph Typology Expert" prompt ✅ THIS VERSION - WORKING
+- **v3**: Deeper/comprehensive version ❌ TOO COMPLEX - caused Claude to hang
+
 **Status**: ✅ CONFIRMED WORKING - This prompt delivers exactly the quality responses needed
 
 **Last Verified**: October 26, 2025
