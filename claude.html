@@ -843,12 +843,28 @@
             display: flex;
             flex-direction: column;
             gap: 0;
-            max-width: 800px;
+            max-width: 800px; /* iPhone - keep narrow for readability */
             margin: 0 auto;
             width: 100%;
             -webkit-overflow-scrolling: touch;
             touch-action: pan-y;
             overscroll-behavior-y: contain;
+        }
+
+        /* iPad (768px - 1024px) - Wider chat area */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .messages-container {
+                max-width: 90%; /* Use 90% of available width on iPad */
+                padding: 20px 32px;
+            }
+        }
+
+        /* Desktop (> 1024px) - Full width chat area */
+        @media (min-width: 1025px) {
+            .messages-container {
+                max-width: 100%; /* Use full available width on desktop */
+                padding: 24px 48px;
+            }
         }
 
         .message-wrapper {
