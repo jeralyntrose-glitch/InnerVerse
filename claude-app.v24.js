@@ -892,12 +892,18 @@ const app = {
         const messageInput = document.getElementById('messageInput');
         if (messageInput) {
             messageInput.addEventListener('keydown', (e) => {
-                // Shift+Enter sends the message, plain Enter creates a new line
-                if (e.key === 'Enter' && e.shiftKey) {
-                    e.preventDefault();
-                    this.sendMessage();
+                if (e.key === 'Enter') {
+                    if (e.shiftKey) {
+                        // Shift+Enter sends the message
+                        e.preventDefault();
+                        console.log('✉️ Shift+Enter detected - sending message');
+                        this.sendMessage();
+                    } else {
+                        // Plain Enter creates a new line - allow default textarea behavior
+                        console.log('⏎ Plain Enter detected - creating new line');
+                        // Do NOT preventDefault() - let the textarea handle it naturally
+                    }
                 }
-                // Plain Enter just creates a new line (default textarea behavior)
             });
 
             // Debounced auto-expand for better performance
