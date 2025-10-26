@@ -4,7 +4,7 @@ InnerVerse is a FastAPI-based PDF Q&A application for intelligent knowledge retr
 
 # Recent Changes
 
-- **Fixed Claude Response Hanging Issue (Oct 26, 2025)**: Added 60-second timeout to Claude API calls and simplified system prompt. The original 105-line comprehensive prompt was causing Claude to over-think and hang. New optimized prompt (122 lines) maintains CS Joseph teaching style and synthesis while removing complex workflow that caused hanging. Timeout ensures app fails gracefully if issues persist.
+- **Rolled Back to Original Working System Prompt (Oct 26, 2025)**: Restored original "Jungian-MBTI Integration System" prompt from git history (commit 8e1cb2b). The experimental comprehensive prompts were causing Claude responses to hang. Original 3-step workflow (Query Backend → Enrich with Public Theory → Deliver Integrated Answer) is now active. Timeouts remain in place (10s Pinecone, 60s Claude) for safety.
 - **Fixed Pinecone Query Timeout Issue (Oct 26, 2025)**: Added 10-second timeout protection to all Pinecone queries in both `claude_api.py` and `main.py`. Queries now fail gracefully with user-friendly error messages instead of hanging indefinitely when knowledge base searches stall.
 - **Hybrid Search System Upgrade (Oct 26, 2025)**: Upgraded to text-embedding-3-large (3072 dims) with improved chunking (2500 chars, 20% overlap), enriched metadata extraction (season/episode, MBTI types, cognitive functions), smart query rewriting with MBTI ontology, and hybrid retrieval (top_k=30 → re-rank to 12). Migration tool available at `/migration`.
 - Enhanced Pinecone search: doubled results from 5 to 10 chunks, added query expansion with 2 variations for better intent matching
