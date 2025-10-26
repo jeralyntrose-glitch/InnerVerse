@@ -403,7 +403,8 @@ You are the Axis of Mind - where CS Joseph's framework meets universal understan
             max_tokens=4096,
             system=system_message,
             tools=tools,
-            messages=messages
+            messages=messages,
+            timeout=60.0  # 60-second timeout to prevent hanging
         )
         
         if response.stop_reason == "end_turn":
@@ -641,7 +642,8 @@ You are the Axis of Mind - where CS Joseph's framework meets universal understan
             max_tokens=4096,
             system=system_message,
             tools=tools,
-            messages=messages
+            messages=messages,
+            timeout=60.0  # 60-second timeout to prevent hanging
         ) as stream:
             for event in stream:
                 if event.type == "content_block_start":
