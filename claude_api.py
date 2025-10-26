@@ -38,47 +38,86 @@ def get_pinecone_index():
     return pc.Index(PINECONE_INDEX)
 
 def query_innerverse_local(question: str) -> str:
-    """Query Pinecone directly for MBTI content (FAST - no external API call)"""
+    """
+    Query Pinecone directly for MBTI content with ENHANCED SEARCH:
+    - Increased top_k from 5 to 10 for better coverage
+    - Query expansion for finding the best chunks
+    """
     try:
         if not OPENAI_API_KEY:
             return ""
         
-        # Get embedding for the question
         openai.api_key = OPENAI_API_KEY
-        response = openai.embeddings.create(
-            input=question,
-            model="text-embedding-ada-002"
-        )
-        question_vector = response.data[0].embedding
-        
-        # Query Pinecone
         pinecone_index = get_pinecone_index()
         if not pinecone_index:
             return ""
         
-        print(f"🔍 Searching Pinecone for: {question}")
-        query_response = pinecone_index.query(
-            vector=question_vector,
-            top_k=5,
-            include_metadata=True
-        )
+        # IMPROVEMENT 1: Query Expansion - Create multiple search variations
+        # This helps find chunks that might use different wording
+        search_queries = [question]  # Start with original question
         
-        # Extract contexts
-        contexts = []
-        try:
-            matches = query_response.matches
-        except AttributeError:
-            matches = query_response.get("matches", [])
+        # Add expanded variations for better coverage
+        question_lower = question.lower()
+        if any(word in question_lower for word in ['narcis', 'toxic', 'selfish', 'bad']):
+            # For questions about negative behavior, search for type-specific issues
+            search_queries.append(f"{question} problems issues negative traits")
         
-        for m in matches:
-            if "metadata" in m and "text" in m["metadata"]:
-                contexts.append(m["metadata"]["text"])
+        if any(word in question_lower for word in ['estp', 'enfp', 'intj', 'infj', 'entp', 'isfj', 'istj', 'esfp']):
+            # Extract type and add cognitive function query
+            for mbti_type in ['ESTP', 'ENFP', 'INTJ', 'INFJ', 'ENTP', 'ISFJ', 'ISTJ', 'ESFP', 'ESTJ', 'INFP', 'INTP', 'ESFJ', 'ENTJ', 'ISFP', 'ISTP', 'ENFJ']:
+                if mbti_type.lower() in question_lower:
+                    search_queries.append(f"{mbti_type} cognitive functions behavior")
+                    break
         
-        if not contexts:
+        # Limit to top 2 queries for performance
+        search_queries = search_queries[:2]
+        
+        print(f"🔍 Searching Pinecone with {len(search_queries)} query variations")
+        
+        # IMPROVEMENT 2: Increased top_k from 5 to 10 for better results
+        all_chunks = {}  # Use dict to deduplicate by text
+        
+        for query in search_queries:
+            # Get embedding for each query variation
+            response = openai.embeddings.create(
+                input=query,
+                model="text-embedding-ada-002"
+            )
+            query_vector = response.data[0].embedding
+            
+            # Query Pinecone with INCREASED top_k
+            query_response = pinecone_index.query(
+                vector=query_vector,
+                top_k=10,  # DOUBLED from 5 to 10!
+                include_metadata=True
+            )
+            
+            # Extract and deduplicate contexts
+            try:
+                matches = query_response.matches
+            except AttributeError:
+                matches = query_response.get("matches", [])
+            
+            for m in matches:
+                if "metadata" in m and "text" in m["metadata"]:
+                    text = m["metadata"]["text"]
+                    # Deduplicate by using text as key
+                    if text not in all_chunks:
+                        all_chunks[text] = {
+                            "text": text,
+                            "score": m.score,
+                            "filename": m["metadata"].get("filename", "Unknown")
+                        }
+        
+        if not all_chunks:
             return "No relevant MBTI content found in knowledge base."
         
+        # Sort by relevance score and take top 10 unique chunks
+        sorted_chunks = sorted(all_chunks.values(), key=lambda x: x["score"], reverse=True)[:10]
+        contexts = [chunk["text"] for chunk in sorted_chunks]
+        
         result = "\n\n".join(contexts)
-        print(f"✅ Found {len(contexts)} relevant chunks ({len(result)} chars)")
+        print(f"✅ Found {len(contexts)} unique chunks from {len(all_chunks)} total results ({len(result)} chars)")
         return result
         
     except Exception as e:
