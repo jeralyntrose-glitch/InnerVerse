@@ -3752,6 +3752,183 @@ def serve_service_worker():
 def serve_manifest():
     return FileResponse("manifest.json", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+
+# === OpenAI-Compatible API for LibreChat Integration ===
+
+@app.get("/v1/models")
+async def list_models():
+    """
+    OpenAI-compatible endpoint to list available models for LibreChat
+    """
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": "innerverse-claude-sonnet-4",
+                "object": "model",
+                "created": 1730000000,
+                "owned_by": "innerverse",
+                "permission": [],
+                "root": "innerverse-claude-sonnet-4",
+                "parent": None
+            }
+        ]
+    }
+
+
+@app.post("/v1/chat/completions")
+async def openai_chat_completions(request: Request):
+    """
+    OpenAI-compatible chat completions endpoint for LibreChat integration.
+    This wraps the InnerVerse Claude functionality with OpenAI API format.
+    """
+    try:
+        data = await request.json()
+        messages = data.get("messages", [])
+        stream = data.get("stream", True)
+        model = data.get("model", "innerverse-claude-sonnet-4")
+        
+        if not messages:
+            raise HTTPException(status_code=400, detail="Messages are required")
+        
+        # Convert OpenAI message format to Claude format
+        claude_messages = []
+        for msg in messages:
+            role = msg.get("role")
+            content = msg.get("content", "")
+            
+            # Skip system messages - we have our own system prompt
+            if role == "system":
+                continue
+                
+            claude_messages.append({
+                "role": "user" if role == "user" else "assistant",
+                "content": content
+            })
+        
+        if stream:
+            # Streaming response in OpenAI SSE format
+            def generate_openai_stream():
+                full_response = []
+                chunk_id = f"chatcmpl-{uuid.uuid4().hex[:8]}"
+                
+                try:
+                    # Use a temporary conversation ID for stateless LibreChat requests
+                    temp_conversation_id = 0  # LibreChat doesn't need real conversation tracking
+                    
+                    for chunk in chat_with_claude_streaming(claude_messages, temp_conversation_id):
+                        # Parse InnerVerse chunk format
+                        if '"chunk"' in chunk:
+                            try:
+                                chunk_data = json.loads(chunk.replace("data: ", ""))
+                                if "chunk" in chunk_data:
+                                    text_chunk = chunk_data["chunk"]
+                                    full_response.append(text_chunk)
+                                    
+                                    # Convert to OpenAI streaming format
+                                    openai_chunk = {
+                                        "id": chunk_id,
+                                        "object": "chat.completion.chunk",
+                                        "created": int(datetime.now(timezone.utc).timestamp()),
+                                        "model": model,
+                                        "choices": [{
+                                            "index": 0,
+                                            "delta": {"content": text_chunk},
+                                            "finish_reason": None
+                                        }]
+                                    }
+                                    yield f"data: {json.dumps(openai_chunk)}\n\n"
+                            except:
+                                pass
+                        
+                        elif '"done": true' in chunk:
+                            # Send final chunk
+                            final_chunk = {
+                                "id": chunk_id,
+                                "object": "chat.completion.chunk",
+                                "created": int(datetime.now(timezone.utc).timestamp()),
+                                "model": model,
+                                "choices": [{
+                                    "index": 0,
+                                    "delta": {},
+                                    "finish_reason": "stop"
+                                }]
+                            }
+                            yield f"data: {json.dumps(final_chunk)}\n\n"
+                            yield "data: [DONE]\n\n"
+                            return
+                        
+                        elif '"error"' in chunk:
+                            # Pass through errors
+                            yield chunk
+                            return
+                
+                except Exception as e:
+                    print(f"❌ Error in OpenAI stream generation: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    error_chunk = {
+                        "id": chunk_id,
+                        "object": "error",
+                        "message": str(e)
+                    }
+                    yield f"data: {json.dumps(error_chunk)}\n\n"
+            
+            return StreamingResponse(
+                generate_openai_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no"
+                }
+            )
+        
+        else:
+            # Non-streaming response (fallback)
+            full_response = []
+            temp_conversation_id = 0
+            
+            for chunk in chat_with_claude_streaming(claude_messages, temp_conversation_id):
+                if '"chunk"' in chunk:
+                    try:
+                        chunk_data = json.loads(chunk.replace("data: ", ""))
+                        if "chunk" in chunk_data:
+                            full_response.append(chunk_data["chunk"])
+                    except:
+                        pass
+            
+            response_text = "".join(full_response)
+            
+            return {
+                "id": f"chatcmpl-{uuid.uuid4().hex[:8]}",
+                "object": "chat.completion",
+                "created": int(datetime.now(timezone.utc).timestamp()),
+                "model": model,
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": response_text
+                    },
+                    "finish_reason": "stop"
+                }],
+                "usage": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0
+                }
+            }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in OpenAI-compatible endpoint: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="."), name="static")
 
