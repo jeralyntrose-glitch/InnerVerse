@@ -3717,6 +3717,10 @@ def serve_claude_js_v23():
 def serve_claude_js_v24():
     return FileResponse("claude-app.v24.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+@app.get("/claude-app.v25.js", include_in_schema=False)
+def serve_claude_js_v25():
+    return FileResponse("claude-app.v25.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
 @app.get("/migration", include_in_schema=False)
 def serve_migration_dashboard():
     return FileResponse("migration.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})

@@ -6,7 +6,7 @@ InnerVerse is a FastAPI-based PDF Q&A application for intelligent knowledge retr
 
 - **Hybrid Search System Upgrade (Oct 26, 2025)**: Upgraded to text-embedding-3-large (3072 dims) with improved chunking (2500 chars, 20% overlap), enriched metadata extraction (season/episode, MBTI types, cognitive functions), smart query rewriting with MBTI ontology, and hybrid retrieval (top_k=30 → re-rank to 12). Migration tool available at `/migration`.
 - Enhanced Pinecone search: doubled results from 5 to 10 chunks, added query expansion with 2 variations for better intent matching
-- Fixed Enter key behavior: plain Enter creates new line, Shift+Enter sends message (iPhone-optimized)
+- **Fixed Enter key behavior (Oct 26, 2025)**: Plain Enter creates new line on iPhone (disabled Shift+Enter on mobile due to auto-capitalization). Desktop: Shift+Enter sends, mobile: use Send button.
 
 # User Preferences
 
