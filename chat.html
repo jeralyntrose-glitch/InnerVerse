@@ -18,56 +18,185 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             height: 100vh;
             overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
-        .container {
-            height: 100vh;
+        .app-container {
             display: flex;
-            flex-direction: column;
+            height: 100vh;
+            width: 100%;
         }
         
-        .header {
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            padding: 20px;
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar-header {
+            padding: 16px;
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
         
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px 16px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin: 0;
-        }
-        
-        .header p {
+            color: white;
+            border: none;
+            border-radius: 8px;
             font-size: 14px;
-            color: #666;
-            margin: 4px 0 0 0;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
+        .new-chat-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .new-chat-btn:active {
+            transform: translateY(0);
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        
+        .project-section {
+            margin-bottom: 16px;
+        }
+        
+        .project-header {
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+        
+        .project-header:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        
+        .project-arrow {
+            transition: transform 0.2s ease;
+        }
+        
+        .project-section.collapsed .project-arrow {
+            transform: rotate(-90deg);
+        }
+        
+        .project-section.collapsed .conversation-list {
+            display: none;
+        }
+        
+        .conversation-list {
+            margin-top: 4px;
+        }
+        
+        .conversation-item {
+            padding: 10px 12px;
+            margin: 2px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        
+        .conversation-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .conversation-item.active {
+            background: rgba(102, 126, 234, 0.2);
+            font-weight: 600;
+        }
+        
+        .conversation-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .conversation-actions {
+            display: none;
+            gap: 4px;
+        }
+        
+        .conversation-item:hover .conversation-actions {
+            display: flex;
+        }
+        
+        .action-btn {
+            padding: 4px 6px;
+            background: rgba(0, 0, 0, 0.05);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .action-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Main Chat Area */
         .chat-container {
             flex: 1;
             display: flex;
             flex-direction: column;
             background: white;
-            margin: 20px;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
         
-        .messages {
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .messages-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -76,7 +205,6 @@
         .message {
             display: flex;
             gap: 12px;
-            max-width: 80%;
             animation: slideIn 0.3s ease;
         }
         
@@ -92,296 +220,462 @@
         }
         
         .message.user {
-            align-self: flex-end;
-            flex-direction: row-reverse;
-        }
-        
-        .message.assistant {
-            align-self: flex-start;
-        }
-        
-        .message-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-        
-        .message.user .message-avatar {
-            background: #f0f0f0;
-        }
-        
-        .message.assistant .message-avatar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            justify-content: flex-end;
         }
         
         .message-content {
+            max-width: 70%;
             padding: 12px 16px;
             border-radius: 18px;
+            font-size: 15px;
             line-height: 1.5;
+            white-space: pre-wrap;
             word-wrap: break-word;
         }
         
         .message.user .message-content {
-            background: #f0f0f0;
-            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
         }
         
         .message.assistant .message-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #f0f0f0;
+            color: #333;
+            border-bottom-left-radius: 4px;
         }
         
         .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            max-width: 80px;
-            padding: 16px 20px;
-            background: rgba(102, 126, 234, 0.1);
+            display: none;
+            padding: 12px 16px;
+            background: #f0f0f0;
             border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            max-width: fit-content;
         }
         
-        .typing-indicator span {
-            height: 8px;
+        .typing-indicator.show {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .typing-dot {
             width: 8px;
-            background: #667eea;
+            height: 8px;
             border-radius: 50%;
-            display: inline-block;
-            animation: bounce 1.4s infinite ease-in-out both;
+            background: #999;
+            animation: typing 1.4s infinite;
         }
         
-        .typing-indicator span:nth-child(1) {
-            animation-delay: -0.32s;
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
         }
         
-        .typing-indicator span:nth-child(2) {
-            animation-delay: -0.16s;
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
         }
         
-        @keyframes bounce {
-            0%, 80%, 100% {
-                transform: scale(0);
+        @keyframes typing {
+            0%, 60%, 100% {
+                opacity: 0.3;
+                transform: scale(0.8);
             }
-            40% {
+            30% {
+                opacity: 1;
                 transform: scale(1);
             }
         }
         
         .input-container {
-            padding: 16px 20px;
-            border-top: 1px solid #e0e0e0;
+            padding: 16px 24px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
             background: white;
-            display: flex;
-            gap: 12px;
-            align-items: flex-end;
         }
         
         .input-wrapper {
-            flex: 1;
-            background: #f5f5f5;
-            border-radius: 24px;
-            padding: 12px 20px;
-            max-height: 120px;
-            overflow-y: auto;
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            max-width: 900px;
+            margin: 0 auto;
         }
         
-        #messageInput {
-            width: 100%;
-            border: none;
-            background: transparent;
-            outline: none;
-            font-size: 16px;
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 15px;
             font-family: inherit;
             resize: none;
-            min-height: 24px;
-            max-height: 96px;
+            min-height: 48px;
+            max-height: 200px;
+            transition: all 0.2s ease;
         }
         
-        #sendButton {
+        .message-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .send-button {
+            padding: 12px 24px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 50%;
-            width: 48px;
-            height: 48px;
+            border-radius: 24px;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: transform 0.2s, opacity 0.2s;
+            transition: all 0.2s ease;
+            min-width: 80px;
         }
         
-        #sendButton:hover:not(:disabled) {
-            transform: scale(1.05);
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
         
-        #sendButton:active:not(:disabled) {
-            transform: scale(0.95);
-        }
-        
-        #sendButton:disabled {
+        .send-button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
         
+        .welcome-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .welcome-title {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 16px;
+        }
+        
+        .welcome-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 32px;
+        }
+        
+        /* Mobile Responsive */
         @media (max-width: 768px) {
-            .chat-container {
-                margin: 0;
-                border-radius: 0;
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                z-index: 1000;
+                transform: translateX(-100%);
             }
             
-            .header h1 {
-                font-size: 20px;
+            .sidebar.open {
+                transform: translateX(0);
             }
             
-            .message {
-                max-width: 90%;
+            .message-content {
+                max-width: 85%;
             }
+            
+            .mobile-menu-btn {
+                display: block;
+                position: fixed;
+                top: 16px;
+                left: 16px;
+                z-index: 999;
+                padding: 8px 12px;
+                background: rgba(255, 255, 255, 0.9);
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+                cursor: pointer;
+            }
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>InnerVerse Chat</h1>
-            <p>Powered by Claude Sonnet 4 + Pinecone Knowledge Base</p>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="createNewChat()">
+                    <span>✨</span>
+                    <span>New Chat</span>
+                </button>
+            </div>
+            
+            <div class="sidebar-content" id="sidebarContent">
+                <!-- Projects will be loaded here -->
+            </div>
         </div>
         
+        <!-- Main Chat -->
         <div class="chat-container">
-            <div class="messages" id="messages"></div>
+            <button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menu</button>
+            
+            <div class="chat-header">
+                <div class="chat-title" id="chatTitle">New Conversation</div>
+            </div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-title">Welcome to InnerVerse Chat</div>
+                    <div class="welcome-subtitle">Ask anything about MBTI, cognitive functions, and personality types</div>
+                </div>
+            </div>
             
             <div class="input-container">
                 <div class="input-wrapper">
                     <textarea 
+                        class="message-input" 
                         id="messageInput" 
-                        placeholder="Ask about MBTI, cognitive functions, type dynamics..."
+                        placeholder="Type your message..."
                         rows="1"
                     ></textarea>
+                    <button class="send-button" id="sendButton" onclick="sendMessage()">Send</button>
                 </div>
-                <button id="sendButton">➤</button>
             </div>
         </div>
     </div>
     
     <script>
-        const messagesContainer = document.getElementById('messages');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
+        // State
+        let currentConversationId = null;
+        let currentProject = null;
+        let projects = [];
         let isTyping = false;
         
-        // Add welcome message
-        addMessage('assistant', 'Hey! I\'m your CS Joseph typology expert. Ask me anything about MBTI, cognitive functions, or type dynamics! 🧠');
-        
-        // Auto-resize textarea
-        messageInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 96) + 'px';
-        });
-        
-        // Send on Enter (but allow Shift+Enter for new line)
-        messageInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-        
-        sendButton.addEventListener('click', sendMessage);
-        
-        function addMessage(role, content) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}`;
-            
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar';
-            avatar.textContent = role === 'user' ? '👤' : '🧠';
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.textContent = content;
-            
-            messageDiv.appendChild(avatar);
-            messageDiv.appendChild(contentDiv);
-            messagesContainer.appendChild(messageDiv);
-            
-            // Scroll to bottom
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
-            return contentDiv;
+        // Initialize
+        async function init() {
+            await loadProjects();
+            setupEventListeners();
         }
         
-        function showTypingIndicator() {
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'message assistant';
-            typingDiv.id = 'typing-indicator';
-            
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar';
-            avatar.textContent = '🧠';
-            
-            const indicator = document.createElement('div');
-            indicator.className = 'typing-indicator';
-            indicator.innerHTML = '<span></span><span></span><span></span>';
-            
-            typingDiv.appendChild(avatar);
-            typingDiv.appendChild(indicator);
-            messagesContainer.appendChild(typingDiv);
-            
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-        
-        function hideTypingIndicator() {
-            const indicator = document.getElementById('typing-indicator');
-            if (indicator) {
-                indicator.remove();
+        // Load projects from API
+        async function loadProjects() {
+            try {
+                const response = await fetch('/claude/projects');
+                const data = await response.json();
+                projects = data.projects;
+                renderSidebar();
+            } catch (error) {
+                console.error('Error loading projects:', error);
             }
         }
         
-        async function sendMessage() {
-            const text = messageInput.value.trim();
-            if (!text || isTyping) return;
+        // Render sidebar with projects and conversations
+        async function renderSidebar() {
+            const sidebarContent = document.getElementById('sidebarContent');
+            sidebarContent.innerHTML = '';
             
-            // Add user message
-            addMessage('user', text);
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-            
-            // Disable input
-            isTyping = true;
-            sendButton.disabled = true;
-            messageInput.disabled = true;
-            
-            // Show typing indicator
-            showTypingIndicator();
+            for (const project of projects) {
+                const section = document.createElement('div');
+                section.className = 'project-section';
+                section.innerHTML = `
+                    <div class="project-header" onclick="toggleProject('${project}')">
+                        <span class="project-arrow">▼</span>
+                        <span>${project}</span>
+                    </div>
+                    <div class="conversation-list" id="project-${project}"></div>
+                `;
+                sidebarContent.appendChild(section);
+                
+                // Load conversations for this project
+                await loadConversations(project);
+            }
+        }
+        
+        // Load conversations for a project
+        async function loadConversations(project) {
+            try {
+                const response = await fetch(`/claude/conversations/${project}`);
+                const data = await response.json();
+                const conversations = data.conversations;
+                
+                const listElement = document.getElementById(`project-${project}`);
+                listElement.innerHTML = '';
+                
+                conversations.forEach(conv => {
+                    const item = document.createElement('div');
+                    item.className = 'conversation-item';
+                    if (conv.id === currentConversationId) {
+                        item.classList.add('active');
+                    }
+                    item.innerHTML = `
+                        <span class="conversation-name">${conv.name}</span>
+                        <div class="conversation-actions">
+                            <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();">🗑️</button>
+                        </div>
+                    `;
+                    item.onclick = () => loadConversation(conv.id);
+                    listElement.appendChild(item);
+                });
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+        
+        // Toggle project expand/collapse
+        function toggleProject(project) {
+            const section = event.currentTarget.parentElement;
+            section.classList.toggle('collapsed');
+        }
+        
+        // Create new chat
+        async function createNewChat() {
+            // Default to first project
+            const defaultProject = projects[0] || 'General';
             
             try {
-                const response = await fetch('/api/claude/chat', {
+                const response = await fetch('/claude/conversations', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        conversation_id: 0,
-                        message: text
+                        project: defaultProject,
+                        name: 'New Conversation'
                     })
                 });
                 
-                if (!response.ok) {
-                    throw new Error('Failed to get response');
+                const conversation = await response.json();
+                currentConversationId = conversation.id;
+                currentProject = conversation.project;
+                
+                // Clear messages
+                clearMessages();
+                document.getElementById('chatTitle').textContent = conversation.name;
+                
+                // Reload sidebar
+                await renderSidebar();
+                
+                // Focus input
+                document.getElementById('messageInput').focus();
+            } catch (error) {
+                console.error('Error creating conversation:', error);
+            }
+        }
+        
+        // Load a conversation
+        async function loadConversation(conversationId) {
+            try {
+                const response = await fetch(`/claude/conversations/detail/${conversationId}`);
+                const data = await response.json();
+                
+                currentConversationId = conversationId;
+                currentProject = data.conversation.project;
+                
+                document.getElementById('chatTitle').textContent = data.conversation.name;
+                
+                // Clear and load messages
+                clearMessages();
+                data.messages.forEach(msg => {
+                    addMessage(msg.role, msg.content);
+                });
+                
+                // Update active state in sidebar
+                document.querySelectorAll('.conversation-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                event.currentTarget.classList.add('active');
+                
+                // Scroll to bottom
+                scrollToBottom();
+                
+                // Close mobile sidebar
+                if (window.innerWidth <= 768) {
+                    toggleSidebar();
+                }
+            } catch (error) {
+                console.error('Error loading conversation:', error);
+            }
+        }
+        
+        // Delete conversation
+        async function deleteConversation(conversationId) {
+            if (!confirm('Delete this conversation?')) return;
+            
+            try {
+                await fetch(`/claude/conversations/${conversationId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (currentConversationId === conversationId) {
+                    currentConversationId = null;
+                    clearMessages();
+                    document.getElementById('chatTitle').textContent = 'New Conversation';
                 }
                 
-                // Hide typing indicator
-                hideTypingIndicator();
+                await renderSidebar();
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+            }
+        }
+        
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || isTyping) return;
+            
+            // Create conversation if needed
+            if (!currentConversationId) {
+                await createNewChat();
+            }
+            
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            isTyping = true;
+            document.getElementById('sendButton').disabled = true;
+            
+            // Hide welcome screen
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            if (welcomeScreen) welcomeScreen.style.display = 'none';
+            
+            try {
+                const response = await fetch(`/claude/conversations/${currentConversationId}/message/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
                 
                 // Create AI message element
-                const aiMessageContent = addMessage('assistant', '');
+                let aiMessageContent = addMessage('assistant', '');
                 let fullResponse = '';
                 
                 const reader = response.body.getReader();
@@ -401,45 +695,134 @@
                                 
                                 // Handle different event types
                                 if (data.event === 'start') {
-                                    // Backend is starting - do nothing
                                     continue;
                                 }
                                 
                                 if (data.chunk) {
                                     fullResponse += data.chunk;
                                     aiMessageContent.textContent = fullResponse;
-                                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                    scrollToBottom();
                                 }
                                 
                                 if (data.done) {
-                                    // Stream finished
                                     break;
                                 }
                             } catch (e) {
-                                // Silently ignore parse errors for malformed chunks
+                                // Ignore parse errors
                             }
                         }
                     }
                 }
                 
+                hideTypingIndicator();
+                
+                // Update conversation name if first message
+                if (fullResponse) {
+                    await updateConversationName(message);
+                }
+                
             } catch (error) {
                 console.error('Error:', error);
                 hideTypingIndicator();
-                
-                // Remove empty AI message if it exists
-                if (aiMessageContent && !fullResponse) {
-                    aiMessageContent.closest('.message').remove();
-                }
-                
                 addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
             } finally {
-                // Re-enable input
                 isTyping = false;
-                sendButton.disabled = false;
-                messageInput.disabled = false;
-                messageInput.focus();
+                document.getElementById('sendButton').disabled = false;
+                input.focus();
             }
         }
+        
+        // Update conversation name based on first message
+        async function updateConversationName(firstMessage) {
+            const truncated = firstMessage.substring(0, 50) + (firstMessage.length > 50 ? '...' : '');
+            
+            try {
+                await fetch(`/claude/conversations/${currentConversationId}/rename`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: truncated })
+                });
+                
+                document.getElementById('chatTitle').textContent = truncated;
+                await renderSidebar();
+            } catch (error) {
+                console.error('Error updating conversation name:', error);
+            }
+        }
+        
+        // UI Helper functions
+        function addMessage(role, content) {
+            const messagesContainer = document.getElementById('messagesContainer');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            scrollToBottom();
+            
+            return contentDiv;
+        }
+        
+        function clearMessages() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.innerHTML = '';
+        }
+        
+        function showTypingIndicator() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator show';
+            indicator.id = 'typingIndicator';
+            indicator.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            messagesContainer.appendChild(indicator);
+            scrollToBottom();
+        }
+        
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+        
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+        
+        // Event listeners
+        function setupEventListeners() {
+            const input = document.getElementById('messageInput');
+            
+            // Auto-resize textarea
+            input.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            });
+            
+            // Enter to send (desktop), Shift+Enter for new line
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey && window.innerWidth > 768) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
