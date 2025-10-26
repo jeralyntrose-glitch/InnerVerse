@@ -1,0 +1,246 @@
+document_id,title,uploaded_at
+f8f82fe0-8e1c-448a-a4c7-988ca9256b5a,Season 1 - How Optimistic Or Pessimistic Are The Cognitive Functions__enhanced.pdf,2025-10-25 02:33 PM
+7c27e2e7-ad22-4c29-a25b-c511cbde51dd,Season 1 - What Are Jungian Personality Types_ _ CS Joseph_enhanced.pdf,2025-10-25 02:33 PM
+48634aad-f696-41c1-95e8-c6729f8c1524,Season 1 - What are Jungian Cognitive Functions and How Do They Work__enhanced.pdf,2025-10-25 02:33 PM
+823fbd4a-274a-4db3-b665-c0b0b12243f2,Season 1 - What Is Extraverted Feeling (Fe)_ _ Cognitive Functions_enhanced.pdf,2025-10-25 02:33 PM
+28a1d0b9-3b98-4227-887a-3b75718dda3e,Season 1 - What Are The Four Sides of the Mind_ _enhanced.pdf,2025-10-25 02:33 PM
+dacf3c93-b36a-4a22-974d-3e30b44616eb,Season 1 - What Is A Cognitive Axis_ _ Cognitive Functions _enhanced.pdf,2025-10-25 02:33 PM
+4bf8fcf6-6672-4244-a971-0e45aaa1a9b5,Season 1 - How Do Cognitive Transitions Impact The Four Sides_enhanced.pdf,2025-10-25 02:33 PM
+47648c03-c575-4856-8aa8-dd452255c3ca,Season 1 - What Are The Eight Cognitive Spectra_ _ Cognitive Functions_enhanced.pdf,2025-10-25 02:34 PM
+698a295a-b8ea-45d9-9a47-1ee05383f3ca,Season 1 - What Is Functional Emulation For Cognitive Senses__enhanced.pdf,2025-10-25 02:34 PM
+be4ab356-f3b8-49ac-b460-ddf4fb325e22,Season 1 - What Is Introverted Sensing (Si)_ _ Cognitive Functions_enhanced.pdf,2025-10-25 02:34 PM
+a2297710-6f69-4fa6-8562-4199da8b506d,Season 1 - What Is Extraverted Sensing (Se)_ _ Cognitive Functions_enhanced.pdf,2025-10-25 02:34 PM
+ef51f8b4-2a6c-49eb-bf63-e616da6db364,Season 1 - What Is Introverted Intuition_ (Ni) _ Cognitive Functions_enhanced.pdf,2025-10-25 02:34 PM
+2776f175-6abe-48b9-81ba-0c046015394d,Season 1 - What Is Extraverted Thinking_ (Te) _ Cognitive Functions _enhanced.pdf,2025-10-25 02:34 PM
+1d9018cd-aa2e-4b71-bf75-64282b852850,Season 1 - What Is Extraverted Intuition (Ne)_ _ Cognitive Functions_enhanced.pdf,2025-10-25 02:34 PM
+f7fac420-1906-449c-a42b-96408c20a80f,Season 1 - What Is Introverted Feeling_ (Fi) _ Cognitive Functions_enhanced.pdf,2025-10-25 02:34 PM
+84a8ebbb-e983-4dbd-924c-36e1764d790f,Season 1 - What Is Introverted Thinking_ (Ti) _ Cognitive Functions_enhanced.pdf,2025-10-25 02:34 PM
+7da7b48b-e6ac-41b8-a420-1c9c76d73301,Season 2 - How Do Social Moratoriums Impact The Interaction Styles_enhanced.pdf,2025-10-25 02:37 PM
+a33ab235-7052-48c0-bc76-1acf6ad4de28,Season 2 - How To Personality Type Anyone _ The Type Grid _enhanced (1).pdf,2025-10-25 02:37 PM
+d29b2c61-b6a5-4ca2-9f31-324918833af5,"Season 2 - What Are The Four Communication Styles_ _ Finisher _ ISTJ, ISTP, INTJ, INFJ_enhanced.pdf",2025-10-25 02:37 PM
+aed208e3-92e1-47ba-af60-31a82dd18011,"Season 2 - What Are The Four Temperaments_ Intellectuals _ ENTJ, ENTP, INTJ, INTP_enhanced.pdf",2025-10-25 02:37 PM
+4ba045f0-c06f-4a33-aad6-53ceedb19414,"Season 2 - What Are The Four Interactions Styles_ _ Structure _ ESTJ, ESTP, ENTJ, ENFJ_enhanced.pdf",2025-10-25 02:37 PM
+d119f2fb-d251-4e8e-8bde-e08bf55cff75,"Season 2 - What Are The Four Interaction Styles_ _ Starters _ ESFJ, ESFP, ENTP, ENFP_enhanced.pdf",2025-10-25 02:37 PM
+ce29080b-408a-464e-b432-cf7d073080d1,"Season 2 - What Are The Four Temperaments_ _ Artisans _ ESTP, ESFP, ISTP, ISFP_enhanced.pdf",2025-10-25 02:37 PM
+68ca3b89-d6ae-4dd2-bab2-7b3502da87e6,"Season 2 - What Are The Four Temperaments_ Idealists _ ENFJ, ENFP, INFJ, INFP_enhanced.pdf",2025-10-25 02:37 PM
+598e58fe-b0bd-445c-bcec-73d9cbeb8ee2,"Season 2 - What are the Four Communication Styles_ Background Types _ ISFJ, ISFP, INTP, INFP_enhanced.pdf",2025-10-25 02:37 PM
+d2c2cfbb-6464-41a4-aa6e-097566e757ce,"Season 2 - What Are The Four Temperaments_ _ Guardians _ ESTJ, ESFJ, ISTJ, ISFJ_enhanced.pdf",2025-10-25 02:37 PM
+7d54b52e-2e2b-4f2b-8038-99594cb40f05,Season 2 - What's The Problem With MBTI Tests_ Is the MBTI Accurate__enhanced.pdf,2025-10-25 02:37 PM
+19ca94ab-dfb0-4566-bea1-cfd784daf574,Season 3 - Who Are The ISFJs (The Knight)_ _ ISFJ Cognitive Functions_enhanced.pdf,2025-10-25 02:38 PM
+6c0c5308-a413-447f-b5b7-fa4900a71bde,Season 3 - Who Are The ESFPs (The Duelist)_ _ ESFP Cognitive Functions_enhanced.pdf,2025-10-25 02:38 PM
+5ca1c644-5a8b-4181-b9d2-5bdba777f4aa,Season 3 - Who Are The ESTPs (The Gladiator)_ _ ESTP Cognitive Functions_enhanced.pdf,2025-10-25 02:38 PM
+1a84b26b-0a67-418d-a4c8-4be6a5bfb12e,Season 3 - Who Are The ISTJs (The Archivist)_ _ ISTJ Cognitive functions_enhanced.pdf,2025-10-25 02:38 PM
+5fb21877-38c4-4bf1-82a1-8a10ebe25fa8,Season 3 - Who Are The ENFPs (The Bard)_ _ ENFP Cognitive Functions_enhanced.pdf,2025-10-25 02:38 PM
+0cb38070-b6fd-49e5-8ce0-60922a79477f,Season 3 - Who Are The INTPs_ (The Ardent) _ INTP Cognitive Functions_enhanced.pdf,2025-10-25 02:38 PM
+73f259f8-7e8e-4d80-830c-739ae9ec27f1,Season 3 - Who Are The INTJs (The Ranger)_ _ INTJ Cognitive Functions_enhanced.pdf,2025-10-25 02:39 PM
+eea574af-f4d3-4788-8cdf-acbab1edb541,Season 3 - Who Are The INFPs_ (The Mystic) _ INFP Cognitive Functions_enhanced.pdf,2025-10-25 02:39 PM
+b536aa37-bee7-45a5-9ce5-f68123751c27,Season 3 - Who Are The ESTJs (The Judicator)_ _ ESTJ Cognitive Functions _enhanced.pdf,2025-10-25 02:39 PM
+71ad9301-338a-49c2-8580-b92a95b60fed,Season 3 - Who Are The ENFJs (The Cleric)_ _ ENFJ Cognitive Functions_enhanced.pdf,2025-10-25 02:39 PM
+ccd084f4-9cb8-4a18-9315-280c65f701cf,Season 3 - Who Are The ISTPs (The Artificer)_ _ ISTP Cognitive Functions_enhanced.pdf,2025-10-25 02:39 PM
+b8ec1dd2-7f5d-48b0-9855-0614c12a84c6,Season 3 - Who Are The ENTPs (The Rogue)_ _ ENTP Cognitive Functions_enhanced.pdf,2025-10-25 02:39 PM
+b1b32abb-7b0c-4280-9aeb-cf739bd241dd,Season 3 - Who Are The ESFJs (The Cavalier)_ _ ESFJ Cognitive Functions_enhanced.pdf,2025-10-25 02:39 PM
+b43156b7-65eb-4362-a413-01f901323423,Season 3 - Who Are The INFJs_ (The Paladin) _ INFJ Cognitive Functions_enhanced.pdf,2025-10-25 02:39 PM
+fad8f4a1-b970-4c98-8404-5b31778ecd0b,Season 3 - Who Are the ENTJs (The Marshal)_ _ ENTJ Cognitive Functions_enhanced.pdf,2025-10-25 02:39 PM
+66219981-a6aa-4575-9bcc-a7bd88349e07,Season 3 - Who Are The ISFPs (The Druid)_ _ ISFP Cognitive Functions_enhanced.pdf,2025-10-25 02:40 PM
+9fc0f657-a487-4e52-b81f-633e1bb9594b,Season 5 - How Does The Golden Rule Apply To Cognitive Compatibility__enhanced.pdf,2025-10-25 02:40 PM
+217f5148-42d5-4004-ab77-7d5655c7f610,Season 5 - What Is Cognitive Synchronicity Of Sensing Functions_ _ Si vs Se_enhanced.pdf,2025-10-25 02:40 PM
+c425063e-50ce-465c-89b4-40f4bc1723bd,Season 5 - What Is Cognitive Synchronicity Of Intuition Functions_ _ Ni vs Ne_enhanced.pdf,2025-10-25 02:40 PM
+3fdf2cbd-0aa8-4753-8062-689a5b4724a7,Season 5 - What Is Cognitive Synchronicity Of Thinking Functions_ _ Ti vs Te_enhanced.pdf,2025-10-25 02:40 PM
+e4c0c91a-7519-4a8b-958b-799ebf00bcc9,Season 5 - What Is Cognitive Synchronicity Of Feeling Functions_ _ Fi vs Fe_enhanced.pdf,2025-10-25 02:40 PM
+72cc0e61-2d5d-4dc1-8534-47227d489581,Season 7 - What Is The Virtue And Vice Of ENFJs_ _ Benevolence Vs. Cruelty_enhanced.pdf,2025-10-25 02:41 PM
+862f4dc0-4776-4caa-9e08-34762dea4498,Season 7 - What Is The Virtue And Vice Of ESTJs_ _ Serenity Vs. Chaos_enhanced.pdf,2025-10-25 02:41 PM
+3acc9b9e-bf17-4db5-a3d7-55b9faa8d2a2,Season 7 - What Is The Virtue And Vice Of ISTJs_ _ Objectivity Vs. The Trivial_enhanced.pdf,2025-10-25 02:41 PM
+6378b206-b983-4d49-be8c-6d806788639a,Season 7 - What Is The Virtue And Vice Of INTJs (The Ranger)_ _ Trust Vs. Paranoia_enhanced.pdf,2025-10-25 02:41 PM
+42fc3767-628b-46d2-a158-c66174d6fe9c,Season 7 - What Is The Virtue And Vice Of ESFJs_ Caregiving Vs. Caretaking_enhanced.pdf,2025-10-25 02:41 PM
+2ca3878f-9a52-47d7-9521-a377ec0bcc40,Season 7 - What Is The Virtue And Vice Of ISTPs_ _ Joy Vs. Melancholy_enhanced (1).pdf,2025-10-25 02:41 PM
+29bb87e4-1caa-4cbe-a937-7dcce0d8ed5c,Season 7 - What Is The Virtue And Vice Of ESTPs_ _ Chastity Vs. Nymphomania_enhanced.pdf,2025-10-25 02:41 PM
+19ac055b-54bc-4fb2-b5c3-a271d1a5649d,Season 7 - What Is The Virtue And Vice Of INFPs (The Mystic)_ _ Loyalty Vs. Treachery_enhanced.pdf,2025-10-25 02:41 PM
+2a3bc6cb-f24e-4750-a614-6b031fa6d824,Season 7 - What Is The Virtue And Vice Of ENTJs_ _ Altruism Vs. Avarice_enhanced.pdf,2025-10-25 02:41 PM
+11dee702-7fbc-459a-a7cb-2a989b9c3906,Season 7 - What Is The Virtue And Vice Of ISFJs_ _ Faith Vs. Fear_enhanced.pdf,2025-10-25 02:41 PM
+ef845fb6-d74f-415c-a8ad-2fdf82ed5e6e,Season 7 - What Is The Virtue And Vice Of INTPs (The Ardent)_ _ Attentiveness Vs. Apathy_enhanced.pdf,2025-10-25 02:41 PM
+aeaf0027-8058-4b2a-9643-7a00b728f88f,Season 7 - What Is The Virtue And Vice Of ENTPs_ _ Sincerity Vs. Insincerity_enhanced.pdf,2025-10-25 02:42 PM
+e56d70be-ac31-41db-b64a-669df4208d3e,Season 7- What Is The Virtue And Vice Of ISFPs_ _ Diligence Vs. Idleness _enhanced.pdf,2025-10-25 02:42 PM
+1d9ae496-f145-4571-9716-1f81331f7562,Season 7 - What Is The Virtue And Vice Of INFJs (The Paladin)_ _ Integrity Vs. Corruption_enhanced.pdf,2025-10-25 02:42 PM
+41b83644-261d-43c6-91cb-8054ac48ee93,Season 7 - What Is The Virtue And Vice Of ENFPs_ _ Charity Vs. Depravity_enhanced.pdf,2025-10-25 02:42 PM
+7c3ac536-836f-4d2f-80ae-65c133a1d34f,Season 7 - What Is The Virtue And Vice Of ESFPs_ Delayed Gratification Vs. Instant Gratification_enhanced.pdf,2025-10-25 02:42 PM
+1eac9eae-261b-48e8-ad4b-c5cfdfc1a50e,Season 7 - What Is The Virtue And Vice Of ISTPs_ _ Joy Vs. Melancholy_enhanced.pdf,2025-10-25 02:42 PM
+6e61bed9-03c8-4203-a166-c441093549fd,Season 7_2 - The Deadly Sin of Gluttony INTP & ESFJ_enhanced.pdf,2025-10-25 02:44 PM
+5201e48b-3be8-4767-a06c-fc318dbf6635,"Season 7.2 - Balancing Wrath and Absolution for Soul Temple! ENFP, INFJ, ESTP, ISTJ_enhanced.pdf",2025-10-25 02:44 PM
+d1d6b2ee-fb30-4b4f-b858-81bcf37f432a,Season 7_2 - The Secret Power Obsession of ESTJs & INFPs_enhanced.pdf,2025-10-25 02:44 PM
+2d86cdf1-45e4-4833-bf4c-e694ffc80f50,Season 7_2 - The Deadly Sin of Pride And How It Can Be Your Downfall ENFJ & ISTP_enhanced.pdf,2025-10-25 02:44 PM
+0da499f2-0380-4169-a454-cc10bdff6809,Season 7.2 - The 8 Deadly Sins (and how to avoid them) _ CS Jos_enhanced.pdf,2025-10-25 02:44 PM
+c0bc282a-69f0-419b-8fce-67c7fedb70b2,Season 7_2 - The Deadly Sin of Lust INFJ & ESTP_enhanced.pdf,2025-10-25 02:44 PM
+8e39b916-690e-49b8-92d7-3f32ba041d58,Season 7_2 - The Deadly sin of Vainglory ESFPs & INTJs_enhanced.pdf,2025-10-25 02:46 PM
+6cfe939d-7659-4f3d-85f5-37e410e84a66,Season 7_2 - The Deadly Sin of Greed ISFP & ENTJ_enhanced.pdf,2025-10-25 02:46 PM
+25665a91-4b61-4ca9-8411-f99325f8d783,Season 7_2 - The Deadly Sin of Envy ENTP & ISFJ_enhanced.pdf,2025-10-25 02:47 PM
+62e3c31f-529c-4e2a-9ecc-3cd21af25401,Season 8 - How Do ENFJs Compare To ENFPs_ _enhanced.pdf,2025-10-25 02:47 PM
+49422f63-abf7-43b2-80ce-b8f5ea41e771,Season 8 - ENTJ vs. ENTP _ Rebuttal To Eric & Opaloid _enhanced.pdf,2025-10-25 02:47 PM
+5c81008c-d61d-44a1-a01e-0cb37bdb1be2,Season 8 - How Do INFJs Compare To INFPs_enhanced.pdf,2025-10-25 02:47 PM
+d4e27b55-8992-4c98-a4ed-535c7ce40c52,Season 8 - How Do ESFJs Compare To ESFPs__enhanced.pdf,2025-10-25 02:47 PM
+27cc8f2e-ac17-4fbe-81c5-41043ea6f4ab,Season 8 - How Do ESTJs Compare To ESTPs__enhanced.pdf,2025-10-25 02:47 PM
+dc60a9d1-2fc9-47c1-aa6f-dc0a5db0966c,Season 8 - How do INTJs compare to INTPs__enhanced.pdf,2025-10-25 02:47 PM
+f2bf4e4f-2bcb-49b0-a9b7-7aec56ee8216,Season 8 - How Do ISFJs Compare To ISFPs__enhanced.pdf,2025-10-25 02:48 PM
+8b265689-00a9-4339-bf1b-a1303f3ce0b4,Season 8 - How Do ISTJs Compare To ISTPs__enhanced.pdf,2025-10-25 02:48 PM
+3c0f5867-2d72-45f7-8691-bbe81c3b42af,Season 9 - How Do ENTJs compare to INTJs_enhanced.pdf,2025-10-25 02:49 PM
+4cdbca7b-f872-4000-8343-1341e977af4f,Season 9 - How Do ESFJs Compare To ISFJs__enhanced.pdf,2025-10-25 02:49 PM
+8c9ccf65-458d-48a5-94c8-9b43b62a8c48,Season 9 - How Do ENTPs compare to INTPs_enhanced.pdf,2025-10-25 02:49 PM
+1a42a4ef-7ecd-44c9-9a43-b31f8341274d,Season 9 - How Do ESTJs Compare To ISTJs__enhanced.pdf,2025-10-25 02:49 PM
+0f12b21d-9d0c-401e-8311-2cf93b0a8bc0,Season 9 - How Do ENFPs Compare To INFPs__enhanced.pdf,2025-10-25 02:49 PM
+edf26a59-b894-425f-852d-f45c0563f2cb,Season 9 - How Do ESFPs Compare To ISFPs__enhanced.pdf,2025-10-25 02:49 PM
+461ead41-c7c3-4d62-8986-44532624ae6b,Season 9 - How Do ESTPs Compare To ISTPs__enhanced.pdf,2025-10-25 02:49 PM
+01c839b8-8578-4b96-86f4-3cd70035d70f,Season 9 - How Does INFJ Compare To ENFJ_ __enhanced.pdf,2025-10-25 02:50 PM
+d57ca8d4-60d8-492e-81ad-146ca8064c77,Season 10 - How do INTJs Compare to INFJs?_enhanced.pdf,2025-10-25 02:50 PM
+564f7e92-f4d6-48cc-9501-4202553495d3,Season 10 - How Do ESTPs Compare To ESFPs?_enhanced.pdf,2025-10-25 02:50 PM
+7a4cb255-0cab-482a-bf7a-8bfbd7d8ba41,Season 10 - How Do ENTJs Compare To ENFJs?_enhanced.pdf,2025-10-25 02:51 PM
+a87fa412-8dbb-48b4-a00b-f88892eaaed7,Season 10 - How Do ESTJs Compare To ESFJs?_enhanced_enhanced.pdf,2025-10-25 02:51 PM
+52110a7f-f9ec-4dbc-9c7e-efc1e16af35f,Season 10 - How Do INTP's Compare To INFP's?_enhanced.pdf,2025-10-25 02:51 PM
+3ebf34ca-9e18-4ed8-934b-987f31aef13b,Season 10 - How Do ISTJs Compare To ISFJs?_enhanced.pdf,2025-10-25 02:51 PM
+0d96bdd4-443e-494e-9e51-4d4269a4bcf6,Season 10 - How Do ISTPs Compare to ISFPs? _enhanced.pdf,2025-10-25 02:51 PM
+3eb4dd5b-d1d6-4de6-99b2-9e4b6eed7ad1,Season 10 - How Do ENTPs Compare To ENFPs? _enhanced.pdf,2025-10-25 02:51 PM
+9af603c9-f3ef-49aa-a6e3-655dbf245d70,Season 11 - How Do ESTJs Compare To ENTJs?_enhanced.pdf,2025-10-25 02:52 PM
+032a5bf3-1356-4311-8fa5-bb75fc09a963,Season 11 - How Do ESTPs Compare To ENTPs?_enhanced.pdf,2025-10-25 02:52 PM
+0cfcae2e-531d-4aad-a5f4-b5bde204407f,Season 11 - How Do ESFJs Compare To ENFJs?_enhanced.pdf,2025-10-25 02:52 PM
+e5867e28-be98-47ee-82ec-8319d8280d30,Season 11 - How Do ESFPs Compare To ENFPs?_enhanced.pdf,2025-10-25 02:55 PM
+3cc8f0bc-8a3a-4c57-9db1-af74e3ca776c,Season 11 - How Do ISTPs Compare to INTPs ?_enhanced.pdf,2025-10-25 02:55 PM
+3cf7c0ea-a2fc-4e95-9959-72fd9fd9c802,Season 11 - How Do ISFPs Compare To INFPs_enhanced.pdf,2025-10-25 02:55 PM
+cdf9172f-2bf0-4b2e-8a9a-127886f366dc,Season 11 - How Do ISTJs Compare To INTJs? _enhanced.pdf,2025-10-25 02:55 PM
+a540601f-1c67-4756-a7a5-75f656186590,Season 11 - How Do ISFJs Compare To INFJs?_enhanced.pdf,2025-10-25 02:55 PM
+fa011c75-3373-4a42-8b32-b566eb8822a8,Season 12-1- What Types Are Socially Compatible With ESTPs_ _ C_enhanced.pdf,2025-10-25 02:56 PM
+b2ed6df2-8a5d-4049-8c0d-4737c943a495,Season 12-1- What Types Are Socially Compatible With ENFJs_ _ C_enhanced.pdf,2025-10-25 02:56 PM
+b8627b04-06cd-4885-b57b-3cc249ed0c4d,Season 12-1 - What Types Are Socially Compatible With INFJs (The Paladin)? _enhanced.pdf,2025-10-25 02:56 PM
+38cdd735-a3e9-4c1d-98dc-ddc11db14ea5,Season 12-1 - What Types Are Socially Compatible With INTJs (The_enhanced.pdf,2025-10-25 02:56 PM
+0d98170b-6745-424b-be1c-d5aca5756d0d,Season 12-1- What Types Are Socially Compatible With ESTJs_ _ C_enhanced.pdf,2025-10-25 02:56 PM
+e9730a73-0ec9-44e6-8e08-db773b12292b,Season 12-1 - What Types are Socially Compatible with ISTP's (Th_enhanced.pdf,2025-10-25 02:57 PM
+c84a6851-bde1-4644-8ac1-71a5220c9dd2,Season 12-1 - What Types Are Socially Compatible With ISTJs_ _ I_enhanced.pdf,2025-10-25 02:57 PM
+c2c20473-5d34-418a-9fab-bd8295be5dc7,Season 12-1 - What Types Are Socially Compatible With ISFPs_ _ C_enhanced.pdf,2025-10-25 02:57 PM
+e9ed27bd-ac8d-4e25-88d0-b7af0ca8ba4a,Season 12-1 - What Types Are Socially Compatible With ENFPs_ _ C_enhanced.pdf,2025-10-25 02:57 PM
+f01e7831-beb8-413d-b2de-41636f97287c,Season 12-1 - What Types Are Socially Compatible With ENTPs (The_enhanced.pdf,2025-10-25 02:57 PM
+618e892d-2e01-4245-b1dc-3bcf1f7d8f3a,Season 12-1 - What Types Are Socially Compatible With INFPs (The_enhanced.pdf,2025-10-25 02:57 PM
+b79c6e6a-81a3-4a00-8d57-bb884555adb7,Season 12-1 - What Types Are Socially Compatible With ESFPs_ _ E_enhanced.pdf,2025-10-25 02:57 PM
+7f128053-3bb5-4685-815e-7022b0ed24ba,Season 12-1 - What Types Are Socially Compatible With INTPs (The_enhanced.pdf,2025-10-25 02:58 PM
+c7f3fb8c-cbad-4c45-96ad-3f5b37835265,Season 12-1- What Types Are Socially Compatible With ESFJs_ _ E_enhanced.pdf,2025-10-25 02:58 PM
+62beb697-0fd7-403c-af60-29636a1eb89e,Season 12-1 - What Types Are Socially Compatible With ISFJs_ _ I_enhanced.pdf,2025-10-25 02:58 PM
+2a8bef93-36ff-43bf-943c-1d4ab236ed06,Season 12-1- What Types Are Socially Compatible With ENTJs_ _ E_enhanced.pdf,2025-10-25 02:58 PM
+fa1ef53f-e027-4027-94a6-3945d0b3abac,Season 12.2 - Optimizing ISFJ Social Skills_enhanced.pdf,2025-10-25 02:58 PM
+407d79fd-c489-4796-b232-4c86916577f8,Season 12.2 - Optimizing ESTP Social Skills_enhanced.pdf,2025-10-25 02:59 PM
+f317d59f-67de-41fe-bcd9-57681708598f,Season 12.2 - Optimizing INFP Social Skills_enhanced.pdf,2025-10-25 02:59 PM
+f4d96892-3f53-4cfe-a6e4-a270e2299fed,Season 12.2 - Optimizing INTJ Social Skills_enhanced.pdf,2025-10-25 02:59 PM
+a11a4a36-8a6b-426b-8a1b-e439525bca37,Season 12.2 - Optimizing ENFJ Social Skills_enhanced.pdf,2025-10-25 02:59 PM
+e678bcbc-ca7e-43ff-b276-7859cb2a4147,Season 12.2 - Optimizing INTP Social Skills_enhanced.pdf,2025-10-25 02:59 PM
+b3da1581-4de2-43ff-a9d0-fb39493d82d1,Season 12.2 - Optimizing ENTJ Social Skills_enhanced.pdf,2025-10-25 02:59 PM
+78b91ce0-9874-4e7f-b49f-346abeb028a7,Season 12.2 - Optimizing ISTP Social Skills_enhanced.pdf,2025-10-25 02:59 PM
+02aca22e-e19b-46dd-881d-98b1415d6a59,Season 12.2 Optimizing INFJ Social Skills_enhanced.pdf,2025-10-25 02:59 PM
+75d22984-ff40-4dd5-a208-933865abe791,Season 12.2 - Optimizing ENFP Social Skills_enhanced.pdf,2025-10-25 02:59 PM
+b2d1b873-e2bd-4c89-8d73-56e0d2595886,Season 12.2 - Optimizing ENTP Social Skills_enhanced.pdf,2025-10-25 03:00 PM
+a0cdcee9-c8fe-4bb7-bf10-1726e7d1807c,Season 12.2 - Optimizing ESFJ Social Skills_enhanced.pdf,2025-10-25 03:00 PM
+a43a7de6-ae25-4881-9ac3-d2bc8ffd3fa4,Season 12.2 - Optimizing ESFP Social Skills_enhanced.pdf,2025-10-25 03:00 PM
+29f84866-01a4-487e-a2dc-f27f682e5048,Seaon 12.2 - Optimizing ISTJ Social Skills_enhanced.pdf,2025-10-25 03:00 PM
+73de0943-6d6a-4364-bfe3-f3942ab55d57,Season 12.2 - Optimizing ESTJ Social Skills & Typing Random People_enhanced.pdf,2025-10-25 03:00 PM
+3f740914-cb96-4a31-adb8-eede3a193344,Season 12.2 - Optimizing ESTP Social Skills_enhanced.pdf,2025-10-25 03:03 PM
+228919dc-8618-461e-8509-7198931b9d55,Season 14.1 - Unveiling the Golden Pairs -ESTP & ISTJ_enhanced.pdf,2025-10-25 03:03 PM
+6fce1bfa-9b6a-4dd0-a188-6ee5962824c0,Season 14.1 - Unveiling the Golden Pairs - ENFP & INFJ_enhanced.pdf,2025-10-25 03:03 PM
+3f3e3be1-217c-4089-a0f5-1d461ac45f1b,Season 14.1 - Unveiling the Golden Pairs - ESFP & ISFJ_enhanced.pdf,2025-10-25 03:03 PM
+0cdb6844-c0f6-4831-8f54-3cd981a89ab6,Season 14.1 - Unveiling the Golden Pairs - ENTP & INTJ _ Season 1_enhanced.pdf,2025-10-25 03:04 PM
+2df00481-6eb3-4ed0-85f9-a74f5373ffc3,Season 14.1 - Unveiling the Golden Pairs - ESFJ & ISFP_enhanced.pdf,2025-10-25 03:04 PM
+30d0befa-07fe-4eaf-aa5b-6c04bfdee925,Season 14.1 - Unveiling the Golden Pairs - ENTJ & INTP_enhanced.pdf,2025-10-25 03:04 PM
+787588f6-1347-457f-ac44-5cad5401a258,Season 14.1 - Unveiling the Golden Pairs - ENFJ & INFP_enhanced.pdf,2025-10-25 03:04 PM
+ae640d3b-ce30-4519-9b1e-3f53f2ea7b05,Season 14.1 - Unveiling the Golden Pairs - ESTJ & ISTP_enhanced.pdf,2025-10-25 03:04 PM
+0eafcf97-795b-49b5-b95f-8e7ce778f83f,Season 14.2 - Pedagogue Pairs - ENFJ & INTP_enhanced-2.pdf,2025-10-25 03:05 PM
+0f336497-d51a-440a-8319-818a99b6177e,Season 14.2 - Pedagogue Pairs - ESFJ & ISTP_enhanced.pdf,2025-10-25 03:05 PM
+18e95f56-e026-4ece-9e7d-20d0ae03e5d1,Season 14.2 - Pedagogue Pairs - ESTJ & ISFP_enhanced.pdf,2025-10-25 03:05 PM
+dd431fab-9103-4704-bc69-eca544a805bc,Season 14.2 - Pedagogue Pairs - ESFP & ISTJ_enhanced.pdf,2025-10-25 03:05 PM
+0704b4ed-7890-40cd-b918-ea2c058412ac,Season 14.2 - Pedagogue Pairs - ENTJ & INFP_enhanced.pdf,2025-10-25 03:05 PM
+fe11b313-f05a-4e81-8a12-fe744e793b5c,Season 14.2 - Pedagogue Pairs - ENFP & INTJ_enhanced-2.pdf,2025-10-25 03:05 PM
+49b50fec-e96b-42ac-befb-0a2e73bb6140,Season 14.2 - Pedagogue Pairs - ENTP & INFJ_enhanced.pdf,2025-10-25 03:05 PM
+8d4a6a25-7ab4-4351-a62b-2656613e2b43,Season 14.2 - Pedagogue Pairs - ESTP & ISFJ_enhanced.pdf,2025-10-25 03:05 PM
+b9ddb9dd-2f8a-489c-a323-afa40eaedd23,Season 14.3 - Unveiling the Bronze Pairs - ENFP & ISTP_enhanced.pdf,2025-10-25 03:06 PM
+85cd1a5e-cf8a-4115-9ffb-8fbf86d7d1c6,Season 14.3 - Unveiling the Bronze Pairs - ENTJ & ISFJ_enhanced.pdf,2025-10-25 03:06 PM
+2c04bbc2-12f0-431f-a735-23907aa92827,Season 14.3 - Unveiling the Bronze Pairs - ESTJ & INFJ_enhanced.pdf,2025-10-25 03:06 PM
+af1e6580-dbf5-4fea-bc88-67b293ced122,Season 14.3 - Unveiling the Bronze Pairs - ESTP & INFP_enhanced.pdf,2025-10-25 03:07 PM
+9e5bda57-b052-47bc-a9b2-aec14a10d316,Seaon 14.3 - Unveiling the Bronze Pairs - ESFP & INTP_enhanced.pdf,2025-10-25 03:07 PM
+2c953c1d-3882-473f-bd7b-04ffab86e10c,Season 14.3 - Unveiling the Bronze Pairs - ESFJ & INTJ_enhanced.pdf,2025-10-25 03:07 PM
+dfab992f-58df-43f5-9036-0638911a8a18,Season 14.3 - Unveiling the Bronze Pairs - ENFJ & ISTJ_enhanced.pdf,2025-10-25 03:07 PM
+e71187b7-cbc3-412c-a217-c2c3c692fd46,Season 14.3 - Unveiling the Bronze Pairs - ENTP & ISFP_enhanced.pdf,2025-10-25 03:07 PM
+ce2b97f3-5fee-4904-ab27-b5a4805eb790,Season 14.4 - ESFJ & INTP Duality Pairs_enhanced.pdf,2025-10-25 03:08 PM
+573f9dab-cb3d-492c-bee7-998ee0fdf10d,Season 14.4 - ESTP & INFJ Duality Pairs_enhanced.pdf,2025-10-25 03:08 PM
+054f4117-f83b-41bc-a98b-195319fc4361,Season 14.4 - ENTJ & ISFP Duality Pairs_enhanced.pdf,2025-10-25 03:08 PM
+3a8b40af-a981-4a70-a106-2feaee8d73cd,Season 14.4 - ENFJ & ISTP Duality Pairs_enhanced.pdf,2025-10-25 03:08 PM
+80f37a9f-1f95-46d8-ab4b-eaafb6d2e0ef,Season 14.4 - ESTJ & INFP? Maybe if you've got something to teac_enhanced.pdf,2025-10-25 03:08 PM
+1e5d992a-fbe0-4a28-bb58-ccf0f71be4be,Season 14.4 - Did I Change My Mind About Socionics?  | CS Joseph_enhanced.pdf,2025-10-25 03:08 PM
+e2bd475e-7e5e-4c8d-8da6-da3a4f0cf833,Season 14.4 - ENTP + ISFJ Duality Pairs_enhanced.pdf,2025-10-25 03:08 PM
+b879d2f2-abb5-4ef0-9156-f2fb2947e414,Season 15 - What Is The Temperament Matrix?.pdf,2025-10-25 03:09 PM
+9ddc927f-d9f2-48e1-baca-7d11e4006422,Season 15 - How Does Affiliative Compare To Pragma.pdf,2025-10-25 03:09 PM
+9b30e7f0-7f92-407f-8a6f-9e6976d54694,Season 15 - How To Prevent Mistyping.pdf,2025-10-25 03:09 PM
+96bae641-a346-403d-a7ce-4bbdfae1c0ed,Season 15 - How Do We Use The Type Grid?.pdf,2025-10-25 03:09 PM
+2e1b7f26-5f47-4f9c-8b45-42baae2e83ba,Season 15 - How Does Direct Compare To Informative.pdf,2025-10-25 03:09 PM
+b547f78d-ece8-4790-8fb2-48830471da59,Season 15 - How Does Systematic Compare To Interes.pdf,2025-10-25 03:09 PM
+1d7696de-a4e4-4446-8471-ba7981ed4696,Season 15 - How Does Initiating Compare To Respond.pdf,2025-10-25 03:09 PM
+5513fc67-3cf6-486e-9c92-75d9320824f4,Season 15 - Intro To Interaction Style & Temperame.pdf,2025-10-25 03:09 PM
+552c5a77-11fd-4b07-a758-b925802aaa76,Season 15 - How Does Control Compare To Movement? .pdf,2025-10-25 03:09 PM
+b39bf7da-5f80-4f36-8b56-1eaa607b5b22,Season 15 - How Does Abstract Compare To Concrete?.pdf,2025-10-25 03:09 PM
+c5723624-91e2-4a6e-9983-44147c8f8b3d,Season 15 - MBTI Letter Dichotomies Debunked.pdf,2025-10-25 03:09 PM
+b592cf69-0e95-48e0-b226-0a0e6b4c009e,Season 15 - What Is Ambiversion?.pdf,2025-10-25 03:09 PM
+a09189e5-7958-438a-a3ba-53a12589cf1f,Season 16 - What Is The Cognitive Attitude Of The -2.pdf,2025-10-25 03:10 PM
+e725227c-bf7d-4c96-b4af-173d008eb4f9,Season 16 - What Is The Cognitive Attitude Of The -5.pdf,2025-10-25 03:10 PM
+dda90fa2-c5f7-4feb-9bc1-62b6665a45ed,Season 16 - What Is The Cognitive Attitude Of The -7.pdf,2025-10-25 03:10 PM
+11e27c70-54af-48d8-aabd-594e7d40803d,Season 16 - What Is The Cognitive Attitude Of The -4.pdf,2025-10-25 03:10 PM
+6e8eae28-dcad-4aaf-a8ae-cd4ba8d65950,Season 16 - What Is The Cognitive Attitude Of The -3.pdf,2025-10-25 03:10 PM
+14a905d6-a851-4954-97ed-f6d24879996d,Season 16 - What Is The Cognitive Attitude Of The -8.pdf,2025-10-25 03:10 PM
+4b3b5fdf-76e0-4434-af2d-a46c1d419b7b,Season 16 - What Is The Cognitive Attitude Of The .pdf,2025-10-25 03:10 PM
+6f3ad554-bd38-4cff-9083-12e5a7bd1a8a,Season 16 - What Is The Cognitive Attitude Of The -6.pdf,2025-10-25 03:10 PM
+8fcc8df1-63a2-42af-87c0-82c917f23521,Season 17.1 - What is the Ego and it's Gateway?-2.pdf,2025-10-25 03:11 PM
+e5ddaf38-0707-4445-9113-697214adfa28,Season 17.1 - What Is The Superego & Its Gateway? .pdf,2025-10-25 03:11 PM
+4755f8ee-f3b4-46df-a3d6-0d33d285c4b9,Season 17.1 - How the four sides of the mind impac.pdf,2025-10-25 03:11 PM
+14510aab-9c63-4b3c-a414-94c5936b55ed,Season 17.1 - How the four sides of the mind manif.pdf,2025-10-25 03:11 PM
+7a55446b-34cc-4a56-a2f0-b9fb4b6f9430,Season 17.1 - How to Type with Quadras.pdf,2025-10-25 03:11 PM
+3c981b55-86f8-4b42-8bcb-ce9c7f744ba0,Season 17.1 - Open letter & Psychological Prejudic.pdf,2025-10-25 03:11 PM
+73f371c6-f62b-4741-bad8-95298ef57753,Season 17.1 - What is Cognitive Focus? | Individua.pdf,2025-10-25 03:11 PM
+f510d82c-b07e-4b0e-80bd-d11c88b8cc14,Season 17.1 - What Is The Unconscious And Its Gate.pdf,2025-10-25 03:18 PM
+2c652530-9492-426d-a9f3-5babc8c539b1,Season 17.1 - The Virtue and Vice of the Quadras |.pdf,2025-10-25 03:20 PM
+05330a31-b5d1-4958-b306-3683d1de0b15,Season 17.1 - Who are the Gamma Quadra? | Wayfarer.pdf,2025-10-25 03:20 PM
+0ffb34d7-649e-4743-8c40-7309cc381160,Season 17.1 - Who are the Beta Quadra? | The Templ.pdf,2025-10-25 03:21 PM
+e78a3aec-8c76-40a5-abdb-604f59470940,Season 17.1 - Positive Parenting Solutions | Traum.pdf,2025-10-25 03:21 PM
+05d6e7e3-f73d-4776-9a2f-642333c4b51f,"Season 17.1 - Who are the Delta Quadra? | Philosophers_ ESTJ, EN.pdf",2025-10-25 03:21 PM
+e620c116-4762-4e5c-95c5-138fc7c3ad5e,Season 17.1 - What Is The Subconscious And Its Gat.pdf,2025-10-25 03:21 PM
+5d22018c-81dd-4666-8337-a759846921f3,Season 17.1 - What Is the Source of All Cognition?-2.pdf,2025-10-25 03:21 PM
+560a89b2-ffd2-4978-b4af-3ca047ffee84,Season 17.1 -Part 1_ What Is The Superego & Its Ga.pdf,2025-10-25 03:21 PM
+2d45dd5f-1e36-4309-8045-6d80c724ffae,Season 17.1 -Who are the Alpha Quadra? | The Crusa.pdf,2025-10-25 03:23 PM
+f6fb1e26-e277-4f4c-8271-e8c8ee9dfb85,"Season 17.2 - Philosopher (ESTJ, ISTJ, ENFP, INFP).pdf",2025-10-25 03:24 PM
+0409109f-4e36-47c0-9335-e695ac764841,"Season 17.2 - Crusader (ENTP, INTP, ESFJ, ISFJ) Ab.pdf",2025-10-25 03:24 PM
+c56ea5a9-3ab8-4e15-99d3-bdf5e6ded153,Season 17.2 - Positive Parenting Solutions.pdf,2025-10-25 03:24 PM
+6f1e260b-ecd8-44e5-a16f-bbfc613e34f4,"Season 17.2 - Templar (ESTP, ISTP, ENFJ, INFJ) Abu.pdf",2025-10-25 03:24 PM
+a9772fe7-e52d-4c02-89e4-c7d4c9c60c60,"Season 17.2 - Wayfarer Abusers (INTJ, ENTJ, ISFP, .pdf",2025-10-25 03:24 PM
+5ea7fd5d-d00b-4a0f-b5d3-31319bd866f7,Season 18 - Octagram Cognitive Development.pdf,2025-10-25 03:25 PM
+4e73bdce-cc82-419a-9024-b8cdc10bb678,Season 18 - Cognitive Focus in Octagram.pdf,2025-10-25 03:25 PM
+e1b6343d-79eb-4054-9140-ce838884e85f,Season 18 - Satisfaction and Reverence.pdf,2025-10-25 03:25 PM
+aecd533f-fece-44f1-ac66-d9b8638964e2,Season 18 - The Third Axis_ Spear and Bow (Fi - Te.pdf,2025-10-25 03:25 PM
+cb5d078d-7c0b-4f2b-95c2-4f4f799850ce,Season 18 - Se and Ne Cognitive Reflection.pdf,2025-10-25 03:25 PM
+2023e19d-d142-4c34-bf15-fca8ee34acb9,Season 18 - SD | UF Decay Octagram.pdf,2025-10-25 03:25 PM
+e35e6016-8ef5-4e65-a44c-9e7e7e9ee55a,Season 18 - 1st Reflector Functions Te & Fe.pdf,2025-10-25 03:25 PM
+c9d3a71f-d17e-48a9-bef6-f281ad04968c,Season 18 - Purpose & Discovery.pdf,2025-10-25 03:26 PM
+58f57105-5a25-4f42-a0bc-99cc42e9e32e,Season 18 - Improve Cognitive Functions Through Co.pdf,2025-10-25 03:26 PM
+fc4fa6bf-d3e9-48ad-8b4a-ee4ab45fb061,Season 18 - Intimacy and Justification.pdf,2025-10-25 03:26 PM
+2020bf6f-7505-42d4-9aea-a42f5b434c61,Season 18 - The System Behind Judgement.pdf,2025-10-25 03:26 PM
+1ceb8a29-a99f-4520-8475-526670e342fb,Season 18 - Cognitive Battlegrounds.pdf,2025-10-25 03:26 PM
+4df222e8-d550-4169-9439-5dbadb662c60,Season 18 -The Fourth Reflection Ti + Fi.pdf,2025-10-25 03:26 PM
+8170323a-7574-4899-8f18-e2cf3250cb2d,Season 18 - UD | UF Despair Octagram.pdf,2025-10-25 03:26 PM
+31d98781-0236-492b-a3ec-7c71b13a62d6,Season 18 - Who are the Body Temple?.pdf,2025-10-25 03:26 PM
+8a0973ee-a155-4dae-a1ba-3f3b166363a4,Season 18 - Introduction to Cognitive Mechanics.pdf,2025-10-25 03:26 PM
+89efac59-88c1-45dc-9c97-4b6201287476,Season 18 - UD | SF Hope Octagram.pdf,2025-10-25 03:26 PM
+bf44a775-12bc-4f08-b777-3a6ec714f8a1,Season 18 - Who are the Mind Temple?.pdf,2025-10-25 03:26 PM
+65edb5c2-aaab-428c-b299-cf86ae4d1b20,Season 18 - The 4th Axis (Ti & Fe).pdf,2025-10-25 03:26 PM
+629aad01-89b9-4a47-a042-4daa7ea63634,Season 18 - The 1st Orbit_ Si & Se.pdf,2025-10-25 03:27 PM
+a018de7f-02a6-4d23-be38-fafb7df44bc9,Season 18 - The System Behind Perception.pdf,2025-10-25 03:27 PM
+a4ba25f1-2160-4ef6-9aa9-057d2f987e06,Season 18 - The 2nd Axis_ Fire and Wind.pdf,2025-10-25 03:27 PM
+8bc938c0-2f83-4a97-8219-346bc508892b,Season 18 - The 4th Cognitive Orbit Fi & Fe.pdf,2025-10-25 03:27 PM
+aa1d4cf7-bb5b-43be-be99-8564a1cd4eb2,Season 18 - The IPOF of Cognition.pdf,2025-10-25 03:27 PM
+5983813b-57c6-4e25-886c-e450dfaf32bd,Season 18 - Who are the Heart Temple?.pdf,2025-10-25 03:27 PM
+473515aa-4d64-433d-8c77-1f0130432bae,Season 18 - The 2nd Orbit_ Ni & Ne.pdf,2025-10-25 03:27 PM
+14bc4beb-a544-4632-9c44-848f5f29790d,Season 18 - What are god functions?.pdf,2025-10-25 03:27 PM
+4a371ca5-7c44-42e7-80de-ab966d49dda5,Season 18 - The First Axis_ Earth and Water.pdf,2025-10-25 03:27 PM
+11835986-815e-415f-bebd-a160b7d82a06,Season 18 - Validation and Authority.pdf,2025-10-25 03:27 PM
+4c21263b-254f-439c-8edf-c86c9df9cc25,Season 18 - The Third Reflection Si + Ni.pdf,2025-10-25 03:28 PM
+4ebbba45-4607-4b78-91e2-00fee80330ff,Season 18 - SD | SF Joy Octagram.pdf,2025-10-25 03:28 PM
+9208d9ea-8f05-45ed-86dc-8d7ce8ac5b96,Season 18 - Temple Introduction.pdf,2025-10-25 03:28 PM
+202c0cc4-99f9-4dec-a363-1690b020e918,Season 18 - Who are the Soul Temple?.pdf,2025-10-25 03:28 PM
+8df799c4-989b-40ee-8f5a-63018ff4eeb8,Season 18 - The 3rd Orbit Ti and Te.pdf,2025-10-25 03:28 PM
