@@ -3744,6 +3744,10 @@ def serve_claude_js_v25():
 def serve_migration_dashboard():
     return FileResponse("migration.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+@app.get("/chat", include_in_schema=False)
+def serve_chat_ui():
+    return FileResponse("chat.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
 @app.get("/sw.js", include_in_schema=False)
 def serve_service_worker():
     return FileResponse("sw.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})

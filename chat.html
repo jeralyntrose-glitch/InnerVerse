@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>InnerVerse Chat</title>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/@chatscope/chat-ui-kit-styles@1.4.0/dist/default/styles.min.css">
+    <script src="https://unpkg.com/@chatscope/chat-ui-kit-react@2.0.3/dist/index.umd.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #root {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        
+        .chat-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+        
+        .chat-header p {
+            font-size: 14px;
+            color: #666;
+            margin: 4px 0 0 0;
+        }
+        
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            margin: 20px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .chat-container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .chat-header h1 {
+                font-size: 20px;
+            }
+        }
+        
+        .cs-message-list {
+            flex: 1;
+        }
+        
+        .cs-message-input {
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .cs-message--incoming .cs-message__content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .cs-message--outgoing .cs-message__content {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 20px;
+            margin: 10px;
+            width: fit-content;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-indicator span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const {
+            MainContainer,
+            ChatContainer,
+            MessageList,
+            Message,
+            MessageInput,
+            TypingIndicator,
+            Avatar
+        } = window.ChatUiKit;
+
+        function App() {
+            const [messages, setMessages] = useState([]);
+            const [isTyping, setIsTyping] = useState(false);
+            const [inputValue, setInputValue] = useState('');
+            const messageListRef = useRef(null);
+
+            const sendMessage = async (text) => {
+                if (!text.trim()) return;
+
+                // Add user message
+                const userMessage = {
+                    message: text,
+                    sentTime: new Date().toISOString(),
+                    sender: 'user',
+                    direction: 'outgoing',
+                    position: 'single'
+                };
+                
+                setMessages(prev => [...prev, userMessage]);
+                setInputValue('');
+                setIsTyping(true);
+
+                try {
+                    // Call the existing Claude API
+                    const response = await fetch('/api/claude/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            conversation_id: 0, // Use conversation ID 0 for stateless chat
+                            message: text
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to get response');
+                    }
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let aiResponseText = '';
+                    let aiMessageAdded = false;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    
+                                    if (data.chunk) {
+                                        aiResponseText += data.chunk;
+                                        
+                                        if (!aiMessageAdded) {
+                                            // Add initial AI message
+                                            const aiMessage = {
+                                                message: data.chunk,
+                                                sentTime: new Date().toISOString(),
+                                                sender: 'InnerVerse',
+                                                direction: 'incoming',
+                                                position: 'single'
+                                            };
+                                            setMessages(prev => [...prev, aiMessage]);
+                                            aiMessageAdded = true;
+                                        } else {
+                                            // Update existing AI message
+                                            setMessages(prev => {
+                                                const updated = [...prev];
+                                                updated[updated.length - 1] = {
+                                                    ...updated[updated.length - 1],
+                                                    message: aiResponseText
+                                                };
+                                                return updated;
+                                            });
+                                        }
+                                    }
+                                    
+                                    if (data.done) {
+                                        setIsTyping(false);
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing chunk:', e);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    setIsTyping(false);
+                    
+                    const errorMessage = {
+                        message: 'Sorry, I encountered an error. Please try again.',
+                        sentTime: new Date().toISOString(),
+                        sender: 'InnerVerse',
+                        direction: 'incoming',
+                        position: 'single'
+                    };
+                    setMessages(prev => [...prev, errorMessage]);
+                }
+            };
+
+            const handleSend = (text) => {
+                sendMessage(text);
+            };
+
+            // Add welcome message on load
+            useEffect(() => {
+                const welcomeMessage = {
+                    message: 'Hey! I\'m your CS Joseph typology expert. Ask me anything about MBTI, cognitive functions, or type dynamics! 🧠',
+                    sentTime: new Date().toISOString(),
+                    sender: 'InnerVerse',
+                    direction: 'incoming',
+                    position: 'single'
+                };
+                setMessages([welcomeMessage]);
+            }, []);
+
+            return (
+                <>
+                    <div className="chat-header">
+                        <h1>InnerVerse Chat</h1>
+                        <p>Powered by Claude Sonnet 4 + Pinecone Knowledge Base</p>
+                    </div>
+                    
+                    <div className="chat-container">
+                        <MainContainer>
+                            <ChatContainer>
+                                <MessageList
+                                    typingIndicator={isTyping ? <TypingIndicator content="InnerVerse is thinking..." /> : null}
+                                >
+                                    {messages.map((msg, i) => (
+                                        <Message
+                                            key={i}
+                                            model={{
+                                                message: msg.message,
+                                                sentTime: msg.sentTime,
+                                                sender: msg.sender,
+                                                direction: msg.direction,
+                                                position: msg.position
+                                            }}
+                                        >
+                                            {msg.direction === 'incoming' && (
+                                                <Avatar 
+                                                    src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23667eea'/%3E%3Ctext x='50' y='65' text-anchor='middle' font-size='50' fill='white'%3E🧠%3C/text%3E%3C/svg%3E"
+                                                    name="InnerVerse"
+                                                />
+                                            )}
+                                        </Message>
+                                    ))}
+                                </MessageList>
+                                <MessageInput
+                                    placeholder="Ask about MBTI, cognitive functions, type dynamics..."
+                                    onSend={handleSend}
+                                    attachButton={false}
+                                    value={inputValue}
+                                    onChange={setInputValue}
+                                />
+                            </ChatContainer>
+                        </MainContainer>
+                    </div>
+                </>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
