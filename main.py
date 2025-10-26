@@ -1008,33 +1008,52 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
             # Filter for documents that contain ANY of the specified tags
             filter_conditions.append({"tags": {"$in": filter_tags}})
         
-        # Build final filter
-        if len(filter_conditions) == 0:
-            # No filters - search all documents
-            print(f"🔍 Searching across ALL documents")
-            query_response = pinecone_index.query(
-                vector=question_vector,
-                top_k=5,
-                include_metadata=True
-            )
-        elif len(filter_conditions) == 1:
-            # Single filter
-            filter_str = f"doc_id={document_id}" if document_id else f"tags={filter_tags}"
-            print(f"🔍 Searching with filter: {filter_str}")
-            query_response = pinecone_index.query(
-                vector=question_vector,
-                top_k=5,
-                include_metadata=True,
-                filter=filter_conditions[0]
-            )
-        else:
-            # Multiple filters - use $and
-            print(f"🔍 Searching with filters: doc_id={document_id}, tags={filter_tags}")
-            query_response = pinecone_index.query(
-                vector=question_vector,
-                top_k=5,
-                include_metadata=True,
-                filter={"$and": filter_conditions}
+        # Build final filter and query with timeout protection
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+        
+        try:
+            with ThreadPoolExecutor() as executor:
+                if len(filter_conditions) == 0:
+                    # No filters - search all documents
+                    print(f"🔍 Searching across ALL documents")
+                    future = executor.submit(
+                        pinecone_index.query,
+                        vector=question_vector,
+                        top_k=5,
+                        include_metadata=True
+                    )
+                    query_response = future.result(timeout=10.0)
+                elif len(filter_conditions) == 1:
+                    # Single filter
+                    filter_str = f"doc_id={document_id}" if document_id else f"tags={filter_tags}"
+                    print(f"🔍 Searching with filter: {filter_str}")
+                    future = executor.submit(
+                        pinecone_index.query,
+                        vector=question_vector,
+                        top_k=5,
+                        include_metadata=True,
+                        filter=filter_conditions[0]
+                    )
+                    query_response = future.result(timeout=10.0)
+                else:
+                    # Multiple filters - use $and
+                    print(f"🔍 Searching with filters: doc_id={document_id}, tags={filter_tags}")
+                    future = executor.submit(
+                        pinecone_index.query,
+                        vector=question_vector,
+                        top_k=5,
+                        include_metadata=True,
+                        filter={"$and": filter_conditions}
+                    )
+                    query_response = future.result(timeout=10.0)
+        except (FuturesTimeoutError, TimeoutError):
+            print(f"⏱️ Pinecone query timed out after 10 seconds")
+            return JSONResponse(
+                status_code=504,
+                content={
+                    "error": "Knowledge base search timed out. Please try again.",
+                    "answer": "The search is taking longer than expected. Please try rephrasing your question or try again in a moment."
+                }
             )
 
         try:

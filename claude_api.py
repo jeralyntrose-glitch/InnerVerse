@@ -118,11 +118,22 @@ def query_innerverse_local(question: str) -> str:
             
             # Query Pinecone with INCREASED top_k for hybrid approach
             print(f"📡 [CLAUDE DEBUG] Querying Pinecone with top_k=30...")
-            query_response = pinecone_index.query(
-                vector=query_vector,
-                top_k=30,  # TRIPLED from 10 to 30 for re-ranking
-                include_metadata=True
-            )
+            try:
+                import asyncio
+                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+                
+                # Wrap Pinecone query with 10-second timeout
+                with ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        pinecone_index.query,
+                        vector=query_vector,
+                        top_k=30,
+                        include_metadata=True
+                    )
+                    query_response = future.result(timeout=10.0)
+            except (FuturesTimeoutError, TimeoutError) as e:
+                print(f"⏱️ [CLAUDE DEBUG] Pinecone query #{query_idx} timed out after 10 seconds")
+                continue  # Skip this query and try next one
             
             # Extract and deduplicate contexts
             try:
