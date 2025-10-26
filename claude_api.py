@@ -47,13 +47,22 @@ def query_innerverse_local(question: str) -> str:
     - Re-ranking for relevance
     """
     try:
+        print(f"\n🔍 [CLAUDE DEBUG] Query: '{question}'")
+        print(f"📍 [CLAUDE DEBUG] Using Pinecone index: {PINECONE_INDEX}")
+        print(f"🔑 [CLAUDE DEBUG] OpenAI API Key: {'✅ SET' if OPENAI_API_KEY else '❌ MISSING'}")
+        print(f"🔑 [CLAUDE DEBUG] Pinecone API Key: {'✅ SET' if PINECONE_API_KEY else '❌ MISSING'}")
+        
         if not OPENAI_API_KEY:
+            print("❌ [CLAUDE DEBUG] OpenAI API key missing!")
             return ""
         
         openai.api_key = OPENAI_API_KEY
         pinecone_index = get_pinecone_index()
         if not pinecone_index:
+            print("❌ [CLAUDE DEBUG] Failed to get Pinecone index!")
             return ""
+        
+        print(f"✅ [CLAUDE DEBUG] Pinecone index connected successfully")
         
         # IMPROVEMENT 1: Smart Query Rewriting with MBTI Ontology
         search_queries = [question]  # Start with original
@@ -90,20 +99,25 @@ def query_innerverse_local(question: str) -> str:
         # Limit to top 3 query variations
         search_queries = search_queries[:3]
         
-        print(f"🔍 Hybrid search with {len(search_queries)} optimized queries")
+        print(f"🔍 [CLAUDE DEBUG] Hybrid search with {len(search_queries)} optimized queries:")
+        for i, q in enumerate(search_queries, 1):
+            print(f"   {i}. '{q}'")
         
         # IMPROVEMENT 2: Broader initial retrieval (top_k=30) for better coverage
         all_chunks = {}  # Deduplicate by text
         
-        for query in search_queries:
+        for query_idx, query in enumerate(search_queries, 1):
             # Get embedding with UPGRADED model
+            print(f"🧮 [CLAUDE DEBUG] Creating embedding for query #{query_idx} with text-embedding-3-large...")
             response = openai.embeddings.create(
                 input=query,
                 model="text-embedding-3-large"  # UPGRADED from ada-002
             )
             query_vector = response.data[0].embedding
+            print(f"✅ [CLAUDE DEBUG] Embedding created: {len(query_vector)} dimensions")
             
             # Query Pinecone with INCREASED top_k for hybrid approach
+            print(f"📡 [CLAUDE DEBUG] Querying Pinecone with top_k=30...")
             query_response = pinecone_index.query(
                 vector=query_vector,
                 top_k=30,  # TRIPLED from 10 to 30 for re-ranking
@@ -115,6 +129,11 @@ def query_innerverse_local(question: str) -> str:
                 matches = query_response.matches
             except AttributeError:
                 matches = query_response.get("matches", [])
+            
+            print(f"📊 [CLAUDE DEBUG] Query #{query_idx} returned {len(matches)} matches")
+            if matches:
+                print(f"   Top match score: {matches[0].score:.4f}")
+                print(f"   Lowest match score: {matches[-1].score:.4f}")
             
             for m in matches:
                 if "metadata" in m and "text" in m["metadata"]:
@@ -129,6 +148,7 @@ def query_innerverse_local(question: str) -> str:
                         }
         
         if not all_chunks:
+            print("❌ [CLAUDE DEBUG] No chunks found! Returning empty message.")
             return "No relevant MBTI content found in knowledge base."
         
         # IMPROVEMENT 3: Simple re-ranking by relevance score
@@ -136,12 +156,18 @@ def query_innerverse_local(question: str) -> str:
         sorted_chunks = sorted(all_chunks.values(), key=lambda x: x["score"], reverse=True)[:12]
         contexts = [chunk["text"] for chunk in sorted_chunks]
         
+        print(f"📚 [CLAUDE DEBUG] Total unique chunks collected: {len(all_chunks)}")
+        print(f"📚 [CLAUDE DEBUG] Top 12 chunks selected for context")
+        print(f"📚 [CLAUDE DEBUG] Sample filenames: {', '.join(set([c['filename'] for c in sorted_chunks[:5]]))}")
+        
         result = "\n\n".join(contexts)
-        print(f"✅ Found {len(contexts)} unique chunks from {len(all_chunks)} total ({len(result)} chars)")
+        print(f"✅ [CLAUDE DEBUG] Returning {len(contexts)} chunks ({len(result)} chars)")
         return result
         
     except Exception as e:
-        print(f"❌ Pinecone query error: {str(e)}")
+        print(f"❌ [CLAUDE DEBUG] Pinecone query error: {str(e)}")
+        import traceback
+        print(f"❌ [CLAUDE DEBUG] Full traceback:\n{traceback.format_exc()}")
         return ""
 
 def search_web_brave(query: str) -> str:
