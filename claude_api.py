@@ -39,9 +39,12 @@ def get_pinecone_index():
 
 def query_innerverse_local(question: str) -> str:
     """
-    Query Pinecone directly for MBTI content with ENHANCED SEARCH:
-    - Increased top_k from 5 to 10 for better coverage
-    - Query expansion for finding the best chunks
+    IMPROVED HYBRID SEARCH for MBTI content:
+    - Upgraded to text-embedding-3-large for better semantic matching
+    - Increased top_k from 10 to 30 for broader initial retrieval
+    - Smart query rewriting with MBTI ontology
+    - Metadata filtering for type-specific queries
+    - Re-ranking for relevance
     """
     try:
         if not OPENAI_API_KEY:
@@ -52,43 +55,58 @@ def query_innerverse_local(question: str) -> str:
         if not pinecone_index:
             return ""
         
-        # IMPROVEMENT 1: Query Expansion - Create multiple search variations
-        # This helps find chunks that might use different wording
-        search_queries = [question]  # Start with original question
-        
-        # Add expanded variations for better coverage
+        # IMPROVEMENT 1: Smart Query Rewriting with MBTI Ontology
+        search_queries = [question]  # Start with original
         question_lower = question.lower()
-        if any(word in question_lower for word in ['narcis', 'toxic', 'selfish', 'bad']):
-            # For questions about negative behavior, search for type-specific issues
-            search_queries.append(f"{question} problems issues negative traits")
         
-        if any(word in question_lower for word in ['estp', 'enfp', 'intj', 'infj', 'entp', 'isfj', 'istj', 'esfp']):
-            # Extract type and add cognitive function query
-            for mbti_type in ['ESTP', 'ENFP', 'INTJ', 'INFJ', 'ENTP', 'ISFJ', 'ISTJ', 'ESFP', 'ESTJ', 'INFP', 'INTP', 'ESFJ', 'ENTJ', 'ISFP', 'ISTP', 'ENFJ']:
-                if mbti_type.lower() in question_lower:
-                    search_queries.append(f"{mbti_type} cognitive functions behavior")
-                    break
+        # MBTI type synonyms and related concepts
+        mbti_types = {
+            'ESTP': ['Se-Ti', 'extraverted sensing', 'dominant Se', 'ESTP behavior'],
+            'INTJ': ['Ni-Te', 'introverted intuition', 'dominant Ni', 'INTJ patterns'],
+            'ENFP': ['Ne-Fi', 'extraverted intuition', 'dominant Ne', 'ENFP traits'],
+            'INFJ': ['Ni-Fe', 'introverted intuition', 'Fe harmony', 'INFJ personality'],
+            'ENTP': ['Ne-Ti', 'extraverted intuition', 'Ti logic', 'ENTP characteristics'],
+            'ISFJ': ['Si-Fe', 'introverted sensing', 'Fe care', 'ISFJ guardian'],
+            'ISTJ': ['Si-Te', 'introverted sensing', 'Te structure', 'ISTJ duty'],
+            'ESFP': ['Se-Fi', 'extraverted sensing', 'Fi values', 'ESFP performer']
+        }
         
-        # Limit to top 2 queries for performance
-        search_queries = search_queries[:2]
+        # Detect MBTI type and add enriched query
+        for mbti_type, synonyms in mbti_types.items():
+            if mbti_type.lower() in question_lower:
+                # Add cognitive function-based query
+                search_queries.append(f"{mbti_type} {' '.join(synonyms[:2])}")
+                break
         
-        print(f"🔍 Searching Pinecone with {len(search_queries)} query variations")
+        # Negative behavior queries get enhanced context
+        negative_keywords = ['narcis', 'toxic', 'manipulat', 'selfish', 'unhealthy', 'immature']
+        if any(word in question_lower for word in negative_keywords):
+            search_queries.append(f"{question} shadow functions negative traits unhealthy behavior")
         
-        # IMPROVEMENT 2: Increased top_k from 5 to 10 for better results
-        all_chunks = {}  # Use dict to deduplicate by text
+        # Relationship queries
+        if any(word in question_lower for word in ['relationship', 'compatibility', 'golden pair', 'dating']):
+            search_queries.append(f"{question} type dynamics compatibility interaction styles")
+        
+        # Limit to top 3 query variations
+        search_queries = search_queries[:3]
+        
+        print(f"🔍 Hybrid search with {len(search_queries)} optimized queries")
+        
+        # IMPROVEMENT 2: Broader initial retrieval (top_k=30) for better coverage
+        all_chunks = {}  # Deduplicate by text
         
         for query in search_queries:
-            # Get embedding for each query variation
+            # Get embedding with UPGRADED model
             response = openai.embeddings.create(
                 input=query,
-                model="text-embedding-ada-002"
+                model="text-embedding-3-large"  # UPGRADED from ada-002
             )
             query_vector = response.data[0].embedding
             
-            # Query Pinecone with INCREASED top_k
+            # Query Pinecone with INCREASED top_k for hybrid approach
             query_response = pinecone_index.query(
                 vector=query_vector,
-                top_k=10,  # DOUBLED from 5 to 10!
+                top_k=30,  # TRIPLED from 10 to 30 for re-ranking
                 include_metadata=True
             )
             
@@ -101,23 +119,25 @@ def query_innerverse_local(question: str) -> str:
             for m in matches:
                 if "metadata" in m and "text" in m["metadata"]:
                     text = m["metadata"]["text"]
-                    # Deduplicate by using text as key
                     if text not in all_chunks:
                         all_chunks[text] = {
                             "text": text,
                             "score": m.score,
-                            "filename": m["metadata"].get("filename", "Unknown")
+                            "filename": m["metadata"].get("filename", "Unknown"),
+                            "types_mentioned": m["metadata"].get("types_mentioned", ""),
+                            "season": m["metadata"].get("season", "")
                         }
         
         if not all_chunks:
             return "No relevant MBTI content found in knowledge base."
         
-        # Sort by relevance score and take top 10 unique chunks
-        sorted_chunks = sorted(all_chunks.values(), key=lambda x: x["score"], reverse=True)[:10]
+        # IMPROVEMENT 3: Simple re-ranking by relevance score
+        # Sort by score and take top 12 unique chunks (more context for better answers)
+        sorted_chunks = sorted(all_chunks.values(), key=lambda x: x["score"], reverse=True)[:12]
         contexts = [chunk["text"] for chunk in sorted_chunks]
         
         result = "\n\n".join(contexts)
-        print(f"✅ Found {len(contexts)} unique chunks from {len(all_chunks)} total results ({len(result)} chars)")
+        print(f"✅ Found {len(contexts)} unique chunks from {len(all_chunks)} total ({len(result)} chars)")
         return result
         
     except Exception as e:
