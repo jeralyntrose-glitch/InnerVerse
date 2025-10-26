@@ -72,7 +72,8 @@ request_timestamps = deque(maxlen=1000)  # For rate limiting
 
 # Pricing per 1K tokens (as of Oct 2025)
 PRICING = {
-    "text-embedding-ada-002": 0.0001,  # per 1K tokens
+    "text-embedding-ada-002": 0.0001,  # per 1K tokens (legacy)
+    "text-embedding-3-large": 0.00013,  # per 1K tokens (improved semantic matching)
     "gpt-3.5-turbo-input": 0.0005,     # per 1K tokens
     "gpt-3.5-turbo-output": 0.0015,    # per 1K tokens
     "whisper-1": 0.006,                # per minute of audio
@@ -205,12 +206,67 @@ def get_pinecone_client():
     return pc.Index(PINECONE_INDEX)
 
 
-# Split PDF text into chunks
-def chunk_text(text, chunk_size=1000, chunk_overlap=200):
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size,
-                                              chunk_overlap=chunk_overlap)
+# Split PDF text into chunks with improved parameters for CS Joseph transcripts
+def chunk_text(text, chunk_size=2500, chunk_overlap=500):
+    """
+    Improved chunking for conversational lecture transcripts:
+    - 2500 chars allows complete thoughts/concepts (was 1000)
+    - 500 char overlap (20%) prevents concept fragmentation (was 200)
+    - Paragraph-aware splitting preserves natural boundaries
+    """
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        separators=["\n\n", "\n", ". ", " ", ""],  # Prefer paragraph boundaries
+        length_function=len
+    )
     chunks = splitter.split_text(text)
     return chunks
+
+
+def extract_enriched_metadata(filename: str, text_sample: str = "") -> dict:
+    """
+    Extract enriched metadata from filename and content for better filtering.
+    Examples: 
+    - "Season 12 Episode 45.pdf" -> {"season": "12", "episode": "45"}
+    - "ESTP vs INTJ.pdf" -> {"types_mentioned": ["ESTP", "INTJ"]}
+    """
+    import re
+    metadata = {}
+    
+    # Extract season/episode from filename
+    season_match = re.search(r'[Ss]eason\s*(\d+)', filename)
+    episode_match = re.search(r'[Ee]pisode\s*(\d+)', filename)
+    
+    if season_match:
+        metadata["season"] = season_match.group(1)
+    if episode_match:
+        metadata["episode"] = episode_match.group(1)
+    
+    # Extract MBTI types mentioned in filename or text
+    mbti_types = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
+                  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP']
+    
+    types_found = []
+    text_to_search = (filename + " " + text_sample[:500]).upper()
+    for mbti_type in mbti_types:
+        if mbti_type in text_to_search:
+            types_found.append(mbti_type)
+    
+    if types_found:
+        metadata["types_mentioned"] = ",".join(list(set(types_found)))[:50]  # Limit length
+    
+    # Extract cognitive functions mentioned
+    functions = ['Fe', 'Fi', 'Te', 'Ti', 'Ne', 'Ni', 'Se', 'Si']
+    functions_found = []
+    for func in functions:
+        if re.search(r'\b' + func + r'\b', text_to_search):
+            functions_found.append(func)
+    
+    if functions_found:
+        metadata["functions_mentioned"] = ",".join(list(set(functions_found)))[:30]
+    
+    return metadata
 
 
 # Load InnerVerse taxonomy schema
@@ -421,8 +477,11 @@ async def upload_pdf_base64(data: Base64Upload):
 
         # Auto-tag document with InnerVerse taxonomy
         tags = await auto_tag_document(text, data.filename, openai_client)
+        
+        # Extract enriched metadata
+        enriched_meta = extract_enriched_metadata(data.filename, text[:2000])
 
-        # Batch embedding + upsert
+        # Batch embedding + upsert with improved embeddings
         vectors_to_upsert = []
         for i, chunk in enumerate(chunks):
             # Show progress for large documents
@@ -430,15 +489,22 @@ async def upload_pdf_base64(data: Base64Upload):
                 print(f"📊 Processing chunk {i}/{len(chunks)}...")
             
             response = openai_client.embeddings.create(
-                input=chunk, model="text-embedding-ada-002", timeout=60)
+                input=chunk, model="text-embedding-3-large", timeout=60)
             vector = response.data[0].embedding
-            vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
+            
+            # Build comprehensive metadata
+            chunk_metadata = {
                 "text": chunk,
                 "doc_id": doc_id,
                 "filename": data.filename,
                 "upload_timestamp": datetime.now().isoformat(),
-                "tags": tags
-            }))
+                "tags": tags,
+                "chunk_index": i
+            }
+            # Add enriched metadata
+            chunk_metadata.update(enriched_meta)
+            
+            vectors_to_upsert.append((f"{doc_id}-{i}", vector, chunk_metadata))
 
         # Upload in batches to avoid Pinecone's 4MB request limit
         if vectors_to_upsert:
@@ -495,8 +561,11 @@ async def upload_pdf(file: UploadFile = File(...)):
 
         # Auto-tag document with InnerVerse taxonomy
         tags = await auto_tag_document(text, file.filename, openai_client)
+        
+        # Extract enriched metadata
+        enriched_meta = extract_enriched_metadata(file.filename, text[:2000])
 
-        # Batch embedding + upsert
+        # Batch embedding + upsert with improved embeddings
         vectors_to_upsert = []
         embed_start = datetime.now()
         
@@ -508,15 +577,22 @@ async def upload_pdf(file: UploadFile = File(...)):
             
             try:
                 response = openai_client.embeddings.create(
-                    input=chunk, model="text-embedding-ada-002", timeout=120)  # Increased timeout
+                    input=chunk, model="text-embedding-3-large", timeout=120)  # Upgraded model
                 vector = response.data[0].embedding
-                vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
+                
+                # Build comprehensive metadata
+                chunk_metadata = {
                     "text": chunk,
                     "doc_id": doc_id,
                     "filename": file.filename,
                     "upload_timestamp": datetime.now().isoformat(),
-                    "tags": tags
-                }))
+                    "tags": tags,
+                    "chunk_index": i
+                }
+                # Add enriched metadata
+                chunk_metadata.update(enriched_meta)
+                
+                vectors_to_upsert.append((f"{doc_id}-{i}", vector, chunk_metadata))
             except Exception as embed_error:
                 print(f"❌ Embedding error on chunk {i}: {str(embed_error)}")
                 raise Exception(f"Failed to embed chunk {i}/{len(chunks)}: {str(embed_error)}")
@@ -916,13 +992,13 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
 
     try:
         embed_response = openai_client.embeddings.create(
-            input=question, model="text-embedding-ada-002")
+            input=question, model="text-embedding-3-large")
         question_vector = embed_response.data[0].embedding
         
         # Log embedding usage
         embed_tokens = embed_response.usage.total_tokens
-        embed_cost = (embed_tokens / 1000) * PRICING["text-embedding-ada-002"]
-        log_api_usage("query_embedding", "text-embedding-ada-002", input_tokens=embed_tokens, cost=embed_cost)
+        embed_cost = (embed_tokens / 1000) * PRICING["text-embedding-3-large"]
+        log_api_usage("query_embedding", "text-embedding-3-large", input_tokens=embed_tokens, cost=embed_cost)
 
         # Build Pinecone filter based on document_id and tags
         filter_conditions = []
@@ -2276,23 +2352,32 @@ async def upload_audio(file: UploadFile = File(...)):
             # Auto-tag document with InnerVerse taxonomy
             tags = await auto_tag_document(text, pdf_filename, openai_client)
             
-            # Batch embedding + upsert
+            # Extract enriched metadata
+            enriched_meta = extract_enriched_metadata(pdf_filename, text[:2000])
+            
+            # Batch embedding + upsert with improved embeddings
             vectors_to_upsert = []
             for i, chunk in enumerate(chunks):
                 if i % 50 == 0 and i > 0:
                     print(f"📊 Processing chunk {i}/{len(chunks)}...")
                 
                 response = openai_client.embeddings.create(
-                    input=chunk, model="text-embedding-ada-002", timeout=120)
+                    input=chunk, model="text-embedding-3-large", timeout=120)
                 vector = response.data[0].embedding
-                vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
+                
+                # Build comprehensive metadata
+                chunk_metadata = {
                     "text": chunk,
                     "doc_id": doc_id,
                     "filename": pdf_filename,
                     "upload_timestamp": datetime.now().isoformat(),
                     "tags": tags,
-                    "source": "audio_upload"
-                }))
+                    "source": "audio_upload",
+                    "chunk_index": i
+                }
+                chunk_metadata.update(enriched_meta)
+                
+                vectors_to_upsert.append((f"{doc_id}-{i}", vector, chunk_metadata))
             
             # Upload in batches to Pinecone
             if vectors_to_upsert:
@@ -2584,23 +2669,32 @@ async def download_youtube(request: YouTubeDownloadRequest):
             # Auto-tag document
             tags = await auto_tag_document(text, pdf_filename, openai_client)
             
-            # Batch embedding + upsert
+            # Extract enriched metadata
+            enriched_meta = extract_enriched_metadata(pdf_filename, text[:2000])
+            
+            # Batch embedding + upsert with improved embeddings
             vectors_to_upsert = []
             for i, chunk in enumerate(chunks):
                 if i % 50 == 0 and i > 0:
                     print(f"📊 Processing chunk {i}/{len(chunks)}...")
                 
                 response = openai_client.embeddings.create(
-                    input=chunk, model="text-embedding-ada-002", timeout=120)
+                    input=chunk, model="text-embedding-3-large", timeout=120)
                 vector = response.data[0].embedding
-                vectors_to_upsert.append((f"{doc_id}-{i}", vector, {
+                
+                # Build comprehensive metadata
+                chunk_metadata = {
                     "text": chunk,
                     "doc_id": doc_id,
                     "filename": pdf_filename,
                     "upload_timestamp": datetime.now().isoformat(),
                     "tags": tags,
-                    "source": "youtube_url"
-                }))
+                    "source": "youtube_url",
+                    "chunk_index": i
+                }
+                chunk_metadata.update(enriched_meta)
+                
+                vectors_to_upsert.append((f"{doc_id}-{i}", vector, chunk_metadata))
             
             # Upload in batches to Pinecone
             if vectors_to_upsert:
