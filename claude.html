@@ -854,16 +854,18 @@
         /* iPad (768px - 1024px) - Wider chat area */
         @media (min-width: 768px) and (max-width: 1024px) {
             .messages-container {
-                max-width: 90%; /* Use 90% of available width on iPad */
+                max-width: none; /* Remove max-width constraint */
                 padding: 20px 32px;
+                margin: 0; /* Remove auto-centering */
             }
         }
 
         /* Desktop (> 1024px) - Full width chat area */
         @media (min-width: 1025px) {
             .messages-container {
-                max-width: 100%; /* Use full available width on desktop */
+                max-width: none; /* Remove max-width constraint */
                 padding: 24px 48px;
+                margin: 0; /* Remove auto-centering */
             }
         }
 
