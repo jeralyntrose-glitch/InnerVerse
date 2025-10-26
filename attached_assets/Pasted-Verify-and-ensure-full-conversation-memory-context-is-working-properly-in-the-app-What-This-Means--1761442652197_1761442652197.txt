@@ -1,0 +1,41 @@
+Verify and ensure full conversation memory/context is working properly in the app.
+What This Means:
+The AI should remember everything said in the current conversation and be able to reference it in later responses. This is critical for coherent, contextual conversations.
+Test Cases to Verify:
+	1.	Start a new chat
+	2.	Tell the AI something specific (e.g., “My girlfriend is an INFJ”)
+	3.	Send several more messages (5-10) about different topics
+	4.	Ask the AI to recall the earlier information (e.g., “What type did I say my girlfriend was?”)
+	5.	The AI should correctly reference the earlier message
+Requirements:
+On the backend:
+	•	When sending a message to Claude API, include the full conversation history in the request
+	•	Format: Array of messages with role (user/assistant) and content
+	•	Include ALL previous messages in the chat, not just the last few
+	•	Maintain proper message ordering (chronological)
+Context Window Management:
+	•	Claude Sonnet has ~200k token context window
+	•	For most personal use, this is plenty - don’t truncate conversation history unless it exceeds this limit
+	•	If conversation gets extremely long (rare), keep recent messages and truncate older ones, but warn user
+Persistence:
+	•	When user leaves chat and comes back, load the full conversation history from database
+	•	When app reloads, conversation context should be preserved
+	•	User shouldn’t have to “remind” the AI of things said earlier in the same conversation
+What NOT to do:
+	•	Don’t send only the last message (no context)
+	•	Don’t send only last 5-10 messages (limited context)
+	•	Don’t reset context when user leaves and returns to chat
+	•	Don’t forget to include system prompt in every API call
+Testing:
+Create a test conversation where:
+	1.	Message 1: “My name is Jeralyn”
+	2.	Messages 2-10: Various MBTI questions
+	3.	Message 11: “What’s my name?”
+	4.	Leave the chat, come back, and ask again: “Do you remember my name?”
+The AI should remember “Jeralyn” both times. If it doesn’t, conversation memory is broken.
+Common Issues to Check:
+	•	Is conversation history being loaded from database when reopening a chat?
+	•	Is the full message array being sent to Claude API on each request?
+	•	Are messages being saved to database correctly?
+	•	Is there a bug truncating message history somewhere?
+Make sure the app passes the name test above before considering this complete.
