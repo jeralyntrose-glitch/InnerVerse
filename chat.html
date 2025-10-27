@@ -1474,11 +1474,6 @@
                 // Scroll to bottom
                 scrollToBottom();
                 
-                // Close mobile sidebar
-                if (window.innerWidth <= 768) {
-                    toggleSidebar();
-                }
-                
                 // Start polling if there are processing messages
                 if (hasProcessingMessage) {
                     startStatusPolling();
