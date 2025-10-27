@@ -4032,6 +4032,14 @@ def serve_service_worker():
 def serve_manifest():
     return FileResponse("manifest.json", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+@app.get("/brain-icon-192.png", include_in_schema=False)
+def serve_icon_192():
+    return FileResponse("brain-icon-192.png", media_type="image/png")
+
+@app.get("/brain-icon-512.png", include_in_schema=False)
+def serve_icon_512():
+    return FileResponse("brain-icon-512.png", media_type="image/png")
+
 
 # === OpenAI-Compatible API for LibreChat Integration ===
 
