@@ -246,6 +246,11 @@
             }
         }
         
+        /* Prevent background scrolling when sidebar is open on mobile */
+        body.sidebar-open {
+            overflow: hidden;
+        }
+        
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -692,6 +697,7 @@
             if (window.innerWidth <= 768 && sidebar && menuToggle) {
                 if (!sidebar.contains(e.target) && !menuToggle.contains(e.target) && sidebar.classList.contains('open')) {
                     sidebar.classList.remove('open');
+                    document.body.classList.remove('sidebar-open');
                 }
             }
         });
@@ -1198,7 +1204,15 @@
         }
         
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
+            const sidebar = document.getElementById('sidebar');
+            const isOpen = sidebar.classList.toggle('open');
+            
+            // Prevent background scrolling on mobile when sidebar is open
+            if (isOpen) {
+                document.body.classList.add('sidebar-open');
+            } else {
+                document.body.classList.remove('sidebar-open');
+            }
         }
         
         // Event listeners
