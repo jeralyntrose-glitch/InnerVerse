@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     
     <style>
         :root {
@@ -306,16 +308,16 @@
         .messages-container {
             flex: 1;
             overflow-y: auto;
-            padding: 24px;
+            padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 16px;
         }
         
         .message {
-            display: flex;
-            gap: 12px;
+            width: 100%;
+            padding: 20px 24px;
             animation: slideIn 0.3s ease;
+            border-bottom: 1px solid var(--border-light);
         }
         
         @keyframes slideIn {
@@ -330,30 +332,91 @@
         }
         
         .message.user {
-            justify-content: flex-end;
+            background: var(--bg-secondary);
+        }
+        
+        .message.assistant {
+            background: var(--bg-primary);
         }
         
         .message-content {
-            max-width: 70%;
-            padding: 12px 16px;
-            border-radius: 18px;
+            max-width: 800px;
+            margin: 0 auto;
             font-size: 15px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            line-height: 1.6;
+            color: var(--text-primary);
         }
         
-        .message.user .message-content {
-            background: var(--message-user-bg);
+        /* Markdown styling */
+        .message-content h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 16px 0 12px 0;
             color: var(--text-primary);
-            border-bottom-right-radius: 4px;
         }
         
-        .message.assistant .message-content {
-            background: var(--message-assistant-bg);
+        .message-content h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 14px 0 10px 0;
             color: var(--text-primary);
-            border: 1px solid var(--border-light);
-            border-bottom-left-radius: 4px;
+        }
+        
+        .message-content h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 12px 0 8px 0;
+            color: var(--text-primary);
+        }
+        
+        .message-content p {
+            margin: 8px 0;
+        }
+        
+        .message-content strong {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .message-content em {
+            font-style: italic;
+        }
+        
+        .message-content ul, .message-content ol {
+            margin: 12px 0;
+            padding-left: 24px;
+        }
+        
+        .message-content li {
+            margin: 6px 0;
+        }
+        
+        .message-content code {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .message-content pre {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+        
+        .message-content pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .message-content blockquote {
+            border-left: 3px solid var(--border-medium);
+            padding-left: 16px;
+            margin: 12px 0;
+            color: var(--text-secondary);
         }
         
         .typing-indicator {
@@ -1226,7 +1289,12 @@
                                 
                                 if (data.chunk) {
                                     fullResponse += data.chunk;
-                                    aiMessageContent.textContent = fullResponse;
+                                    const rawHtml = marked.parse(fullResponse);
+                                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
+                                        ALLOWED_ATTR: ['href', 'title', 'target']
+                                    });
+                                    aiMessageContent.innerHTML = cleanHtml;
                                     scrollToBottom();
                                 }
                                 
@@ -1291,7 +1359,18 @@
             
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
-            contentDiv.textContent = content;
+            
+            // Render markdown for assistant messages, plain text for user messages
+            if (role === 'assistant' && content) {
+                const rawHtml = marked.parse(content);
+                const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
+                    ALLOWED_ATTR: ['href', 'title', 'target']
+                });
+                contentDiv.innerHTML = cleanHtml;
+            } else {
+                contentDiv.textContent = content;
+            }
             
             messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
