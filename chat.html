@@ -110,6 +110,28 @@
             transform: scale(0.98);
         }
         
+        /* Search Box */
+        .search-box {
+            padding: 8px 12px;
+            margin-top: 8px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            width: 100%;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .search-box::placeholder {
+            color: var(--text-tertiary);
+        }
+        
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
@@ -748,6 +770,7 @@
                     <span>+</span>
                     <span>New Chat</span>
                 </button>
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search conversations..." oninput="filterConversations()">
             </div>
             
             <div class="sidebar-content" id="sidebarContent">
@@ -1010,6 +1033,52 @@
             } else {
                 arrow.textContent = '▼';
             }
+        }
+        
+        // Filter conversations based on search query
+        function filterConversations() {
+            const searchQuery = document.getElementById('searchBox').value.toLowerCase().trim();
+            const allConversationItems = document.querySelectorAll('.conversation-item');
+            const allProjectSections = document.querySelectorAll('.project-section');
+            
+            // If search is empty, show everything
+            if (searchQuery === '') {
+                allConversationItems.forEach(item => {
+                    item.style.display = '';
+                });
+                allProjectSections.forEach(section => {
+                    section.style.display = '';
+                });
+                return;
+            }
+            
+            // Filter conversations
+            allConversationItems.forEach(item => {
+                const conversationName = item.querySelector('.conversation-name').textContent.toLowerCase();
+                if (conversationName.includes(searchQuery)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Hide project sections that have no visible conversations
+            allProjectSections.forEach(section => {
+                const conversationList = section.querySelector('.conversation-list');
+                const visibleConversations = conversationList.querySelectorAll('.conversation-item:not([style*="display: none"])');
+                
+                if (visibleConversations.length === 0) {
+                    section.style.display = 'none';
+                } else {
+                    section.style.display = '';
+                    // Auto-expand sections with matches
+                    if (section.classList.contains('collapsed')) {
+                        section.classList.remove('collapsed');
+                        const arrow = section.querySelector('.project-arrow');
+                        if (arrow) arrow.textContent = '▼';
+                    }
+                }
+            });
         }
         
         // Create new chat
