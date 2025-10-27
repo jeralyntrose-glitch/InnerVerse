@@ -798,7 +798,7 @@ async def get_documents_report():
         
         # Query Pinecone to get documents
         # We'll use a dummy vector query with high top_k to get many results
-        dummy_vector = [0.0] * 1536  # OpenAI ada-002 has 1536 dimensions
+        dummy_vector = [0.0] * 3072  # text-embedding-3-large has 3072 dimensions
         
         query_response = pinecone_index.query(
             vector=dummy_vector,
