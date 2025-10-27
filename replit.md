@@ -17,6 +17,7 @@ Preferred communication style: Simple, everyday language.
     - **PWA Support**: Full Progressive Web App capabilities including offline support, installability, and manifest configuration with professional teal brain icon.
     - **Performance**: Optimized for speed using HTML template strings, event delegation, optimistic UI updates, and parallel API fetches.
     - **Chat Styling**: User messages display in teal bubbles (#10a37f) with white text, right-aligned at 70% max-width, with comprehensive markdown support. AI responses remain full-width.
+    - **Vision/Image Analysis**: Full Claude vision mode support for image upload and analysis. Users can upload images (JPEG, PNG, GIF, WebP up to 5MB) via the paperclip button, see image previews before sending, and receive AI analysis. Images display inline within chat messages with proper styling.
 - **Migration Dashboard (`/migration`)**: Provides a real-time dashboard for upgrading embeddings with progress tracking and live logs.
 
 ## Backend Architecture
