@@ -976,17 +976,6 @@
                         await loadConversationMessages();
                     }
                 }
-                
-                // Periodically refresh sidebar to show unread indicators on other conversations
-                // (Do this every 5th poll to reduce load)
-                if (!pollConversationUpdates.counter) {
-                    pollConversationUpdates.counter = 0;
-                }
-                pollConversationUpdates.counter++;
-                
-                if (pollConversationUpdates.counter % 5 === 0) {
-                    await renderSidebar();
-                }
             } catch (error) {
                 console.error('Error polling conversation status:', error);
             }
