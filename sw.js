@@ -1,4 +1,4 @@
-const CACHE_NAME = 'innerverse-chat-v1';
+const CACHE_NAME = 'innerverse-chat-v2';
 const urlsToCache = [
   '/manifest.json',
   '/chat',
