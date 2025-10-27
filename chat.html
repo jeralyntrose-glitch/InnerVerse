@@ -1404,7 +1404,8 @@
         async function loadConversation(conversationId, event) {
             try {
                 // Close mobile menu if open
-                if (window.innerWidth <= 768) {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
                     const sidebar = document.getElementById('sidebar');
                     sidebar.classList.remove('open');
                     document.body.classList.remove('sidebar-open');
@@ -1438,6 +1439,13 @@
                 
                 // Refresh sidebar to remove unread dot
                 await renderSidebar();
+                
+                // Force sidebar to stay closed on mobile after refresh
+                if (isMobile) {
+                    const sidebar = document.getElementById('sidebar');
+                    sidebar.classList.remove('open');
+                    document.body.classList.remove('sidebar-open');
+                }
                 
                 // Update active state in sidebar
                 document.querySelectorAll('.conversation-item').forEach(item => {
@@ -1496,6 +1504,13 @@
                     stopStatusPolling();
                     // Refresh sidebar to update conversation list
                     await renderSidebar();
+                    
+                    // Keep sidebar closed on mobile after background refresh
+                    if (window.innerWidth <= 768) {
+                        const sidebar = document.getElementById('sidebar');
+                        sidebar.classList.remove('open');
+                        document.body.classList.remove('sidebar-open');
+                    }
                 }
             } catch (error) {
                 console.error('Error reloading conversation messages:', error);
