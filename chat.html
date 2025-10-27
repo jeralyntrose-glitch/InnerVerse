@@ -148,7 +148,7 @@
         }
         
         .project-section {
-            margin-bottom: 16px;
+            margin-bottom: 4px;
         }
         
         .project-header {
@@ -245,12 +245,6 @@
             color: var(--text-primary);
         }
         
-        .project-description {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            padding: 0 12px 8px 30px;
-            line-height: 1.4;
-        }
         
         /* Main Chat Area */
         .chat-container {
@@ -958,7 +952,7 @@
             // Also fetch all conversations
             fetchPromises.push((async () => {
                 try {
-                    const response = await fetch('/claude/conversations/all');
+                    const response = await fetch('/claude/conversations/all/list');
                     const data = await response.json();
                     conversationsData['all'] = data.conversations;
                 } catch (error) {
@@ -982,7 +976,6 @@
                         <span class="project-arrow">▶</span>
                         <span>${project.name}</span>
                     </div>
-                    ${project.description ? `<div class="project-description">${project.description}</div>` : ''}
                     <div class="conversation-list" id="project-${project.id}"></div>
                 `;
                 sidebarContent.appendChild(section);

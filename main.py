@@ -3088,6 +3088,31 @@ async def get_conversations(project: str):
         print(f"❌ Error fetching conversations: {str(e)}")
         return {"conversations": []}
 
+@app.get("/claude/conversations/all/list")
+async def get_all_conversations():
+    """Get all conversations across all projects, sorted by most recent"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return {"conversations": []}
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT id, project, name, created_at, updated_at, has_unread_response
+            FROM conversations
+            ORDER BY updated_at DESC
+            LIMIT 100
+        """)
+        
+        conversations = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {"conversations": [dict(c) for c in conversations]}
+    except Exception as e:
+        print(f"❌ Error fetching all conversations: {str(e)}")
+        return {"conversations": []}
+
 @app.get("/claude/conversations/detail/{conversation_id}")
 async def get_conversation_detail(conversation_id: int):
     """Get conversation with all messages"""
