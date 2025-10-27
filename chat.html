@@ -1847,22 +1847,44 @@
         
         // Copy text to clipboard and show toast
         async function copyToClipboard(text) {
+            // iOS-compatible copy method
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            
+            // Make it visible but off-screen for iOS
+            textarea.style.position = 'fixed';
+            textarea.style.top = '0';
+            textarea.style.left = '-9999px';
+            textarea.style.width = '1px';
+            textarea.style.height = '1px';
+            textarea.setAttribute('readonly', '');
+            
+            document.body.appendChild(textarea);
+            
+            // For iOS, we need to select the text properly
+            if (navigator.userAgent.match(/ipad|iphone/i)) {
+                const range = document.createRange();
+                range.selectNodeContents(textarea);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                textarea.setSelectionRange(0, text.length);
+            } else {
+                textarea.select();
+            }
+            
             try {
-                await navigator.clipboard.writeText(text);
-                showCopyToast();
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopyToast();
+                } else {
+                    console.error('Copy command failed');
+                }
             } catch (err) {
                 console.error('Failed to copy:', err);
-                // Fallback for older browsers
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                textarea.style.position = 'fixed';
-                textarea.style.opacity = '0';
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                showCopyToast();
             }
+            
+            document.body.removeChild(textarea);
         }
         
         // Show copy success toast
