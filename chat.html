@@ -1491,10 +1491,16 @@
                 const response = await fetch(`/claude/conversations/detail/${currentConversationId}`);
                 const data = await response.json();
                 
+                // Get existing messages to detect new ones
+                const existingMessages = Array.from(document.querySelectorAll('.message'));
+                const existingCount = existingMessages.length;
+                
                 // Clear and reload messages
                 clearMessages();
                 let hasProcessingMessage = false;
-                data.messages.forEach(msg => {
+                let newCompletedMessage = null;
+                
+                data.messages.forEach((msg, index) => {
                     const msgContent = addMessage(msg.role, msg.content || '');
                     
                     // Show processing indicator for messages still being generated
@@ -1502,7 +1508,18 @@
                         hasProcessingMessage = true;
                         msgContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
                     }
+                    
+                    // Detect if this is a newly completed message (was processing, now completed)
+                    if (msg.role === 'assistant' && msg.status === 'completed' && index === data.messages.length - 1 && backgroundRefresh) {
+                        // This is the last message and we're in a background refresh - likely just completed
+                        newCompletedMessage = { element: msgContent, content: msg.content };
+                    }
                 });
+                
+                // If there's a newly completed message, animate it with typewriter effect
+                if (newCompletedMessage && newCompletedMessage.content) {
+                    typewriterEffect(newCompletedMessage.element, newCompletedMessage.content);
+                }
                 
                 // Stop polling if no more processing messages
                 if (!hasProcessingMessage) {
@@ -1739,6 +1756,35 @@
             } catch (error) {
                 console.error('Error updating conversation name:', error);
             }
+        }
+        
+        // Typewriter effect for newly completed messages
+        function typewriterEffect(element, content) {
+            // Clear the element first (remove processing indicator)
+            element.innerHTML = '';
+            
+            // Parse markdown first
+            const rawHtml = marked.parse(content);
+            const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
+                ALLOWED_ATTR: ['href', 'title', 'target']
+            });
+            
+            // Create a temporary div to get the plain text chunks
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cleanHtml;
+            
+            // For smooth reveal, just fade in the full content with a brief delay
+            // This is faster and smoother than character-by-character for long responses
+            element.style.opacity = '0';
+            element.innerHTML = cleanHtml;
+            
+            // Smooth fade-in animation
+            requestAnimationFrame(() => {
+                element.style.transition = 'opacity 0.3s ease-in';
+                element.style.opacity = '1';
+                scrollToBottom();
+            });
         }
         
         // UI Helper functions
