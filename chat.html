@@ -700,10 +700,17 @@
             padding: 10px 12px;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: opacity 0.3s ease;
         }
         
         .menu-toggle:active {
             transform: scale(0.95);
+        }
+        
+        /* Hide burger when sidebar is open on mobile */
+        body.sidebar-open .menu-toggle {
+            opacity: 0;
+            pointer-events: none;
         }
         
         .hamburger {
@@ -880,6 +887,8 @@
         function toggleMobileMenu() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('open');
+            // Toggle body class to hide burger when sidebar is open
+            document.body.classList.toggle('sidebar-open');
         }
         
         // Close mobile menu when clicking outside
@@ -932,6 +941,36 @@
         // Render sidebar with projects and conversations
         async function renderSidebar() {
             const sidebarContent = document.getElementById('sidebarContent');
+            
+            // Fetch all conversations data in parallel BEFORE clearing sidebar
+            const conversationsData = {};
+            const fetchPromises = projects.map(async (project) => {
+                try {
+                    const response = await fetch(`/claude/conversations/${project.id}`);
+                    const data = await response.json();
+                    conversationsData[project.id] = data.conversations;
+                } catch (error) {
+                    console.error(`Error loading conversations for ${project.id}:`, error);
+                    conversationsData[project.id] = [];
+                }
+            });
+            
+            // Also fetch all conversations
+            fetchPromises.push((async () => {
+                try {
+                    const response = await fetch('/claude/conversations/all');
+                    const data = await response.json();
+                    conversationsData['all'] = data.conversations;
+                } catch (error) {
+                    console.error('Error loading all conversations:', error);
+                    conversationsData['all'] = [];
+                }
+            })());
+            
+            // Wait for all data to be fetched
+            await Promise.all(fetchPromises);
+            
+            // NOW clear and rebuild sidebar with all data ready
             sidebarContent.innerHTML = '';
             
             // Add Projects sections (collapsed by default)
@@ -948,8 +987,13 @@
                 `;
                 sidebarContent.appendChild(section);
                 
-                // Load conversations for this project
-                await loadConversations(project.id);
+                // Render conversations immediately (data already fetched)
+                const listElement = document.getElementById(`project-${project.id}`);
+                const conversations = conversationsData[project.id] || [];
+                conversations.forEach(conv => {
+                    const item = createConversationItem(conv);
+                    listElement.appendChild(item);
+                });
             }
             
             // Add "All Chats" section
@@ -964,8 +1008,38 @@
             `;
             sidebarContent.appendChild(allChatsSection);
             
-            // Load all conversations for "All Chats"
-            await loadAllChats();
+            // Render all conversations immediately (data already fetched)
+            const allListElement = document.getElementById('all-chats');
+            const allConversations = conversationsData['all'] || [];
+            allConversations.forEach(conv => {
+                const item = createConversationItem(conv);
+                allListElement.appendChild(item);
+            });
+        }
+        
+        // Helper function to create a conversation item element
+        function createConversationItem(conv) {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            item.dataset.conversationId = conv.id;
+            if (conv.id === currentConversationId) {
+                item.classList.add('active');
+            }
+            
+            // Add unread indicator if conversation has unread responses
+            const unreadDot = conv.has_unread_response ? '<span class="unread-dot"></span>' : '';
+            
+            item.innerHTML = `
+                ${unreadDot}
+                <span class="conversation-name">${conv.name}</span>
+                <div class="conversation-actions">
+                    <button class="action-btn" onclick="moveConversation(${conv.id}); event.stopPropagation();" title="Move to...">📁</button>
+                    <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
+                    <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();" title="Delete">🗑️</button>
+                </div>
+            `;
+            item.onclick = (e) => loadConversation(conv.id, e);
+            return item;
         }
         
         // Load conversations for a project
@@ -1259,6 +1333,13 @@
         // Load a conversation
         async function loadConversation(conversationId, event) {
             try {
+                // Close mobile menu if open
+                if (window.innerWidth <= 768) {
+                    const sidebar = document.getElementById('sidebar');
+                    sidebar.classList.remove('open');
+                    document.body.classList.remove('sidebar-open');
+                }
+                
                 const response = await fetch(`/claude/conversations/detail/${conversationId}`);
                 const data = await response.json();
                 
