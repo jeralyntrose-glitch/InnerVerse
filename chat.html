@@ -232,8 +232,25 @@
             flex-shrink: 0;
         }
         
-        .conversation-item:hover .conversation-actions {
+        .conversation-actions.show {
             display: flex;
+        }
+        
+        .menu-toggle-btn {
+            padding: 4px 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-tertiary);
+            opacity: 0.6;
+            flex-shrink: 0;
+            transition: opacity 0.15s ease;
+        }
+        
+        .menu-toggle-btn:hover,
+        .menu-toggle-btn.active {
+            opacity: 1;
         }
         
         .action-btn {
@@ -917,6 +934,14 @@
                     document.body.classList.remove('sidebar-open');
                 }
             }
+            
+            // Close conversation action menus when clicking outside
+            if (!e.target.closest('.conversation-actions') && !e.target.closest('.menu-toggle-btn')) {
+                document.querySelectorAll('.conversation-actions.show').forEach(el => {
+                    el.classList.remove('show');
+                    el.parentElement.querySelector('.menu-toggle-btn').classList.remove('active');
+                });
+            }
         });
         
         // Register Service Worker for PWA
@@ -1045,15 +1070,35 @@
             
             item.innerHTML = `
                 ${unreadDot}
-                <span class="conversation-name">${conv.name}</span>
+                <span class="conversation-name" onclick="loadConversation(${conv.id}, event)">${conv.name}</span>
+                <button class="menu-toggle-btn" onclick="toggleConversationMenu(event)" title="Options">⋯</button>
                 <div class="conversation-actions">
                     <button class="action-btn" onclick="moveConversation(${conv.id}); event.stopPropagation();" title="Move to...">📁</button>
                     <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
                     <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();" title="Delete">🗑️</button>
                 </div>
             `;
-            item.onclick = (e) => loadConversation(conv.id, e);
             return item;
+        }
+        
+        // Toggle conversation menu (action buttons)
+        function toggleConversationMenu(event) {
+            event.stopPropagation();
+            const menuBtn = event.currentTarget;
+            const item = menuBtn.closest('.conversation-item');
+            const actions = item.querySelector('.conversation-actions');
+            
+            // Close other open menus
+            document.querySelectorAll('.conversation-actions.show').forEach(el => {
+                if (el !== actions) {
+                    el.classList.remove('show');
+                    el.parentElement.querySelector('.menu-toggle-btn').classList.remove('active');
+                }
+            });
+            
+            // Toggle this menu
+            actions.classList.toggle('show');
+            menuBtn.classList.toggle('active');
         }
         
         // Load conversations for a project
@@ -1067,26 +1112,7 @@
                 listElement.innerHTML = '';
                 
                 conversations.forEach(conv => {
-                    const item = document.createElement('div');
-                    item.className = 'conversation-item';
-                    item.dataset.conversationId = conv.id;
-                    if (conv.id === currentConversationId) {
-                        item.classList.add('active');
-                    }
-                    
-                    // Add unread indicator if conversation has unread responses
-                    const unreadDot = conv.has_unread_response ? '<span class="unread-dot"></span>' : '';
-                    
-                    item.innerHTML = `
-                        ${unreadDot}
-                        <span class="conversation-name">${conv.name}</span>
-                        <div class="conversation-actions">
-                            <button class="action-btn" onclick="moveConversation(${conv.id}); event.stopPropagation();" title="Move to...">📁</button>
-                            <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
-                            <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();" title="Delete">🗑️</button>
-                        </div>
-                    `;
-                    item.onclick = (e) => loadConversation(conv.id, e);
+                    const item = createConversationItem(conv);
                     listElement.appendChild(item);
                 });
             } catch (error) {
@@ -1107,26 +1133,7 @@
                     const conversations = data.conversations;
                     
                     conversations.forEach(conv => {
-                        const item = document.createElement('div');
-                        item.className = 'conversation-item';
-                        item.dataset.conversationId = conv.id;
-                        if (conv.id === currentConversationId) {
-                            item.classList.add('active');
-                        }
-                        
-                        // Add unread indicator if conversation has unread responses
-                        const unreadDot = conv.has_unread_response ? '<span class="unread-dot"></span>' : '';
-                        
-                        item.innerHTML = `
-                            ${unreadDot}
-                            <span class="conversation-name">${conv.name}</span>
-                            <div class="conversation-actions">
-                                <button class="action-btn" onclick="moveConversation(${conv.id}); event.stopPropagation();" title="Move to...">📁</button>
-                                <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
-                                <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();" title="Delete">🗑️</button>
-                            </div>
-                        `;
-                        item.onclick = (e) => loadConversation(conv.id, e);
+                        const item = createConversationItem(conv);
                         listElement.appendChild(item);
                     });
                 }
