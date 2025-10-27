@@ -251,6 +251,58 @@
             overflow: hidden;
         }
         
+        /* Unread indicator dot */
+        .unread-dot {
+            width: 8px;
+            height: 8px;
+            background: #10a37f;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        
+        .conversation-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Processing indicator (animated) */
+        .processing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+        }
+        
+        .processing-indicator span {
+            width: 4px;
+            height: 4px;
+            background: #666;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite ease-in-out both;
+        }
+        
+        .processing-indicator span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        
+        .processing-indicator span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        
+        @keyframes pulse {
+            0%, 80%, 100% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+            40% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -706,6 +758,8 @@
         async function init() {
             await loadProjects();
             setupEventListeners();
+            // Start polling for background response updates
+            startStatusPolling();
         }
         
         // Load projects from API
@@ -776,7 +830,12 @@
                     if (conv.id === currentConversationId) {
                         item.classList.add('active');
                     }
+                    
+                    // Add unread indicator if conversation has unread responses
+                    const unreadDot = conv.has_unread_response ? '<span class="unread-dot"></span>' : '';
+                    
                     item.innerHTML = `
+                        ${unreadDot}
                         <span class="conversation-name">${conv.name}</span>
                         <div class="conversation-actions">
                             <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
@@ -833,15 +892,31 @@
         
         // Poll for conversation updates (check for completed background responses)
         async function pollConversationUpdates() {
-            if (!currentConversationId) return;
-            
             try {
-                const response = await fetch(`/claude/conversations/${currentConversationId}/status`);
-                const data = await response.json();
+                // Check current conversation for updates
+                if (currentConversationId) {
+                    const response = await fetch(`/claude/conversations/${currentConversationId}/status`);
+                    const data = await response.json();
+                    
+                    // If there are pending messages that are now completed, reload the conversation
+                    if (data.status === 'processing') {
+                        // Still processing, reload to show updated content
+                        await loadConversationMessages();
+                    } else if (data.has_unread) {
+                        // Has unread response, reload
+                        await loadConversationMessages();
+                    }
+                }
                 
-                // If there are pending messages that are now completed, reload the conversation
-                if (data.has_unread && data.status === 'ready') {
-                    await loadConversationMessages();
+                // Periodically refresh sidebar to show unread indicators on other conversations
+                // (Do this every 5th poll to reduce load)
+                if (!pollConversationUpdates.counter) {
+                    pollConversationUpdates.counter = 0;
+                }
+                pollConversationUpdates.counter++;
+                
+                if (pollConversationUpdates.counter % 5 === 0) {
+                    await renderSidebar();
                 }
             } catch (error) {
                 console.error('Error polling conversation status:', error);
@@ -925,9 +1000,24 @@
                 
                 // Clear and load messages
                 clearMessages();
+                let hasProcessingMessage = false;
                 data.messages.forEach(msg => {
-                    addMessage(msg.role, msg.content);
+                    const msgContent = addMessage(msg.role, msg.content || '');
+                    
+                    // Show processing indicator for messages still being generated
+                    if (msg.status === 'processing' && msg.role === 'assistant') {
+                        hasProcessingMessage = true;
+                        msgContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
+                    }
                 });
+                
+                // Mark conversation as read
+                await fetch(`/claude/conversations/${conversationId}/mark-read`, {
+                    method: 'PATCH'
+                });
+                
+                // Refresh sidebar to remove unread dot
+                await renderSidebar();
                 
                 // Update active state in sidebar
                 document.querySelectorAll('.conversation-item').forEach(item => {
@@ -950,8 +1040,45 @@
                 if (window.innerWidth <= 768) {
                     toggleSidebar();
                 }
+                
+                // Start polling if there are processing messages
+                if (hasProcessingMessage) {
+                    startStatusPolling();
+                }
             } catch (error) {
                 console.error('Error loading conversation:', error);
+            }
+        }
+        
+        // Helper to reload conversation messages (for polling updates)
+        async function loadConversationMessages() {
+            if (!currentConversationId) return;
+            
+            try {
+                const response = await fetch(`/claude/conversations/detail/${currentConversationId}`);
+                const data = await response.json();
+                
+                // Clear and reload messages
+                clearMessages();
+                let hasProcessingMessage = false;
+                data.messages.forEach(msg => {
+                    const msgContent = addMessage(msg.role, msg.content || '');
+                    
+                    // Show processing indicator for messages still being generated
+                    if (msg.status === 'processing' && msg.role === 'assistant') {
+                        hasProcessingMessage = true;
+                        msgContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
+                    }
+                });
+                
+                // Stop polling if no more processing messages
+                if (!hasProcessingMessage) {
+                    stopStatusPolling();
+                    // Refresh sidebar to update conversation list
+                    await renderSidebar();
+                }
+            } catch (error) {
+                console.error('Error reloading conversation messages:', error);
             }
         }
         

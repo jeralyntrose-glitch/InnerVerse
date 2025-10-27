@@ -3073,7 +3073,7 @@ async def get_conversations(project: str):
         
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute("""
-            SELECT id, project, name, created_at, updated_at
+            SELECT id, project, name, created_at, updated_at, has_unread_response
             FROM conversations
             WHERE project = %s
             ORDER BY updated_at DESC
