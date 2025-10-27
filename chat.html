@@ -1199,13 +1199,23 @@
                     const response = await fetch(`/claude/conversations/${currentConversationId}/status`);
                     const data = await response.json();
                     
+                    console.log('📡 Poll status:', data.status, 'has_unread:', data.has_unread, 'pending:', data.pending_messages?.length || 0);
+                    
                     // If there are pending messages that are now completed, reload the conversation
                     if (data.status === 'processing') {
+                        console.log('🔄 Still processing, reloading messages...');
                         // Still processing, reload to show updated content (background refresh = true to prevent sidebar opening)
                         await loadConversationMessages(true);
                     } else if (data.has_unread) {
+                        console.log('✅ Has unread response, reloading messages...');
                         // Has unread response, reload (background refresh = true to prevent sidebar opening)
                         await loadConversationMessages(true);
+                        
+                        // Mark as read so we don't keep reloading
+                        await fetch(`/claude/conversations/${currentConversationId}/mark-read`, {
+                            method: 'PATCH'
+                        });
+                        console.log('✅ Marked conversation as read');
                     }
                 }
             } catch (error) {
