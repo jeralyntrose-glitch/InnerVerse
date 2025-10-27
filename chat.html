@@ -711,12 +711,13 @@
             const sidebarContent = document.getElementById('sidebarContent');
             sidebarContent.innerHTML = '';
             
+            // Add Projects sections (collapsed by default)
             for (const project of projects) {
                 const section = document.createElement('div');
-                section.className = 'project-section';
+                section.className = 'project-section collapsed';  // Collapsed by default
                 section.innerHTML = `
                     <div class="project-header" onclick="toggleProject(event)">
-                        <span class="project-arrow">▼</span>
+                        <span class="project-arrow">▶</span>
                         <span>${project.emoji ? project.emoji + ' ' : ''}${project.name}</span>
                     </div>
                     ${project.description ? `<div class="project-description">${project.description}</div>` : ''}
@@ -727,6 +728,21 @@
                 // Load conversations for this project
                 await loadConversations(project.id);
             }
+            
+            // Add "All Chats" section
+            const allChatsSection = document.createElement('div');
+            allChatsSection.className = 'project-section';  // Open by default
+            allChatsSection.innerHTML = `
+                <div class="project-header" onclick="toggleProject(event)">
+                    <span class="project-arrow">▼</span>
+                    <span>💬 All Chats</span>
+                </div>
+                <div class="conversation-list" id="all-chats"></div>
+            `;
+            sidebarContent.appendChild(allChatsSection);
+            
+            // Load all conversations for "All Chats"
+            await loadAllChats();
         }
         
         // Load conversations for a project
@@ -761,10 +777,53 @@
             }
         }
         
+        // Load all conversations across all projects
+        async function loadAllChats() {
+            try {
+                const listElement = document.getElementById('all-chats');
+                listElement.innerHTML = '';
+                
+                // Fetch conversations from all projects
+                for (const project of projects) {
+                    const response = await fetch(`/claude/conversations/${project.id}`);
+                    const data = await response.json();
+                    const conversations = data.conversations;
+                    
+                    conversations.forEach(conv => {
+                        const item = document.createElement('div');
+                        item.className = 'conversation-item';
+                        item.dataset.conversationId = conv.id;
+                        if (conv.id === currentConversationId) {
+                            item.classList.add('active');
+                        }
+                        item.innerHTML = `
+                            <span class="conversation-name">${conv.name}</span>
+                            <div class="conversation-actions">
+                                <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
+                                <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();" title="Delete">🗑️</button>
+                            </div>
+                        `;
+                        item.onclick = (e) => loadConversation(conv.id, e);
+                        listElement.appendChild(item);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading all chats:', error);
+            }
+        }
+        
         // Toggle project expand/collapse
         function toggleProject(e) {
             const section = e.currentTarget.parentElement;
+            const arrow = e.currentTarget.querySelector('.project-arrow');
             section.classList.toggle('collapsed');
+            
+            // Update arrow direction
+            if (section.classList.contains('collapsed')) {
+                arrow.textContent = '▶';
+            } else {
+                arrow.textContent = '▼';
+            }
         }
         
         // Create new chat
