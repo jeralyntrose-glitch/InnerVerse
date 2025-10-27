@@ -3367,8 +3367,8 @@ async def send_message_streaming(conversation_id: int, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def process_message_background(conversation_id: int, user_message: str, assistant_message_id: int):
-    """Background task to process Claude response"""
+def process_message_background(conversation_id: int, user_message: str, assistant_message_id: int, image_data: str = None):
+    """Background task to process Claude response (with vision support)"""
     try:
         print(f"🔄 [BACKGROUND] Processing message for conversation {conversation_id}")
         
@@ -3397,11 +3397,42 @@ def process_message_background(conversation_id: int, user_message: str, assistan
                 "content": msg["content"]
             })
         
-        # Add current user message
-        claude_messages.append({
-            "role": "user",
-            "content": user_message
-        })
+        # Add current user message with image if present
+        if image_data:
+            # Extract base64 data (remove data:image/...;base64, prefix if present)
+            if ',' in image_data:
+                media_type_prefix = image_data.split(',')[0]
+                base64_data = image_data.split(',')[1]
+                # Extract media type (e.g., "image/jpeg")
+                media_type = media_type_prefix.split(';')[0].split(':')[1] if ':' in media_type_prefix else "image/jpeg"
+            else:
+                base64_data = image_data
+                media_type = "image/jpeg"
+            
+            # Claude vision format
+            claude_messages.append({
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": base64_data
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": user_message or "Analyze this image for MBTI cognitive functions being used."
+                    }
+                ]
+            })
+        else:
+            # Text-only message
+            claude_messages.append({
+                "role": "user",
+                "content": user_message
+            })
         
         # Get response from Claude
         print(f"🤖 [BACKGROUND] Calling Claude API...")
@@ -3461,13 +3492,14 @@ def process_message_background(conversation_id: int, user_message: str, assistan
 
 @app.post("/claude/conversations/{conversation_id}/message/background")
 async def send_message_background(conversation_id: int, request: Request, background_tasks: BackgroundTasks):
-    """Send a message and process Claude's response in the background"""
+    """Send a message and process Claude's response in the background (with vision support)"""
     try:
         data = await request.json()
         user_message = data.get("message")
+        image_data = data.get("image")  # base64 image data
         
-        if not user_message:
-            raise HTTPException(status_code=400, detail="Message is required")
+        if not user_message and not image_data:
+            raise HTTPException(status_code=400, detail="Message or image is required")
         
         conn = get_db_connection()
         if not conn:
@@ -3493,7 +3525,7 @@ async def send_message_background(conversation_id: int, request: Request, backgr
             INSERT INTO messages (conversation_id, role, content, status)
             VALUES (%s, 'user', %s, 'completed')
             RETURNING id, role, content, created_at, status
-        """, (conversation_id, user_message))
+        """, (conversation_id, user_message or "[Image uploaded]"))
         user_msg = cursor.fetchone()
         
         # Create placeholder assistant message with status='processing'
@@ -3508,12 +3540,13 @@ async def send_message_background(conversation_id: int, request: Request, backgr
         cursor.close()
         conn.close()
         
-        # Enqueue background task
+        # Enqueue background task (pass image data if present)
         background_tasks.add_task(
             process_message_background,
             conversation_id,
             user_message,
-            assistant_msg['id']
+            assistant_msg['id'],
+            image_data
         )
         
         print(f"✅ Background task enqueued for conversation {conversation_id}, message {assistant_msg['id']}")

@@ -1672,75 +1672,46 @@
             }
             
             try {
-                const response = await fetch(`/claude/conversations/${currentConversationId}/message/stream`, {
+                // Use background endpoint - returns immediately, processes in background
+                const response = await fetch(`/claude/conversations/${currentConversationId}/message/background`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 
-                // Create AI message element
-                let aiMessageContent = addMessage('assistant', '');
-                let fullResponse = '';
-                
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-                    
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.slice(6));
-                                
-                                // Handle different event types
-                                if (data.event === 'start') {
-                                    continue;
-                                }
-                                
-                                if (data.chunk) {
-                                    fullResponse += data.chunk;
-                                    const rawHtml = marked.parse(fullResponse);
-                                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
-                                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
-                                        ALLOWED_ATTR: ['href', 'title', 'target']
-                                    });
-                                    aiMessageContent.innerHTML = cleanHtml;
-                                    scrollToBottom();
-                                }
-                                
-                                if (data.done) {
-                                    break;
-                                }
-                            } catch (e) {
-                                // Ignore parse errors
-                            }
-                        }
-                    }
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
                 }
                 
-                hideTypingIndicator();
+                // Show processing indicator
+                const aiMessageContent = addMessage('assistant', '');
+                aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
+                scrollToBottom();
                 
-                // Clear image after sending
+                // Clear image after sending (backend will handle it)
                 if (selectedImage) {
                     clearImage();
                 }
                 
-                // Update conversation name only if it's still "New Conversation" (first message)
+                // Update conversation name if it's the first message
                 const currentTitle = document.getElementById('chatTitle').textContent;
-                if (fullResponse && currentTitle === 'New Conversation') {
+                if (currentTitle === 'New Conversation') {
                     await updateConversationName(message || 'Image analysis');
                 }
+                
+                // Enable input immediately - response will come via polling
+                isTyping = false;
+                document.getElementById('sendButton').disabled = false;
+                hideTypingIndicator();
+                input.focus();
+                
+                // Start polling for the response
+                startStatusPolling();
                 
             } catch (error) {
                 console.error('Error:', error);
                 hideTypingIndicator();
                 addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
-            } finally {
                 isTyping = false;
                 document.getElementById('sendButton').disabled = false;
                 input.focus();
