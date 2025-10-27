@@ -481,8 +481,46 @@
             margin-bottom: 32px;
         }
         
+        /* Hamburger Menu Button */
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1001;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .menu-toggle:active {
+            transform: scale(0.95);
+        }
+        
+        .hamburger {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .hamburger span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        
         /* Mobile Responsive */
         @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+            
             .sidebar {
                 position: fixed;
                 left: 0;
@@ -490,6 +528,7 @@
                 height: 100vh;
                 z-index: 1000;
                 transform: translateX(-100%);
+                transition: transform 0.3s ease;
             }
             
             .sidebar.open {
@@ -559,6 +598,15 @@
     </style>
 </head>
 <body>
+    <!-- Mobile Menu Toggle -->
+    <button class="menu-toggle" id="menuToggle" onclick="toggleMobileMenu()">
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </button>
+    
     <div class="app-container">
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
@@ -621,6 +669,24 @@
         let projects = [];
         let isTyping = false;
         let selectedImage = null; // Store selected image as base64
+        
+        // Toggle mobile menu
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+        
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.getElementById('menuToggle');
+            
+            if (window.innerWidth <= 768 && sidebar && menuToggle) {
+                if (!sidebar.contains(e.target) && !menuToggle.contains(e.target) && sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                }
+            }
+        });
         
         // Initialize
         async function init() {
