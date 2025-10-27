@@ -1035,50 +1035,117 @@
             }
         }
         
-        // Filter conversations based on search query
-        function filterConversations() {
-            const searchQuery = document.getElementById('searchBox').value.toLowerCase().trim();
-            const allConversationItems = document.querySelectorAll('.conversation-item');
-            const allProjectSections = document.querySelectorAll('.project-section');
+        // Debounce timer for search
+        let searchDebounceTimer = null;
+        
+        // Filter conversations using backend search API
+        async function filterConversations() {
+            const searchQuery = document.getElementById('searchBox').value.trim();
             
-            // If search is empty, show everything
+            // Clear previous debounce timer
+            if (searchDebounceTimer) {
+                clearTimeout(searchDebounceTimer);
+            }
+            
+            // If search is empty, reload sidebar to show all conversations
             if (searchQuery === '') {
-                allConversationItems.forEach(item => {
-                    item.style.display = '';
-                });
-                allProjectSections.forEach(section => {
-                    section.style.display = '';
-                });
+                await renderSidebar();
                 return;
             }
             
-            // Filter conversations
-            allConversationItems.forEach(item => {
-                const conversationName = item.querySelector('.conversation-name').textContent.toLowerCase();
-                if (conversationName.includes(searchQuery)) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-            
-            // Hide project sections that have no visible conversations
-            allProjectSections.forEach(section => {
-                const conversationList = section.querySelector('.conversation-list');
-                const visibleConversations = conversationList.querySelectorAll('.conversation-item:not([style*="display: none"])');
-                
-                if (visibleConversations.length === 0) {
-                    section.style.display = 'none';
-                } else {
-                    section.style.display = '';
-                    // Auto-expand sections with matches
-                    if (section.classList.contains('collapsed')) {
-                        section.classList.remove('collapsed');
-                        const arrow = section.querySelector('.project-arrow');
-                        if (arrow) arrow.textContent = '▼';
+            // Debounce: wait 300ms after user stops typing
+            searchDebounceTimer = setTimeout(async () => {
+                try {
+                    // Call backend search API
+                    const response = await fetch(`/claude/search?q=${encodeURIComponent(searchQuery)}`);
+                    const data = await response.json();
+                    const results = data.results || [];
+                    
+                    // Clear sidebar and show search results
+                    const sidebarContent = document.getElementById('sidebarContent');
+                    sidebarContent.innerHTML = '';
+                    
+                    if (results.length === 0) {
+                        sidebarContent.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 13px;">No results found</div>';
+                        return;
                     }
+                    
+                    // Group results by project
+                    const resultsByProject = {};
+                    results.forEach(result => {
+                        if (!resultsByProject[result.project]) {
+                            resultsByProject[result.project] = [];
+                        }
+                        resultsByProject[result.project].push(result);
+                    });
+                    
+                    // Display results grouped by project
+                    for (const project of projects) {
+                        const projectResults = resultsByProject[project.id] || [];
+                        if (projectResults.length === 0) continue;
+                        
+                        const section = document.createElement('div');
+                        section.className = 'project-section'; // Open by default for search results
+                        section.innerHTML = `
+                            <div class="project-header" onclick="toggleProject(event)">
+                                <span class="project-arrow">▼</span>
+                                <span>${project.name}</span>
+                            </div>
+                            <div class="conversation-list" id="search-project-${project.id}"></div>
+                        `;
+                        sidebarContent.appendChild(section);
+                        
+                        const listElement = document.getElementById(`search-project-${project.id}`);
+                        projectResults.forEach(result => {
+                            const item = document.createElement('div');
+                            item.className = 'conversation-item';
+                            item.dataset.conversationId = result.id;
+                            if (result.id === currentConversationId) {
+                                item.classList.add('active');
+                            }
+                            
+                            // Create conversation name
+                            const nameSpan = document.createElement('span');
+                            nameSpan.className = 'conversation-name';
+                            nameSpan.textContent = result.name;
+                            item.appendChild(nameSpan);
+                            
+                            // Create action buttons
+                            const actionsDiv = document.createElement('div');
+                            actionsDiv.className = 'conversation-actions';
+                            
+                            const renameBtn = document.createElement('button');
+                            renameBtn.className = 'action-btn';
+                            renameBtn.textContent = '✏️';
+                            renameBtn.title = 'Rename';
+                            renameBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                renameConversation(result.id);
+                            };
+                            
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.className = 'action-btn';
+                            deleteBtn.textContent = '🗑️';
+                            deleteBtn.title = 'Delete';
+                            deleteBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                deleteConversation(result.id);
+                            };
+                            
+                            actionsDiv.appendChild(renameBtn);
+                            actionsDiv.appendChild(deleteBtn);
+                            item.appendChild(actionsDiv);
+                            
+                            // Attach click handler to load conversation
+                            item.onclick = (e) => loadConversation(result.id, e);
+                            
+                            listElement.appendChild(item);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error searching conversations:', error);
                 }
-            });
+            }, 300); // 300ms debounce delay
         }
         
         // Create new chat
