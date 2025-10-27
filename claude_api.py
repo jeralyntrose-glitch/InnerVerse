@@ -107,11 +107,11 @@ def query_innerverse_local(question: str) -> str:
         all_chunks = {}  # Deduplicate by text
         
         for query_idx, query in enumerate(search_queries, 1):
-            # Get embedding with UPGRADED model
-            print(f"🧮 [CLAUDE DEBUG] Creating embedding for query #{query_idx} with text-embedding-3-large...")
+            # Get embedding
+            print(f"🧮 [CLAUDE DEBUG] Creating embedding for query #{query_idx}...")
             response = openai.embeddings.create(
                 input=query,
-                model="text-embedding-3-large"  # UPGRADED from ada-002
+                model="text-embedding-ada-002"  # Using ada-002 for production index
             )
             query_vector = response.data[0].embedding
             print(f"✅ [CLAUDE DEBUG] Embedding created: {len(query_vector)} dimensions")
