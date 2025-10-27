@@ -152,6 +152,7 @@
         .conversation-actions {
             display: none;
             gap: 4px;
+            flex-shrink: 0;
         }
         
         .conversation-item:hover .conversation-actions {
@@ -170,6 +171,13 @@
         
         .action-btn:hover {
             background: rgba(0, 0, 0, 0.1);
+        }
+        
+        .project-description {
+            font-size: 11px;
+            color: #999;
+            padding: 0 12px 8px 30px;
+            line-height: 1.3;
         }
         
         /* Main Chat Area */
@@ -503,42 +511,45 @@
                 const section = document.createElement('div');
                 section.className = 'project-section';
                 section.innerHTML = `
-                    <div class="project-header" onclick="toggleProject('${project}')">
+                    <div class="project-header" onclick="toggleProject(event)">
                         <span class="project-arrow">▼</span>
-                        <span>${project}</span>
+                        <span>${project.emoji ? project.emoji + ' ' : ''}${project.name}</span>
                     </div>
-                    <div class="conversation-list" id="project-${project}"></div>
+                    ${project.description ? `<div class="project-description">${project.description}</div>` : ''}
+                    <div class="conversation-list" id="project-${project.id}"></div>
                 `;
                 sidebarContent.appendChild(section);
                 
                 // Load conversations for this project
-                await loadConversations(project);
+                await loadConversations(project.id);
             }
         }
         
         // Load conversations for a project
-        async function loadConversations(project) {
+        async function loadConversations(projectId) {
             try {
-                const response = await fetch(`/claude/conversations/${project}`);
+                const response = await fetch(`/claude/conversations/${projectId}`);
                 const data = await response.json();
                 const conversations = data.conversations;
                 
-                const listElement = document.getElementById(`project-${project}`);
+                const listElement = document.getElementById(`project-${projectId}`);
                 listElement.innerHTML = '';
                 
                 conversations.forEach(conv => {
                     const item = document.createElement('div');
                     item.className = 'conversation-item';
+                    item.dataset.conversationId = conv.id;
                     if (conv.id === currentConversationId) {
                         item.classList.add('active');
                     }
                     item.innerHTML = `
                         <span class="conversation-name">${conv.name}</span>
                         <div class="conversation-actions">
-                            <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();">🗑️</button>
+                            <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
+                            <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();" title="Delete">🗑️</button>
                         </div>
                     `;
-                    item.onclick = () => loadConversation(conv.id);
+                    item.onclick = (e) => loadConversation(conv.id, e);
                     listElement.appendChild(item);
                 });
             } catch (error) {
@@ -547,15 +558,15 @@
         }
         
         // Toggle project expand/collapse
-        function toggleProject(project) {
-            const section = event.currentTarget.parentElement;
+        function toggleProject(e) {
+            const section = e.currentTarget.parentElement;
             section.classList.toggle('collapsed');
         }
         
         // Create new chat
         async function createNewChat() {
             // Default to first project
-            const defaultProject = projects[0] || 'General';
+            const defaultProject = projects[0]?.id || 'quick-hits';
             
             try {
                 const response = await fetch('/claude/conversations', {
@@ -586,7 +597,7 @@
         }
         
         // Load a conversation
-        async function loadConversation(conversationId) {
+        async function loadConversation(conversationId, event) {
             try {
                 const response = await fetch(`/claude/conversations/detail/${conversationId}`);
                 const data = await response.json();
@@ -606,7 +617,15 @@
                 document.querySelectorAll('.conversation-item').forEach(item => {
                     item.classList.remove('active');
                 });
-                event.currentTarget.classList.add('active');
+                
+                // Add active class to the clicked item
+                if (event && event.currentTarget) {
+                    event.currentTarget.classList.add('active');
+                } else {
+                    // Fallback: find by data attribute
+                    const activeItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+                    if (activeItem) activeItem.classList.add('active');
+                }
                 
                 // Scroll to bottom
                 scrollToBottom();
@@ -617,6 +636,31 @@
                 }
             } catch (error) {
                 console.error('Error loading conversation:', error);
+            }
+        }
+        
+        // Rename conversation
+        async function renameConversation(conversationId) {
+            const newName = prompt('Enter new name:');
+            if (!newName || !newName.trim()) return;
+            
+            try {
+                await fetch(`/claude/conversations/${conversationId}/rename`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName.trim() })
+                });
+                
+                // Update title if this is the current conversation
+                if (conversationId === currentConversationId) {
+                    document.getElementById('chatTitle').textContent = newName.trim();
+                }
+                
+                // Reload sidebar to show new name
+                await renderSidebar();
+            } catch (error) {
+                console.error('Error renaming conversation:', error);
+                alert('Failed to rename conversation');
             }
         }
         
@@ -716,8 +760,9 @@
                 
                 hideTypingIndicator();
                 
-                // Update conversation name if first message
-                if (fullResponse) {
+                // Update conversation name only if it's still "New Conversation" (first message)
+                const currentTitle = document.getElementById('chatTitle').textContent;
+                if (fullResponse && currentTitle === 'New Conversation') {
                     await updateConversationName(message);
                 }
                 
