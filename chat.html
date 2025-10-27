@@ -953,6 +953,7 @@
                         ${unreadDot}
                         <span class="conversation-name">${conv.name}</span>
                         <div class="conversation-actions">
+                            <button class="action-btn" onclick="moveConversation(${conv.id}); event.stopPropagation();" title="Move to...">📁</button>
                             <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
                             <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();" title="Delete">🗑️</button>
                         </div>
@@ -992,6 +993,7 @@
                             ${unreadDot}
                             <span class="conversation-name">${conv.name}</span>
                             <div class="conversation-actions">
+                                <button class="action-btn" onclick="moveConversation(${conv.id}); event.stopPropagation();" title="Move to...">📁</button>
                                 <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
                                 <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();" title="Delete">🗑️</button>
                             </div>
@@ -1137,6 +1139,15 @@
                             const actionsDiv = document.createElement('div');
                             actionsDiv.className = 'conversation-actions';
                             
+                            const moveBtn = document.createElement('button');
+                            moveBtn.className = 'action-btn';
+                            moveBtn.textContent = '📁';
+                            moveBtn.title = 'Move to...';
+                            moveBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                moveConversation(result.id);
+                            };
+                            
                             const renameBtn = document.createElement('button');
                             renameBtn.className = 'action-btn';
                             renameBtn.textContent = '✏️';
@@ -1155,6 +1166,7 @@
                                 deleteConversation(result.id);
                             };
                             
+                            actionsDiv.appendChild(moveBtn);
                             actionsDiv.appendChild(renameBtn);
                             actionsDiv.appendChild(deleteBtn);
                             item.appendChild(actionsDiv);
@@ -1342,6 +1354,46 @@
                 await renderSidebar();
             } catch (error) {
                 console.error('Error deleting conversation:', error);
+            }
+        }
+        
+        // Move conversation to a different project
+        async function moveConversation(conversationId) {
+            try {
+                // Build project list for selection
+                let message = 'Move to which project?\n\n';
+                projects.forEach((p, index) => {
+                    message += `${index + 1}. ${p.name}\n`;
+                });
+                message += '\nEnter the number:';
+                
+                const selection = prompt(message);
+                if (!selection) return; // User cancelled
+                
+                const projectIndex = parseInt(selection) - 1;
+                if (projectIndex < 0 || projectIndex >= projects.length) {
+                    alert('Invalid selection');
+                    return;
+                }
+                
+                const targetProject = projects[projectIndex];
+                
+                // Call API to move conversation
+                const response = await fetch(`/claude/conversations/${conversationId}/move`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project: targetProject.id })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to move conversation');
+                }
+                
+                // Reload sidebar to show conversation in new location
+                await renderSidebar();
+            } catch (error) {
+                console.error('Error moving conversation:', error);
+                alert('Failed to move conversation');
             }
         }
         

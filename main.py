@@ -3615,6 +3615,44 @@ async def rename_conversation(conversation_id: int, request: Request):
         print(f"❌ Error renaming conversation: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.patch("/claude/conversations/{conversation_id}/move")
+async def move_conversation_to_project(conversation_id: int, request: Request):
+    """Move a conversation to a different project"""
+    try:
+        data = await request.json()
+        new_project = data.get("project")
+        
+        if not new_project:
+            raise HTTPException(status_code=400, detail="Project is required")
+        
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            UPDATE conversations
+            SET project = %s, updated_at = NOW()
+            WHERE id = %s
+            RETURNING id, project, name, created_at, updated_at
+        """, (new_project, conversation_id))
+        
+        conversation = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        return dict(conversation)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error moving conversation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.delete("/claude/messages/{message_id}")
 async def delete_message(message_id: int):
     """Delete a single message from a conversation"""
