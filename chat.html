@@ -420,6 +420,20 @@
             color: var(--text-primary);
         }
         
+        /* Image styling in messages */
+        .message-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 8px 0;
+            display: block;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .message.user .message-content img {
+            margin-bottom: 8px;
+        }
+        
         /* Markdown styling */
         .message-content h1 {
             font-size: 28px;
@@ -1552,8 +1566,8 @@
                 await createNewChat();
             }
             
-            // Add user message
-            addMessage('user', message);
+            // Add user message with image if present
+            addMessage('user', message, selectedImage);
             input.value = '';
             input.style.height = 'auto';
             
@@ -1671,7 +1685,7 @@
         }
         
         // UI Helper functions
-        function addMessage(role, content) {
+        function addMessage(role, content, imageData = null) {
             const messagesContainer = document.getElementById('messagesContainer');
             
             const messageDiv = document.createElement('div');
@@ -1680,16 +1694,34 @@
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
             
-            // Render markdown for assistant messages, plain text for user messages
-            if (role === 'assistant' && content) {
-                const rawHtml = marked.parse(content);
-                const cleanHtml = DOMPurify.sanitize(rawHtml, {
-                    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
-                    ALLOWED_ATTR: ['href', 'title', 'target']
-                });
-                contentDiv.innerHTML = cleanHtml;
-            } else {
-                contentDiv.textContent = content;
+            // Add image if present
+            if (imageData) {
+                const imgElement = document.createElement('img');
+                imgElement.src = imageData;
+                imgElement.style.maxWidth = '100%';
+                imgElement.style.borderRadius = '8px';
+                imgElement.style.marginBottom = content ? '8px' : '0';
+                imgElement.style.display = 'block';
+                contentDiv.appendChild(imgElement);
+            }
+            
+            // Add text content
+            if (content) {
+                // Render markdown for assistant messages, plain text for user messages
+                if (role === 'assistant') {
+                    const rawHtml = marked.parse(content);
+                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
+                        ALLOWED_ATTR: ['href', 'title', 'target']
+                    });
+                    const textDiv = document.createElement('div');
+                    textDiv.innerHTML = cleanHtml;
+                    contentDiv.appendChild(textDiv);
+                } else {
+                    const textDiv = document.createElement('div');
+                    textDiv.textContent = content;
+                    contentDiv.appendChild(textDiv);
+                }
             }
             
             messageDiv.appendChild(contentDiv);
