@@ -343,7 +343,7 @@
         
         .input-wrapper {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: flex-end;
             max-width: 900px;
             margin: 0 auto;
@@ -362,6 +362,72 @@
             transition: all 0.15s ease;
             background: var(--bg-primary);
             color: var(--text-primary);
+        }
+        
+        .upload-btn {
+            padding: 12px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+        }
+        
+        .upload-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .upload-btn input[type="file"] {
+            display: none;
+        }
+        
+        .image-preview {
+            display: none;
+            position: relative;
+            max-width: 200px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+        }
+        
+        .image-preview.show {
+            display: block;
+        }
+        
+        .image-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .image-preview-close {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .image-preview-close:hover {
+            background: rgba(0, 0, 0, 0.8);
         }
         
         .message-input:focus {
@@ -527,7 +593,15 @@
             </div>
             
             <div class="input-container">
+                <div class="image-preview" id="imagePreview">
+                    <img id="previewImg" src="" alt="Preview">
+                    <button class="image-preview-close" onclick="clearImage()">×</button>
+                </div>
                 <div class="input-wrapper">
+                    <label class="upload-btn" title="Upload image">
+                        📎
+                        <input type="file" id="imageInput" accept="image/*" onchange="handleImageSelect(event)">
+                    </label>
                     <textarea 
                         class="message-input" 
                         id="messageInput" 
@@ -546,6 +620,7 @@
         let currentProject = null;
         let projects = [];
         let isTyping = false;
+        let selectedImage = null; // Store selected image as base64
         
         // Initialize
         async function init() {
@@ -748,12 +823,41 @@
             }
         }
         
+        // Handle image selection
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image too large. Please select an image under 5MB.');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                selectedImage = e.target.result; // base64 string
+                
+                // Show preview
+                document.getElementById('previewImg').src = selectedImage;
+                document.getElementById('imagePreview').classList.add('show');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Clear selected image
+        function clearImage() {
+            selectedImage = null;
+            document.getElementById('imagePreview').classList.remove('show');
+            document.getElementById('imageInput').value = '';
+        }
+        
         // Send message
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
-            if (!message || isTyping) return;
+            if ((!message && !selectedImage) || isTyping) return;
             
             // Create conversation if needed
             if (!currentConversationId) {
@@ -774,11 +878,21 @@
             const welcomeScreen = document.getElementById('welcomeScreen');
             if (welcomeScreen) welcomeScreen.style.display = 'none';
             
+            // Prepare message payload
+            const payload = {
+                message: message || 'Analyze this image'
+            };
+            
+            // Add image if selected
+            if (selectedImage) {
+                payload.image = selectedImage;
+            }
+            
             try {
                 const response = await fetch(`/claude/conversations/${currentConversationId}/message/stream`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify(payload)
                 });
                 
                 // Create AI message element
@@ -823,10 +937,15 @@
                 
                 hideTypingIndicator();
                 
+                // Clear image after sending
+                if (selectedImage) {
+                    clearImage();
+                }
+                
                 // Update conversation name only if it's still "New Conversation" (first message)
                 const currentTitle = document.getElementById('chatTitle').textContent;
                 if (fullResponse && currentTitle === 'New Conversation') {
-                    await updateConversationName(message);
+                    await updateConversationName(message || 'Image analysis');
                 }
                 
             } catch (error) {

@@ -3199,13 +3199,14 @@ async def send_message(conversation_id: int, request: Request):
 
 @app.post("/claude/conversations/{conversation_id}/message/stream")
 async def send_message_streaming(conversation_id: int, request: Request):
-    """Send a message and get Claude's STREAMING response in real-time"""
+    """Send a message and get Claude's STREAMING response in real-time (with vision support)"""
     try:
         data = await request.json()
         user_message = data.get("message")
+        image_data = data.get("image")  # base64 image data
         
-        if not user_message:
-            raise HTTPException(status_code=400, detail="Message is required")
+        if not user_message and not image_data:
+            raise HTTPException(status_code=400, detail="Message or image is required")
         
         conn = get_db_connection()
         if not conn:
@@ -3213,12 +3214,12 @@ async def send_message_streaming(conversation_id: int, request: Request):
         
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Save user message
+        # Save user message (store text, image will be passed separately)
         cursor.execute("""
             INSERT INTO messages (conversation_id, role, content)
             VALUES (%s, 'user', %s)
             RETURNING id
-        """, (conversation_id, user_message))
+        """, (conversation_id, user_message or "[Image uploaded]"))
         conn.commit()
         
         # Get message history
@@ -3233,10 +3234,47 @@ async def send_message_streaming(conversation_id: int, request: Request):
         conn.close()  # Close connection NOW - generator will create its own
         
         claude_messages = []
-        for msg in message_history:
+        for msg in message_history[:-1]:  # All except the last one (which we'll add with image if present)
             claude_messages.append({
                 "role": msg["role"],
                 "content": msg["content"]
+            })
+        
+        # Add the latest user message with image if present
+        if image_data:
+            # Extract base64 data (remove data:image/...;base64, prefix if present)
+            if ',' in image_data:
+                media_type_prefix = image_data.split(',')[0]
+                base64_data = image_data.split(',')[1]
+                # Extract media type (e.g., "image/jpeg")
+                media_type = media_type_prefix.split(';')[0].split(':')[1] if ':' in media_type_prefix else "image/jpeg"
+            else:
+                base64_data = image_data
+                media_type = "image/jpeg"
+            
+            # Claude vision format: content array with image and text
+            claude_messages.append({
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": base64_data
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": user_message or "Analyze this image for MBTI cognitive functions being used."
+                    }
+                ]
+            })
+        else:
+            # Text-only message
+            claude_messages.append({
+                "role": "user",
+                "content": user_message
             })
         
         # Create generator for streaming
