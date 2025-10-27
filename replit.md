@@ -11,11 +11,12 @@ Preferred communication style: Simple, everyday language.
 ## Frontend Architecture
 - **UI/UX**: Features a glassmorphic design, animated SVG brain icon, purple gradient theme, and a live visual cost tracker. Includes Light/Dark mode, drag-and-drop PDF uploads, Google Drive integration, YouTube MP3 transcription, and a cloud-based visual tag library.
 - **Chat Interface (`/chat` and `/claude`)**: A professional, Claude.ai-inspired chat interface with full feature parity. It uses a clean, minimal aesthetic with neutral colors and the Inter font. Key features include:
-    - **Sidebar**: Collapsible project folders (7 categories), search functionality for conversations and messages, and conversation management (load, rename, delete).
-    - **Conversation Management**: Persistent conversation history stored in PostgreSQL, smart auto-naming for new chats, and responsive design for mobile.
+    - **Sidebar**: Collapsible project folders (7 categories) with compact 4px spacing, no descriptions shown, search functionality for conversations and messages, and conversation management (load, rename, delete). Mobile-optimized with burger menu that hides when sidebar is open, auto-closes on conversation selection, and batch-fetches all data before rendering to prevent flickering.
+    - **Conversation Management**: Persistent conversation history stored in PostgreSQL, smart auto-naming for new chats, and responsive design for mobile. "All Chats" section displays all conversations across all projects (up to 100, sorted by most recent).
     - **Real-time Interaction**: SSE streaming for AI responses with a typewriter effect, optimized scrolling, and a "thinking" indicator.
-    - **PWA Support**: Full Progressive Web App capabilities including offline support, installability, and manifest configuration.
+    - **PWA Support**: Full Progressive Web App capabilities including offline support, installability, and manifest configuration with professional teal brain icon.
     - **Performance**: Optimized for speed using HTML template strings, event delegation, optimistic UI updates, and parallel API fetches.
+    - **Chat Styling**: User messages display in teal bubbles (#10a37f) with white text, right-aligned at 70% max-width, with comprehensive markdown support. AI responses remain full-width.
 - **Migration Dashboard (`/migration`)**: Provides a real-time dashboard for upgrading embeddings with progress tracking and live logs.
 
 ## Backend Architecture
@@ -44,7 +45,7 @@ Preferred communication style: Simple, everyday language.
 ## API Structure
 - **Core APIs**: `POST /upload`, `POST /upload-base64`, `POST /upload-audio`, `POST /query`, `POST /text-to-pdf`, `POST /reprocess-pdf`.
 - **Document Management**: `GET /documents/report`, `DELETE /documents/{document_id}`, `DELETE /documents/all`, `PATCH /documents/{document_id}/rename`, and chat commands.
-- **Claude Chat API**: Endpoints for managing project categories, conversations, and messages.
+- **Claude Chat API**: Endpoints for managing project categories, conversations, and messages. Includes `GET /claude/conversations/all/list` for fetching all conversations across projects.
 - **OpenAI-Compatible API**: `GET /v1/models`, `POST /v1/chat/completions` for LibreChat integration, wrapping Claude and Pinecone functionality.
 - **System APIs**: Migration (`/api/start-migration`, `/api/migration-status`) and usage monitoring (`/api/usage`).
 - **Static Files**: Serves frontend assets and Swagger UI.
