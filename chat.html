@@ -718,7 +718,7 @@
                 section.innerHTML = `
                     <div class="project-header" onclick="toggleProject(event)">
                         <span class="project-arrow">▶</span>
-                        <span>${project.emoji ? project.emoji + ' ' : ''}${project.name}</span>
+                        <span>${project.name}</span>
                     </div>
                     ${project.description ? `<div class="project-description">${project.description}</div>` : ''}
                     <div class="conversation-list" id="project-${project.id}"></div>
