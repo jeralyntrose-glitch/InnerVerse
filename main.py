@@ -33,6 +33,8 @@ from youtube_transcript_api import YouTubeTranscriptApi
 import re
 import requests
 from http.cookiejar import MozillaCookieJar
+import threading
+import asyncio
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
