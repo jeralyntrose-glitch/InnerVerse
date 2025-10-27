@@ -1799,14 +1799,28 @@
                 isLongPress = false;
                 element.classList.add('pressing');
                 
-                pressTimer = setTimeout(() => {
+                pressTimer = setTimeout(async () => {
                     isLongPress = true;
-                    copyToClipboard(text);
                     element.classList.remove('pressing');
                     
                     // Haptic feedback on iOS
                     if (navigator.vibrate) {
                         navigator.vibrate(50);
+                    }
+                    
+                    // Try native share first (works best on iOS), fallback to copy
+                    if (navigator.share) {
+                        try {
+                            await navigator.share({ text: text });
+                            showCopyToast('Shared!');
+                        } catch (err) {
+                            // User cancelled or error - try clipboard instead
+                            if (err.name !== 'AbortError') {
+                                copyToClipboard(text);
+                            }
+                        }
+                    } else {
+                        copyToClipboard(text);
                     }
                 }, 500); // 500ms long press
             };
@@ -1893,16 +1907,16 @@
         }
         
         // Show copy success toast
-        function showCopyToast() {
+        function showCopyToast(message = 'Copied!') {
             let toast = document.getElementById('copyToast');
             if (!toast) {
                 toast = document.createElement('div');
                 toast.id = 'copyToast';
                 toast.className = 'copy-toast';
-                toast.textContent = 'Copied!';
                 document.body.appendChild(toast);
             }
             
+            toast.textContent = message;
             toast.classList.add('show');
             setTimeout(() => {
                 toast.classList.remove('show');
