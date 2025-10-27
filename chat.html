@@ -1021,6 +1021,10 @@
         async function renderSidebar() {
             const sidebarContent = document.getElementById('sidebarContent');
             
+            // Remember if sidebar was closed on mobile before re-rendering
+            const sidebar = document.getElementById('sidebar');
+            const wasClosed = window.innerWidth <= 768 && !sidebar.classList.contains('open');
+            
             // Fetch all conversations data in parallel BEFORE clearing sidebar
             const conversationsData = {};
             const fetchPromises = projects.map(async (project) => {
@@ -1093,6 +1097,12 @@
                 const item = createConversationItem(conv);
                 allListElement.appendChild(item);
             });
+            
+            // Restore sidebar closed state on mobile if it was closed before
+            if (wasClosed) {
+                sidebar.classList.remove('open');
+                document.body.classList.remove('sidebar-open');
+            }
         }
         
         // Helper function to create a conversation item element
