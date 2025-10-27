@@ -3342,6 +3342,242 @@ async def send_message_streaming(conversation_id: int, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def process_message_background(conversation_id: int, user_message: str, assistant_message_id: int):
+    """Background task to process Claude response"""
+    try:
+        print(f"🔄 [BACKGROUND] Processing message for conversation {conversation_id}")
+        
+        # Get message history
+        conn = get_db_connection()
+        if not conn:
+            print(f"❌ [BACKGROUND] Database unavailable")
+            return
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT role, content
+            FROM messages
+            WHERE conversation_id = %s AND status != 'processing'
+            ORDER BY created_at ASC
+        """, (conversation_id,))
+        message_history = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Build Claude messages
+        claude_messages = []
+        for msg in message_history:
+            claude_messages.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+        
+        # Add current user message
+        claude_messages.append({
+            "role": "user",
+            "content": user_message
+        })
+        
+        # Get response from Claude
+        print(f"🤖 [BACKGROUND] Calling Claude API...")
+        assistant_response, tool_details = chat_with_claude(claude_messages, conversation_id)
+        print(f"✅ [BACKGROUND] Claude response received: {len(assistant_response)} chars")
+        
+        # Update assistant message with response
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE messages
+                    SET content = %s, status = 'completed', updated_at = NOW()
+                    WHERE id = %s
+                """, (assistant_response, assistant_message_id))
+                
+                # Mark conversation as having unread response
+                cursor.execute("""
+                    UPDATE conversations
+                    SET has_unread_response = TRUE, updated_at = NOW()
+                    WHERE id = %s
+                """, (conversation_id,))
+                
+                conn.commit()
+                cursor.close()
+                print(f"✅ [BACKGROUND] Message {assistant_message_id} marked as completed")
+            except Exception as db_error:
+                print(f"❌ [BACKGROUND] Database error: {str(db_error)}")
+                import traceback
+                traceback.print_exc()
+            finally:
+                conn.close()
+                
+    except Exception as e:
+        print(f"❌ [BACKGROUND] Error processing message: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Mark message as error
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE messages
+                    SET status = 'error', content = %s, updated_at = NOW()
+                    WHERE id = %s
+                """, (f"Error: {str(e)}", assistant_message_id))
+                conn.commit()
+                cursor.close()
+            except:
+                pass
+            finally:
+                conn.close()
+
+
+@app.post("/claude/conversations/{conversation_id}/message/background")
+async def send_message_background(conversation_id: int, request: Request, background_tasks: BackgroundTasks):
+    """Send a message and process Claude's response in the background"""
+    try:
+        data = await request.json()
+        user_message = data.get("message")
+        
+        if not user_message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Check if there's already a processing message for this conversation
+        cursor.execute("""
+            SELECT id FROM messages
+            WHERE conversation_id = %s AND status = 'processing' AND role = 'assistant'
+            LIMIT 1
+        """, (conversation_id,))
+        existing = cursor.fetchone()
+        
+        if existing:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=409, detail="A message is already being processed for this conversation")
+        
+        # Save user message
+        cursor.execute("""
+            INSERT INTO messages (conversation_id, role, content, status)
+            VALUES (%s, 'user', %s, 'completed')
+            RETURNING id, role, content, created_at, status
+        """, (conversation_id, user_message))
+        user_msg = cursor.fetchone()
+        
+        # Create placeholder assistant message with status='processing'
+        cursor.execute("""
+            INSERT INTO messages (conversation_id, role, content, status)
+            VALUES (%s, 'assistant', '', 'processing')
+            RETURNING id, role, content, created_at, status
+        """, (conversation_id,))
+        assistant_msg = cursor.fetchone()
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Enqueue background task
+        background_tasks.add_task(
+            process_message_background,
+            conversation_id,
+            user_message,
+            assistant_msg['id']
+        )
+        
+        print(f"✅ Background task enqueued for conversation {conversation_id}, message {assistant_msg['id']}")
+        
+        return {
+            "user_message": dict(user_msg),
+            "assistant_message": dict(assistant_msg),
+            "status": "processing"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error sending background message: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/claude/conversations/{conversation_id}/status")
+async def get_conversation_status(conversation_id: int):
+    """Get conversation status including pending messages and unread responses"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get conversation info
+        cursor.execute("""
+            SELECT id, project, name, has_unread_response, updated_at
+            FROM conversations
+            WHERE id = %s
+        """, (conversation_id,))
+        conversation = cursor.fetchone()
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        # Get pending/processing messages
+        cursor.execute("""
+            SELECT id, role, content, status, created_at, updated_at
+            FROM messages
+            WHERE conversation_id = %s AND status = 'processing'
+            ORDER BY created_at DESC
+        """, (conversation_id,))
+        pending_messages = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "conversation": dict(conversation),
+            "has_unread": conversation['has_unread_response'],
+            "pending_messages": [dict(m) for m in pending_messages],
+            "status": "processing" if pending_messages else "ready"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting conversation status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/claude/conversations/{conversation_id}/mark-read")
+async def mark_conversation_read(conversation_id: int):
+    """Mark conversation as read (clear unread response flag)"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database unavailable")
+        
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE conversations
+            SET has_unread_response = FALSE
+            WHERE id = %s
+        """, (conversation_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return {"success": True}
+        
+    except Exception as e:
+        print(f"❌ Error marking conversation read: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.patch("/claude/conversations/{conversation_id}/rename")
 async def rename_conversation(conversation_id: int, request: Request):
     """Rename a conversation"""

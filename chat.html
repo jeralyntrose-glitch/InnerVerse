@@ -669,6 +669,7 @@
         let projects = [];
         let isTyping = false;
         let selectedImage = null; // Store selected image as base64
+        let statusPollInterval = null;
         
         // Toggle mobile menu
         function toggleMobileMenu() {
@@ -796,7 +797,12 @@
                         if (conv.id === currentConversationId) {
                             item.classList.add('active');
                         }
+                        
+                        // Add unread indicator if conversation has unread responses
+                        const unreadDot = conv.has_unread_response ? '<span class="unread-dot"></span>' : '';
+                        
                         item.innerHTML = `
+                            ${unreadDot}
                             <span class="conversation-name">${conv.name}</span>
                             <div class="conversation-actions">
                                 <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
@@ -809,6 +815,40 @@
                 }
             } catch (error) {
                 console.error('Error loading all chats:', error);
+            }
+        }
+        
+        // Poll for conversation updates (check for completed background responses)
+        async function pollConversationUpdates() {
+            if (!currentConversationId) return;
+            
+            try {
+                const response = await fetch(`/claude/conversations/${currentConversationId}/status`);
+                const data = await response.json();
+                
+                // If there are pending messages that are now completed, reload the conversation
+                if (data.has_unread && data.status === 'ready') {
+                    await loadConversationMessages();
+                }
+            } catch (error) {
+                console.error('Error polling conversation status:', error);
+            }
+        }
+        
+        // Start polling when page loads
+        function startStatusPolling() {
+            if (statusPollInterval) {
+                clearInterval(statusPollInterval);
+            }
+            // Poll every 3 seconds
+            statusPollInterval = setInterval(pollConversationUpdates, 3000);
+        }
+        
+        // Stop polling
+        function stopStatusPolling() {
+            if (statusPollInterval) {
+                clearInterval(statusPollInterval);
+                statusPollInterval = null;
             }
         }
         
