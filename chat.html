@@ -1201,11 +1201,11 @@
                     
                     // If there are pending messages that are now completed, reload the conversation
                     if (data.status === 'processing') {
-                        // Still processing, reload to show updated content
-                        await loadConversationMessages();
+                        // Still processing, reload to show updated content (background refresh = true to prevent sidebar opening)
+                        await loadConversationMessages(true);
                     } else if (data.has_unread) {
-                        // Has unread response, reload
-                        await loadConversationMessages();
+                        // Has unread response, reload (background refresh = true to prevent sidebar opening)
+                        await loadConversationMessages(true);
                     }
                 }
             } catch (error) {
@@ -1479,7 +1479,7 @@
         }
         
         // Helper to reload conversation messages (for polling updates)
-        async function loadConversationMessages() {
+        async function loadConversationMessages(backgroundRefresh = false) {
             if (!currentConversationId) return;
             
             try {
@@ -1502,14 +1502,17 @@
                 // Stop polling if no more processing messages
                 if (!hasProcessingMessage) {
                     stopStatusPolling();
-                    // Refresh sidebar to update conversation list
-                    await renderSidebar();
                     
-                    // Keep sidebar closed on mobile after background refresh
-                    if (window.innerWidth <= 768) {
-                        const sidebar = document.getElementById('sidebar');
-                        sidebar.classList.remove('open');
-                        document.body.classList.remove('sidebar-open');
+                    // Only refresh sidebar if NOT a background refresh (prevents sidebar from reopening on mobile)
+                    if (!backgroundRefresh) {
+                        await renderSidebar();
+                        
+                        // Keep sidebar closed on mobile after refresh
+                        if (window.innerWidth <= 768) {
+                            const sidebar = document.getElementById('sidebar');
+                            sidebar.classList.remove('open');
+                            document.body.classList.remove('sidebar-open');
+                        }
                     }
                 }
             } catch (error) {
