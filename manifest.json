@@ -1,11 +1,11 @@
 {
-  "name": "InnerVerse - MBTI Master",
+  "name": "InnerVerse Chat",
   "short_name": "InnerVerse",
-  "description": "Your personal MBTI knowledge workspace powered by Claude and CS Joseph's teachings",
-  "start_url": "/claude",
+  "description": "Your personal MBTI knowledge workspace powered by Claude Sonnet 4 and CS Joseph's teachings",
+  "start_url": "/chat",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#7C3AED",
+  "background_color": "#ffffff",
+  "theme_color": "#10a37f",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -28,8 +28,9 @@
       "name": "New Chat",
       "short_name": "New Chat",
       "description": "Start a new MBTI conversation",
-      "url": "/claude",
+      "url": "/chat",
       "icons": []
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }
