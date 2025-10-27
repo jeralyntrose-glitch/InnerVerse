@@ -3134,7 +3134,7 @@ async def get_conversation_detail(conversation_id: int):
             raise HTTPException(status_code=404, detail="Conversation not found")
         
         cursor.execute("""
-            SELECT id, role, content, created_at
+            SELECT id, role, content, created_at, status
             FROM messages
             WHERE conversation_id = %s
             ORDER BY created_at ASC
