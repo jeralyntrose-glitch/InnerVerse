@@ -671,6 +671,42 @@
             background: rgba(0, 0, 0, 0.8);
         }
         
+        /* Copy toast notification */
+        .copy-toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 10000;
+        }
+        
+        .copy-toast.show {
+            opacity: 1;
+        }
+        
+        /* Long-press visual feedback */
+        .message.user .message-content {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            cursor: pointer;
+        }
+        
+        .message.user .message-content.pressing {
+            opacity: 0.8;
+            transform: scale(0.98);
+            transition: all 0.1s ease;
+        }
+        
         .message-input:focus {
             outline: none;
             border-color: var(--accent);
@@ -1741,12 +1777,109 @@
                 }
             }
             
+            // Add long-press copy functionality to user messages
+            if (role === 'user' && content) {
+                setupLongPressCopy(contentDiv, content);
+            }
+            
             messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
             
             scrollToBottom();
             
             return contentDiv;
+        }
+        
+        // Setup long-press to copy for user messages
+        function setupLongPressCopy(element, text) {
+            let pressTimer = null;
+            let isLongPress = false;
+            
+            const handleTouchStart = (e) => {
+                isLongPress = false;
+                element.classList.add('pressing');
+                
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    copyToClipboard(text);
+                    element.classList.remove('pressing');
+                    
+                    // Haptic feedback on iOS
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                }, 500); // 500ms long press
+            };
+            
+            const handleTouchEnd = (e) => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                }
+                element.classList.remove('pressing');
+                
+                // Prevent click if it was a long press
+                if (isLongPress) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            };
+            
+            const handleTouchMove = (e) => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                }
+                element.classList.remove('pressing');
+            };
+            
+            const handleTouchCancel = (e) => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                }
+                element.classList.remove('pressing');
+            };
+            
+            element.addEventListener('touchstart', handleTouchStart, { passive: true });
+            element.addEventListener('touchend', handleTouchEnd);
+            element.addEventListener('touchmove', handleTouchMove, { passive: true });
+            element.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+            element.addEventListener('contextmenu', (e) => e.preventDefault()); // Prevent default context menu
+        }
+        
+        // Copy text to clipboard and show toast
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showCopyToast();
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showCopyToast();
+            }
+        }
+        
+        // Show copy success toast
+        function showCopyToast() {
+            let toast = document.getElementById('copyToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'copyToast';
+                toast.className = 'copy-toast';
+                toast.textContent = 'Copied!';
+                document.body.appendChild(toast);
+            }
+            
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
         }
         
         function clearMessages() {
