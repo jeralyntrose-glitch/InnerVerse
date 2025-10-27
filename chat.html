@@ -239,6 +239,13 @@
             color: var(--text-primary);
         }
         
+        /* Hide chat header on mobile */
+        @media (max-width: 768px) {
+            .chat-header {
+                display: none;
+            }
+        }
+        
         .messages-container {
             flex: 1;
             overflow-y: auto;
