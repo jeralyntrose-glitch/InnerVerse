@@ -388,11 +388,12 @@
         }
         
         .message.user {
-            background: transparent;
+            background: transparent !important;
             display: flex;
             justify-content: flex-end;
             padding: 12px 24px;
-            border-bottom: none;
+            border: none !important;
+            border-bottom: none !important;
         }
         
         .message.user .message-content {
@@ -402,6 +403,8 @@
             border-radius: 18px;
             max-width: 70%;
             margin: 0;
+            border: none;
+            box-shadow: none;
         }
         
         /* Override markdown colors for user messages to ensure readability on teal background */
