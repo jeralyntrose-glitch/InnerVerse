@@ -376,6 +376,17 @@
             animation: slideIn 0.3s ease;
         }
         
+        /* Less padding on mobile for more content space */
+        @media (max-width: 768px) {
+            .message {
+                padding: 16px 12px;
+            }
+            
+            .message.user {
+                padding: 12px 12px !important;
+            }
+        }
+        
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -440,11 +451,18 @@
         }
         
         .message-content {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             font-size: 15px;
             line-height: 1.6;
             color: var(--text-primary);
+        }
+        
+        /* Make content wider on mobile */
+        @media (max-width: 768px) {
+            .message-content {
+                max-width: 100% !important;
+            }
         }
         
         /* Image styling in messages */
