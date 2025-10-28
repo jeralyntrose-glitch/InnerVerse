@@ -1025,8 +1025,7 @@
             registerServiceWorker();
             await loadProjects();
             setupEventListeners();
-            // Start polling for background response updates
-            startStatusPolling();
+            // Polling is only started when using background processing mode
         }
         
         // Load projects from API
@@ -1215,45 +1214,42 @@
             }
         }
         
-        // Poll for conversation updates (check for completed background responses)
+        // Poll for conversation updates (ONLY when background processing is active)
         async function pollConversationUpdates() {
             try {
-                // Check current conversation for updates
-                if (currentConversationId) {
-                    const response = await fetch(`/claude/conversations/${currentConversationId}/status`);
-                    const data = await response.json();
+                // Only poll if current conversation exists and we're waiting for background response
+                if (!currentConversationId) return;
+                
+                const response = await fetch(`/claude/conversations/${currentConversationId}/status`);
+                const data = await response.json();
+                
+                console.log('📡 Poll status:', data.status, 'has_unread:', data.has_unread);
+                
+                // Only reload if we have an unread response (completed background processing)
+                if (data.has_unread) {
+                    console.log('✅ Background response completed, reloading...');
+                    await loadConversationMessages(true);
                     
-                    console.log('📡 Poll status:', data.status, 'has_unread:', data.has_unread, 'pending:', data.pending_messages?.length || 0);
+                    // Mark as read
+                    await fetch(`/claude/conversations/${currentConversationId}/mark-read`, {
+                        method: 'PATCH'
+                    });
                     
-                    // If there are pending messages that are now completed, reload the conversation
-                    if (data.status === 'processing') {
-                        console.log('🔄 Still processing, reloading messages...');
-                        // Still processing, reload to show updated content (background refresh = true to prevent sidebar opening)
-                        await loadConversationMessages(true);
-                    } else if (data.has_unread) {
-                        console.log('✅ Has unread response, reloading messages...');
-                        // Has unread response, reload (background refresh = true to prevent sidebar opening)
-                        await loadConversationMessages(true);
-                        
-                        // Mark as read so we don't keep reloading
-                        await fetch(`/claude/conversations/${currentConversationId}/mark-read`, {
-                            method: 'PATCH'
-                        });
-                        console.log('✅ Marked conversation as read');
-                    }
+                    // Stop polling once we get the response
+                    stopStatusPolling();
                 }
             } catch (error) {
                 console.error('Error polling conversation status:', error);
             }
         }
         
-        // Start polling when page loads
+        // Start polling (only for background processing mode)
         function startStatusPolling() {
             if (statusPollInterval) {
                 clearInterval(statusPollInterval);
             }
-            // Poll every 3 seconds
-            statusPollInterval = setInterval(pollConversationUpdates, 3000);
+            // Poll every 2 seconds for background responses
+            statusPollInterval = setInterval(pollConversationUpdates, 2000);
         }
         
         // Stop polling
@@ -1681,7 +1677,7 @@
             document.getElementById('imageInput').value = '';
         }
         
-        // Send message with GUARANTEED delivery (hybrid: background + streaming)
+        // Send message with streaming (foreground) or background processing (when backgrounded)
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -1717,60 +1713,96 @@
                 payload.image = selectedImage;
             }
             
+            // Clear image after preparing payload
+            const hadImage = !!selectedImage;
+            if (selectedImage) {
+                clearImage();
+            }
+            
             try {
-                // STEP 1: Save message to database using background endpoint (GUARANTEED DELIVERY)
-                console.log('💾 Saving message to database first...');
-                const bgResponse = await fetch(`/claude/conversations/${currentConversationId}/message/background`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                // Check if page is visible - use streaming if visible, background if not
+                const isVisible = document.visibilityState === 'visible';
                 
-                if (!bgResponse.ok) {
-                    throw new Error('Failed to save message');
+                if (isVisible) {
+                    // FOREGROUND MODE: Use streaming for immediate feedback
+                    console.log('📡 Streaming response (page visible)...');
+                    
+                    hideTypingIndicator();
+                    const aiMessageContent = addMessage('assistant', '');
+                    
+                    // Stream the response
+                    const response = await fetch(`/claude/conversations/${currentConversationId}/message`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to send message');
+                    }
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.content) {
+                                        aiMessageContent.textContent += parsed.content;
+                                        scrollToBottom();
+                                    }
+                                } catch (e) {
+                                    // Ignore parse errors
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Update conversation name if it's the first message
+                    const currentTitle = document.getElementById('chatTitle').textContent;
+                    if (currentTitle === 'New Conversation') {
+                        await updateConversationName(message || 'Image analysis');
+                    }
+                    
+                } else {
+                    // BACKGROUND MODE: Save to database for guaranteed delivery
+                    console.log('💾 Background processing (page hidden)...');
+                    
+                    const bgResponse = await fetch(`/claude/conversations/${currentConversationId}/message/background`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!bgResponse.ok) {
+                        throw new Error('Failed to save message');
+                    }
+                    
+                    hideTypingIndicator();
+                    const aiMessageContent = addMessage('assistant', '');
+                    aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
+                    
+                    // Start polling to check for completion
+                    startStatusPolling();
                 }
                 
-                console.log('✅ Message saved! Background processing started.');
-                
-                // Clear image after saving
-                if (selectedImage) {
-                    clearImage();
-                }
-                
-                // Update conversation name if it's the first message
-                const currentTitle = document.getElementById('chatTitle').textContent;
-                if (currentTitle === 'New Conversation') {
-                    await updateConversationName(message || 'Image analysis');
-                }
-                
-                // Show processing indicator in message
-                hideTypingIndicator(); // Hide the bottom typing indicator
-                const aiMessageContent = addMessage('assistant', '');
-                aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
-                scrollToBottom();
-                
-                // Enable input immediately - response will come via polling OR streaming
+                // Re-enable input
                 isTyping = false;
                 document.getElementById('sendButton').disabled = false;
                 input.focus();
-                
-                // STEP 2: Try to get streaming response (BONUS - for real-time display)
-                console.log('📡 Attempting to stream response...');
-                try {
-                    // Get the conversation messages to stream the response
-                    const streamResponse = await fetch(`/claude/conversations/detail/${currentConversationId}`);
-                    const convData = await streamResponse.json();
-                    const lastMsgId = convData.messages[convData.messages.length - 1].id;
-                    
-                    // Note: We're not actually streaming here since backend already started processing
-                    // Just start polling to catch the response
-                    startStatusPolling();
-                    
-                } catch (streamError) {
-                    console.log('⚠️ Streaming unavailable, relying on background processing');
-                    // Fall back to polling only
-                    startStatusPolling();
-                }
                 
             } catch (error) {
                 console.error('Error sending message:', error);
