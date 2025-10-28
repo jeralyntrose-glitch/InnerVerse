@@ -1,7 +1,6 @@
-const CACHE_NAME = 'innerverse-chat-v4';
+const CACHE_NAME = 'innerverse-chat-v5';
 const urlsToCache = [
   '/manifest.json',
-  '/chat',
   '/brain-icon-192.png',
   '/brain-icon-512.png',
   // CDN libraries for offline support
@@ -26,11 +25,13 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Skip caching for API calls and chat pages - always fetch fresh
+  // Skip caching for API calls and chat pages - ALWAYS fetch fresh
   if (url.pathname.startsWith('/api/') || 
       url.pathname.startsWith('/claude/') ||
       url.pathname === '/chat' ||
-      url.pathname === '/chat.html') {
+      url.pathname === '/chat.html' ||
+      url.pathname === '/' ||
+      url.pathname === '/index.html') {
     event.respondWith(fetch(event.request));
     return;
   }
@@ -40,8 +41,8 @@ self.addEventListener('fetch', (event) => {
                        url.host === 'fonts.googleapis.com' ||
                        url.host === 'fonts.gstatic.com';
   
-  // Skip caching for non-CDN JS files (dynamic scripts)
-  if (url.pathname.includes('.js') && !isCDNLibrary) {
+  // Skip caching for ALL HTML and JS files (except CDN) - always fetch fresh
+  if ((url.pathname.endsWith('.html') || url.pathname.endsWith('.js')) && !isCDNLibrary) {
     event.respondWith(fetch(event.request));
     return;
   }
