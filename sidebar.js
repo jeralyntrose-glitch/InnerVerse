@@ -202,6 +202,16 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Close any open menu when selecting a conversation
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.conversation-item') && !e.target.closest('.conversation-menu-btn') && !e.target.closest('.dropdown-menu')) {
+        if (currentMenu) {
+            currentMenu.classList.remove('show');
+            currentMenu = null;
+        }
+    }
+});
+
 // === Create New Conversation ===
 async function createNewConversation(folderId = 'brain-dump') {
     try {
