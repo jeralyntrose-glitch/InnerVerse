@@ -1677,7 +1677,7 @@
             document.getElementById('imageInput').value = '';
         }
         
-        // Send message with SMART HYBRID: streaming when visible, background when hidden
+        // Send message with STREAMING (foreground) - beautiful letter-by-letter display
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -1718,131 +1718,73 @@
                 clearImage();
             }
             
-            // SMART MODE SELECTION: Check if app is visible
-            const isVisible = document.visibilityState === 'visible';
-            console.log(`📱 App visibility: ${isVisible ? 'VISIBLE (streaming)' : 'HIDDEN (background)'}`);
-            
             try {
-                if (isVisible) {
-                    // FOREGROUND MODE: Use streaming for letter-by-letter display
-                    console.log('📡 Starting streaming response...');
+                // Use STREAMING for letter-by-letter display
+                console.log('📡 Starting streaming response...');
+                
+                // Hide typing indicator and create AI message bubble
+                hideTypingIndicator();
+                const aiMessageContent = addMessage('assistant', '');
+                
+                // Stream the response letter-by-letter
+                const response = await fetch(`/claude/conversations/${currentConversationId}/message/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
+                }
+                
+                // Update conversation name if it's the first message
+                const currentTitle = document.getElementById('chatTitle').textContent;
+                if (currentTitle === 'New Conversation') {
+                    await updateConversationName(message || 'Image analysis');
+                }
+                
+                // Read the streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullText = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
                     
-                    // Hide typing indicator and create AI message bubble
-                    hideTypingIndicator();
-                    const aiMessageContent = addMessage('assistant', '');
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
                     
-                    // Stream the response letter-by-letter
-                    const response = await fetch(`/claude/conversations/${currentConversationId}/message/stream`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error('Failed to send message');
-                    }
-                    
-                    // Update conversation name if it's the first message
-                    const currentTitle = document.getElementById('chatTitle').textContent;
-                    if (currentTitle === 'New Conversation') {
-                        await updateConversationName(message || 'Image analysis');
-                    }
-                    
-                    // Read the streaming response
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let buffer = '';
-                    let fullText = '';
-                    let streamAborted = false;
-                    
-                    // Listen for visibility change during streaming
-                    const visibilityHandler = () => {
-                        if (document.visibilityState === 'hidden') {
-                            console.log('⚠️ App backgrounded during streaming - response will complete in background');
-                            streamAborted = true;
-                            reader.cancel(); // Stop streaming
-                        }
-                    };
-                    document.addEventListener('visibilitychange', visibilityHandler);
-                    
-                    try {
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done || streamAborted) break;
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
                             
-                            buffer += decoder.decode(value, { stream: true });
-                            const lines = buffer.split('\n');
-                            buffer = lines.pop() || '';
-                            
-                            for (const line of lines) {
-                                if (line.startsWith('data: ')) {
-                                    const data = line.slice(6);
-                                    if (data === '[DONE]') continue;
-                                    
-                                    try {
-                                        const parsed = JSON.parse(data);
-                                        if (parsed.content) {
-                                            fullText += parsed.content;
-                                            // Update with plain text for streaming
-                                            aiMessageContent.textContent = fullText;
-                                            scrollToBottom();
-                                        }
-                                    } catch (e) {
-                                        // Ignore parse errors
-                                    }
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.content) {
+                                    fullText += parsed.content;
+                                    // Update with plain text for streaming
+                                    aiMessageContent.textContent = fullText;
+                                    scrollToBottom();
                                 }
+                            } catch (e) {
+                                // Ignore parse errors
                             }
                         }
-                    } finally {
-                        document.removeEventListener('visibilitychange', visibilityHandler);
                     }
-                    
-                    if (streamAborted) {
-                        // Stream was interrupted, show processing indicator and start polling
-                        aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
-                        startStatusPolling();
-                    } else {
-                        // Streaming completed successfully, render markdown
-                        if (fullText) {
-                            const rawHtml = marked.parse(fullText);
-                            const cleanHtml = DOMPurify.sanitize(rawHtml, {
-                                ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
-                                ALLOWED_ATTR: ['href', 'title', 'target']
-                            });
-                            aiMessageContent.innerHTML = cleanHtml;
-                        }
-                    }
-                    
-                } else {
-                    // BACKGROUND MODE: Use background processing for guaranteed delivery
-                    console.log('💾 Using background processing (app hidden)...');
-                    
-                    const bgResponse = await fetch(`/claude/conversations/${currentConversationId}/message/background`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                }
+                
+                // After streaming is complete, render markdown
+                if (fullText) {
+                    const rawHtml = marked.parse(fullText);
+                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
+                        ALLOWED_ATTR: ['href', 'title', 'target']
                     });
-                    
-                    if (!bgResponse.ok) {
-                        throw new Error('Failed to save message');
-                    }
-                    
-                    console.log('✅ Message saved! Processing in background.');
-                    
-                    // Update conversation name if it's the first message
-                    const currentTitle = document.getElementById('chatTitle').textContent;
-                    if (currentTitle === 'New Conversation') {
-                        await updateConversationName(message || 'Image analysis');
-                    }
-                    
-                    // Show processing indicator
-                    hideTypingIndicator();
-                    const aiMessageContent = addMessage('assistant', '');
-                    aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
-                    scrollToBottom();
-                    
-                    // Start polling to display the response when ready
-                    startStatusPolling();
+                    aiMessageContent.innerHTML = cleanHtml;
                 }
                 
                 // Re-enable input
