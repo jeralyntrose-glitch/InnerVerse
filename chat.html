@@ -1681,14 +1681,22 @@
         
         // Send message with STREAMING (foreground) - beautiful letter-by-letter display
         async function sendMessage() {
+            console.log('🚀 sendMessage() called');
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
+            console.log('📝 Message:', message);
+            console.log('🆔 currentConversationId:', currentConversationId);
             
-            if ((!message && !selectedImage) || isTyping) return;
+            if ((!message && !selectedImage) || isTyping) {
+                console.log('❌ Returning early - no message or isTyping:', isTyping);
+                return;
+            }
             
             // Create conversation if needed
             if (!currentConversationId) {
+                console.log('➕ Creating new conversation...');
                 await createNewChat();
+                console.log('✅ New conversation created:', currentConversationId);
             }
             
             // Add user message with image if present
@@ -1723,10 +1731,12 @@
             try {
                 // Use STREAMING for letter-by-letter display
                 console.log('📡 Starting streaming response...');
+                console.log('🔗 Endpoint:', `/claude/conversations/${currentConversationId}/message/stream`);
                 
                 // Hide typing indicator and create AI message bubble
                 hideTypingIndicator();
                 const aiMessageContent = addMessage('assistant', '');
+                console.log('💬 AI message bubble created:', aiMessageContent);
                 
                 // Stream the response letter-by-letter
                 const response = await fetch(`/claude/conversations/${currentConversationId}/message/stream`, {
@@ -1735,8 +1745,10 @@
                     body: JSON.stringify(payload)
                 });
                 
+                console.log('📥 Response received, status:', response.status, 'ok:', response.ok);
+                
                 if (!response.ok) {
-                    throw new Error('Failed to send message');
+                    throw new Error(`Failed to send message: ${response.status} ${response.statusText}`);
                 }
                 
                 // Update conversation name if it's the first message
@@ -1750,10 +1762,14 @@
                 const decoder = new TextDecoder();
                 let buffer = '';
                 let fullText = '';
+                console.log('📖 Starting to read stream...');
                 
                 while (true) {
                     const { done, value } = await reader.read();
-                    if (done) break;
+                    if (done) {
+                        console.log('✅ Stream complete. Total text length:', fullText.length);
+                        break;
+                    }
                     
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split('\n');
@@ -1795,9 +1811,10 @@
                 input.focus();
                 
             } catch (error) {
-                console.error('Error sending message:', error);
+                console.error('❌ ERROR sending message:', error);
+                console.error('❌ Error stack:', error.stack);
                 hideTypingIndicator();
-                addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+                addMessage('assistant', `Sorry, I encountered an error: ${error.message}\n\nPlease try again.`);
                 isTyping = false;
                 document.getElementById('sendButton').disabled = false;
                 input.focus();
