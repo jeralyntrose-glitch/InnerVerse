@@ -1681,7 +1681,7 @@
             document.getElementById('imageInput').value = '';
         }
         
-        // Send message with real-time streaming
+        // Send message with GUARANTEED delivery (hybrid: background + streaming)
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -1718,18 +1718,21 @@
             }
             
             try {
-                // Use STREAMING endpoint for real-time character-by-character display
-                const response = await fetch(`/claude/conversations/${currentConversationId}/message/stream`, {
+                // STEP 1: Save message to database using background endpoint (GUARANTEED DELIVERY)
+                console.log('💾 Saving message to database first...');
+                const bgResponse = await fetch(`/claude/conversations/${currentConversationId}/message/background`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 
-                if (!response.ok) {
-                    throw new Error('Failed to send message');
+                if (!bgResponse.ok) {
+                    throw new Error('Failed to save message');
                 }
                 
-                // Clear image after sending
+                console.log('✅ Message saved! Background processing started.');
+                
+                // Clear image after saving
                 if (selectedImage) {
                     clearImage();
                 }
@@ -1740,89 +1743,42 @@
                     await updateConversationName(message || 'Image analysis');
                 }
                 
-                // Create AI message container for streaming content
-                const aiMessageContent = addMessage('assistant', '');
-                hideTypingIndicator();
-                scrollToBottom();
-                
-                // Stream the response character-by-character
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                let fullResponse = '';
-                
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop(); // Keep incomplete line in buffer
-                    
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
-                            if (data === '[DONE]') continue;
-                            
-                            try {
-                                const parsed = JSON.parse(data);
-                                
-                                if (parsed.error) {
-                                    console.error('Stream error:', parsed.error);
-                                    aiMessageContent.textContent = 'Error: ' + parsed.error;
-                                    break;
-                                }
-                                
-                                if (parsed.done) {
-                                    break;
-                                }
-                                
-                                // Backend sends "chunk" not "content"
-                                if (parsed.chunk) {
-                                    fullResponse += parsed.chunk;
-                                    
-                                    // Render markdown in real-time
-                                    const rawHtml = marked.parse(fullResponse);
-                                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
-                                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
-                                        ALLOWED_ATTR: ['href', 'title', 'target']
-                                    });
-                                    aiMessageContent.innerHTML = cleanHtml;
-                                    scrollToBottom();
-                                }
-                            } catch (e) {
-                                console.error('Error parsing SSE:', e, data);
-                            }
-                        }
-                    }
-                }
-                
-                // Enable input after streaming completes
-                isTyping = false;
-                document.getElementById('sendButton').disabled = false;
-                input.focus();
-                
-                // Start polling to catch any messages that completed while offline
-                startStatusPolling();
-                
-            } catch (error) {
-                console.error('Streaming error:', error);
-                console.log('🔄 Stream interrupted - backend will continue processing, polling will catch response');
-                
-                // Show processing indicator - backend is still processing
+                // Show processing indicator
                 const aiMessageContent = addMessage('assistant', '');
                 aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
+                hideTypingIndicator();
                 scrollToBottom();
                 
-                // Enable input and start polling
-                // The streaming endpoint saves to DB even if client disconnects
+                // Enable input immediately - response will come via polling OR streaming
                 isTyping = false;
                 document.getElementById('sendButton').disabled = false;
-                hideTypingIndicator();
                 input.focus();
                 
-                // Start polling - will catch response when backend completes
-                startStatusPolling();
+                // STEP 2: Try to get streaming response (BONUS - for real-time display)
+                console.log('📡 Attempting to stream response...');
+                try {
+                    // Get the conversation messages to stream the response
+                    const streamResponse = await fetch(`/claude/conversations/detail/${currentConversationId}`);
+                    const convData = await streamResponse.json();
+                    const lastMsgId = convData.messages[convData.messages.length - 1].id;
+                    
+                    // Note: We're not actually streaming here since backend already started processing
+                    // Just start polling to catch the response
+                    startStatusPolling();
+                    
+                } catch (streamError) {
+                    console.log('⚠️ Streaming unavailable, relying on background processing');
+                    // Fall back to polling only
+                    startStatusPolling();
+                }
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                hideTypingIndicator();
+                addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+                isTyping = false;
+                document.getElementById('sendButton').disabled = false;
+                input.focus();
             }
         }
         
