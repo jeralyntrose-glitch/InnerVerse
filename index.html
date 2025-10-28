@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InnerVerse - Phase 1</title>
+    <title>InnerVerse - Phase 2</title>
     <link rel="stylesheet" href="/node_modules/@chatscope/chat-ui-kit-styles/dist/default/styles.min.css">
     <style>
         * {
@@ -187,17 +187,26 @@
             border-radius: 8px;
             margin: 10px 20px;
         }
+
+        .loading-indicator {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
     <div class="app-container">
         <div class="header">
             <h1>🧠 InnerVerse</h1>
-            <p>Phase 1: Chat with Claude Sonnet 4</p>
+            <p>Phase 2: Persistent Conversations</p>
         </div>
 
         <div class="chat-container">
-            <div class="messages" id="messages"></div>
+            <div class="messages" id="messages">
+                <div class="loading-indicator">Loading conversation...</div>
+            </div>
 
             <div class="input-container">
                 <input 
@@ -220,7 +229,66 @@
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
 
-        async function initializeConversation() {
+        async function loadLatestConversation() {
+            try {
+                // Try to get the latest conversation
+                const response = await fetch('/claude/conversations/all/list');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch conversations');
+                }
+
+                const data = await response.json();
+                
+                if (data.conversations && data.conversations.length > 0) {
+                    // Load the most recent conversation
+                    const latestConv = data.conversations[0];
+                    conversationId = latestConv.id;
+                    console.log('✅ Loaded latest conversation:', conversationId);
+                    
+                    // Load all messages for this conversation
+                    await loadConversationMessages(conversationId);
+                } else {
+                    // No conversations exist, create a new one
+                    await createNewConversation();
+                }
+            } catch (error) {
+                console.error('❌ Error loading conversation:', error);
+                // If loading fails, create a new conversation
+                await createNewConversation();
+            }
+        }
+
+        async function loadConversationMessages(convId) {
+            try {
+                const response = await fetch(`/claude/conversations/detail/${convId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load messages');
+                }
+
+                const data = await response.json();
+                
+                // Clear loading indicator
+                messagesDiv.innerHTML = '';
+                
+                // Display all messages
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        addMessage(msg.role, msg.content);
+                    });
+                    console.log(`✅ Loaded ${data.messages.length} messages`);
+                } else {
+                    messagesDiv.innerHTML = '';
+                }
+            } catch (error) {
+                console.error('❌ Error loading messages:', error);
+                messagesDiv.innerHTML = '';
+                showError('Failed to load conversation history.');
+            }
+        }
+
+        async function createNewConversation() {
             try {
                 const response = await fetch('/claude/conversations', {
                     method: 'POST',
@@ -237,9 +305,11 @@
 
                 const data = await response.json();
                 conversationId = data.id;
-                console.log('✅ Conversation created:', conversationId);
+                messagesDiv.innerHTML = '';
+                console.log('✅ Created new conversation:', conversationId);
             } catch (error) {
                 console.error('❌ Error creating conversation:', error);
+                messagesDiv.innerHTML = '';
                 showError('Failed to initialize chat. Please refresh the page.');
             }
         }
@@ -345,7 +415,8 @@
             }
         });
 
-        initializeConversation();
+        // Initialize on page load
+        loadLatestConversation();
     </script>
 </body>
 </html>
