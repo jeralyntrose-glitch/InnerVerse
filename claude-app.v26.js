@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#10a37f">
+    <meta name="description" content="Your personal MBTI knowledge workspace powered by Claude Sonnet 4">
+    <title>InnerVerse Chat</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json?v=2">
+    <link rel="icon" type="image/png" sizes="192x192" href="/brain-icon-192.png?v=2">
+    <link rel="icon" type="image/png" sizes="512x512" href="/brain-icon-512.png?v=2">
+    
+    <!-- Apple Touch Icons (iOS uses these, not manifest.json) -->
+    <!-- Using 980x980 to bypass iOS screenshot race condition bug -->
+    <link rel="apple-touch-icon" href="/brain-icon-980.png?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="/brain-icon-180.png?v=3">
+    <link rel="apple-touch-icon" sizes="192x192" href="/brain-icon-192.png?v=3">
+    <link rel="apple-touch-icon" sizes="512x512" href="/brain-icon-512.png?v=3">
+    <link rel="apple-touch-icon" sizes="980x980" href="/brain-icon-980.png?v=3">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    
+    <style>
+        :root {
+            /* Light mode colors */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7f7f8;
+            --bg-tertiary: #ececf1;
+            --text-primary: #202123;
+            --text-secondary: #6e6e80;
+            --text-tertiary: #acacbe;
+            --border-light: #e5e5e5;
+            --border-medium: #d1d1d6;
+            --accent: #10a37f;
+            --accent-hover: #0e9172;
+            --message-user-bg: #f4f4f4;
+            --message-assistant-bg: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.05);
+        }
+        
+        [data-theme="dark"] {
+            /* Dark mode colors */
+            --bg-primary: #212121;
+            --bg-secondary: #2f2f2f;
+            --bg-tertiary: #3f3f3f;
+            --text-primary: #ececf1;
+            --text-secondary: #c5c5d2;
+            --text-tertiary: #8e8ea0;
+            --border-light: #3f3f3f;
+            --border-medium: #565869;
+            --accent: #19c37d;
+            --accent-hover: #1a7f5e;
+            --message-user-bg: #3f3f3f;
+            --message-assistant-bg: #2f2f2f;
+            --shadow: rgba(0, 0, 0, 0.25);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar-header {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .new-chat-btn {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .new-chat-btn:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--border-medium);
+        }
+        
+        .new-chat-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* Search Box */
+        .search-box {
+            padding: 8px 12px;
+            margin-top: 8px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            width: 100%;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .search-box::placeholder {
+            color: var(--text-tertiary);
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        
+        .project-section {
+            margin-bottom: 4px;
+        }
+        
+        .project-header {
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 6px;
+            transition: background 0.15s ease;
+        }
+        
+        .project-header:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .project-arrow {
+            transition: transform 0.2s ease;
+        }
+        
+        .project-section.collapsed .project-arrow {
+            transform: rotate(-90deg);
+        }
+        
+        .project-section.collapsed .conversation-list {
+            display: none;
+        }
+        
+        .conversation-list {
+            margin-top: 4px;
+        }
+        
+        .conversation-item {
+            padding: 8px 12px;
+            margin: 1px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        
+        .conversation-item:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .conversation-item.active {
+            background: var(--bg-tertiary);
+            font-weight: 500;
+        }
+        
+        .conversation-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .conversation-actions {
+            display: none;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        
+        .conversation-actions.show {
+            display: flex;
+        }
+        
+        .menu-toggle-btn {
+            padding: 4px 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-tertiary);
+            opacity: 0.6;
+            flex-shrink: 0;
+            transition: opacity 0.15s ease;
+        }
+        
+        .menu-toggle-btn:hover,
+        .menu-toggle-btn.active {
+            opacity: 1;
+        }
+        
+        .action-btn {
+            padding: 4px 6px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            transition: all 0.15s ease;
+        }
+        
+        .action-btn:hover {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        
+        /* Main Chat Area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+        }
+        
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-light);
+            background: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Show only theme toggle on mobile in chat header */
+        @media (max-width: 768px) {
+            .chat-header {
+                padding: 12px 16px;
+                justify-content: flex-end;
+            }
+            
+            .chat-title {
+                display: none;
+            }
+        }
+        
+        /* Prevent background scrolling when sidebar is open on mobile */
+        body.sidebar-open {
+            overflow: hidden;
+        }
+        
+        /* Unread indicator dot */
+        .unread-dot {
+            width: 8px;
+            height: 8px;
+            background: #10a37f;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        
+        .conversation-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Processing indicator (animated) */
+        .processing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+        }
+        
+        .processing-indicator span {
+            width: 4px;
+            height: 4px;
+            background: #666;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite ease-in-out both;
+        }
+        
+        .processing-indicator span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        
+        .processing-indicator span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        
+        @keyframes pulse {
+            0%, 80%, 100% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+            40% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            width: 100%;
+            padding: 20px 24px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        /* Less padding on mobile for more content space */
+        @media (max-width: 768px) {
+            .message {
+                padding: 16px 12px;
+            }
+            
+            .message.user {
+                padding: 12px 12px !important;
+            }
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.user {
+            background: transparent !important;
+            display: flex;
+            justify-content: flex-end;
+            padding: 12px 24px;
+            border: none !important;
+            border-bottom: none !important;
+        }
+        
+        .message.user .message-content {
+            background: #10a37f;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 70%;
+            margin: 0;
+            border: none;
+            box-shadow: none;
+        }
+        
+        /* Override markdown colors for user messages to ensure readability on teal background */
+        .message.user .message-content,
+        .message.user .message-content * {
+            color: white !important;
+        }
+        
+        .message.user .message-content code {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .message.user .message-content pre {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .message.user .message-content pre code {
+            background: none;
+        }
+        
+        .message.user .message-content a {
+            color: white !important;
+            text-decoration: underline;
+        }
+        
+        .message.user .message-content a:hover {
+            opacity: 0.8;
+        }
+        
+        .message.assistant {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .message-content {
+            max-width: 900px;
+            margin: 0 auto;
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+        
+        /* Make content wider on mobile */
+        @media (max-width: 768px) {
+            .message-content {
+                max-width: 100% !important;
+            }
+        }
+        
+        /* Image styling in messages */
+        .message-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 8px 0;
+            display: block;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .message.user .message-content img {
+            margin-bottom: 8px;
+        }
+        
+        /* Markdown styling */
+        .message-content h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 16px 0 12px 0;
+            color: var(--text-primary);
+        }
+        
+        .message-content h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 14px 0 10px 0;
+            color: var(--text-primary);
+        }
+        
+        .message-content h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 12px 0 8px 0;
+            color: var(--text-primary);
+        }
+        
+        .message-content p {
+            margin: 8px 0;
+        }
+        
+        .message-content strong {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .message-content em {
+            font-style: italic;
+        }
+        
+        .message-content ul, .message-content ol {
+            margin: 12px 0;
+            padding-left: 24px;
+        }
+        
+        .message-content li {
+            margin: 6px 0;
+        }
+        
+        .message-content code {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .message-content pre {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+        
+        .message-content pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .message-content blockquote {
+            border-left: 3px solid var(--border-medium);
+            padding-left: 16px;
+            margin: 12px 0;
+            color: var(--text-secondary);
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: var(--message-assistant-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            max-width: fit-content;
+        }
+        
+        .typing-indicator.show {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-tertiary);
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+            30% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .input-container {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-light);
+            background: var(--bg-primary);
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            font-size: 16px; /* Minimum 16px for iOS to prevent zoom */
+            font-family: inherit;
+            resize: none;
+            min-height: 48px;
+            max-height: 200px;
+            transition: all 0.15s ease;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            -webkit-appearance: none; /* Remove iOS styling */
+            appearance: none;
+        }
+        
+        .upload-btn {
+            padding: 12px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+        }
+        
+        .upload-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .upload-btn input[type="file"] {
+            display: none;
+        }
+        
+        .image-preview {
+            display: none;
+            position: relative;
+            max-width: 200px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+        }
+        
+        .image-preview.show {
+            display: block;
+        }
+        
+        .image-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .image-preview-close {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .image-preview-close:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        /* Copy toast notification */
+        .copy-toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 10000;
+        }
+        
+        .copy-toast.show {
+            opacity: 1;
+        }
+        
+        /* Long-press visual feedback */
+        .message.user .message-content {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            cursor: pointer;
+        }
+        
+        .message.user .message-content.pressing {
+            opacity: 0.8;
+            transform: scale(0.98);
+            transition: all 0.1s ease;
+        }
+        
+        .message-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
+        }
+        
+        .send-button {
+            padding: 12px 20px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            min-width: 70px;
+        }
+        
+        .send-button:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .welcome-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .welcome-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+        
+        .welcome-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+        
+        /* Hamburger Menu Button */
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1001;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: opacity 0.3s ease;
+        }
+        
+        .menu-toggle:active {
+            transform: scale(0.95);
+        }
+        
+        /* Hide burger when sidebar is open on mobile */
+        body.sidebar-open .menu-toggle {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .hamburger {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .hamburger span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+            
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                z-index: 1000;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+                position: fixed;
+                top: 16px;
+                left: 16px;
+                z-index: 999;
+                padding: 8px 12px;
+                background: var(--bg-primary);
+                border: 1px solid var(--border-light);
+                border-radius: 8px;
+                cursor: pointer;
+                color: var(--text-primary);
+            }
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+        }
+        
+        /* Theme Toggle */
+        .theme-toggle {
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+        
+        .theme-toggle:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle -->
+    <button class="menu-toggle" id="menuToggle" onclick="toggleMobileMenu()">
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </button>
+    
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="createNewChat()">
+                    <span>+</span>
+                    <span>New Chat</span>
+                </button>
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search conversations..." oninput="filterConversations()">
+            </div>
+            
+            <div class="sidebar-content" id="sidebarContent">
+                <!-- Projects will be loaded here -->
+            </div>
+        </div>
+        
+        <!-- Main Chat -->
+        <div class="chat-container">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menu</button>
+            
+            <div class="chat-header">
+                <div class="chat-title" id="chatTitle">New Conversation</div>
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
+                    🌙
+                </button>
+            </div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-title">Welcome to InnerVerse Chat</div>
+                    <div class="welcome-subtitle">Ask anything about MBTI, cognitive functions, and personality types</div>
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <div class="image-preview" id="imagePreview">
+                    <img id="previewImg" src="" alt="Preview">
+                    <button class="image-preview-close" onclick="clearImage()">×</button>
+                </div>
+                <div class="input-wrapper">
+                    <label class="upload-btn" title="Upload image">
+                        📎
+                        <input type="file" id="imageInput" accept="image/*" onchange="handleImageSelect(event)">
+                    </label>
+                    <textarea 
+                        class="message-input" 
+                        id="messageInput" 
+                        placeholder="Type your message..."
+                        rows="1"
+                        autocomplete="off"
+                        autocorrect="on"
+                        autocapitalize="sentences"
+                        spellcheck="true"
+                    ></textarea>
+                    <button class="send-button" id="sendButton" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // State
+        let currentConversationId = null;
+        let currentProject = null;
+        let projects = [];
+        let isTyping = false;
+        let selectedImage = null; // Store selected image as base64
+        let statusPollInterval = null;
+        
+        // Toggle mobile menu
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+            // Toggle body class to hide burger when sidebar is open
+            document.body.classList.toggle('sidebar-open');
+        }
+        
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.getElementById('menuToggle');
+            
+            if (window.innerWidth <= 768 && sidebar && menuToggle) {
+                if (!sidebar.contains(e.target) && !menuToggle.contains(e.target) && sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                    document.body.classList.remove('sidebar-open');
+                }
+            }
+            
+            // Close conversation action menus when clicking outside
+            if (!e.target.closest('.conversation-actions') && !e.target.closest('.menu-toggle-btn')) {
+                document.querySelectorAll('.conversation-actions.show').forEach(el => {
+                    el.classList.remove('show');
+                    el.parentElement.querySelector('.menu-toggle-btn').classList.remove('active');
+                });
+            }
+        });
+        
+        // Register Service Worker for PWA
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            }
+        }
+        
+        // Initialize
+        async function init() {
+            registerServiceWorker();
+            await loadProjects();
+            setupEventListeners();
+            // Polling is only started when using background processing mode
+        }
+        
+        // Load projects from API
+        async function loadProjects() {
+            try {
+                const response = await fetch('/claude/projects');
+                const data = await response.json();
+                projects = data.projects;
+                renderSidebar();
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
+        }
+        
+        // Render sidebar with projects and conversations
+        async function renderSidebar() {
+            const sidebarContent = document.getElementById('sidebarContent');
+            
+            // Remember if sidebar was closed on mobile before re-rendering
+            const sidebar = document.getElementById('sidebar');
+            const wasClosed = window.innerWidth <= 768 && !sidebar.classList.contains('open');
+            
+            // Fetch all conversations data in parallel BEFORE clearing sidebar
+            const conversationsData = {};
+            const fetchPromises = projects.map(async (project) => {
+                try {
+                    const response = await fetch(`/claude/conversations/${project.id}`);
+                    const data = await response.json();
+                    conversationsData[project.id] = data.conversations;
+                } catch (error) {
+                    console.error(`Error loading conversations for ${project.id}:`, error);
+                    conversationsData[project.id] = [];
+                }
+            });
+            
+            // Also fetch all conversations
+            fetchPromises.push((async () => {
+                try {
+                    const response = await fetch('/claude/conversations/all/list');
+                    const data = await response.json();
+                    conversationsData['all'] = data.conversations;
+                } catch (error) {
+                    console.error('Error loading all conversations:', error);
+                    conversationsData['all'] = [];
+                }
+            })());
+            
+            // Wait for all data to be fetched
+            await Promise.all(fetchPromises);
+            
+            // NOW clear and rebuild sidebar with all data ready
+            sidebarContent.innerHTML = '';
+            
+            // Add Projects sections (collapsed by default)
+            for (const project of projects) {
+                const section = document.createElement('div');
+                section.className = 'project-section collapsed';  // Collapsed by default
+                section.innerHTML = `
+                    <div class="project-header" onclick="toggleProject(event)">
+                        <span class="project-arrow">▶</span>
+                        <span>${project.name}</span>
+                    </div>
+                    <div class="conversation-list" id="project-${project.id}"></div>
+                `;
+                sidebarContent.appendChild(section);
+                
+                // Render conversations immediately (data already fetched)
+                const listElement = document.getElementById(`project-${project.id}`);
+                const conversations = conversationsData[project.id] || [];
+                conversations.forEach(conv => {
+                    const item = createConversationItem(conv);
+                    listElement.appendChild(item);
+                });
+            }
+            
+            // Add "All Chats" section
+            const allChatsSection = document.createElement('div');
+            allChatsSection.className = 'project-section';  // Open by default
+            allChatsSection.innerHTML = `
+                <div class="project-header" onclick="toggleProject(event)">
+                    <span class="project-arrow">▼</span>
+                    <span>💬 All Chats</span>
+                </div>
+                <div class="conversation-list" id="all-chats"></div>
+            `;
+            sidebarContent.appendChild(allChatsSection);
+            
+            // Render all conversations immediately (data already fetched)
+            const allListElement = document.getElementById('all-chats');
+            const allConversations = conversationsData['all'] || [];
+            allConversations.forEach(conv => {
+                const item = createConversationItem(conv);
+                allListElement.appendChild(item);
+            });
+            
+            // Restore sidebar closed state on mobile if it was closed before
+            if (wasClosed) {
+                sidebar.classList.remove('open');
+                document.body.classList.remove('sidebar-open');
+            }
+        }
+        
+        // Helper function to create a conversation item element
+        function createConversationItem(conv) {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            item.dataset.conversationId = conv.id;
+            if (conv.id === currentConversationId) {
+                item.classList.add('active');
+            }
+            
+            // Add unread indicator if conversation has unread responses
+            const unreadDot = conv.has_unread_response ? '<span class="unread-dot"></span>' : '';
+            
+            item.innerHTML = `
+                ${unreadDot}
+                <span class="conversation-name" onclick="loadConversation(${conv.id}, event)">${conv.name}</span>
+                <button class="menu-toggle-btn" onclick="toggleConversationMenu(event)" title="Options">⋯</button>
+                <div class="conversation-actions">
+                    <button class="action-btn" onclick="moveConversation(${conv.id}); event.stopPropagation();" title="Move to...">📁</button>
+                    <button class="action-btn" onclick="renameConversation(${conv.id}); event.stopPropagation();" title="Rename">✏️</button>
+                    <button class="action-btn" onclick="deleteConversation(${conv.id}); event.stopPropagation();" title="Delete">🗑️</button>
+                </div>
+            `;
+            return item;
+        }
+        
+        // Toggle conversation menu (action buttons)
+        function toggleConversationMenu(event) {
+            event.stopPropagation();
+            const menuBtn = event.currentTarget;
+            const item = menuBtn.closest('.conversation-item');
+            const actions = item.querySelector('.conversation-actions');
+            
+            // Close other open menus
+            document.querySelectorAll('.conversation-actions.show').forEach(el => {
+                if (el !== actions) {
+                    el.classList.remove('show');
+                    el.parentElement.querySelector('.menu-toggle-btn').classList.remove('active');
+                }
+            });
+            
+            // Toggle this menu
+            actions.classList.toggle('show');
+            menuBtn.classList.toggle('active');
+        }
+        
+        // Load conversations for a project
+        async function loadConversations(projectId) {
+            try {
+                const response = await fetch(`/claude/conversations/${projectId}`);
+                const data = await response.json();
+                const conversations = data.conversations;
+                
+                const listElement = document.getElementById(`project-${projectId}`);
+                listElement.innerHTML = '';
+                
+                conversations.forEach(conv => {
+                    const item = createConversationItem(conv);
+                    listElement.appendChild(item);
+                });
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+        
+        // Load all conversations across all projects
+        async function loadAllChats() {
+            try {
+                const listElement = document.getElementById('all-chats');
+                listElement.innerHTML = '';
+                
+                // Fetch conversations from all projects
+                for (const project of projects) {
+                    const response = await fetch(`/claude/conversations/${project.id}`);
+                    const data = await response.json();
+                    const conversations = data.conversations;
+                    
+                    conversations.forEach(conv => {
+                        const item = createConversationItem(conv);
+                        listElement.appendChild(item);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading all chats:', error);
+            }
+        }
+        
+        // Poll for conversation updates (ONLY when background processing is active)
+        async function pollConversationUpdates() {
+            try {
+                // Only poll if current conversation exists and we're waiting for background response
+                if (!currentConversationId) return;
+                
+                const response = await fetch(`/claude/conversations/${currentConversationId}/status`);
+                const data = await response.json();
+                
+                console.log('📡 Poll status:', data.status, 'has_unread:', data.has_unread);
+                
+                // Only reload if we have an unread response (completed background processing)
+                if (data.has_unread) {
+                    console.log('✅ Background response completed, reloading...');
+                    await loadConversationMessages(true);
+                    
+                    // Mark as read
+                    await fetch(`/claude/conversations/${currentConversationId}/mark-read`, {
+                        method: 'PATCH'
+                    });
+                    
+                    // Stop polling once we get the response
+                    stopStatusPolling();
+                }
+            } catch (error) {
+                console.error('Error polling conversation status:', error);
+            }
+        }
+        
+        // Start polling (only for background processing mode)
+        function startStatusPolling() {
+            if (statusPollInterval) {
+                clearInterval(statusPollInterval);
+            }
+            // Poll every 2 seconds for background responses
+            statusPollInterval = setInterval(pollConversationUpdates, 2000);
+        }
+        
+        // Stop polling
+        function stopStatusPolling() {
+            if (statusPollInterval) {
+                clearInterval(statusPollInterval);
+                statusPollInterval = null;
+            }
+        }
+        
+        // Toggle project expand/collapse
+        function toggleProject(e) {
+            const section = e.currentTarget.parentElement;
+            const arrow = e.currentTarget.querySelector('.project-arrow');
+            section.classList.toggle('collapsed');
+            
+            // Update arrow direction
+            if (section.classList.contains('collapsed')) {
+                arrow.textContent = '▶';
+            } else {
+                arrow.textContent = '▼';
+            }
+        }
+        
+        // Debounce timer for search
+        let searchDebounceTimer = null;
+        
+        // Filter conversations using backend search API
+        async function filterConversations() {
+            const searchQuery = document.getElementById('searchBox').value.trim();
+            
+            // Clear previous debounce timer
+            if (searchDebounceTimer) {
+                clearTimeout(searchDebounceTimer);
+            }
+            
+            // If search is empty, reload sidebar to show all conversations
+            if (searchQuery === '') {
+                await renderSidebar();
+                return;
+            }
+            
+            // Debounce: wait 300ms after user stops typing
+            searchDebounceTimer = setTimeout(async () => {
+                try {
+                    // Call backend search API
+                    const response = await fetch(`/claude/search?q=${encodeURIComponent(searchQuery)}`);
+                    const data = await response.json();
+                    const results = data.results || [];
+                    
+                    // Clear sidebar and show search results
+                    const sidebarContent = document.getElementById('sidebarContent');
+                    sidebarContent.innerHTML = '';
+                    
+                    if (results.length === 0) {
+                        sidebarContent.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 13px;">No results found</div>';
+                        return;
+                    }
+                    
+                    // Group results by project
+                    const resultsByProject = {};
+                    results.forEach(result => {
+                        if (!resultsByProject[result.project]) {
+                            resultsByProject[result.project] = [];
+                        }
+                        resultsByProject[result.project].push(result);
+                    });
+                    
+                    // Display results grouped by project
+                    for (const project of projects) {
+                        const projectResults = resultsByProject[project.id] || [];
+                        if (projectResults.length === 0) continue;
+                        
+                        const section = document.createElement('div');
+                        section.className = 'project-section'; // Open by default for search results
+                        section.innerHTML = `
+                            <div class="project-header" onclick="toggleProject(event)">
+                                <span class="project-arrow">▼</span>
+                                <span>${project.name}</span>
+                            </div>
+                            <div class="conversation-list" id="search-project-${project.id}"></div>
+                        `;
+                        sidebarContent.appendChild(section);
+                        
+                        const listElement = document.getElementById(`search-project-${project.id}`);
+                        projectResults.forEach(result => {
+                            const item = document.createElement('div');
+                            item.className = 'conversation-item';
+                            item.dataset.conversationId = result.id;
+                            if (result.id === currentConversationId) {
+                                item.classList.add('active');
+                            }
+                            
+                            // Create conversation name
+                            const nameSpan = document.createElement('span');
+                            nameSpan.className = 'conversation-name';
+                            nameSpan.textContent = result.name;
+                            item.appendChild(nameSpan);
+                            
+                            // Create action buttons
+                            const actionsDiv = document.createElement('div');
+                            actionsDiv.className = 'conversation-actions';
+                            
+                            const moveBtn = document.createElement('button');
+                            moveBtn.className = 'action-btn';
+                            moveBtn.textContent = '📁';
+                            moveBtn.title = 'Move to...';
+                            moveBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                moveConversation(result.id);
+                            };
+                            
+                            const renameBtn = document.createElement('button');
+                            renameBtn.className = 'action-btn';
+                            renameBtn.textContent = '✏️';
+                            renameBtn.title = 'Rename';
+                            renameBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                renameConversation(result.id);
+                            };
+                            
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.className = 'action-btn';
+                            deleteBtn.textContent = '🗑️';
+                            deleteBtn.title = 'Delete';
+                            deleteBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                deleteConversation(result.id);
+                            };
+                            
+                            actionsDiv.appendChild(moveBtn);
+                            actionsDiv.appendChild(renameBtn);
+                            actionsDiv.appendChild(deleteBtn);
+                            item.appendChild(actionsDiv);
+                            
+                            // Attach click handler to load conversation
+                            item.onclick = (e) => loadConversation(result.id, e);
+                            
+                            listElement.appendChild(item);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error searching conversations:', error);
+                }
+            }, 300); // 300ms debounce delay
+        }
+        
+        // Create new chat
+        async function createNewChat() {
+            // Default to first project
+            const defaultProject = projects[0]?.id || 'quick-hits';
+            
+            try {
+                const response = await fetch('/claude/conversations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project: defaultProject,
+                        name: 'New Conversation'
+                    })
+                });
+                
+                const conversation = await response.json();
+                currentConversationId = conversation.id;
+                currentProject = conversation.project;
+                
+                // Clear messages
+                clearMessages();
+                document.getElementById('chatTitle').textContent = conversation.name;
+                
+                // Reload sidebar
+                await renderSidebar();
+                
+                // Focus input
+                document.getElementById('messageInput').focus();
+            } catch (error) {
+                console.error('Error creating conversation:', error);
+            }
+        }
+        
+        // Load a conversation
+        async function loadConversation(conversationId, event) {
+            try {
+                // Close mobile menu if open
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    const sidebar = document.getElementById('sidebar');
+                    sidebar.classList.remove('open');
+                    document.body.classList.remove('sidebar-open');
+                }
+                
+                const response = await fetch(`/claude/conversations/detail/${conversationId}`);
+                const data = await response.json();
+                
+                currentConversationId = conversationId;
+                currentProject = data.conversation.project;
+                
+                document.getElementById('chatTitle').textContent = data.conversation.name;
+                
+                // Clear and load messages
+                clearMessages();
+                let hasProcessingMessage = false;
+                data.messages.forEach(msg => {
+                    const msgContent = addMessage(msg.role, msg.content || '');
+                    
+                    // Show processing indicator for messages still being generated
+                    if (msg.status === 'processing' && msg.role === 'assistant') {
+                        hasProcessingMessage = true;
+                        msgContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
+                    }
+                });
+                
+                // Mark conversation as read
+                await fetch(`/claude/conversations/${conversationId}/mark-read`, {
+                    method: 'PATCH'
+                });
+                
+                // Refresh sidebar to remove unread dot
+                await renderSidebar();
+                
+                // Force sidebar to stay closed on mobile after refresh
+                if (isMobile) {
+                    const sidebar = document.getElementById('sidebar');
+                    sidebar.classList.remove('open');
+                    document.body.classList.remove('sidebar-open');
+                }
+                
+                // Update active state in sidebar
+                document.querySelectorAll('.conversation-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                // Add active class to the clicked item
+                if (event && event.currentTarget) {
+                    event.currentTarget.classList.add('active');
+                } else {
+                    // Fallback: find by data attribute
+                    const activeItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+                    if (activeItem) activeItem.classList.add('active');
+                }
+                
+                // Scroll to bottom
+                scrollToBottom();
+                
+                // Start polling if there are processing messages
+                if (hasProcessingMessage) {
+                    startStatusPolling();
+                }
+            } catch (error) {
+                console.error('Error loading conversation:', error);
+            }
+        }
+        
+        // Helper to reload conversation messages (for polling updates)
+        async function loadConversationMessages(backgroundRefresh = false) {
+            if (!currentConversationId) return;
+            
+            try {
+                const response = await fetch(`/claude/conversations/detail/${currentConversationId}`);
+                const data = await response.json();
+                
+                // Get existing messages to detect new ones
+                const existingMessages = Array.from(document.querySelectorAll('.message'));
+                const existingCount = existingMessages.length;
+                
+                // Clear and reload messages
+                clearMessages();
+                let hasProcessingMessage = false;
+                let newCompletedMessage = null;
+                
+                data.messages.forEach((msg, index) => {
+                    const msgContent = addMessage(msg.role, msg.content || '');
+                    
+                    // Show processing indicator for messages still being generated
+                    if (msg.status === 'processing' && msg.role === 'assistant') {
+                        hasProcessingMessage = true;
+                        msgContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
+                    }
+                    
+                    // Detect if this is a newly completed message (was processing, now completed)
+                    if (msg.role === 'assistant' && msg.status === 'completed' && index === data.messages.length - 1 && backgroundRefresh) {
+                        // This is the last message and we're in a background refresh - likely just completed
+                        newCompletedMessage = { element: msgContent, content: msg.content };
+                    }
+                });
+                
+                // If there's a newly completed message, animate it with typewriter effect
+                if (newCompletedMessage && newCompletedMessage.content) {
+                    typewriterEffect(newCompletedMessage.element, newCompletedMessage.content);
+                }
+                
+                // Stop polling if no more processing messages
+                if (!hasProcessingMessage) {
+                    stopStatusPolling();
+                    
+                    // Only refresh sidebar if NOT a background refresh (prevents sidebar from reopening on mobile)
+                    if (!backgroundRefresh) {
+                        await renderSidebar();
+                        
+                        // Keep sidebar closed on mobile after refresh
+                        if (window.innerWidth <= 768) {
+                            const sidebar = document.getElementById('sidebar');
+                            sidebar.classList.remove('open');
+                            document.body.classList.remove('sidebar-open');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error reloading conversation messages:', error);
+            }
+        }
+        
+        // Rename conversation
+        async function renameConversation(conversationId) {
+            const newName = prompt('Enter new name:');
+            if (!newName || !newName.trim()) return;
+            
+            try {
+                await fetch(`/claude/conversations/${conversationId}/rename`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName.trim() })
+                });
+                
+                // Update title if this is the current conversation
+                if (conversationId === currentConversationId) {
+                    document.getElementById('chatTitle').textContent = newName.trim();
+                }
+                
+                // Reload sidebar to show new name
+                await renderSidebar();
+            } catch (error) {
+                console.error('Error renaming conversation:', error);
+                alert('Failed to rename conversation');
+            }
+        }
+        
+        // Delete conversation
+        async function deleteConversation(conversationId) {
+            if (!confirm('Delete this conversation?')) return;
+            
+            try {
+                await fetch(`/claude/conversations/${conversationId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (currentConversationId === conversationId) {
+                    currentConversationId = null;
+                    clearMessages();
+                    document.getElementById('chatTitle').textContent = 'New Conversation';
+                }
+                
+                await renderSidebar();
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+            }
+        }
+        
+        // Move conversation to a different project
+        async function moveConversation(conversationId) {
+            try {
+                // Build project list for selection
+                let message = 'Move to which project?\n\n';
+                projects.forEach((p, index) => {
+                    message += `${index + 1}. ${p.name}\n`;
+                });
+                message += '\nEnter the number:';
+                
+                const selection = prompt(message);
+                if (!selection) return; // User cancelled
+                
+                const projectIndex = parseInt(selection) - 1;
+                if (projectIndex < 0 || projectIndex >= projects.length) {
+                    alert('Invalid selection');
+                    return;
+                }
+                
+                const targetProject = projects[projectIndex];
+                
+                // Call API to move conversation
+                const response = await fetch(`/claude/conversations/${conversationId}/move`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project: targetProject.id })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to move conversation');
+                }
+                
+                // Reload sidebar to show conversation in new location
+                await renderSidebar();
+            } catch (error) {
+                console.error('Error moving conversation:', error);
+                alert('Failed to move conversation');
+            }
+        }
+        
+        // Handle image selection
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image too large. Please select an image under 5MB.');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                selectedImage = e.target.result; // base64 string
+                
+                // Show preview
+                document.getElementById('previewImg').src = selectedImage;
+                document.getElementById('imagePreview').classList.add('show');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Clear selected image
+        function clearImage() {
+            selectedImage = null;
+            document.getElementById('imagePreview').classList.remove('show');
+            document.getElementById('imageInput').value = '';
+        }
+        
+        // Send message with STREAMING (foreground) - beautiful letter-by-letter display
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if ((!message && !selectedImage) || isTyping) return;
+            
+            // Create conversation if needed
+            if (!currentConversationId) {
+                await createNewChat();
+            }
+            
+            // Add user message with image if present
+            addMessage('user', message, selectedImage);
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            isTyping = true;
+            document.getElementById('sendButton').disabled = true;
+            
+            // Hide welcome screen
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            if (welcomeScreen) welcomeScreen.style.display = 'none';
+            
+            // Prepare message payload
+            const payload = {
+                message: message || 'Analyze this image'
+            };
+            
+            // Add image if selected
+            if (selectedImage) {
+                payload.image = selectedImage;
+            }
+            
+            // Clear image after preparing payload
+            if (selectedImage) {
+                clearImage();
+            }
+            
+            try {
+                // Use STREAMING for letter-by-letter display
+                console.log('📡 Starting streaming response...');
+                
+                // Hide typing indicator and create AI message bubble
+                hideTypingIndicator();
+                const aiMessageContent = addMessage('assistant', '');
+                
+                // Stream the response letter-by-letter
+                const response = await fetch(`/claude/conversations/${currentConversationId}/message/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
+                }
+                
+                // Update conversation name if it's the first message
+                const currentTitle = document.getElementById('chatTitle').textContent;
+                if (currentTitle === 'New Conversation') {
+                    await updateConversationName(message || 'Image analysis');
+                }
+                
+                // Read the streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullText = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.content) {
+                                    fullText += parsed.content;
+                                    // Update with plain text for streaming
+                                    aiMessageContent.textContent = fullText;
+                                    scrollToBottom();
+                                }
+                            } catch (e) {
+                                // Ignore parse errors
+                            }
+                        }
+                    }
+                }
+                
+                // After streaming is complete, render markdown
+                if (fullText) {
+                    const rawHtml = marked.parse(fullText);
+                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
+                        ALLOWED_ATTR: ['href', 'title', 'target']
+                    });
+                    aiMessageContent.innerHTML = cleanHtml;
+                }
+                
+                // Re-enable input
+                isTyping = false;
+                document.getElementById('sendButton').disabled = false;
+                input.focus();
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                hideTypingIndicator();
+                addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+                isTyping = false;
+                document.getElementById('sendButton').disabled = false;
+                input.focus();
+            }
+        }
+        
+        // Update conversation name based on first message
+        async function updateConversationName(firstMessage) {
+            const truncated = firstMessage.substring(0, 50) + (firstMessage.length > 50 ? '...' : '');
+            
+            try {
+                await fetch(`/claude/conversations/${currentConversationId}/rename`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: truncated })
+                });
+                
+                document.getElementById('chatTitle').textContent = truncated;
+                await renderSidebar();
+            } catch (error) {
+                console.error('Error updating conversation name:', error);
+            }
+        }
+        
+        // Typewriter effect for newly completed messages
+        function typewriterEffect(element, content) {
+            // Clear the element first (remove processing indicator)
+            element.innerHTML = '';
+            
+            // Parse markdown first
+            const rawHtml = marked.parse(content);
+            const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
+                ALLOWED_ATTR: ['href', 'title', 'target']
+            });
+            
+            // Create a temporary div to get the plain text chunks
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cleanHtml;
+            
+            // For smooth reveal, just fade in the full content with a brief delay
+            // This is faster and smoother than character-by-character for long responses
+            element.style.opacity = '0';
+            element.innerHTML = cleanHtml;
+            
+            // Smooth fade-in animation
+            requestAnimationFrame(() => {
+                element.style.transition = 'opacity 0.3s ease-in';
+                element.style.opacity = '1';
+                scrollToBottom();
+            });
+        }
+        
+        // UI Helper functions
+        function addMessage(role, content, imageData = null) {
+            const messagesContainer = document.getElementById('messagesContainer');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            // Add image if present
+            if (imageData) {
+                const imgElement = document.createElement('img');
+                imgElement.src = imageData;
+                imgElement.style.maxWidth = '100%';
+                imgElement.style.borderRadius = '8px';
+                imgElement.style.marginBottom = content ? '8px' : '0';
+                imgElement.style.display = 'block';
+                contentDiv.appendChild(imgElement);
+            }
+            
+            // Add text content
+            if (content) {
+                // Render markdown for assistant messages, plain text for user messages
+                if (role === 'assistant') {
+                    const rawHtml = marked.parse(content);
+                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
+                        ALLOWED_ATTR: ['href', 'title', 'target']
+                    });
+                    const textDiv = document.createElement('div');
+                    textDiv.innerHTML = cleanHtml;
+                    contentDiv.appendChild(textDiv);
+                } else {
+                    const textDiv = document.createElement('div');
+                    textDiv.textContent = content;
+                    contentDiv.appendChild(textDiv);
+                }
+            }
+            
+            // Add long-press copy functionality to user messages
+            if (role === 'user' && content) {
+                setupLongPressCopy(contentDiv, content);
+            }
+            
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            scrollToBottom();
+            
+            return contentDiv;
+        }
+        
+        // Setup long-press to copy for user messages
+        function setupLongPressCopy(element, text) {
+            let pressTimer = null;
+            let isLongPress = false;
+            
+            const handleTouchStart = (e) => {
+                console.log('👆 Touch start on message');
+                isLongPress = false;
+                element.classList.add('pressing');
+                
+                pressTimer = setTimeout(async () => {
+                    console.log('⏱️ Long press detected!');
+                    isLongPress = true;
+                    element.classList.remove('pressing');
+                    
+                    // Haptic feedback on iOS
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                    
+                    // Try native share first (works best on iOS), fallback to copy
+                    if (navigator.share) {
+                        console.log('📤 Using native share');
+                        try {
+                            await navigator.share({ text: text });
+                            showCopyToast('Shared!');
+                        } catch (err) {
+                            console.log('⚠️ Share cancelled or failed:', err.name);
+                            // User cancelled or error - try clipboard instead
+                            if (err.name !== 'AbortError') {
+                                copyToClipboard(text);
+                            }
+                        }
+                    } else {
+                        console.log('📋 Using clipboard copy');
+                        copyToClipboard(text);
+                    }
+                }, 500); // 500ms long press
+            };
+            
+            const handleTouchEnd = (e) => {
+                console.log('👆 Touch end');
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                }
+                element.classList.remove('pressing');
+                
+                // Prevent click if it was a long press
+                if (isLongPress) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            };
+            
+            const handleTouchMove = (e) => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                }
+                element.classList.remove('pressing');
+            };
+            
+            const handleTouchCancel = (e) => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                }
+                element.classList.remove('pressing');
+            };
+            
+            console.log('✅ Long-press copy enabled for message');
+            element.addEventListener('touchstart', handleTouchStart, { passive: false });
+            element.addEventListener('touchend', handleTouchEnd, { passive: false });
+            element.addEventListener('touchmove', handleTouchMove, { passive: true });
+            element.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+            element.addEventListener('contextmenu', (e) => e.preventDefault()); // Prevent default context menu
+        }
+        
+        // Copy text to clipboard and show toast
+        function copyToClipboard(text) {
+            // Create a contenteditable div (works better on iOS than textarea)
+            const el = document.createElement('div');
+            el.contentEditable = true;
+            el.textContent = text;
+            
+            // Style it to be visible but off-screen for iOS
+            el.style.position = 'fixed';
+            el.style.top = '0';
+            el.style.left = '0';
+            el.style.width = '1px';
+            el.style.height = '1px';
+            el.style.opacity = '0';
+            el.style.overflow = 'hidden';
+            
+            document.body.appendChild(el);
+            
+            // Select the text
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // For iOS specifically
+            if (navigator.userAgent.match(/ipad|iphone/i)) {
+                el.focus();
+            }
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopyToast();
+                    console.log('✅ Copy successful:', text.substring(0, 50));
+                } else {
+                    console.error('❌ Copy command failed');
+                }
+            } catch (err) {
+                console.error('❌ Failed to copy:', err);
+            }
+            
+            // Clean up
+            selection.removeAllRanges();
+            document.body.removeChild(el);
+        }
+        
+        // Show copy success toast
+        function showCopyToast(message = 'Copied!') {
+            let toast = document.getElementById('copyToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'copyToast';
+                toast.className = 'copy-toast';
+                document.body.appendChild(toast);
+            }
+            
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+        
+        function clearMessages() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.innerHTML = '';
+        }
+        
+        function showTypingIndicator() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator show';
+            indicator.id = 'typingIndicator';
+            indicator.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            messagesContainer.appendChild(indicator);
+            scrollToBottom();
+        }
+        
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+        
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const isOpen = sidebar.classList.toggle('open');
+            
+            // Prevent background scrolling on mobile when sidebar is open
+            if (isOpen) {
+                document.body.classList.add('sidebar-open');
+            } else {
+                document.body.classList.remove('sidebar-open');
+            }
+        }
+        
+        // Event listeners
+        function setupEventListeners() {
+            const input = document.getElementById('messageInput');
+            
+            // Auto-resize textarea
+            input.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            });
+            
+            // Enter to send (desktop), Shift+Enter for new line
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey && window.innerWidth > 768) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
+        
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            // Update button icon
+            document.getElementById('themeToggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        // Load saved theme on startup
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('themeToggle').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTheme();
+            init();
+        });
+    </script>
+</body>
+</html>
