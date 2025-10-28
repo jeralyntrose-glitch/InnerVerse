@@ -87,7 +87,7 @@ function renderSidebar() {
     // Render project folders
     FOLDERS.forEach(folder => {
         const conversations = allConversations.filter(c => c.project === folder.id);
-        const isExpanded = folderStates[folder.id] !== false; // Default: expanded
+        const isExpanded = folderStates[folder.id] === true; // Default: closed
         
         html += `
             <div class="folder ${isExpanded ? 'expanded' : ''}" data-folder="${folder.id}">
