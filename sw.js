@@ -1,10 +1,8 @@
-const CACHE_NAME = 'innerverse-chat-v5';
+const CACHE_NAME = 'innerverse-chat-v6';
 const urlsToCache = [
   '/manifest.json',
-  '/chat', // Cached for offline fallback only
   '/brain-icon-192.png',
   '/brain-icon-512.png',
-  '/brain-icon-980.png',
   // CDN libraries for offline support
   'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
   'https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js',
@@ -12,13 +10,15 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', (event) => {
+  // Force this service worker to activate immediately
+  console.log('[SW v6] Installing...');
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching files');
+        console.log('[SW v6] Caching essential files only');
         return cache.addAll(urlsToCache).catch(err => {
-          console.error('Service Worker: Cache failed for some files:', err);
+          console.error('[SW v6] Cache failed for some files:', err);
         });
       })
   );
@@ -27,8 +27,14 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Network-first for API calls - ALWAYS fetch fresh, no caching
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/claude/')) {
+  // Network-ONLY for all HTML pages and API calls - NEVER cache these!
+  if (url.pathname.startsWith('/api/') || 
+      url.pathname.startsWith('/claude/') ||
+      url.pathname === '/chat' ||
+      url.pathname === '/claude' ||
+      url.pathname === '/' ||
+      url.pathname.endsWith('.html')) {
+    console.log('[SW v6] Network-ONLY:', url.pathname);
     event.respondWith(fetch(event.request));
     return;
   }
@@ -38,13 +44,12 @@ self.addEventListener('fetch', (event) => {
                        url.host === 'fonts.googleapis.com' ||
                        url.host === 'fonts.gstatic.com';
   
-  // Network-first for HTML/JS files (except CDN) - fetch fresh, update cache, fallback to cache offline
-  if ((url.pathname.endsWith('.html') || url.pathname.endsWith('.js') || 
-       url.pathname === '/chat' || url.pathname === '/') && !isCDNLibrary) {
+  // Network-first for local JS files (except CDN)
+  if (url.pathname.endsWith('.js') && !isCDNLibrary) {
+    console.log('[SW v6] Network-first for JS:', url.pathname);
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Update cache with fresh version
           if (response && response.status === 200) {
             const responseToCache = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -53,23 +58,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => {
-          // Offline fallback - try cached version first
-          return caches.match(event.request).then((cached) => {
-            if (cached) return cached;
-            
-            // For navigation requests, fall back to /chat shell
-            if (event.request.mode === 'navigate') {
-              return caches.match('/chat');
-            }
-            
-            // For scripts/assets, fail gracefully (don't return HTML as JS)
-            return new Response('Offline - resource not cached', {
-              status: 503,
-              statusText: 'Service Unavailable'
-            });
-          });
-        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
@@ -114,18 +103,24 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  console.log('[SW v6] Activating...');
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
+      console.log('[SW v6] Found caches:', cacheNames);
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('Service Worker: Clearing old cache:', cacheName);
+            console.log('[SW v6] ❌ DELETING old cache:', cacheName);
             return caches.delete(cacheName);
+          } else {
+            console.log('[SW v6] ✅ Keeping cache:', cacheName);
           }
         })
       );
+    }).then(() => {
+      console.log('[SW v6] Taking control of all clients');
+      return self.clients.claim();
     })
   );
-  return self.clients.claim();
 });
