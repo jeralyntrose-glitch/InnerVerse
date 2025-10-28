@@ -1677,7 +1677,7 @@
             document.getElementById('imageInput').value = '';
         }
         
-        // Send message with HYBRID delivery: background save + foreground streaming
+        // Send message with STREAMING (foreground) or background processing (when app is closed)
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -1719,19 +1719,23 @@
             }
             
             try {
-                // STEP 1: Always save to database first (GUARANTEED delivery even if app closes)
-                console.log('💾 Saving message to database...');
-                const bgResponse = await fetch(`/claude/conversations/${currentConversationId}/message/background`, {
+                // Use STREAMING for letter-by-letter display
+                console.log('📡 Starting streaming response...');
+                
+                // Hide typing indicator and create AI message bubble
+                hideTypingIndicator();
+                const aiMessageContent = addMessage('assistant', '');
+                
+                // Stream the response letter-by-letter
+                const response = await fetch(`/claude/conversations/${currentConversationId}/message/stream`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 
-                if (!bgResponse.ok) {
-                    throw new Error('Failed to save message');
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
                 }
-                
-                console.log('✅ Message saved! Processing started in background.');
                 
                 // Update conversation name if it's the first message
                 const currentTitle = document.getElementById('chatTitle').textContent;
@@ -1739,19 +1743,54 @@
                     await updateConversationName(message || 'Image analysis');
                 }
                 
-                // Show processing indicator
-                hideTypingIndicator();
-                const aiMessageContent = addMessage('assistant', '');
-                aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
-                scrollToBottom();
+                // Read the streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullText = '';
                 
-                // Re-enable input immediately
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.content) {
+                                    fullText += parsed.content;
+                                    // Update with plain text for streaming
+                                    aiMessageContent.textContent = fullText;
+                                    scrollToBottom();
+                                }
+                            } catch (e) {
+                                // Ignore parse errors
+                            }
+                        }
+                    }
+                }
+                
+                // After streaming is complete, render markdown
+                if (fullText) {
+                    const rawHtml = marked.parse(fullText);
+                    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a'],
+                        ALLOWED_ATTR: ['href', 'title', 'target']
+                    });
+                    aiMessageContent.innerHTML = cleanHtml;
+                }
+                
+                // Re-enable input
                 isTyping = false;
                 document.getElementById('sendButton').disabled = false;
                 input.focus();
-                
-                // STEP 2: Start polling to display the response when ready
-                startStatusPolling();
                 
             } catch (error) {
                 console.error('Error sending message:', error);
