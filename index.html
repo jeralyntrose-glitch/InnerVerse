@@ -696,6 +696,16 @@
         
         // Fallback for older iOS versions - update on window resize
         window.addEventListener('resize', updateViewportHeight);
+        
+        // Reset scroll position when keyboard closes
+        const msgInput = document.getElementById('messageInput');
+        if (msgInput) {
+            msgInput.addEventListener('blur', function() {
+                setTimeout(function() {
+                    window.scrollTo(0, 0);
+                }, 100);
+            });
+        }
     </script>
     <script src="/static/sidebar.js"></script>
 </body>
