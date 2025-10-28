@@ -697,9 +697,18 @@
         // Fallback for older iOS versions - update on window resize
         window.addEventListener('resize', updateViewportHeight);
         
-        // Reset scroll position when keyboard closes
+        // Handle keyboard open/close to prevent excessive scrolling
         const msgInput = document.getElementById('messageInput');
         if (msgInput) {
+            // When keyboard opens (input focused)
+            msgInput.addEventListener('focus', function() {
+                setTimeout(function() {
+                    // Reset scroll after iOS tries to scroll the input into view
+                    window.scrollTo(0, 0);
+                }, 300);
+            });
+            
+            // When keyboard closes (input blurred)
             msgInput.addEventListener('blur', function() {
                 setTimeout(function() {
                     window.scrollTo(0, 0);
