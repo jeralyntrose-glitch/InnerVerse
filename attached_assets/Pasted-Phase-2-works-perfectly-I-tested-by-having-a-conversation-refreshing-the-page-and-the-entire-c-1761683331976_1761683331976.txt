@@ -1,0 +1,105 @@
+Phase 2 works perfectly! ✅
+
+I tested by having a conversation, refreshing the page, and the entire conversation loaded with full context preserved. The AI remembered everything.
+
+Ready to move to Phase 3: Complete Sidebar & Organization
+
+Please add:
+
+**Sidebar Structure:**
+- Collapsible sidebar (default: open on desktop, closed on mobile)
+- Burger menu button (☰) to toggle open/closed
+- Width: 280px on desktop, full-screen slide-in on mobile
+
+**IMPORTANT - Burger Menu Behavior:**
+- When sidebar is CLOSED: Burger menu (☰) visible
+- When sidebar is OPEN: Burger menu HIDES or moves inside sidebar (not blocking content)
+- The burger should never overlap or block the "New Chat" button
+- On desktop: Burger can stay visible but positioned properly, or transform to X (close) icon
+- On mobile: Burger should transform to X (close) icon when sidebar opens
+
+**Top Section:**
+- "New Chat" button (prominent, always visible at top of sidebar)
+- Clicking creates new conversation, defaults to "Brain Dump" folder, and switches to it immediately
+
+**Folder Organization:**
+8 collapsible project folders in this exact order:
+1. 💕 Relationship Lab
+2. 🎓 MBTI Academy
+3. 🔍 Type Detective
+4. 📈 Trading Psychology
+5. 🎯 PM Playbook
+6. ⚡ Quick Hits
+7. 🧠 Brain Dump
+8. 📋 All Chats (at bottom, with divider line above it)
+
+Note: "All Chats" is a special view-only folder that shows all conversations from all folders. It's not a real folder - moving a chat from "All Chats" moves it from its current folder to the selected folder.
+
+Each folder displays:
+- Number of chats in parentheses: "Relationship Lab (3)"
+- Expand/collapse arrow indicator (▶/▼)
+- List of conversations when expanded
+- Empty folders show "No chats yet" in greyed out text
+
+**Conversation Display:**
+Each conversation in list shows:
+- First 40 characters of first message (or auto-generated title)
+- Truncate with "..." if longer
+- Active conversation highlighted with background color change
+
+**Chat Management (3-Dot Menu):**
+Each conversation has a menu button (⋮) that reveals:
+- Rename: Click to edit inline or in popup, updates immediately
+- Move to Folder: Dropdown showing the 7 project folders (NOT "All Chats")
+- Delete: Shows confirmation dialog:
+  Message: "Delete this conversation? This action cannot be undone."
+  Buttons: "Cancel" (grey) and "Delete" (red)
+
+**Database Updates:**
+- Add `folder` field to conversations table (default: "Brain Dump")
+- Add `title` field to conversations table (default: first message preview, max 40 chars)
+- Update API endpoints to support folder filtering and chat management
+
+**Initial Load Behavior:**
+- On first load, automatically load the most recent conversation
+- If no conversations exist, show empty chat with welcome message
+- While loading conversations, show loading spinner in sidebar
+
+**Behavior:**
+- Folders remember expand/collapse state (persist in localStorage)
+- Click conversation → loads it in main chat area
+- Delete conversation → removes from list and database immediately (after confirmation)
+- Move conversation → appears in new folder immediately
+- Rename conversation → updates title immediately
+- Sidebar auto-closes on mobile after selecting conversation
+- New chats always default to "Brain Dump" folder
+
+**Mobile Optimization:**
+- Burger menu visible on mobile when sidebar is closed
+- When sidebar opens, burger transforms to X (close) icon
+- Sidebar slides in from left as full overlay
+- Tap outside sidebar to close it
+- All functionality works on touch (no hover-required features)
+- 3-dot menu accessible via tap
+
+**Desktop Enhancement (Optional):**
+- Keyboard shortcut: Cmd/Ctrl + K to toggle sidebar (nice to have, not required)
+
+**Test Criteria:**
+I should be able to:
+✅ Open sidebar - burger menu doesn't block "New Chat" button
+✅ Create new chats via button (defaults to Brain Dump)
+✅ See loading spinner while conversations load
+✅ Expand/collapse folders
+✅ See "No chats yet" in empty folders
+✅ Click chat to load it in main area
+✅ Most recent conversation loads automatically on first visit
+✅ Rename chats (updates immediately)
+✅ Move chats between folders (appears in new location, not available from "All Chats")
+✅ Delete chats with proper confirmation dialog
+✅ See all conversations in "All Chats" folder at bottom
+✅ Works smoothly on both desktop and mobile
+✅ Folder states persist across page refresh
+✅ Burger menu behavior is clean (transforms to X on mobile)
+
+This is the complete sidebar feature - all navigation and management in one cohesive phase. 🚀
