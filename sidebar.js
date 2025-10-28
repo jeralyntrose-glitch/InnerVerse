@@ -147,9 +147,9 @@ function renderConversationItem(conv) {
             <span class="conversation-title">${displayTitle}</span>
             <button class="conversation-menu-btn" onclick="event.stopPropagation(); showConversationMenu(${conv.id}, event)">⋮</button>
             <div class="dropdown-menu" id="menu-${conv.id}">
-                <div class="dropdown-item" onclick="renameConversation(${conv.id})">Rename</div>
-                <div class="dropdown-item" onclick="showMoveConversation(${conv.id})">Move to Folder</div>
-                <div class="dropdown-item danger" onclick="deleteConversation(${conv.id})">Delete</div>
+                <div class="dropdown-item" onclick="event.stopPropagation(); renameConversation(${conv.id})">Rename</div>
+                <div class="dropdown-item" onclick="event.stopPropagation(); showMoveConversation(${conv.id})">Move to Folder</div>
+                <div class="dropdown-item danger" onclick="event.stopPropagation(); deleteConversation(${conv.id})">Delete</div>
             </div>
         </div>
     `;

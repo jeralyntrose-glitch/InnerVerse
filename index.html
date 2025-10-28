@@ -523,6 +523,15 @@
 
         /* Mobile Styles */
         @media (max-width: 768px) {
+            body {
+                overflow: hidden;
+            }
+
+            .app-container {
+                height: 100vh;
+                height: 100dvh; /* Dynamic viewport height */
+            }
+
             .sidebar {
                 position: fixed;
                 left: 0;
@@ -533,7 +542,7 @@
             }
 
             .sidebar-header {
-                padding: 20px 20px 20px 20px;
+                padding: 20px;
                 display: flex;
                 align-items: center;
                 gap: 12px;
@@ -544,12 +553,20 @@
                 margin-right: 52px; /* Make room for X button (40px width + 12px gap) */
             }
 
+            .burger-menu {
+                top: 20px;
+                left: 20px;
+            }
+
             .burger-menu.sidebar-open {
                 position: fixed;
-                top: 20px;
+                top: 20px; /* Match sidebar-header padding */
                 right: 20px;
                 left: auto;
                 font-size: 0; /* Hide the original ☰ text */
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .burger-menu.sidebar-open::before {
@@ -564,6 +581,25 @@
 
             .main-content {
                 margin-left: 0;
+                width: 100%;
+                max-width: 100%;
+                height: 100vh;
+                height: 100dvh;
+                box-shadow: none;
+            }
+
+            .chat-container {
+                flex: 1;
+                min-height: 0;
+            }
+
+            .messages {
+                padding: 15px;
+            }
+
+            .input-container {
+                padding: 15px;
+                flex-shrink: 0;
             }
         }
 
