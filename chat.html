@@ -1677,7 +1677,7 @@
             document.getElementById('imageInput').value = '';
         }
         
-        // Send message with streaming (foreground) or background processing (when backgrounded)
+        // Send message with HYBRID delivery: background save + foreground streaming
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -1714,95 +1714,44 @@
             }
             
             // Clear image after preparing payload
-            const hadImage = !!selectedImage;
             if (selectedImage) {
                 clearImage();
             }
             
             try {
-                // Check if page is visible - use streaming if visible, background if not
-                const isVisible = document.visibilityState === 'visible';
+                // STEP 1: Always save to database first (GUARANTEED delivery even if app closes)
+                console.log('💾 Saving message to database...');
+                const bgResponse = await fetch(`/claude/conversations/${currentConversationId}/message/background`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 
-                if (isVisible) {
-                    // FOREGROUND MODE: Use streaming for immediate feedback
-                    console.log('📡 Streaming response (page visible)...');
-                    
-                    hideTypingIndicator();
-                    const aiMessageContent = addMessage('assistant', '');
-                    
-                    // Stream the response
-                    const response = await fetch(`/claude/conversations/${currentConversationId}/message`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error('Failed to send message');
-                    }
-                    
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let buffer = '';
-                    
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        
-                        buffer += decoder.decode(value, { stream: true });
-                        const lines = buffer.split('\n');
-                        buffer = lines.pop() || '';
-                        
-                        for (const line of lines) {
-                            if (line.startsWith('data: ')) {
-                                const data = line.slice(6);
-                                if (data === '[DONE]') continue;
-                                
-                                try {
-                                    const parsed = JSON.parse(data);
-                                    if (parsed.content) {
-                                        aiMessageContent.textContent += parsed.content;
-                                        scrollToBottom();
-                                    }
-                                } catch (e) {
-                                    // Ignore parse errors
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Update conversation name if it's the first message
-                    const currentTitle = document.getElementById('chatTitle').textContent;
-                    if (currentTitle === 'New Conversation') {
-                        await updateConversationName(message || 'Image analysis');
-                    }
-                    
-                } else {
-                    // BACKGROUND MODE: Save to database for guaranteed delivery
-                    console.log('💾 Background processing (page hidden)...');
-                    
-                    const bgResponse = await fetch(`/claude/conversations/${currentConversationId}/message/background`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    
-                    if (!bgResponse.ok) {
-                        throw new Error('Failed to save message');
-                    }
-                    
-                    hideTypingIndicator();
-                    const aiMessageContent = addMessage('assistant', '');
-                    aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
-                    
-                    // Start polling to check for completion
-                    startStatusPolling();
+                if (!bgResponse.ok) {
+                    throw new Error('Failed to save message');
                 }
                 
-                // Re-enable input
+                console.log('✅ Message saved! Processing started in background.');
+                
+                // Update conversation name if it's the first message
+                const currentTitle = document.getElementById('chatTitle').textContent;
+                if (currentTitle === 'New Conversation') {
+                    await updateConversationName(message || 'Image analysis');
+                }
+                
+                // Show processing indicator
+                hideTypingIndicator();
+                const aiMessageContent = addMessage('assistant', '');
+                aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
+                scrollToBottom();
+                
+                // Re-enable input immediately
                 isTyping = false;
                 document.getElementById('sendButton').disabled = false;
                 input.focus();
+                
+                // STEP 2: Start polling to display the response when ready
+                startStatusPolling();
                 
             } catch (error) {
                 console.error('Error sending message:', error);
@@ -1920,10 +1869,12 @@
             let isLongPress = false;
             
             const handleTouchStart = (e) => {
+                console.log('👆 Touch start on message');
                 isLongPress = false;
                 element.classList.add('pressing');
                 
                 pressTimer = setTimeout(async () => {
+                    console.log('⏱️ Long press detected!');
                     isLongPress = true;
                     element.classList.remove('pressing');
                     
@@ -1934,22 +1885,26 @@
                     
                     // Try native share first (works best on iOS), fallback to copy
                     if (navigator.share) {
+                        console.log('📤 Using native share');
                         try {
                             await navigator.share({ text: text });
                             showCopyToast('Shared!');
                         } catch (err) {
+                            console.log('⚠️ Share cancelled or failed:', err.name);
                             // User cancelled or error - try clipboard instead
                             if (err.name !== 'AbortError') {
                                 copyToClipboard(text);
                             }
                         }
                     } else {
+                        console.log('📋 Using clipboard copy');
                         copyToClipboard(text);
                     }
                 }, 500); // 500ms long press
             };
             
             const handleTouchEnd = (e) => {
+                console.log('👆 Touch end');
                 if (pressTimer) {
                     clearTimeout(pressTimer);
                 }
@@ -1976,6 +1931,7 @@
                 element.classList.remove('pressing');
             };
             
+            console.log('✅ Long-press copy enabled for message');
             element.addEventListener('touchstart', handleTouchStart, { passive: false });
             element.addEventListener('touchend', handleTouchEnd, { passive: false });
             element.addEventListener('touchmove', handleTouchMove, { passive: true });
