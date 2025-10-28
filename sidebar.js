@@ -179,8 +179,12 @@ function showConversationMenu(id, event) {
         currentMenu.classList.remove('show');
     }
     
-    // Open this menu
-    const menu = document.getElementById(`menu-${id}`);
+    // Find the menu relative to the button that was clicked
+    // This ensures we get the correct menu even with duplicate IDs
+    const button = event.target;
+    const conversationItem = button.closest('.conversation-item');
+    const menu = conversationItem.querySelector('.dropdown-menu');
+    
     menu.classList.add('show');
     currentMenu = menu;
 }
