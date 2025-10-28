@@ -298,7 +298,7 @@ async function updateConversationTitle(id, title) {
         const response = await fetch(`/claude/conversations/${id}/rename`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title })
+            body: JSON.stringify({ name: title })
         });
 
         if (!response.ok) throw new Error('Failed to rename conversation');
