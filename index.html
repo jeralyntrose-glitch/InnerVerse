@@ -533,12 +533,22 @@
             }
 
             .sidebar-header {
-                padding-right: 70px; /* Make room for the X button */
+                padding: 20px 20px 20px 20px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .new-chat-btn {
+                flex: 1;
+                margin-right: 52px; /* Make room for X button (40px width + 12px gap) */
             }
 
             .burger-menu.sidebar-open {
-                left: auto;
+                position: fixed;
+                top: 20px;
                 right: 20px;
+                left: auto;
                 font-size: 0; /* Hide the original ☰ text */
             }
 
