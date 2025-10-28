@@ -1759,8 +1759,9 @@
                                     break;
                                 }
                                 
-                                if (parsed.content) {
-                                    fullResponse += parsed.content;
+                                // Backend sends "chunk" not "content"
+                                if (parsed.chunk) {
+                                    fullResponse += parsed.chunk;
                                     
                                     // Render markdown in real-time
                                     const rawHtml = marked.parse(fullResponse);
@@ -1787,12 +1788,23 @@
                 startStatusPolling();
                 
             } catch (error) {
-                console.error('Error:', error);
-                hideTypingIndicator();
-                addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+                console.error('Streaming error:', error);
+                console.log('🔄 Stream interrupted - backend will continue processing, polling will catch response');
+                
+                // Show processing indicator - backend is still processing
+                const aiMessageContent = addMessage('assistant', '');
+                aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
+                scrollToBottom();
+                
+                // Enable input and start polling
+                // The streaming endpoint saves to DB even if client disconnects
                 isTyping = false;
                 document.getElementById('sendButton').disabled = false;
+                hideTypingIndicator();
                 input.focus();
+                
+                // Start polling - will catch response when backend completes
+                startStatusPolling();
             }
         }
         
