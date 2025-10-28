@@ -1,8 +1,10 @@
 const CACHE_NAME = 'innerverse-chat-v5';
 const urlsToCache = [
   '/manifest.json',
+  '/chat', // Cached for offline fallback only
   '/brain-icon-192.png',
   '/brain-icon-512.png',
+  '/brain-icon-980.png',
   // CDN libraries for offline support
   'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
   'https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js',
@@ -25,13 +27,8 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Skip caching for API calls and chat pages - ALWAYS fetch fresh
-  if (url.pathname.startsWith('/api/') || 
-      url.pathname.startsWith('/claude/') ||
-      url.pathname === '/chat' ||
-      url.pathname === '/chat.html' ||
-      url.pathname === '/' ||
-      url.pathname === '/index.html') {
+  // Network-first for API calls - ALWAYS fetch fresh, no caching
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/claude/')) {
     event.respondWith(fetch(event.request));
     return;
   }
@@ -41,9 +38,39 @@ self.addEventListener('fetch', (event) => {
                        url.host === 'fonts.googleapis.com' ||
                        url.host === 'fonts.gstatic.com';
   
-  // Skip caching for ALL HTML and JS files (except CDN) - always fetch fresh
-  if ((url.pathname.endsWith('.html') || url.pathname.endsWith('.js')) && !isCDNLibrary) {
-    event.respondWith(fetch(event.request));
+  // Network-first for HTML/JS files (except CDN) - fetch fresh, update cache, fallback to cache offline
+  if ((url.pathname.endsWith('.html') || url.pathname.endsWith('.js') || 
+       url.pathname === '/chat' || url.pathname === '/') && !isCDNLibrary) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Update cache with fresh version
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Offline fallback - try cached version first
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            
+            // For navigation requests, fall back to /chat shell
+            if (event.request.mode === 'navigate') {
+              return caches.match('/chat');
+            }
+            
+            // For scripts/assets, fail gracefully (don't return HTML as JS)
+            return new Response('Offline - resource not cached', {
+              status: 503,
+              statusText: 'Service Unavailable'
+            });
+          });
+        })
+    );
     return;
   }
   
@@ -76,10 +103,12 @@ self.addEventListener('fetch', (event) => {
         });
       })
       .catch(() => {
-        // Offline fallback - return cached chat page
+        // Offline fallback for static assets
         if (event.request.mode === 'navigate') {
           return caches.match('/chat');
         }
+        // Return undefined for other failed requests
+        return undefined;
       })
   );
 });
