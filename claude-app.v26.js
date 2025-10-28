@@ -1022,7 +1022,8 @@
         
         // Initialize
         async function init() {
-            registerServiceWorker();
+            // TEMPORARILY DISABLED: Service Worker causing caching issues
+            // registerServiceWorker();
             await loadProjects();
             setupEventListeners();
             // Polling is only started when using background processing mode
