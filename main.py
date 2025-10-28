@@ -4319,6 +4319,7 @@ async def openai_chat_completions(request: Request):
 
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="."), name="static")
+app.mount("/node_modules", StaticFiles(directory="node_modules"), name="node_modules")
 
 
 # === Run the app ===
