@@ -1,4 +1,4 @@
-const CACHE_NAME = 'innerverse-chat-v3';
+const CACHE_NAME = 'innerverse-chat-v4';
 const urlsToCache = [
   '/manifest.json',
   '/chat',
@@ -26,9 +26,11 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Skip caching for API calls - always fetch fresh
+  // Skip caching for API calls and chat pages - always fetch fresh
   if (url.pathname.startsWith('/api/') || 
-      url.pathname.startsWith('/claude/')) {
+      url.pathname.startsWith('/claude/') ||
+      url.pathname === '/chat' ||
+      url.pathname === '/chat.html') {
     event.respondWith(fetch(event.request));
     return;
   }
