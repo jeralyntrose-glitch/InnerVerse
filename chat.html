@@ -1743,10 +1743,10 @@
                     await updateConversationName(message || 'Image analysis');
                 }
                 
-                // Show processing indicator
+                // Show processing indicator in message
+                hideTypingIndicator(); // Hide the bottom typing indicator
                 const aiMessageContent = addMessage('assistant', '');
                 aiMessageContent.innerHTML = '<div class="processing-indicator"><span></span><span></span><span></span></div> Generating response...';
-                hideTypingIndicator();
                 scrollToBottom();
                 
                 // Enable input immediately - response will come via polling OR streaming
@@ -1944,8 +1944,8 @@
                 element.classList.remove('pressing');
             };
             
-            element.addEventListener('touchstart', handleTouchStart, { passive: true });
-            element.addEventListener('touchend', handleTouchEnd);
+            element.addEventListener('touchstart', handleTouchStart, { passive: false });
+            element.addEventListener('touchend', handleTouchEnd, { passive: false });
             element.addEventListener('touchmove', handleTouchMove, { passive: true });
             element.addEventListener('touchcancel', handleTouchCancel, { passive: true });
             element.addEventListener('contextmenu', (e) => e.preventDefault()); // Prevent default context menu
