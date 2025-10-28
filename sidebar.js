@@ -27,6 +27,11 @@ const newChatBtn = document.getElementById('newChatBtn');
 const sidebarContent = document.getElementById('sidebarContent');
 const modalOverlay = document.getElementById('modalOverlay');
 
+// Initialize sidebar state on mobile
+if (window.innerWidth <= 768) {
+    sidebar.classList.add('closed');
+}
+
 // === Sidebar Toggle ===
 burgerMenu.addEventListener('click', () => {
     sidebar.classList.toggle('closed');
