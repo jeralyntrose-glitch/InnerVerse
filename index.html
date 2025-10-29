@@ -617,7 +617,7 @@
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
-                padding-bottom: 80px; /* Space for fixed input bar */
+                padding-bottom: var(--input-bar-height, 100px); /* Dynamic space for fixed input bar */
             }
 
             .input-container {
@@ -701,16 +701,38 @@
             }
         }
         
+        // Dynamically measure and update input bar height
+        function updateInputBarHeight() {
+            const inputContainer = document.querySelector('.input-container');
+            if (inputContainer) {
+                // Measure actual height including padding and safe-area
+                const height = inputContainer.offsetHeight;
+                // Add extra buffer for safety
+                const totalHeight = height + 20;
+                document.documentElement.style.setProperty('--input-bar-height', `${totalHeight}px`);
+            }
+        }
+        
         // Update on load
         updateViewportHeight();
+        updateInputBarHeight();
         
         // Update when keyboard appears/disappears (viewport resizes)
         if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', updateViewportHeight);
+            window.visualViewport.addEventListener('resize', () => {
+                updateViewportHeight();
+                updateInputBarHeight();
+            });
         }
         
         // Fallback for older iOS versions - update on window resize
-        window.addEventListener('resize', updateViewportHeight);
+        window.addEventListener('resize', () => {
+            updateViewportHeight();
+            updateInputBarHeight();
+        });
+        
+        // Update after DOM is fully loaded
+        window.addEventListener('load', updateInputBarHeight);
     </script>
     <script src="/static/sidebar.js"></script>
 </body>
