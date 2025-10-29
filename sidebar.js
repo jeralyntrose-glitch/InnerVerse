@@ -456,6 +456,17 @@ function hideModal() {
 }
 
 // === Message Functions ===
+// Helper: Only auto-scroll if user is already near the bottom
+function shouldAutoScroll() {
+    const threshold = 100; // pixels from bottom
+    const distanceFromBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight;
+    return distanceFromBottom < threshold;
+}
+
+function scrollToBottom() {
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
 function addMessage(role, content) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
@@ -472,7 +483,10 @@ function addMessage(role, content) {
     messageDiv.appendChild(contentDiv);
     messagesDiv.appendChild(messageDiv);
 
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    // Only auto-scroll if user is already at bottom
+    if (shouldAutoScroll()) {
+        scrollToBottom();
+    }
 
     return contentDiv;
 }
@@ -482,7 +496,10 @@ function showError(message) {
     errorDiv.className = 'error-message';
     errorDiv.textContent = message;
     messagesDiv.appendChild(errorDiv);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    // Only auto-scroll if user is already at bottom
+    if (shouldAutoScroll()) {
+        scrollToBottom();
+    }
 }
 
 // === Send Message ===
@@ -526,7 +543,10 @@ async function sendMessage() {
                         if (data.chunk) {
                             fullResponse += data.chunk;
                             assistantContent.textContent = fullResponse;
-                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                            // Only auto-scroll if user is already at bottom
+                            if (shouldAutoScroll()) {
+                                scrollToBottom();
+                            }
                         }
 
                         if (data.error) {

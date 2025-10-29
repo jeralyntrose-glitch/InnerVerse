@@ -604,7 +604,6 @@
             .chat-container {
                 height: 100%;
                 position: relative;
-                padding-bottom: 70px; /* Make room for fixed input */
             }
             
             .messages {
@@ -612,6 +611,7 @@
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
+                padding-bottom: 100px; /* Extra space so messages don't hide behind fixed input */
             }
 
             .input-container {
