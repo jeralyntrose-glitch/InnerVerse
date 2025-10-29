@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>InnerVerse - Phase 3</title>
-    <link rel="stylesheet" href="/node_modules/@chatscope/chat-ui-kit-styles/dist/default/styles.min.css">
+    <title>InnerVerse - Phase 4</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="/node_modules/marked/lib/marked.umd.js"></script>
+    <script src="/node_modules/dompurify/dist/purify.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,13 +18,27 @@
 
         :root {
             --viewport-height: 100vh;
+            /* Professional Color Scheme - Phase 4 */
+            --color-page-bg: #FFFFFF;
+            --color-chat-bg: #FFFFFF;
+            --color-ai-message-bg: #F7F7F8;
+            --color-user-bubble: #10A37F;
+            --color-user-bubble-hover: #0D8C6C;
+            --color-text-primary: #2D2D2D;
+            --color-text-secondary: #6B6B6B;
+            --color-text-on-teal: #FFFFFF;
+            --color-link: #0066CC;
+            --color-border: #E5E5E5;
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #f5f5f5;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--color-page-bg);
             height: 100vh;
             overflow: hidden;
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--color-text-primary);
         }
 
         .app-container {
@@ -368,8 +386,7 @@
             flex-direction: column;
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            background: var(--color-chat-bg);
             width: 100%;
         }
 
@@ -378,10 +395,11 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             text-align: center;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .header h1 {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 600;
         }
 
@@ -407,107 +425,212 @@
             gap: 15px;
         }
 
+        /* Professional Message Styles - Phase 4 */
         .message {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            max-width: 80%;
+            margin-bottom: 16px;
+            animation: fadeIn 0.15s ease;
         }
 
-        .message.user {
-            align-self: flex-end;
-            flex-direction: row-reverse;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
+        /* AI Messages - Full Width */
         .message.assistant {
-            align-self: flex-start;
-        }
-
-        .message-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-            flex-shrink: 0;
-        }
-
-        .message.user .message-avatar {
-            background: #667eea;
-            color: white;
-        }
-
-        .message.assistant .message-avatar {
-            background: #764ba2;
-            color: white;
-        }
-
-        .message-content {
-            background: #f0f0f0;
-            padding: 12px 16px;
-            border-radius: 12px;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-
-        .message.user .message-content {
-            background: #667eea;
-            color: white;
+            width: 100%;
+            background: var(--color-ai-message-bg);
+            padding: 24px;
+            text-align: left;
         }
 
         .message.assistant .message-content {
-            background: #f0f0f0;
-            color: #333;
+            color: var(--color-text-primary);
+            line-height: 1.6;
+        }
+
+        /* User Messages - Bubble Style */
+        .message.user {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+        }
+
+        .message.user .message-content {
+            background: var(--color-user-bubble);
+            color: var(--color-text-on-teal);
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 70%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            word-wrap: break-word;
+            line-height: 1.6;
+        }
+
+        /* No avatars in Phase 4 - removed for clean look */
+        .message-avatar {
+            display: none;
+        }
+
+        /* Markdown Styles in Messages */
+        .message-content h1, .message-content h2, .message-content h3 {
+            font-weight: 600;
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .message-content h1 { font-size: 24px; }
+        .message-content h2 { font-size: 20px; }
+        .message-content h3 { font-size: 18px; }
+
+        .message-content p {
+            margin-bottom: 12px;
+        }
+
+        .message-content code {
+            background: #1E1E1E;
+            color: #D4D4D4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .message-content pre {
+            background: #1E1E1E;
+            color: #D4D4D4;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .message-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .message-content ul, .message-content ol {
+            margin-left: 24px;
+            margin-bottom: 12px;
+        }
+
+        .message-content li {
+            margin-bottom: 4px;
+        }
+
+        .message-content a {
+            color: var(--color-link);
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .message-content a:hover {
+            text-decoration: underline;
+        }
+
+        .message-content blockquote {
+            border-left: 4px solid var(--color-border);
+            padding-left: 16px;
+            margin: 12px 0;
+            color: var(--color-text-secondary);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            width: 100%;
+            background: var(--color-ai-message-bg);
+            padding: 24px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-dots {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: var(--color-text-secondary);
+            border-radius: 50%;
+            animation: typingDot 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingDot {
+            0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+            30% { opacity: 1; transform: translateY(-6px); }
         }
 
         .input-container {
-            padding: 20px;
-            border-top: 1px solid #e0e0e0;
+            padding: 16px;
+            border-top: 1px solid var(--color-border);
+            background: var(--color-page-bg);
             display: flex;
-            gap: 10px;
+            gap: 12px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
         }
 
         .message-input {
             flex: 1;
             padding: 12px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 24px;
-            font-size: 15px;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--color-page-bg);
+            color: var(--color-text-primary);
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color 0.15s ease;
         }
 
         .message-input:focus {
-            border-color: #667eea;
+            border-color: var(--color-user-bubble);
         }
 
         .send-button {
             padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--color-user-bubble);
             color: white;
             border: none;
-            border-radius: 24px;
+            border-radius: 8px;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, opacity 0.2s;
+            min-height: 44px;
+            transition: background 0.15s ease, transform 0.15s ease;
         }
 
-        .send-button:hover {
-            transform: translateY(-2px);
+        .send-button:hover:not(:disabled) {
+            background: var(--color-user-bubble-hover);
         }
 
         .send-button:active {
-            transform: translateY(0);
+            transform: scale(0.98);
         }
 
         .send-button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
+        }
+
+        /* Smooth scrolling */
+        .messages {
+            scroll-behavior: smooth;
         }
 
         .loading-indicator {
@@ -636,6 +759,23 @@
             .message-input {
                 font-size: 16px; /* Prevents zoom on iOS */
             }
+            
+            /* Phase 4: Mobile responsive adjustments */
+            .message.assistant {
+                padding: 16px; /* Reduced from 24px on mobile */
+            }
+            
+            .message.user .message-content {
+                max-width: 85%; /* Wider on mobile */
+            }
+            
+            .messages {
+                gap: 12px; /* Reduced spacing on mobile */
+            }
+            
+            .message {
+                margin-bottom: 12px; /* Reduced from 16px */
+            }
         }
 
         @media (min-width: 769px) {
@@ -674,6 +814,15 @@
             <div class="chat-container">
                 <div class="messages" id="messages">
                     <div class="loading-indicator">Loading conversation...</div>
+                    
+                    <!-- Typing Indicator -->
+                    <div class="typing-indicator" id="typingIndicator">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="input-container">

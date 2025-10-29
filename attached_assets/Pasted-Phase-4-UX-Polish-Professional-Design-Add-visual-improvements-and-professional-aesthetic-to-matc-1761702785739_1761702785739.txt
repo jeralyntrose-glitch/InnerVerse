@@ -1,0 +1,192 @@
+Phase 4: UX Polish & Professional Design
+
+Add visual improvements and professional aesthetic to match Claude.ai quality.
+
+**LAYOUT STRUCTURE:**
+
+Chat Container:
+- Use full available width of viewport
+- Desktop: Max-width 1200px, centered with auto margins
+- Mobile: Full width minus 16px margins on sides
+- When sidebar is open: Chat area fills remaining space after 280px sidebar
+- When sidebar is closed: Chat area uses full viewport width
+- No narrow column layouts - messages should breathe and use space
+
+**1. MARKDOWN RENDERING**
+
+Install and configure react-markdown library to render:
+- Headers: # (h1), ## (h2), ### (h3)
+- Bold: **text** or __text__
+- Italic: *text* or _text_
+- Code blocks: ```language\ncode\n```
+- Inline code: `code`
+- Bullet lists: - item or * item
+- Numbered lists: 1. item
+- Links: [text](url) - make clickable, open in new tab
+- Blockquotes: > quote
+
+**2. PROFESSIONAL COLOR SCHEME**
+
+Exact color system (use these specific values):
+
+Background colors:
+- Page background: #FFFFFF (white)
+- Chat background: #FFFFFF (white)
+- AI message background: #F7F7F8 (very light grey)
+- User message bubble: #10A37F (teal - Claude-like)
+
+Text colors:
+- Primary text: #2D2D2D (dark grey, not pure black)
+- Secondary text: #6B6B6B (medium grey)
+- User message text: #FFFFFF (white on teal bubble)
+- Links: #0066CC (professional blue)
+
+Accent colors:
+- Hover states: #0D8C6C (darker teal)
+- Borders: #E5E5E5 (light grey)
+
+**Typography:**
+- Font stack: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', sans-serif
+- Base font size: 16px
+- Line height: 1.6 (comfortable reading)
+- Font weights: 400 (normal), 600 (semibold for headers)
+
+**3. MESSAGE STYLING**
+
+AI Messages (Full-Width Layout):
+- Width: 100% of chat container
+- Background: #F7F7F8 (light grey)
+- Padding: 24px (desktop), 16px (mobile)
+- Text alignment: Left
+- Border-radius: 0 (square corners, professional)
+- Margin bottom: 16px (spacing between messages)
+
+User Messages (Bubble Style):
+- Width: Auto (fits content), max-width 70% of chat container
+- Alignment: Right (flex-end or margin-left: auto)
+- Background: #10A37F (teal bubble)
+- Text color: #FFFFFF (white)
+- Padding: 12px 16px (compact but readable)
+- Border-radius: 18px (subtle rounded, not overly bubbly)
+- Margin bottom: 16px
+- Box-shadow: 0 1px 2px rgba(0,0,0,0.1) (subtle depth)
+
+Message Spacing:
+- 16px between consecutive messages
+- 24px between message groups (if adding timestamps)
+- Clean visual hierarchy
+
+**4. TYPING INDICATOR**
+
+While AI is generating response:
+- Show animated dots in AI message area
+- Text: "InnerVerse is typing..." (optional, can be just dots)
+- Animation: 3 dots fading in/out sequentially
+- Background: #F7F7F8 (matches AI message background)
+- Padding: 16px
+- Position: Bottom of chat, above input
+
+**5. MOBILE RESPONSIVE BEHAVIOR**
+
+Breakpoint: 768px
+
+Desktop (>768px):
+- Chat container max-width: 1200px
+- AI message padding: 24px
+- User bubble max-width: 70%
+- Standard spacing
+
+Mobile (≤768px):
+- Chat container: Full width minus 16px side margins
+- AI message padding: 16px
+- User bubble max-width: 85% (wider on small screens)
+- Reduced spacing: 12px between messages
+- Input bar fixed at bottom (z-index: 100)
+- Smooth scroll behavior
+- Touch targets minimum 44px × 44px
+
+**6. ADDITIONAL POLISH**
+
+Scrolling:
+- Smooth scroll behavior (scroll-behavior: smooth)
+- Auto-scroll to bottom on new messages
+- Maintain scroll position when loading history
+
+Input Area:
+- Fixed at bottom (position: sticky or fixed)
+- Background: #FFFFFF
+- Border-top: 1px solid #E5E5E5
+- Padding: 16px
+- Box-shadow: 0 -2px 10px rgba(0,0,0,0.05) (subtle elevation)
+
+Loading States:
+- Skeleton loaders for messages loading
+- Smooth transitions (150ms ease)
+
+**IMPORTANT - Edge Cases:**
+
+Long user messages:
+- Allow bubble to expand vertically
+- Maintain max-width constraint
+- Text wraps properly (word-wrap: break-word)
+
+Code blocks in AI messages:
+- Maintain full-width
+- Dark background: #1E1E1E
+- Light text: #D4D4D4
+- Horizontal scroll if needed (overflow-x: auto)
+- Syntax highlighting optional but nice
+
+Long links:
+- Break properly (word-break: break-all for URLs)
+- Don't overflow containers
+
+**OVERALL AESTHETIC GOAL:**
+
+Reference: Claude.ai chat interface
+
+Target feel:
+- Clean, spacious, professional
+- High readability (contrast, spacing, typography)
+- Minimal but polished
+- NOT playful/casual/toy-like
+- Business/professional tool aesthetic
+- Sophisticated color palette
+- Generous whitespace
+
+**TEST CRITERIA:**
+
+Visual:
+✅ Looks like Claude.ai quality (clean, professional)
+✅ Color scheme matches specified hex codes
+✅ Typography is crisp and readable
+✅ Spacing feels comfortable, not cramped
+
+Layout:
+✅ Chat uses full available width (not narrow)
+✅ AI messages span full width with grey background
+✅ User messages are compact bubbles, right-aligned
+✅ Clear visual distinction between user and AI
+
+Functionality:
+✅ Markdown renders correctly (test headers, bold, code, lists)
+✅ Typing indicator shows while waiting
+✅ Smooth scrolling behavior
+✅ Input fixed at bottom on mobile
+
+Responsive:
+✅ Looks professional on desktop (1920px)
+✅ Looks professional on tablet (768px)
+✅ Looks professional on mobile (375px iPhone)
+✅ No layout breaking at any screen size
+
+Edge Cases:
+✅ Long user messages wrap properly in bubble
+✅ Long AI responses display correctly
+✅ Code blocks don't break layout
+✅ Long URLs break/wrap appropriately
+
+**Screenshot test:**
+"Would I show this in a PM job interview?" → Must be YES
+
+Stop here. Test thoroughly on multiple screen sizes. Verify all colors, spacing, and layout match specifications. ✅

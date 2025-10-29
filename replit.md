@@ -1,6 +1,6 @@
 # Overview
 
-InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowledge retrieval. It enables users to upload PDFs, transcribe audio and YouTube videos into searchable documents, and generate reports. The system leverages chunking, embedding, and storage in Pinecone, using OpenAI's GPT models for query answering. It also includes features for API usage monitoring, cost tracking, and rate limiting, providing an intuitive document interaction experience. The project aims to deliver a professional chat interface, inspired by platforms like Claude.ai, with robust features for conversation management, persistent history, and PWA capabilities.
+InnerVerse is a FastAPI-based PDF Q&A application designed for intelligent knowledge retrieval. It enables users to upload PDFs, transcribe audio and YouTube videos into searchable documents, and generate reports. The system leverages chunking, embedding, and storage in Pinecone, using OpenAI's GPT models for query answering. It also includes features for API usage monitoring, cost tracking, and rate limiting, providing an intuitive document interaction experience. The project delivers a professional Claude.ai-inspired chat interface with Phase 4 UX polish, featuring markdown rendering, professional color scheme, animated typing indicators, and full mobile optimization.
 
 # User Preferences
 
@@ -9,7 +9,7 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Frontend Architecture
-- **UI/UX**: Features a glassmorphic design, animated SVG brain icon, purple gradient theme, and a live visual cost tracker. Includes Light/Dark mode, drag-and-drop PDF uploads, Google Drive integration, YouTube MP3 transcription, and a cloud-based visual tag library.
+- **UI/UX (Phase 4 - Professional Design)**: Claude.ai-inspired professional interface with clean, spacious aesthetic. Features Inter font, exact professional color scheme (#10A37F teal user bubbles, #F7F7F8 grey AI backgrounds), full markdown rendering (headers, code blocks, lists, links), animated typing indicator, and responsive mobile design. Glassmorphic header with purple gradient remains for branding.
 - **Chat Interface (`/chat` and `/claude`)**: A professional, Claude.ai-inspired chat interface with full feature parity. It uses a clean, minimal aesthetic with neutral colors and the Inter font. Key features include:
     - **Sidebar**: Collapsible project folders (7 categories) with compact 4px spacing, no descriptions shown, search functionality for conversations and messages, and conversation management (load, rename, delete). Mobile-optimized with burger menu that stays closed during background refreshes (renderSidebar preserves closed state), auto-closes on conversation selection, and batch-fetches all data before rendering to prevent flickering.
     - **Conversation Management**: Persistent conversation history stored in PostgreSQL, smart auto-naming for new chats, and responsive design for mobile. "All Chats" section displays all conversations across all projects (up to 100, sorted by most recent).
@@ -17,7 +17,12 @@ Preferred communication style: Simple, everyday language.
     - **Real-time Updates**: 3-second polling for conversation status checks unread responses and processing messages. Background refreshes skip renderSidebar() to prevent sidebar from reopening on mobile.
     - **PWA Support**: Full Progressive Web App capabilities including offline support, installability, and manifest configuration with professional teal brain icon.
     - **Performance**: Optimized for speed using HTML template strings, event delegation, optimistic UI updates, and parallel API fetches.
-    - **Chat Styling**: User messages display in teal bubbles (#10a37f) with white text, right-aligned at 70% max-width, with comprehensive markdown support. AI responses remain full-width.
+    - **Chat Styling (Phase 4)**: 
+        - **User messages**: Teal bubbles (#10A37F) with white text, right-aligned, 70% max-width (85% on mobile), 18px border-radius, subtle shadow
+        - **AI messages**: Full-width grey background (#F7F7F8), 24px padding (16px mobile), markdown rendered with syntax highlighting for code blocks
+        - **Typography**: Inter font, 16px base, 1.6 line-height, professional color scheme (#2D2D2D primary text)
+        - **Typing Indicator**: Animated dots during AI response generation
+        - **Markdown Support**: Full rendering via marked.js - headers, bold, italic, code blocks, lists, blockquotes, links (open in new tab)
     - **Vision/Image Analysis**: Full Claude vision mode support for image upload and analysis via background processing. Users can upload images (JPEG, PNG, GIF, WebP up to 5MB) via the paperclip button, see image previews before sending, and receive AI analysis. Images display inline within chat messages with proper styling.
 - **Migration Dashboard (`/migration`)**: Provides a real-time dashboard for upgrading embeddings with progress tracking and live logs.
 

@@ -26,6 +26,7 @@ const burgerMenu = document.getElementById('burgerMenu');
 const newChatBtn = document.getElementById('newChatBtn');
 const sidebarContent = document.getElementById('sidebarContent');
 const modalOverlay = document.getElementById('modalOverlay');
+const typingIndicator = document.getElementById('typingIndicator');
 
 // Initialize sidebar state on mobile
 if (window.innerWidth <= 768) {
@@ -136,15 +137,25 @@ function renderSidebar() {
     sidebarContent.innerHTML = html;
 }
 
+// SECURITY: Escape HTML to prevent XSS in sidebar
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 // === Render Conversation Item ===
 function renderConversationItem(conv) {
     const title = conv.title || (conv.name && conv.name !== 'New Chat' && conv.name !== 'New Conversation' ? conv.name : 'Untitled Chat');
     const displayTitle = title.length > 40 ? title.substring(0, 40) + '...' : title;
     const isActive = conv.id === conversationId;
     
+    // SECURITY: Escape user-controlled title to prevent XSS
+    const safeTitle = escapeHTML(displayTitle);
+    
     return `
         <div class="conversation-item ${isActive ? 'active' : ''}" data-id="${conv.id}" onclick="selectConversation(${conv.id})">
-            <span class="conversation-title">${displayTitle}</span>
+            <span class="conversation-title">${safeTitle}</span>
             <button class="conversation-menu-btn" onclick="event.stopPropagation(); showConversationMenu(${conv.id}, event)">⋮</button>
             <div class="dropdown-menu" id="menu-${conv.id}">
                 <div class="dropdown-item" onclick="event.stopPropagation(); renameConversation(${conv.id})">Rename</div>
@@ -278,9 +289,12 @@ function renameConversation(id) {
     
     showModal({
         title: 'Rename Conversation',
-        content: `<input type="text" class="modal-input" id="renameInput" value="${currentTitle}" placeholder="Enter new name">`,
+        // SECURITY: Don't inject user data into attributes - set via DOM instead
+        content: `<input type="text" class="modal-input" id="renameInput" placeholder="Enter new name">`,
         onShow: () => {
             const input = document.getElementById('renameInput');
+            // SECURITY: Set value via DOM API to prevent XSS
+            input.value = currentTitle;
             input.focus();
             input.select();
         },
@@ -472,19 +486,42 @@ function scrollToBottom() {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+// Professional Phase 4: Markdown-enabled message rendering with XSS protection
 function addMessage(role, content) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
 
-    const avatar = document.createElement('div');
-    avatar.className = 'message-avatar';
-    avatar.textContent = role === 'user' ? 'U' : 'A';
-
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
-    contentDiv.textContent = content;
+    
+    // Render markdown for AI messages, plain text for user messages
+    if (role === 'assistant' && typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+        // Configure marked for security
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false,
+            mangle: false
+        });
+        
+        // SECURITY: Sanitize markdown output before injecting into DOM
+        const rawHTML = marked.parse(content);
+        const cleanHTML = DOMPurify.sanitize(rawHTML, {
+            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+                          'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a', 'hr'],
+            ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
+        });
+        contentDiv.innerHTML = cleanHTML;
+        
+        // Make links open in new tab
+        contentDiv.querySelectorAll('a').forEach(link => {
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+        });
+    } else {
+        contentDiv.textContent = content;
+    }
 
-    messageDiv.appendChild(avatar);
     messageDiv.appendChild(contentDiv);
     messagesDiv.appendChild(messageDiv);
 
@@ -494,6 +531,22 @@ function addMessage(role, content) {
     }
 
     return contentDiv;
+}
+
+// Show/hide typing indicator
+function showTypingIndicator() {
+    if (typingIndicator) {
+        typingIndicator.classList.add('active');
+        if (shouldAutoScroll()) {
+            scrollToBottom();
+        }
+    }
+}
+
+function hideTypingIndicator() {
+    if (typingIndicator) {
+        typingIndicator.classList.remove('active');
+    }
 }
 
 function showError(message) {
@@ -517,6 +570,9 @@ async function sendMessage() {
     sendButton.disabled = true;
 
     addMessage('user', message);
+    
+    // Show typing indicator
+    showTypingIndicator();
 
     const assistantContent = addMessage('assistant', '');
     let fullResponse = '';
@@ -529,6 +585,9 @@ async function sendMessage() {
         });
 
         if (!response.ok) throw new Error('Failed to send message');
+
+        // Hide typing indicator when response starts
+        hideTypingIndicator();
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -547,7 +606,18 @@ async function sendMessage() {
                         
                         if (data.chunk) {
                             fullResponse += data.chunk;
-                            assistantContent.textContent = fullResponse;
+                            // Update with markdown rendering + sanitization
+                            if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+                                const rawHTML = marked.parse(fullResponse);
+                                const cleanHTML = DOMPurify.sanitize(rawHTML, {
+                                    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+                                                  'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a', 'hr'],
+                                    ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
+                                });
+                                assistantContent.innerHTML = cleanHTML;
+                            } else {
+                                assistantContent.textContent = fullResponse;
+                            }
                             // Only auto-scroll if user is already at bottom
                             if (shouldAutoScroll()) {
                                 scrollToBottom();
@@ -569,7 +639,9 @@ async function sendMessage() {
     } catch (error) {
         console.error('❌ Error sending message:', error);
         showError('Failed to get response. Please try again.');
+        hideTypingIndicator();
     } finally {
+        hideTypingIndicator();
         isStreaming = false;
         sendButton.disabled = false;
         messageInput.focus();
