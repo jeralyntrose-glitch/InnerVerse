@@ -3063,6 +3063,41 @@ async def create_conversation(request: Request):
         print(f"❌ Error creating conversation: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/claude/conversations/search")
+async def search_conversations(q: str = ""):
+    """Search conversations by title AND message content - Phase 5"""
+    try:
+        if not q or len(q.strip()) == 0:
+            return {"conversations": []}
+        
+        conn = get_db_connection()
+        if not conn:
+            return {"conversations": []}
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        search_pattern = f"%{q.lower()}%"
+        
+        # Search in both conversation titles AND message content
+        cursor.execute("""
+            SELECT DISTINCT c.id, c.project, c.name, c.created_at, c.updated_at, c.has_unread_response
+            FROM conversations c
+            LEFT JOIN messages m ON m.conversation_id = c.id
+            WHERE 
+                LOWER(c.name) LIKE %s
+                OR LOWER(m.content) LIKE %s
+            ORDER BY c.updated_at DESC
+            LIMIT 100
+        """, (search_pattern, search_pattern))
+        
+        conversations = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {"conversations": [dict(c) for c in conversations]}
+    except Exception as e:
+        print(f"❌ Error searching conversations: {str(e)}", flush=True)
+        return {"conversations": []}
+
 @app.get("/claude/conversations/{project}")
 async def get_conversations(project: str):
     """Get all conversations in a project, sorted by most recent"""
@@ -3113,45 +3148,40 @@ async def get_all_conversations():
         print(f"❌ Error fetching all conversations: {str(e)}")
         return {"conversations": []}
 
-@app.get("/claude/conversations/search")
-async def search_conversations(q: str):
-    """
-    Search conversations by title AND message content
-    Phase 5: Search functionality
-    Returns conversations that match the search term in either title or message content
-    """
+@app.get("/claude/conversations/search/test")
+async def test_search_connection():
+    """Test endpoint to verify database connection and query"""
     try:
-        if not q or len(q.strip()) == 0:
-            return {"conversations": []}
-        
         conn = get_db_connection()
         if not conn:
-            return {"conversations": []}
+            return {"error": "No database connection"}
         
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        search_term = f"%{q.lower()}%"
+        cursor.execute("SELECT COUNT(*) as count FROM conversations")
+        result = cursor.fetchone()
         
-        # Search in both conversation titles AND message content
-        # Using DISTINCT to avoid duplicate conversations if multiple messages match
+        cursor.execute("SELECT COUNT(*) as count FROM messages WHERE LOWER(content) LIKE '%infj%'")
+        message_count = cursor.fetchone()
+        
         cursor.execute("""
-            SELECT DISTINCT c.id, c.project, c.name, c.created_at, c.updated_at, c.has_unread_response
-            FROM conversations c
-            LEFT JOIN messages m ON m.conversation_id = c.id
-            WHERE 
-                LOWER(c.name) LIKE %s
-                OR LOWER(m.content) LIKE %s
-            ORDER BY c.updated_at DESC
-            LIMIT 100
-        """, (search_term, search_term))
+            SELECT DISTINCT c.id, c.name 
+            FROM conversations c 
+            LEFT JOIN messages m ON m.conversation_id = c.id 
+            WHERE LOWER(c.name) LIKE '%infj%' OR LOWER(m.content) LIKE '%infj%'
+            LIMIT 5
+        """)
+        test_results = cursor.fetchall()
         
-        conversations = cursor.fetchall()
         cursor.close()
         conn.close()
         
-        return {"conversations": [dict(c) for c in conversations]}
+        return {
+            "total_conversations": result['count'] if result else 0,
+            "infj_messages": message_count['count'] if message_count else 0,
+            "sample_results": [dict(r) for r in test_results]
+        }
     except Exception as e:
-        print(f"❌ Error searching conversations: {str(e)}")
-        return {"conversations": []}
+        return {"error": str(e)}
 
 @app.get("/claude/conversations/detail/{conversation_id}")
 async def get_conversation_detail(conversation_id: int):
@@ -3833,7 +3863,7 @@ async def move_conversation(conversation_id: int, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/claude/search")
-async def search_conversations(q: str = ""):
+async def search_all_content(q: str = ""):
     """Search across all conversations and messages"""
     try:
         if not q:
@@ -4090,7 +4120,7 @@ def serve_privacy():
 
 @app.get("/claude", include_in_schema=False)
 def serve_claude():
-    return FileResponse("claude.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/claude-app.js", include_in_schema=False)
 def serve_claude_js():

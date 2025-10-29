@@ -112,11 +112,14 @@ async function performSearch() {
     }
     
     try {
+        console.log('🔍 Searching for:', searchTerm);
         // Call backend search endpoint (searches titles AND message content)
         const response = await fetch(`/claude/conversations/search?q=${encodeURIComponent(searchTerm)}`);
+        console.log('📡 Search response status:', response.status);
         if (!response.ok) throw new Error('Search failed');
         
         const data = await response.json();
+        console.log('📦 Search results:', data.conversations?.length, 'conversations');
         allConversations = data.conversations || [];
         isBackendSearch = true; // Mark as backend search results
         

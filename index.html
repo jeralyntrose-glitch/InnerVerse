@@ -751,14 +751,11 @@
 
             .sidebar-header {
                 padding: 20px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
             }
 
             .new-chat-btn {
-                flex: 1;
-                margin-right: 52px; /* Make room for X button (40px width + 12px gap) */
+                width: 100%;
+                margin-bottom: 12px;
             }
 
             .burger-menu {
@@ -875,6 +872,7 @@
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
                 <div class="search-container">
                     <span class="search-icon">🔍</span>
                     <input 
@@ -886,7 +884,6 @@
                     />
                     <button class="search-clear-btn" id="searchClearBtn" style="display: none;">×</button>
                 </div>
-                <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
             </div>
             <div class="sidebar-content" id="sidebarContent">
                 <div class="loading-indicator">Loading conversations...</div>
