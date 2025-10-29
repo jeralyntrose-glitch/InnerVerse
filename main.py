@@ -3113,6 +3113,46 @@ async def get_all_conversations():
         print(f"❌ Error fetching all conversations: {str(e)}")
         return {"conversations": []}
 
+@app.get("/claude/conversations/search")
+async def search_conversations(q: str):
+    """
+    Search conversations by title AND message content
+    Phase 5: Search functionality
+    Returns conversations that match the search term in either title or message content
+    """
+    try:
+        if not q or len(q.strip()) == 0:
+            return {"conversations": []}
+        
+        conn = get_db_connection()
+        if not conn:
+            return {"conversations": []}
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        search_term = f"%{q.lower()}%"
+        
+        # Search in both conversation titles AND message content
+        # Using DISTINCT to avoid duplicate conversations if multiple messages match
+        cursor.execute("""
+            SELECT DISTINCT c.id, c.project, c.name, c.created_at, c.updated_at, c.has_unread_response
+            FROM conversations c
+            LEFT JOIN messages m ON m.conversation_id = c.id
+            WHERE 
+                LOWER(c.name) LIKE %s
+                OR LOWER(m.content) LIKE %s
+            ORDER BY c.updated_at DESC
+            LIMIT 100
+        """, (search_term, search_term))
+        
+        conversations = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {"conversations": [dict(c) for c in conversations]}
+    except Exception as e:
+        print(f"❌ Error searching conversations: {str(e)}")
+        return {"conversations": []}
+
 @app.get("/claude/conversations/detail/{conversation_id}")
 async def get_conversation_detail(conversation_id: int):
     """Get conversation with all messages"""

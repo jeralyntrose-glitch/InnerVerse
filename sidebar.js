@@ -8,6 +8,7 @@ let allConversations = [];
 let currentMenu = null;
 let searchTerm = '';
 let searchDebounceTimer = null;
+let isBackendSearch = false; // Flag to track if we're using backend search results
 
 // Folder Configuration
 const FOLDERS = [
@@ -74,32 +75,61 @@ searchInput.addEventListener('input', (e) => {
     
     // Debounce search (wait 300ms after user stops typing)
     clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(() => {
+    searchDebounceTimer = setTimeout(async () => {
         searchTerm = value;
-        renderSidebar();
+        await performSearch();
     }, 300);
 });
 
 // Clear button click listener
-searchClearBtn.addEventListener('click', () => {
+searchClearBtn.addEventListener('click', async () => {
     searchInput.value = '';
     searchTerm = '';
+    isBackendSearch = false;
     searchClearBtn.style.display = 'none';
-    renderSidebar();
+    await loadAllConversations(); // Reload all conversations
     searchInput.focus(); // Keep focus for better UX
 });
 
 // ESC key to clear search
-searchInput.addEventListener('keydown', (e) => {
+searchInput.addEventListener('keydown', async (e) => {
     if (e.key === 'Escape') {
         searchInput.value = '';
         searchTerm = '';
+        isBackendSearch = false;
         searchClearBtn.style.display = 'none';
-        renderSidebar();
+        await loadAllConversations(); // Reload all conversations
     }
 });
 
-// === Search Filter Function ===
+// === Phase 5: Backend Search Function ===
+async function performSearch() {
+    if (!searchTerm) {
+        // If search is empty, reload all conversations
+        isBackendSearch = false;
+        await loadAllConversations();
+        return;
+    }
+    
+    try {
+        // Call backend search endpoint (searches titles AND message content)
+        const response = await fetch(`/claude/conversations/search?q=${encodeURIComponent(searchTerm)}`);
+        if (!response.ok) throw new Error('Search failed');
+        
+        const data = await response.json();
+        allConversations = data.conversations || [];
+        isBackendSearch = true; // Mark as backend search results
+        
+        renderSidebar();
+    } catch (error) {
+        console.error('❌ Error searching conversations:', error);
+        // Fall back to client-side title-only search
+        isBackendSearch = false;
+        renderSidebar();
+    }
+}
+
+// === Search Filter Function (Client-Side Fallback) ===
 function filterConversations(conversations) {
     if (!searchTerm) return conversations;
     
@@ -108,7 +138,7 @@ function filterConversations(conversations) {
     return conversations.filter(conv => {
         const title = (conv.title || conv.name || '').toLowerCase();
         
-        // Search in conversation title
+        // Search in conversation title (fallback if backend search fails)
         return title.includes(term);
     });
 }
@@ -145,13 +175,16 @@ function renderSidebar() {
     let html = '';
     let totalMatches = 0;
     
-    // Filter all conversations based on search term
-    const filteredConversations = filterConversations(allConversations);
+    // IMPORTANT: If using backend search results, DON'T filter again!
+    // Backend already returned filtered results (titles + message content)
+    // Only apply client-side filtering if NOT using backend search
+    const filteredConversations = isBackendSearch ? allConversations : filterConversations(allConversations);
     
     // Render project folders
     FOLDERS.forEach(folder => {
         const folderConvs = allConversations.filter(c => c.project === folder.id);
-        const filteredFolderConvs = filterConversations(folderConvs);
+        // Use same logic: backend search results are already filtered
+        const filteredFolderConvs = isBackendSearch ? folderConvs : filterConversations(folderConvs);
         
         // Auto-expand folders with matches, collapse others during search
         const hasMatches = filteredFolderConvs.length > 0;
