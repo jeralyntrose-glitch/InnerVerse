@@ -1036,7 +1036,7 @@ async function sendMessage() {
     // Show typing indicator
     showTypingIndicator();
 
-    const assistantContent = addMessage('assistant', '');
+    let assistantContent = null;
     let fullResponse = '';
 
     try {
@@ -1047,9 +1047,6 @@ async function sendMessage() {
         });
 
         if (!response.ok) throw new Error('Failed to send message');
-
-        // Hide typing indicator when response starts
-        hideTypingIndicator();
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -1067,6 +1064,12 @@ async function sendMessage() {
                         const data = JSON.parse(line.slice(6));
                         
                         if (data.chunk) {
+                            // On first chunk, hide typing indicator and create assistant message
+                            if (!assistantContent) {
+                                hideTypingIndicator();
+                                assistantContent = addMessage('assistant', '');
+                            }
+                            
                             fullResponse += data.chunk;
                             // Update with markdown rendering + sanitization
                             if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
