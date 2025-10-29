@@ -1,0 +1,74 @@
+Phase 4 looks great overall! Need some color/styling adjustments AND want to make everything more compact/sleek:
+
+**STYLING PHILOSOPHY:**
+Make the interface thinner, sleeker, more minimalist - BUT keep the chat area comfortable and usable (not cramped at bottom).
+
+**Issues to fix:**
+
+1. Header Bar (Top of Page):
+   - Currently: Big fat purple bar
+   - Change to: THIN minimal header (max 50px height) OR remove entirely
+   - Background: White or very light grey (#F7F7F8)
+   - Sleek, barely-there feel
+   - Should NOT dominate the screen
+
+2. New Chat Button (Sidebar):
+   - Currently: Purple button, likely chunky
+   - Change to: 
+     * Thin, sleek button design
+     * Reduced padding (8px vertical, 12px horizontal)
+     * Background: White or light grey with subtle 1px border
+     * Text color: Dark grey (#2D2D2D)
+     * Hover state: Light teal (#E6F7F4)
+     * Should be compact, not bulky
+
+3. Sidebar Overall:
+   - Make everything more compact
+   - Reduce padding/spacing between elements
+   - Folders: Tighter spacing
+   - Chat list items: Sleeker, less padding
+   - Overall: Thin, tight, professional feel
+
+4. Send Button (Bottom Right):
+   - Currently: Practically black, hard to see
+   - Change to:
+     * Teal (#10A37F) background
+     * Compact size (not huge)
+     * Sleek design
+     * Hover state: Darker teal (#0D8C6C)
+     * Should be visible but not dominating
+
+5. User Messages (My Messages):
+   - Currently: Grey rectangle spanning full width
+   - Should be: 
+     * Small teal bubble (#10A37F)
+     * Right-aligned
+     * Max-width: 60% (slightly smaller than before)
+     * Compact padding: 10px 14px (tighter)
+     * Border-radius: 16px
+     * Sleek bubble feel
+
+6. Message Input Area (Bottom):
+   - Keep it functional and usable
+   - Reduce overall height to be sleeker
+   - BUT: Don't make it cramped or tiny
+   - Input box should still be comfortable to type in
+   - Send button integrated nicely
+   - Thin but usable
+
+7. Overall Spacing:
+   - Reduce padding throughout
+   - Tighter margins between messages (12px instead of 16px)
+   - More compact feel overall
+   - BUT: Keep readability - don't make it claustrophobic
+
+**GOAL:**
+Sleek, thin, minimalist, professional aesthetic - like a high-end productivity tool. Everything compact but still usable. Think: "Apple design language" - minimal, tight, refined.
+
+**CRITICAL:**
+- Chat area should NOT feel cramped
+- Input box at bottom should still be comfortable to use
+- Just make all the chrome/UI elements thinner and tighter
+- The content (messages) should breathe, the UI should be minimal
+
+Please adjust these items while maintaining the good parts (AI full-width messages, markdown rendering, etc.)
