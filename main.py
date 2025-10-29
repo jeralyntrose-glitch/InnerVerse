@@ -4112,6 +4112,10 @@ def health_check():
 
 @app.get("/", include_in_schema=False)
 def serve_frontend():
+    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+@app.get("/uploader", include_in_schema=False)
+def serve_uploader():
     return FileResponse("uploader.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/privacy", include_in_schema=False)
@@ -4388,7 +4392,7 @@ async def openai_chat_completions(request: Request):
 
 
 # Mount static files (CSS, JS)
-app.mount("/static", StaticFiles(directory="."), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/node_modules", StaticFiles(directory="node_modules"), name="node_modules")
 
 
