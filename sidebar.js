@@ -606,6 +606,142 @@ function scrollToBottom() {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+// === Phase 5 Part 2: Copy Message Functionality ===
+
+// Strip markdown from AI messages to get plain text
+function stripMarkdown(text) {
+    let plain = text;
+    
+    // Remove code blocks
+    plain = plain.replace(/```[\s\S]*?```/g, (match) => {
+        // Extract code content, preserve formatting
+        return match.replace(/```\w*\n?/g, '').replace(/```$/g, '');
+    });
+    
+    // Remove inline code
+    plain = plain.replace(/`([^`]+)`/g, '$1');
+    
+    // Remove bold
+    plain = plain.replace(/\*\*([^*]+)\*\*/g, '$1');
+    plain = plain.replace(/__([^_]+)__/g, '$1');
+    
+    // Remove italic
+    plain = plain.replace(/\*([^*]+)\*/g, '$1');
+    plain = plain.replace(/_([^_]+)_/g, '$1');
+    
+    // Remove headers
+    plain = plain.replace(/^#{1,6}\s+(.+)$/gm, '$1');
+    
+    // Remove strikethrough
+    plain = plain.replace(/~~([^~]+)~~/g, '$1');
+    
+    // Remove blockquotes
+    plain = plain.replace(/^>\s+(.+)$/gm, '$1');
+    
+    // Remove horizontal rules
+    plain = plain.replace(/^([-*_]){3,}$/gm, '');
+    
+    // Remove list markers (preserve content)
+    plain = plain.replace(/^[\s]*[-*+]\s+(.+)$/gm, '$1');
+    plain = plain.replace(/^[\s]*\d+\.\s+(.+)$/gm, '$1');
+    
+    // Remove links but keep text
+    plain = plain.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    
+    // Remove images
+    plain = plain.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1');
+    
+    // Clean up extra whitespace but preserve structure
+    plain = plain.replace(/\n{3,}/g, '\n\n');
+    plain = plain.trim();
+    
+    return plain;
+}
+
+// Copy message to clipboard with fallback
+async function copyMessageToClipboard(messageText, isAIMessage, button) {
+    try {
+        // Strip markdown if AI message
+        const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
+        
+        // Try modern Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(plainText);
+            showCopySuccess(button);
+        } else {
+            // Fallback for older browsers
+            fallbackCopy(plainText, button);
+        }
+    } catch (err) {
+        console.error('Clipboard error:', err);
+        // Try fallback method
+        const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
+        fallbackCopy(plainText, button);
+    }
+}
+
+// Fallback copy method for older browsers
+function fallbackCopy(text, button) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    
+    try {
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        const success = document.execCommand('copy');
+        
+        if (success) {
+            showCopySuccess(button);
+        } else {
+            showCopyError(button);
+        }
+    } catch (err) {
+        console.error('Fallback copy failed:', err);
+        showCopyError(button);
+    } finally {
+        document.body.removeChild(textarea);
+    }
+}
+
+// Show copy success feedback
+function showCopySuccess(button) {
+    button.classList.add('copied');
+    button.setAttribute('data-tooltip', 'Copied!');
+    
+    // Change icon to checkmark
+    button.innerHTML = `
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13.5 4L6 11.5L2.5 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    `;
+    
+    // Reset after 2 seconds
+    setTimeout(() => {
+        button.classList.remove('copied');
+        button.setAttribute('data-tooltip', 'Copy message');
+        button.innerHTML = `
+            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M3 10V3C3 2.44772 3.44772 2 4 2H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+        `;
+    }, 2000);
+}
+
+// Show copy error feedback
+function showCopyError(button) {
+    button.setAttribute('data-tooltip', 'Copy failed');
+    
+    // Reset after 2 seconds
+    setTimeout(() => {
+        button.setAttribute('data-tooltip', 'Copy message');
+    }, 2000);
+}
+
 // Professional Phase 4: Markdown-enabled message rendering with XSS protection
 function addMessage(role, content) {
     const messageDiv = document.createElement('div');
@@ -643,6 +779,35 @@ function addMessage(role, content) {
     }
 
     messageDiv.appendChild(contentDiv);
+    
+    // === Phase 5 Part 2: Add Copy Button ===
+    const copyButton = document.createElement('button');
+    copyButton.className = 'copy-btn';
+    copyButton.setAttribute('data-tooltip', 'Copy message');
+    copyButton.setAttribute('aria-label', 'Copy message');
+    copyButton.setAttribute('tabindex', '0');
+    copyButton.innerHTML = `
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M3 10V3C3 2.44772 3.44772 2 4 2H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+    `;
+    
+    // Add click handler
+    copyButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent any parent click handlers
+        copyMessageToClipboard(content, role === 'assistant', copyButton);
+    });
+    
+    // Add keyboard support (Enter and Space)
+    copyButton.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            copyMessageToClipboard(content, role === 'assistant', copyButton);
+        }
+    });
+    
+    messageDiv.appendChild(copyButton);
     messagesDiv.appendChild(messageDiv);
 
     // Only auto-scroll if user is already at bottom
