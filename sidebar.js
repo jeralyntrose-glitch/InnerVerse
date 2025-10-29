@@ -1171,21 +1171,35 @@ async function sendMessage() {
 }
 
 // === Event Listeners ===
-console.log('🔗 Setting up event listeners - sendButton:', sendButton, 'messageInput:', messageInput);
+console.log('🔗 Setting up event listeners');
+console.log('sendButton exists?', sendButton !== null);
+console.log('messageInput exists?', messageInput !== null);
+console.log('sendButton element:', sendButton);
+console.log('messageInput element:', messageInput);
 
-sendButton.addEventListener('click', () => {
-    console.log('🖱️ SEND BUTTON CLICKED!');
-    sendMessage();
-});
-
-messageInput.addEventListener('keypress', (e) => {
-    console.log('⌨️ KEY PRESSED:', e.key);
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        console.log('✅ ENTER KEY - SENDING MESSAGE!');
+if (sendButton) {
+    sendButton.addEventListener('click', () => {
+        console.log('🖱️ SEND BUTTON CLICKED!');
         sendMessage();
-    }
-});
+    });
+    console.log('✅ Click listener added to send button');
+} else {
+    console.error('❌ sendButton is NULL - cannot add event listener!');
+}
+
+if (messageInput) {
+    messageInput.addEventListener('keypress', (e) => {
+        console.log('⌨️ KEY PRESSED:', e.key);
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            console.log('✅ ENTER KEY - SENDING MESSAGE!');
+            sendMessage();
+        }
+    });
+    console.log('✅ Keypress listener added to message input');
+} else {
+    console.error('❌ messageInput is NULL - cannot add event listener!');
+}
 
 // iOS Safari: Scroll to top when keyboard closes to show header
 messageInput.addEventListener('blur', () => {
