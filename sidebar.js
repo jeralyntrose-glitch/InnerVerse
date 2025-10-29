@@ -1,10 +1,13 @@
 // === Phase 3: Sidebar & Organization ===
+// === Phase 5: Search & Copy Utility Features ===
 
 // State
 let conversationId = null;
 let isStreaming = false;
 let allConversations = [];
 let currentMenu = null;
+let searchTerm = '';
+let searchDebounceTimer = null;
 
 // Folder Configuration
 const FOLDERS = [
@@ -27,6 +30,8 @@ const newChatBtn = document.getElementById('newChatBtn');
 const sidebarContent = document.getElementById('sidebarContent');
 const modalOverlay = document.getElementById('modalOverlay');
 const typingIndicator = document.getElementById('typingIndicator');
+const searchInput = document.getElementById('searchInput');
+const searchClearBtn = document.getElementById('searchClearBtn');
 
 // Initialize sidebar state on mobile
 if (window.innerWidth <= 768) {
@@ -59,6 +64,55 @@ newChatBtn.addEventListener('click', async () => {
     }
 });
 
+// === Phase 5: Search Functionality ===
+// Search input event listener with debounce (300ms)
+searchInput.addEventListener('input', (e) => {
+    const value = e.target.value.trim();
+    
+    // Show/hide clear button
+    searchClearBtn.style.display = value ? 'flex' : 'none';
+    
+    // Debounce search (wait 300ms after user stops typing)
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        searchTerm = value;
+        renderSidebar();
+    }, 300);
+});
+
+// Clear button click listener
+searchClearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    searchTerm = '';
+    searchClearBtn.style.display = 'none';
+    renderSidebar();
+    searchInput.focus(); // Keep focus for better UX
+});
+
+// ESC key to clear search
+searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        searchInput.value = '';
+        searchTerm = '';
+        searchClearBtn.style.display = 'none';
+        renderSidebar();
+    }
+});
+
+// === Search Filter Function ===
+function filterConversations(conversations) {
+    if (!searchTerm) return conversations;
+    
+    const term = searchTerm.toLowerCase();
+    
+    return conversations.filter(conv => {
+        const title = (conv.title || conv.name || '').toLowerCase();
+        
+        // Search in conversation title
+        return title.includes(term);
+    });
+}
+
 // === Load All Conversations ===
 async function loadAllConversations() {
     try {
@@ -85,15 +139,25 @@ async function loadAllConversations() {
 
 // === Render Sidebar ===
 function renderSidebar() {
-    // Get folder states from localStorage
+    // Get folder states from localStorage (only used when NOT searching)
     const folderStates = JSON.parse(localStorage.getItem('folderStates') || '{}');
     
     let html = '';
+    let totalMatches = 0;
+    
+    // Filter all conversations based on search term
+    const filteredConversations = filterConversations(allConversations);
     
     // Render project folders
     FOLDERS.forEach(folder => {
-        const conversations = allConversations.filter(c => c.project === folder.id);
-        const isExpanded = folderStates[folder.id] === true; // Default: closed
+        const folderConvs = allConversations.filter(c => c.project === folder.id);
+        const filteredFolderConvs = filterConversations(folderConvs);
+        
+        // Auto-expand folders with matches, collapse others during search
+        const hasMatches = filteredFolderConvs.length > 0;
+        const isExpanded = searchTerm ? hasMatches : (folderStates[folder.id] === true);
+        
+        if (hasMatches) totalMatches += filteredFolderConvs.length;
         
         html += `
             <div class="folder ${isExpanded ? 'expanded' : ''}" data-folder="${folder.id}">
@@ -101,11 +165,11 @@ function renderSidebar() {
                     <span class="folder-arrow">▶</span>
                     <span class="folder-icon">${folder.icon}</span>
                     <span class="folder-name">${folder.name}</span>
-                    <span class="folder-count">(${conversations.length})</span>
+                    <span class="folder-count">(${filteredFolderConvs.length})</span>
                 </div>
                 <div class="folder-conversations">
-                    ${conversations.length > 0 
-                        ? conversations.map(c => renderConversationItem(c)).join('')
+                    ${filteredFolderConvs.length > 0 
+                        ? filteredFolderConvs.map(c => renderConversationItem(c)).join('')
                         : '<div class="empty-folder">No chats yet</div>'
                     }
                 </div>
@@ -116,23 +180,36 @@ function renderSidebar() {
     // Add divider and "All Chats" folder
     html += '<div class="folder-divider"></div>';
     
-    const allChatsExpanded = folderStates['all-chats'] !== false;
+    // Auto-expand All Chats if it has matches during search
+    const allChatsHasMatches = filteredConversations.length > 0;
+    const allChatsExpanded = searchTerm ? allChatsHasMatches : (folderStates['all-chats'] !== false);
+    
     html += `
         <div class="folder ${allChatsExpanded ? 'expanded' : ''}" data-folder="all-chats">
             <div class="folder-header" onclick="toggleFolder('all-chats')">
                 <span class="folder-arrow">▶</span>
                 <span class="folder-icon">📋</span>
                 <span class="folder-name">All Chats</span>
-                <span class="folder-count">(${allConversations.length})</span>
+                <span class="folder-count">(${filteredConversations.length})</span>
             </div>
             <div class="folder-conversations">
-                ${allConversations.length > 0
-                    ? allConversations.slice(0, 100).map(c => renderConversationItem(c)).join('')
+                ${filteredConversations.length > 0
+                    ? filteredConversations.slice(0, 100).map(c => renderConversationItem(c)).join('')
                     : '<div class="empty-folder">No chats yet</div>'
                 }
             </div>
         </div>
     `;
+    
+    // Show empty state if searching and no results
+    if (searchTerm && filteredConversations.length === 0) {
+        html = `
+            <div class="search-empty-state">
+                <strong>No conversations found matching "${escapeHTML(searchTerm)}"</strong>
+                Try a different search term
+            </div>
+        `;
+    }
     
     sidebarContent.innerHTML = html;
 }
