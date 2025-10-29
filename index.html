@@ -587,40 +587,37 @@
                 display: flex !important;
             }
 
-            body {
-                position: fixed;
-                width: 100%;
-                overflow: hidden;
-            }
-            
             .main-content {
                 margin-left: 0;
                 width: 100%;
                 max-width: 100%;
-                height: var(--viewport-height, 100vh);
+                height: 100vh;
                 box-shadow: none;
-                display: flex;
-                flex-direction: column;
+                position: relative;
             }
             
             .chat-container {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                min-height: 0;
-                overflow: hidden;
+                height: 100%;
+                position: relative;
+                padding-bottom: 70px; /* Make room for fixed input */
             }
             
             .messages {
-                flex: 1;
+                height: 100%;
                 overflow-y: auto;
-                min-height: 0;
+                -webkit-overflow-scrolling: touch;
                 padding: 15px;
             }
 
             .input-container {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
                 padding: 12px 15px;
-                flex-shrink: 0;
+                background: white;
+                border-top: 1px solid #e0e0e0;
+                z-index: 100;
             }
             
             .message-input {
@@ -703,13 +700,7 @@
         // Fallback for older iOS versions - update on window resize
         window.addEventListener('resize', updateViewportHeight);
         
-        // Prevent page scrolling on iOS when keyboard appears
-        if (window.visualViewport) {
-            // Force scroll to stay at 0,0 when viewport scrolls
-            window.visualViewport.addEventListener('scroll', function() {
-                window.scrollTo(0, 0);
-            });
-        }
+        // No scroll prevention needed with absolute positioning
     </script>
     <script src="/static/sidebar.js"></script>
 </body>
