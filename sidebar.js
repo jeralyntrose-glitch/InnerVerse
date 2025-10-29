@@ -1,6 +1,8 @@
 // === Phase 3: Sidebar & Organization ===
 // === Phase 5: Search & Copy Utility Features ===
 
+console.log('🟢🟢🟢 SIDEBAR.JS IS LOADING! 🟢🟢🟢');
+
 // State
 let conversationId = null;
 let isStreaming = false;
