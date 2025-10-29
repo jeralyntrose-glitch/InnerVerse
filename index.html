@@ -94,6 +94,78 @@
             border-bottom: 1px solid #e0e0e0;
         }
 
+        /* Search Container - Phase 5 */
+        .search-container {
+            position: relative;
+            width: 100%;
+            height: 40px;
+            background: #FFFFFF;
+            border: 1px solid #E5E5E5;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-icon {
+            font-size: 16px;
+            line-height: 1;
+            color: #6B6B6B;
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            color: #2D2D2D;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            outline: none;
+            width: 100%;
+        }
+
+        .search-input::placeholder {
+            color: #999;
+        }
+
+        .search-clear-btn {
+            background: none;
+            border: none;
+            color: #6B6B6B;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: color 0.2s;
+        }
+
+        .search-clear-btn:hover {
+            color: #2D2D2D;
+        }
+
+        /* Empty search state */
+        .search-empty-state {
+            padding: 20px;
+            text-align: center;
+            color: #6B6B6B;
+            font-size: 14px;
+        }
+
+        .search-empty-state strong {
+            color: #2D2D2D;
+            display: block;
+            margin-bottom: 4px;
+        }
+
         .new-chat-btn {
             width: 100%;
             padding: 8px 12px;
@@ -803,6 +875,17 @@
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        class="search-input" 
+                        placeholder="Search conversations..."
+                        autocomplete="off"
+                    />
+                    <button class="search-clear-btn" id="searchClearBtn" style="display: none;">×</button>
+                </div>
                 <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
             </div>
             <div class="sidebar-content" id="sidebarContent">

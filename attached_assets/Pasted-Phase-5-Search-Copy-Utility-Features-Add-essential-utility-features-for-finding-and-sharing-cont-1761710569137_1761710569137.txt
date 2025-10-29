@@ -1,0 +1,240 @@
+Phase 5: Search & Copy Utility Features
+
+Add essential utility features for finding and sharing content. These are TWO separate, independent features that should be built and tested sequentially.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 1: SEARCH FUNCTIONALITY (Build This First)
+
+**PURPOSE:**
+Allow users to search through all conversations and messages to quickly find specific chats.
+
+**LOCATION:**
+Top of sidebar, above "New Chat" button
+
+**VISUAL DESIGN:**
+
+Search Bar Container:
+- Position: Fixed at top of sidebar (always visible)
+- Width: 100% of sidebar width minus 16px padding on each side
+- Height: 40px (compact, sleek)
+- Background: #FFFFFF (white)
+- Border: 1px solid #E5E5E5 (subtle grey border)
+- Border-radius: 8px (slightly rounded)
+- Padding: 8px 12px
+- Margin-bottom: 12px (space before New Chat button)
+
+Search Input Field:
+- Placeholder text: "Search conversations..."
+- Font-size: 14px
+- Color: #2D2D2D (dark grey)
+- Background: transparent
+- Border: none
+- Width: 100%
+- No outline on focus
+
+Search Icon:
+- Position: Left side of input, before text
+- Icon: 🔍 or magnifying glass SVG
+- Size: 16px × 16px
+- Color: #6B6B6B (medium grey)
+
+Clear Button (X):
+- Position: Right side of input, after text
+- Only shows when there's text in search field
+- Icon: × or close SVG
+- Size: 16px × 16px
+- Color: #6B6B6B
+- Clickable: Clears search and shows all conversations
+
+**FUNCTIONALITY:**
+
+Search Behavior:
+- Real-time filtering (search as user types)
+- Debounce: 300ms (wait 300ms after user stops typing before searching)
+- Case-insensitive search
+- Searches through:
+  * Conversation titles
+  * Message content (both user and AI messages)
+
+Search Results Display:
+- Filter conversations in sidebar to show only matches
+- Highlight matching conversations in folder structure
+- If conversation matches: Show it in its folder
+- If no matches: Show "No results found" message
+- Folders with no matching conversations: Collapse automatically
+- Folders with matching conversations: Expand automatically
+
+Clear Search:
+- Click X button: Clears search, shows all conversations
+- Clear input field: Shows all conversations again
+- ESC key: Clears search (keyboard shortcut)
+
+Empty State:
+- When search returns no results:
+  * Show message: "No conversations found matching '[search term]'"
+  * Show message: "Try a different search term"
+  * Keep search bar visible and active
+
+**TECHNICAL IMPLEMENTATION:**
+
+Search Algorithm:
+- Client-side search (filter existing data, don't hit database)
+- Search string matching (contains, not exact match)
+- Match against:
+  * conversation.title field
+  * All messages in conversation (concatenated text)
+
+Performance:
+- Only search loaded conversations (don't load all conversations just for search)
+- If user has 100+ conversations, consider backend search endpoint
+- For now: Client-side is fine for < 100 conversations
+
+State Management:
+- Store search term in component state
+- Filter conversations based on search term
+- Re-render filtered list
+- Preserve folder expand/collapse states during search
+
+**EDGE CASES:**
+
+Long search terms:
+- Input field should scroll horizontally if text too long
+- No character limit on search
+
+Special characters:
+- Handle special characters in search (., ?, !, etc.)
+- Escape regex special characters to avoid errors
+
+No conversations:
+- If user has no conversations yet, show empty state
+- Search bar still visible but disabled state
+
+Mobile:
+- Search bar remains at top of sidebar
+- Same functionality on mobile
+- Touch-friendly (40px height = good tap target)
+
+**TEST CRITERIA:**
+
+Search Functionality:
+✅ Type in search bar → results filter in real-time
+✅ Search finds matches in conversation titles
+✅ Search finds matches in message content
+✅ Search is case-insensitive ("ENFP" finds "enfp")
+✅ Clear button (X) appears when typing
+✅ Click X → clears search, shows all conversations
+✅ ESC key → clears search
+✅ No results → shows "No conversations found" message
+
+Visual:
+✅ Search bar looks clean and professional
+✅ Matches Claude.ai aesthetic (sleek, minimal)
+✅ Folders expand/collapse based on matches
+✅ Active conversation stays highlighted during search
+
+Performance:
+✅ Search is fast (no lag when typing)
+✅ Debounce prevents excessive filtering
+✅ Doesn't slow down app
+
+Mobile:
+✅ Search bar works on mobile
+✅ Touch-friendly
+✅ Keyboard doesn't break layout
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STOP HERE AND TEST PART 1 BEFORE PROCEEDING TO PART 2
+
+Once search is working perfectly, reply: "Part 1 (Search) is solid! Ready for Part 2 (Copy)."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 2: COPY MESSAGE FUNCTIONALITY (Build After Part 1 Works)
+
+**PURPOSE:**
+Allow users to copy any message (user or AI) to clipboard for sharing or saving.
+
+**LOCATION:**
+Copy button appears on each message (both user messages and AI messages)
+
+**VISUAL DESIGN:**
+
+Copy Button:
+- Position: Top-right corner of each message
+- Visibility: 
+  * Desktop: Show on hover over message
+  * Mobile: Always visible (no hover on touch devices)
+- Icon: 📋 or copy/clipboard SVG
+- Size: 20px × 20px
+- Background: Semi-transparent white/grey (rgba(255,255,255,0.8))
+- Border: 1px solid #E5E5E5
+- Border-radius: 4px
+- Padding: 4px
+- Cursor: pointer
+
+Button States:
+- Default: Copy icon, subtle
+- Hover: Slight scale (transform: scale(1.05))
+- Active (clicked): Changes to checkmark ✓ for 2 seconds
+- After 2 seconds: Returns to copy icon
+
+Tooltip (optional but nice):
+- On hover: Show "Copy message"
+- After click: Show "Copied!" for 2 seconds
+- Position: Above button
+- Font-size: 12px
+- Background: #2D2D2D
+- Color: #FFFFFF
+- Padding: 4px 8px
+- Border-radius: 4px
+
+**FUNCTIONALITY:**
+
+Copy Behavior:
+- Click copy button → Copies message text to clipboard
+- Uses Clipboard API: navigator.clipboard.writeText()
+- Copies PLAIN TEXT only (no formatting, no markdown symbols)
+- For AI messages: Copy rendered text (not raw markdown)
+- For user messages: Copy exact text user typed
+
+Success Feedback:
+- Button icon changes to checkmark ✓
+- Optional: Brief "Copied!" toast notification
+- After 2 seconds: Button returns to normal
+
+What Gets Copied:
+- AI messages: Clean text without markdown formatting
+  * "**bold**" becomes "bold"
+  * "## Header" becomes "Header"
+  * Remove markdown symbols, copy readable text
+- User messages: Exact text as typed
+- No metadata (no timestamps, no "InnerVerse said...")
+- Just the message content
+
+**POSITIONING:**
+
+AI Messages (Full-Width):
+- Copy button in top-right corner of message area
+- Position: absolute, top: 8px, right: 8px
+- Doesn't interfere with text
+
+User Messages (Bubbles):
+- Copy button in top-right corner of bubble
+- Position: absolute, top: 8px, right: 8px
+- On teal bubble: Button should be visible (light icon)
+
+**TECHNICAL IMPLEMENTATION:**
+
+Clipboard API:
+```javascript
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    // Show success feedback
+  } catch (err) {
+    // Fallback for older browsers
+    // Use document.execCommand('copy') fallback
+  }
+}
