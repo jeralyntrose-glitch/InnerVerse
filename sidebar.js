@@ -1078,9 +1078,20 @@ async function sendMessage() {
     }
     
     // Show typing indicator
-    alert('ABOUT TO SHOW TYPING INDICATOR!');
     showTypingIndicator();
-    alert('TYPING INDICATOR SHOULD BE VISIBLE NOW!');
+    
+    // Debug: Check if typing indicator is visible
+    setTimeout(() => {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) {
+            const hasActive = indicator.classList.contains('active');
+            const computedStyle = window.getComputedStyle(indicator);
+            const displayValue = computedStyle.display;
+            alert(`Typing Indicator Debug:\nHas 'active' class: ${hasActive}\nDisplay value: ${displayValue}\nClasses: ${indicator.className}`);
+        } else {
+            alert('ERROR: typingIndicator element not found in DOM!');
+        }
+    }, 100);
     
     // Force scroll to show typing indicator
     setTimeout(() => scrollToBottom(), 100);
