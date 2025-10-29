@@ -551,6 +551,7 @@
             width: 100%;
             margin-bottom: 12px;
             animation: fadeIn 0.15s ease;
+            position: relative; /* For copy button positioning */
         }
 
         @keyframes fadeIn {
@@ -651,6 +652,95 @@
             padding-left: 16px;
             margin: 12px 0;
             color: var(--color-text-secondary);
+        }
+
+        /* Phase 5 Part 2: Copy Button Styles */
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #E5E5E5;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 10;
+            -webkit-appearance: none;
+            appearance: none;
+            opacity: 0; /* Hidden by default on desktop */
+        }
+
+        .copy-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: #6B6B6B;
+            transition: fill 0.15s ease;
+        }
+
+        /* Desktop: Show on message hover */
+        @media (min-width: 769px) {
+            .message:hover .copy-btn {
+                opacity: 1;
+            }
+        }
+
+        /* Mobile: Always visible */
+        @media (max-width: 768px) {
+            .copy-btn {
+                opacity: 1;
+            }
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.05);
+        }
+
+        .copy-btn:focus {
+            outline: 2px solid #10A37F;
+            outline-offset: 2px;
+        }
+
+        /* Success state after copy */
+        .copy-btn.copied {
+            background: #10A37F;
+        }
+
+        .copy-btn.copied svg {
+            fill: #FFFFFF;
+        }
+
+        /* Tooltip */
+        .copy-btn::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            right: 0;
+            background: #2D2D2D;
+            color: #FFFFFF;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .copy-btn:hover::before {
+            opacity: 1;
+        }
+
+        .copy-btn.copied::before {
+            content: 'Copied!';
+            opacity: 1;
         }
 
         /* Typing Indicator - Sleek Compact */
