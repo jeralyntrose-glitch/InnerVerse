@@ -786,6 +786,7 @@
 
             .sidebar-header {
                 padding: 20px;
+                padding-right: 60px; /* Make room for X button */
             }
 
             .new-chat-btn {
@@ -800,8 +801,8 @@
 
             .burger-menu.sidebar-open {
                 position: fixed;
-                top: 8px;
-                right: 12px;
+                top: 12px;
+                right: 16px;
                 left: auto;
                 font-size: 0; /* Hide the original ☰ text */
                 display: flex;
@@ -809,6 +810,7 @@
                 justify-content: center;
                 background: white;
                 border: 1px solid #d0d0d0;
+                z-index: 1002; /* Above sidebar content */
             }
 
             .burger-menu.sidebar-open::before {
@@ -816,6 +818,12 @@
                 font-size: 32px;
                 color: #666;
                 font-weight: 300;
+            }
+            
+            /* Remove iOS button styling from burger menu */
+            .burger-menu {
+                -webkit-appearance: none;
+                appearance: none;
             }
 
             /* Always show 3-dot menu on mobile (no hover needed) */
