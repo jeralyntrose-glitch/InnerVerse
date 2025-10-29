@@ -610,6 +610,7 @@
                 overflow: hidden;
                 display: flex;
                 flex-direction: column;
+                margin-bottom: var(--input-bar-height, 100px); /* Make room for fixed input */
             }
             
             .messages {
@@ -617,7 +618,7 @@
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
-                padding-bottom: var(--input-bar-height, 100px); /* Dynamic space for fixed input bar */
+                padding-bottom: 20px; /* Just a small buffer */
             }
 
             .input-container {
