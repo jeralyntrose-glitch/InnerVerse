@@ -199,7 +199,7 @@
             background-color: transparent;
             border: none;
             outline: none;
-            color: #6B6B6B;
+            color: var(--color-text-secondary);
             font-size: 20px;
             line-height: 1;
             cursor: pointer;
@@ -215,7 +215,7 @@
         }
 
         .search-clear-btn:hover {
-            color: #2D2D2D;
+            color: var(--color-text-primary);
         }
 
         .search-clear-btn:focus {
@@ -1088,7 +1088,7 @@
             flex: 1;
             padding: 12px 16px;
             border: 1px solid var(--color-input-border);
-            border-radius: 12px;
+            border-radius: 24px;
             font-size: 15px;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--color-input-bg);
@@ -1266,8 +1266,8 @@
                 left: 0;
                 right: 0;
                 padding: 12px 15px;
-                background: white;
-                border-top: 1px solid #e0e0e0;
+                background: var(--color-page-bg);
+                border-top: 1px solid var(--color-border);
                 z-index: 100;
                 padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
             }
