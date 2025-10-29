@@ -1171,6 +1171,7 @@ async function sendMessage() {
 }
 
 // === Event Listeners ===
+console.log('📦 SIDEBAR.JS VERSION: 2025-10-29-17:35 🆕');
 console.log('🔗 Setting up event listeners');
 console.log('sendButton exists?', sendButton !== null);
 console.log('messageInput exists?', messageInput !== null);
