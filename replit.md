@@ -9,8 +9,9 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Frontend Architecture
-- **UI/UX (Sleek Compact Design)**: Apple-inspired minimalist interface with sleek, tight, refined aesthetic. Features Inter font, thin minimal header (50px, light grey), teal accent colors (#10A37F), compact spacing throughout, and responsive mobile design. Professional productivity tool aesthetic with reduced padding and tighter margins while maintaining usability.
-- **Chat Interface (`/chat` and `/claude`)**: A professional, Claude.ai-inspired chat interface with full feature parity. It uses a clean, minimal aesthetic with neutral colors and the Inter font. Key features include:
+- **UI/UX (Sleek Compact Design)**: Apple-inspired minimalist interface with sleek, tight, refined aesthetic. Features lighter ChatGPT-style typography (Inter font with reduced weights: 300-500 instead of 600), thin minimal header (50px, light grey), teal accent colors (#10A37F), compact spacing throughout, and responsive mobile design. Professional productivity tool aesthetic with reduced padding and tighter margins while maintaining usability.
+- **Branding**: "InnerVerse" title uses thin Outfit font (weight 300) with increased letter-spacing for modern, clean aesthetic. Simplified brain logo with minimal line-art design (circles and paths) in teal (#10A37F).
+- **Chat Interface (`/chat` and `/claude`)**: A professional, Claude.ai/ChatGPT-inspired chat interface with full feature parity. It uses a clean, minimal aesthetic with neutral colors and lighter font weights. Key features include:
     - **Sidebar**: Collapsible project folders (7 categories) with compact 4px spacing, no descriptions shown, conversation management (load, rename, delete). Mobile-optimized with burger menu that stays closed during background refreshes (renderSidebar preserves closed state), auto-closes on conversation selection, and batch-fetches all data before rendering to prevent flickering.
     - **Search Functionality (Phase 5 Part 1)**: Comprehensive search with backend endpoint `/claude/conversations/search` that searches both conversation titles AND message content using SQL LEFT JOIN. Features 300ms debounce, real-time filtering, auto-expand/collapse folders based on matches, clear via X button or ESC key, XSS protection, and graceful client-side fallback. Search results bypass client-side filtering (isBackendSearch flag prevents double-filtering).
     - **Copy Message Functionality (Phase 5 Part 2)**: One-click copy buttons on all messages (user and AI) with intelligent markdown stripping for AI responses. Features desktop hover-to-reveal UX, mobile always-visible buttons, keyboard accessibility (Tab/Enter/Space), success feedback with checkmark animation, and clipboard API with legacy fallback. Strips markdown formatting (bold, italic, code blocks, headers, lists, links) from AI messages before copying plain text.
@@ -20,11 +21,11 @@ Preferred communication style: Simple, everyday language.
     - **PWA Support**: Full Progressive Web App capabilities including offline support, installability, and manifest configuration with professional teal brain icon.
     - **Performance**: Optimized for speed using HTML template strings, event delegation, optimistic UI updates, and parallel API fetches.
     - **Chat Styling (ChatGPT-Inspired Minimal)**: 
-        - **Header**: Thin minimal bar (50px), light grey (#F7F7F8), minimalist teal brain logo (SVG), centered title with refined typography
+        - **Header**: Thin minimal bar (50px), light grey (#F7F7F8), simplified brain logo (minimal line-art SVG in teal), centered title with Outfit font (weight 300, 0.5px letter-spacing)
         - **Burger Menu**: Clean white button with border, positioned inside header bounds, teal hover state
         - **User messages**: ChatGPT-style - light grey background (#F7F7F8), left-aligned, full-width, 16px font, 1.6 line-height
         - **AI messages**: White background (#FFFFFF), left-aligned, full-width, compact padding (16px 20px), markdown rendered
-        - **Typography**: Inter font, 16px base, 1.6 line-height, clean black text (#2D2D2D)
+        - **Typography**: Inter font with ChatGPT-style lighter weights (300-500), 16px base, 1.6 line-height, clean black text (#2D2D2D). Title uses Outfit font (weight 300) for refined aesthetic.
         - **Sidebar**: Compact spacing - reduced padding throughout, smaller folder icons (14px), tight conversation items (6px padding)
         - **New Chat Button**: Sleek white button with 1px border, teal hover (#E6F7F4), compact (8px vertical padding)
         - **Send Button**: Teal (#10A37F) with darker hover (#0D8C6C), compact (40px height, 10px padding)
