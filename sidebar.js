@@ -976,6 +976,9 @@ let typingIndicatorStartTime = null;
 
 // Show/hide typing indicator
 function showTypingIndicator() {
+    // Get element dynamically to avoid stale reference
+    const typingIndicator = document.getElementById('typingIndicator');
+    
     if (typingIndicator) {
         console.log('🔵 SHOWING typing indicator');
         typingIndicator.classList.add('active');
@@ -988,6 +991,9 @@ function showTypingIndicator() {
 }
 
 function hideTypingIndicator() {
+    // Get element dynamically to avoid stale reference
+    const typingIndicator = document.getElementById('typingIndicator');
+    
     if (typingIndicator) {
         console.log('🔴 HIDING typing indicator');
         
@@ -1000,7 +1006,10 @@ function hideTypingIndicator() {
                 const delay = minDisplayTime - elapsed;
                 console.log(`⏳ Delaying hide by ${delay}ms to show indicator`);
                 setTimeout(() => {
-                    typingIndicator.classList.remove('active');
+                    const indicator = document.getElementById('typingIndicator');
+                    if (indicator) {
+                        indicator.classList.remove('active');
+                    }
                 }, delay);
                 return;
             }
@@ -1079,19 +1088,6 @@ async function sendMessage() {
     
     // Show typing indicator
     showTypingIndicator();
-    
-    // Debug: Check if typing indicator is visible
-    setTimeout(() => {
-        const indicator = document.getElementById('typingIndicator');
-        if (indicator) {
-            const hasActive = indicator.classList.contains('active');
-            const computedStyle = window.getComputedStyle(indicator);
-            const displayValue = computedStyle.display;
-            alert(`Typing Indicator Debug:\nHas 'active' class: ${hasActive}\nDisplay value: ${displayValue}\nClasses: ${indicator.className}`);
-        } else {
-            alert('ERROR: typingIndicator element not found in DOM!');
-        }
-    }, 100);
     
     // Force scroll to show typing indicator
     setTimeout(() => scrollToBottom(), 100);
