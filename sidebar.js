@@ -33,11 +33,88 @@ const modalOverlay = document.getElementById('modalOverlay');
 const typingIndicator = document.getElementById('typingIndicator');
 const searchInput = document.getElementById('searchInput');
 const searchClearBtn = document.getElementById('searchClearBtn');
+const uploadButton = document.getElementById('uploadButton');
+const imageUpload = document.getElementById('imageUpload');
+const uploadError = document.getElementById('uploadError');
 
 // Initialize sidebar state on mobile
 if (window.innerWidth <= 768) {
     sidebar.classList.add('closed');
 }
+
+// === Phase 6: Image Upload ===
+let selectedImage = null;
+
+// File validation constants
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+// Show error message
+function showUploadError(message) {
+    uploadError.textContent = message;
+    uploadError.style.display = 'block';
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        uploadError.style.display = 'none';
+    }, 5000);
+}
+
+// Format file size for display
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// Validate image file
+function validateImage(file) {
+    if (!file) {
+        showUploadError('No file selected');
+        return false;
+    }
+    
+    // Check file type
+    if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/')) {
+        showUploadError('Please upload an image file (JPEG, PNG, GIF, or WebP)');
+        return false;
+    }
+    
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
+        const fileSize = formatFileSize(file.size);
+        showUploadError(`Image must be under 5MB. Your file is ${fileSize}`);
+        return false;
+    }
+    
+    return true;
+}
+
+// Upload button click handler
+uploadButton.addEventListener('click', () => {
+    imageUpload.click();
+});
+
+// File input change handler
+imageUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    
+    if (!file) {
+        return;
+    }
+    
+    // Validate file
+    if (!validateImage(file)) {
+        imageUpload.value = ''; // Clear the input
+        return;
+    }
+    
+    // File is valid - store it and update UI
+    selectedImage = file;
+    uploadButton.classList.add('file-selected');
+    
+    console.log('Image selected:', file.name, formatFileSize(file.size));
+});
 
 // === Sidebar Toggle ===
 burgerMenu.addEventListener('click', () => {
