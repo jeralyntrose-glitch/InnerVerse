@@ -859,13 +859,26 @@ function showCopyError(button) {
     }, 2000);
 }
 
-// Professional Phase 4: Markdown-enabled message rendering with XSS protection
-function addMessage(role, content) {
+// Professional Phase 4 & 6: Markdown-enabled message rendering with image support
+function addMessage(role, content, imageFile = null) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
+    
+    // === Phase 6: Add image if provided (for user messages) ===
+    if (imageFile && role === 'user') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imgElement = document.createElement('img');
+            imgElement.src = e.target.result;
+            imgElement.className = 'message-image';
+            imgElement.style.cssText = 'max-width: 300px; width: 100%; height: auto; border-radius: 12px; margin-bottom: 8px; display: block;';
+            contentDiv.insertBefore(imgElement, contentDiv.firstChild);
+        };
+        reader.readAsDataURL(imageFile);
+    }
     
     // Render markdown for AI messages, plain text for user messages
     if (role === 'assistant' && typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
@@ -891,8 +904,11 @@ function addMessage(role, content) {
             link.setAttribute('target', '_blank');
             link.setAttribute('rel', 'noopener noreferrer');
         });
-    } else {
-        contentDiv.textContent = content;
+    } else if (content) {
+        // Add text content if provided
+        const textSpan = document.createElement('span');
+        textSpan.textContent = content;
+        contentDiv.appendChild(textSpan);
     }
 
     messageDiv.appendChild(contentDiv);
@@ -965,13 +981,47 @@ function showError(message) {
 // === Send Message ===
 async function sendMessage() {
     const message = messageInput.value.trim();
-    if (!message || isStreaming || !conversationId) return;
+    const hasImage = selectedImage !== null;
+    
+    // Allow sending if there's a message OR an image
+    if ((!message && !hasImage) || isStreaming || !conversationId) return;
 
     messageInput.value = '';
     isStreaming = true;
     sendButton.disabled = true;
 
-    addMessage('user', message);
+    // Prepare message payload
+    let messagePayload = { message: message || '' };
+    
+    // If there's an image, convert to base64 and add to payload
+    if (hasImage) {
+        const reader = new FileReader();
+        const imageDataPromise = new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(selectedImage);
+        });
+        
+        try {
+            const imageDataUrl = await imageDataPromise;
+            // Backend expects image data as a base64 string
+            messagePayload.image = imageDataUrl;
+        } catch (error) {
+            console.error('Error reading image:', error);
+            showError('Failed to process image. Please try again.');
+            isStreaming = false;
+            sendButton.disabled = false;
+            return;
+        }
+    }
+
+    // Display user message (with or without image)
+    addMessage('user', message, hasImage ? selectedImage : null);
+    
+    // Clear image preview after adding to chat
+    if (hasImage) {
+        clearImagePreview();
+    }
     
     // Show typing indicator
     showTypingIndicator();
@@ -983,7 +1033,7 @@ async function sendMessage() {
         const response = await fetch(`/claude/conversations/${conversationId}/message/stream`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message })
+            body: JSON.stringify(messagePayload)
         });
 
         if (!response.ok) throw new Error('Failed to send message');
