@@ -47,6 +47,7 @@ Preferred communication style: Simple, everyday language.
         - **Persistence**: Theme preference saved to localStorage, auto-applied on page load.
         - **Complete Coverage**: All UI components adapted including messages, sidebar folders/conversations, search, input areas, buttons, modals, typing indicator, code blocks, and markdown content.
 - **Migration Dashboard (`/migration`)**: Provides a real-time dashboard for upgrading embeddings with progress tracking and live logs.
+- **AXIS MIND Uploader (`/uploader`)**: Full-featured document upload and management interface with drag & drop PDF upload, audio transcription (MP3/M4A/WAV via Whisper AI), YouTube video transcription, Text-to-PDF converter with AI grammar fixes, Tag Library showing top 30 MBTI/Jungian taxonomy tags and all uploaded files, API Cost Tracker with breakdown by operation, Document Report download, Delete All functionality, and floating chat widget. All uploads connect to Pinecone vector storage with text-embedding-3-large embeddings.
 
 ## Backend Architecture
 - **Framework**: FastAPI with asynchronous operations, Python runtime, and Uvicorn ASGI server.
