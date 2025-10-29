@@ -786,20 +786,26 @@ function stripMarkdown(text) {
 
 // Copy message to clipboard with fallback
 async function copyMessageToClipboard(messageText, isAIMessage, button) {
+    console.log('📋 copyMessageToClipboard called', { isAIMessage, textLength: messageText.length });
+    
     try {
         // Strip markdown if AI message
         const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
+        console.log('📋 Plain text prepared:', plainText.substring(0, 100));
         
         // Try modern Clipboard API
         if (navigator.clipboard && navigator.clipboard.writeText) {
+            console.log('📋 Using modern Clipboard API');
             await navigator.clipboard.writeText(plainText);
+            console.log('✅ Copy successful!');
             showCopySuccess(button);
         } else {
+            console.log('📋 Using fallback copy method');
             // Fallback for older browsers
             fallbackCopy(plainText, button);
         }
     } catch (err) {
-        console.error('Clipboard error:', err);
+        console.error('❌ Clipboard error:', err);
         // Try fallback method
         const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
         fallbackCopy(plainText, button);
@@ -835,6 +841,7 @@ function fallbackCopy(text, button) {
 
 // Show copy success feedback
 function showCopySuccess(button) {
+    console.log('✅ Showing copy success feedback');
     button.classList.add('copied');
     button.setAttribute('data-tooltip', 'Copied!');
     
@@ -938,6 +945,8 @@ function addMessage(role, content, imageFile = null) {
     // Add click handler
     copyButton.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent any parent click handlers
+        e.preventDefault(); // Prevent default action
+        console.log('📋 Copy button clicked!', { content: content.substring(0, 50), role });
         copyMessageToClipboard(content, role === 'assistant', copyButton);
     });
     
