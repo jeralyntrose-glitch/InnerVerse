@@ -246,6 +246,11 @@ async function loadConversation(id) {
             data.messages.forEach(msg => {
                 addMessage(msg.role, msg.content);
             });
+            
+            // Scroll to bottom after loading all messages
+            setTimeout(() => {
+                scrollToBottom();
+            }, 100);
         }
         
         // Update active state in sidebar
