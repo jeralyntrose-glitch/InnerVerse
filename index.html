@@ -32,20 +32,67 @@
 
         :root {
             --viewport-height: 100vh;
-            /* Claude-Inspired Minimalist Color Scheme */
+        }
+        
+        /* Light Mode Colors (Default) */
+        [data-theme="light"] {
             --color-page-bg: #FFFFFF;
-            --color-chat-bg: #FFFFFF;
-            --color-user-bg: #F5F5F5;
-            --color-ai-bg: #FFFFFF;
+            --color-main-bg: #FFFFFF;
+            --color-header-bg: #F7F7F8;
+            --color-sidebar-bg: #FFFFFF;
+            --color-user-bubble: #E5E5EA;
+            --color-ai-bubble: #FFFFFF;
             --color-text-primary: #2D2D2D;
             --color-text-secondary: #6B6B6B;
-            --color-link: #0066CC;
+            --color-text-tertiary: #999999;
             --color-border: #E5E5E5;
+            --color-border-light: #F0F0F0;
+            --color-input-bg: #FFFFFF;
+            --color-input-border: #D0D0D0;
+            --color-button-bg: #FFFFFF;
+            --color-button-hover: #F5F5F5;
+            --color-accent: #10A37F;
+            --color-accent-hover: #0D8C6C;
+            --color-accent-light: #E6F7F4;
+            --color-folder-hover: #F5F5F5;
+            --color-conversation-hover: #F7F7F7;
+            --color-conversation-active: #E6F7F4;
+            --color-link: #0066CC;
+            --color-code-bg: #F5F5F5;
+            --color-shadow: rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Dark Mode Colors */
+        [data-theme="dark"] {
+            --color-page-bg: #1A1A1A;
+            --color-main-bg: #1A1A1A;
+            --color-header-bg: #252525;
+            --color-sidebar-bg: #1F1F1F;
+            --color-user-bubble: #2D2D2D;
+            --color-ai-bubble: #252525;
+            --color-text-primary: #E5E5E5;
+            --color-text-secondary: #A0A0A0;
+            --color-text-tertiary: #707070;
+            --color-border: #3A3A3A;
+            --color-border-light: #2D2D2D;
+            --color-input-bg: #252525;
+            --color-input-border: #3A3A3A;
+            --color-button-bg: #2D2D2D;
+            --color-button-hover: #353535;
+            --color-accent: #10A37F;
+            --color-accent-hover: #0D8C6C;
+            --color-accent-light: #1A3830;
+            --color-folder-hover: #2D2D2D;
+            --color-conversation-hover: #2A2A2A;
+            --color-conversation-active: #1A3830;
+            --color-link: #4A9EFF;
+            --color-code-bg: #2D2D2D;
+            --color-shadow: rgba(0, 0, 0, 0.3);
         }
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: #FFFFFF;
+            background: var(--color-page-bg);
             height: 100vh;
             overflow: hidden;
             overflow-x: hidden;
@@ -67,21 +114,21 @@
             z-index: 1001;
             width: 36px;
             height: 36px;
-            background: white;
-            border: 1px solid #d0d0d0;
+            background: var(--color-button-bg);
+            border: 1px solid var(--color-input-border);
             border-radius: 6px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #2D2D2D;
+            color: var(--color-text-primary);
             font-size: 20px;
             transition: all 0.2s ease;
         }
 
         .burger-menu:hover {
-            background: #f5f5f5;
-            border-color: #10A37F;
+            background: var(--color-button-hover);
+            border-color: var(--color-accent);
         }
 
         .burger-menu.hidden {
@@ -92,8 +139,8 @@
         /* Sidebar */
         .sidebar {
             width: 280px;
-            background: white;
-            border-right: 1px solid #e0e0e0;
+            background: var(--color-sidebar-bg);
+            border-right: 1px solid var(--color-border);
             display: flex;
             flex-direction: column;
             transition: transform 0.3s ease;
@@ -114,8 +161,8 @@
             position: relative;
             width: 100%;
             height: 40px;
-            background: #FFFFFF;
-            border: 1px solid #E5E5E5;
+            background: var(--color-input-bg);
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             padding: 8px 12px;
             display: flex;
@@ -254,7 +301,7 @@
         }
 
         .folder-header:hover {
-            background: #f5f5f5;
+            background: var(--color-folder-hover);
         }
 
         .folder-arrow {
@@ -306,11 +353,11 @@
         }
 
         .conversation-item:hover {
-            background: #f5f5f5;
+            background: var(--color-conversation-hover);
         }
 
         .conversation-item.active {
-            background: #e8eaf6;
+            background: var(--color-conversation-active);
         }
 
         .conversation-title {
@@ -391,7 +438,7 @@
         }
 
         .dropdown-item:hover {
-            background: #f5f5f5;
+            background: var(--color-folder-hover);
         }
 
         .dropdown-item.danger {
@@ -417,33 +464,35 @@
         }
 
         .modal {
-            background: white;
+            background: var(--color-sidebar-bg);
             border-radius: 12px;
             padding: 24px;
             max-width: 400px;
             width: 90%;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 32px var(--color-shadow);
         }
 
         .modal-title {
             font-size: 18px;
             font-weight: 600;
             margin-bottom: 16px;
-            color: #333;
+            color: var(--color-text-primary);
         }
 
         .modal-input {
             width: 100%;
             padding: 10px 12px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--color-border);
             border-radius: 8px;
             font-size: 14px;
             margin-bottom: 16px;
             outline: none;
+            background: var(--color-input-bg);
+            color: var(--color-text-primary);
         }
 
         .modal-input:focus {
-            border-color: #667eea;
+            border-color: var(--color-accent);
         }
 
         .modal-select {
@@ -474,12 +523,12 @@
         }
 
         .modal-btn.cancel {
-            background: #f0f0f0;
-            color: #666;
+            background: var(--color-button-bg);
+            color: var(--color-text-secondary);
         }
 
         .modal-btn.cancel:hover {
-            background: #e0e0e0;
+            background: var(--color-button-hover);
         }
 
         .modal-btn.confirm {
@@ -508,16 +557,16 @@
             width: 100%;
             margin: 0;
             overflow-x: hidden;
-            background: #FFFFFF; /* White background instead of gray */
+            background: var(--color-main-bg);
         }
 
         .header {
             padding: 12px 20px;
             padding-top: calc(12px + env(safe-area-inset-top, 0));
-            background: #F7F7F8;
-            color: #2D2D2D;
+            background: var(--color-header-bg);
+            color: var(--color-text-primary);
             text-align: center;
-            border-bottom: 1px solid #E5E5E5;
+            border-bottom: 1px solid var(--color-border);
             min-height: 50px;
             display: flex;
             align-items: center;
@@ -619,7 +668,7 @@
             display: flex;
             flex-direction: column;
             gap: 0;
-            background: #FFFFFF;
+            background: var(--color-main-bg);
         }
 
         /* Sleek Compact Message Styles */
@@ -637,7 +686,7 @@
 
         /* User Messages - iPhone Bubble Style (Right-aligned) */
         .message.user {
-            background: #E5E5EA;
+            background: var(--color-user-bubble);
             padding: 10px 14px;
             padding-right: 40px; /* Extra space for copy button */
             width: fit-content;
@@ -650,7 +699,7 @@
         }
 
         .message.user .message-content {
-            color: #000000;
+            color: var(--color-text-primary);
             font-size: 16px;
             line-height: 1.4;
         }
@@ -665,12 +714,12 @@
 
         /* AI Messages - Full-width White (Left-aligned) */
         .message.assistant {
-            background: #FFFFFF;
+            background: var(--color-ai-bubble);
             padding: 16px 20px;
         }
 
         .message.assistant .message-content {
-            color: #2D2D2D;
+            color: var(--color-text-primary);
             line-height: 1.6;
             max-width: 100%;
         }
@@ -696,8 +745,8 @@
         }
 
         .message-content code {
-            background: #1E1E1E;
-            color: #D4D4D4;
+            background: var(--color-code-bg);
+            color: var(--color-text-primary);
             padding: 2px 6px;
             border-radius: 4px;
             font-family: 'Courier New', monospace;
@@ -705,8 +754,8 @@
         }
 
         .message-content pre {
-            background: #1E1E1E;
-            color: #D4D4D4;
+            background: var(--color-code-bg);
+            color: var(--color-text-primary);
             padding: 16px;
             border-radius: 6px;
             overflow-x: auto;
@@ -852,7 +901,7 @@
             bottom: 20px; /* Lower position, closer to input bar */
             left: 0;
             width: fit-content;
-            background: #E5E5EA;
+            background: var(--color-user-bubble);
             padding: 6px 12px; /* Reduced vertical padding for thinner look */
             border-radius: 14px;
             margin-left: 12px;
@@ -926,9 +975,9 @@
         }
         
         .upload-button:hover {
-            color: #10A37F;
-            border-color: #10A37F;
-            background: #F7F7F8;
+            color: var(--color-accent);
+            border-color: var(--color-accent);
+            background: var(--color-accent-light);
         }
         
         .upload-button:active {
@@ -967,8 +1016,8 @@
         /* Image preview container */
         .image-preview {
             width: 100%;
-            background: #F7F7F8;
-            border: 1px solid #E5E5E5;
+            background: var(--color-code-bg);
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 8px;
@@ -1054,12 +1103,12 @@
         }
 
         .message-input:focus {
-            border-color: #2D2D2D;
+            border-color: var(--color-accent);
         }
 
         .send-button {
             padding: 10px 20px;
-            background: #10A37F;
+            background: var(--color-accent);
             color: white;
             border: none;
             border-radius: 6px;
@@ -1071,7 +1120,7 @@
         }
 
         .send-button:hover:not(:disabled) {
-            background: #0D8C6C;
+            background: var(--color-accent-hover);
         }
 
         .send-button:active {
@@ -1091,7 +1140,7 @@
         .loading-indicator {
             text-align: center;
             padding: 20px;
-            color: #999;
+            color: var(--color-text-secondary);
             font-style: italic;
         }
 

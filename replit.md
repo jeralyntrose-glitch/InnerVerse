@@ -36,6 +36,14 @@ Preferred communication style: Simple, everyday language.
         - **Security**: Comprehensive XSS protection via DOMPurify sanitization (markdown), HTML escaping (sidebar), and DOM API value assignment (modals)
     - **Vision/Image Analysis (Phase 6)**: Full Claude vision mode support for image upload and analysis. Features paperclip button (📎) positioned left of input, mobile camera access, file validation (5MB max, JPEG/PNG/GIF/WebP), image preview with thumbnail/filename/filesize, remove button (×), and inline image display in chat messages. Backend leverages Claude Sonnet 4 Vision API with base64 image encoding. Primary use cases: screenshot-based MBTI typing from text messages, social media captions, forum posts, and handwritten notes.
     - **Auto-Expanding Textarea (Phase 6)**: Message input uses multi-line textarea that auto-expands as user types (max 150px height, then scrolls). Supports Shift+Enter for new lines and Enter to send. Resets to single line after sending.
+    - **Dark/Light Mode (Phase 7)**: Full theme switching capability with persistent localStorage preference. Features:
+        - **Toggle Button**: Borderless colored icons (indigo moon 🌙 for light mode, amber sun ☀️ for dark mode) positioned in top-right header corner, aligned with hamburger button. Includes hover fade and rotation animation.
+        - **Theme System**: Comprehensive CSS custom properties (--color-*) for all UI elements including backgrounds, text, borders, buttons, inputs, messages, sidebar, modals, and code blocks.
+        - **Light Mode Colors**: Clean whites (#FFFFFF main, #F7F7F8 header), grey user bubbles (#E5E5EA), teal accents (#10A37F).
+        - **Dark Mode Colors**: Rich darks (#1A1A1A main, #252525 header/AI bubbles, #2D2D2D user bubbles), adjusted borders (#3A3A3A), brighter link blue (#4A9EFF).
+        - **Prevent Flash**: Inline script in <head> applies theme before page render using localStorage and system preference fallback.
+        - **Persistence**: Theme preference saved to localStorage, auto-applied on page load.
+        - **Complete Coverage**: All UI components adapted including messages, sidebar folders/conversations, search, input areas, buttons, modals, typing indicator, code blocks, and markdown content.
 - **Migration Dashboard (`/migration`)**: Provides a real-time dashboard for upgrading embeddings with progress tracking and live logs.
 
 ## Backend Architecture
