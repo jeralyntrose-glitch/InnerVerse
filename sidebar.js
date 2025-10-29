@@ -36,6 +36,7 @@ const searchClearBtn = document.getElementById('searchClearBtn');
 const uploadButton = document.getElementById('uploadButton');
 const imageUpload = document.getElementById('imageUpload');
 const uploadError = document.getElementById('uploadError');
+const imagePreviewContainer = document.getElementById('imagePreviewContainer');
 
 // Initialize sidebar state on mobile
 if (window.innerWidth <= 768) {
@@ -95,6 +96,41 @@ uploadButton.addEventListener('click', () => {
     imageUpload.click();
 });
 
+// Show image preview
+function showImagePreview(file, dataUrl) {
+    const fileName = file.name.length > 40 ? file.name.substring(0, 37) + '...' : file.name;
+    const fileSize = formatFileSize(file.size);
+    
+    imagePreviewContainer.innerHTML = `
+        <div class="image-preview">
+            <img src="${dataUrl}" alt="Preview" class="image-preview-thumbnail">
+            <div class="image-preview-info">
+                <div class="image-preview-filename">${fileName}</div>
+                <div class="image-preview-filesize">${fileSize}</div>
+            </div>
+            <button class="image-preview-remove" id="removeImageBtn" type="button">×</button>
+        </div>
+    `;
+    
+    imagePreviewContainer.style.display = 'block';
+    
+    // Update placeholder
+    messageInput.placeholder = 'Add a message (optional)...';
+    
+    // Add event listener for remove button
+    document.getElementById('removeImageBtn').addEventListener('click', clearImagePreview);
+}
+
+// Clear image preview
+function clearImagePreview() {
+    selectedImage = null;
+    imagePreviewContainer.innerHTML = '';
+    imagePreviewContainer.style.display = 'none';
+    imageUpload.value = '';
+    uploadButton.classList.remove('file-selected');
+    messageInput.placeholder = 'Type your message...';
+}
+
 // File input change handler
 imageUpload.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -109,11 +145,15 @@ imageUpload.addEventListener('change', (e) => {
         return;
     }
     
-    // File is valid - store it and update UI
-    selectedImage = file;
-    uploadButton.classList.add('file-selected');
-    
-    console.log('Image selected:', file.name, formatFileSize(file.size));
+    // File is valid - read it and show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        selectedImage = file;
+        uploadButton.classList.add('file-selected');
+        showImagePreview(file, e.target.result);
+        console.log('Image selected:', file.name, formatFileSize(file.size));
+    };
+    reader.readAsDataURL(file);
 });
 
 // === Sidebar Toggle ===
