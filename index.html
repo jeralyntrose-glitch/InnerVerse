@@ -538,6 +538,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative; /* Enable absolute positioning for typing indicator */
         }
 
         .messages {
@@ -782,10 +783,10 @@
             left: 0;
             width: fit-content;
             background: #E5E5EA;
-            padding: 8px 12px;
-            border-radius: 16px;
+            padding: 6px 12px; /* Reduced vertical padding for thinner look */
+            border-radius: 14px;
             margin-left: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 16px; /* More space from input box */
             z-index: 10;
         }
         
@@ -801,8 +802,8 @@
         }
 
         .typing-dots span {
-            width: 7px;
-            height: 7px;
+            width: 6px;
+            height: 6px;
             background: #8E8E93;
             border-radius: 50%;
             animation: typingDot 1.4s infinite ease-in-out;
@@ -823,7 +824,7 @@
             }
             30% { 
                 opacity: 1; 
-                transform: scale(1.1) translateY(-4px); 
+                transform: scale(1.1) translateY(-3px); /* Reduced bounce height */
             }
         }
 
