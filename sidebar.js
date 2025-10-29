@@ -176,24 +176,43 @@ function renderSidebar() {
     const folderStates = JSON.parse(localStorage.getItem('folderStates') || '{}');
     
     let html = '';
-    let totalMatches = 0;
     
     // IMPORTANT: If using backend search results, DON'T filter again!
     // Backend already returned filtered results (titles + message content)
     // Only apply client-side filtering if NOT using backend search
     const filteredConversations = isBackendSearch ? allConversations : filterConversations(allConversations);
     
+    // === Phase 5: Flat Search Results (No Folder Organization) ===
+    if (searchTerm) {
+        // Show flat list of search results (no folders)
+        if (filteredConversations.length === 0) {
+            html = `
+                <div class="search-empty-state">
+                    <strong>No conversations found matching "${escapeHTML(searchTerm)}"</strong>
+                    Try a different search term
+                </div>
+            `;
+        } else {
+            html = `
+                <div class="search-results-header">
+                    <strong>Search Results</strong>
+                    <span class="folder-count">(${filteredConversations.length})</span>
+                </div>
+                <div class="search-results-list">
+                    ${filteredConversations.slice(0, 100).map(c => renderConversationItem(c)).join('')}
+                </div>
+            `;
+        }
+        
+        sidebarContent.innerHTML = html;
+        return;
+    }
+    
+    // === Normal Mode: Show Folders ===
     // Render project folders
     FOLDERS.forEach(folder => {
         const folderConvs = allConversations.filter(c => c.project === folder.id);
-        // Use same logic: backend search results are already filtered
-        const filteredFolderConvs = isBackendSearch ? folderConvs : filterConversations(folderConvs);
-        
-        // Auto-expand folders with matches, collapse others during search
-        const hasMatches = filteredFolderConvs.length > 0;
-        const isExpanded = searchTerm ? hasMatches : (folderStates[folder.id] === true);
-        
-        if (hasMatches) totalMatches += filteredFolderConvs.length;
+        const isExpanded = folderStates[folder.id] === true;
         
         html += `
             <div class="folder ${isExpanded ? 'expanded' : ''}" data-folder="${folder.id}">
@@ -201,11 +220,11 @@ function renderSidebar() {
                     <span class="folder-arrow">▶</span>
                     <span class="folder-icon">${folder.icon}</span>
                     <span class="folder-name">${folder.name}</span>
-                    <span class="folder-count">(${filteredFolderConvs.length})</span>
+                    <span class="folder-count">(${folderConvs.length})</span>
                 </div>
                 <div class="folder-conversations">
-                    ${filteredFolderConvs.length > 0 
-                        ? filteredFolderConvs.map(c => renderConversationItem(c)).join('')
+                    ${folderConvs.length > 0 
+                        ? folderConvs.map(c => renderConversationItem(c)).join('')
                         : '<div class="empty-folder">No chats yet</div>'
                     }
                 </div>
@@ -216,9 +235,7 @@ function renderSidebar() {
     // Add divider and "All Chats" folder
     html += '<div class="folder-divider"></div>';
     
-    // Auto-expand All Chats if it has matches during search
-    const allChatsHasMatches = filteredConversations.length > 0;
-    const allChatsExpanded = searchTerm ? allChatsHasMatches : (folderStates['all-chats'] !== false);
+    const allChatsExpanded = folderStates['all-chats'] !== false;
     
     html += `
         <div class="folder ${allChatsExpanded ? 'expanded' : ''}" data-folder="all-chats">
@@ -226,26 +243,16 @@ function renderSidebar() {
                 <span class="folder-arrow">▶</span>
                 <span class="folder-icon">📋</span>
                 <span class="folder-name">All Chats</span>
-                <span class="folder-count">(${filteredConversations.length})</span>
+                <span class="folder-count">(${allConversations.length})</span>
             </div>
             <div class="folder-conversations">
-                ${filteredConversations.length > 0
-                    ? filteredConversations.slice(0, 100).map(c => renderConversationItem(c)).join('')
+                ${allConversations.length > 0
+                    ? allConversations.slice(0, 100).map(c => renderConversationItem(c)).join('')
                     : '<div class="empty-folder">No chats yet</div>'
                 }
             </div>
         </div>
     `;
-    
-    // Show empty state if searching and no results
-    if (searchTerm && filteredConversations.length === 0) {
-        html = `
-            <div class="search-empty-state">
-                <strong>No conversations found matching "${escapeHTML(searchTerm)}"</strong>
-                Try a different search term
-            </div>
-        `;
-    }
     
     sidebarContent.innerHTML = html;
 }
