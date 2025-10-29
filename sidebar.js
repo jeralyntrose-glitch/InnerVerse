@@ -964,9 +964,8 @@ function addMessage(role, content, imageFile = null) {
 function showTypingIndicator() {
     if (typingIndicator) {
         typingIndicator.classList.add('active');
-        if (shouldAutoScroll()) {
-            scrollToBottom();
-        }
+        // Always scroll to show typing indicator
+        setTimeout(() => scrollToBottom(), 50);
     }
 }
 
@@ -1028,6 +1027,9 @@ async function sendMessage() {
     // Display user message (with or without image)
     addMessage('user', message, hasImage ? selectedImage : null);
     
+    // Force scroll to show user message
+    scrollToBottom();
+    
     // Clear image preview after adding to chat
     if (hasImage) {
         clearImagePreview();
@@ -1035,6 +1037,9 @@ async function sendMessage() {
     
     // Show typing indicator
     showTypingIndicator();
+    
+    // Force scroll to show typing indicator
+    setTimeout(() => scrollToBottom(), 100);
 
     let assistantContent = null;
     let fullResponse = '';
