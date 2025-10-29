@@ -587,6 +587,12 @@
                 display: flex !important;
             }
 
+            body {
+                position: fixed;
+                width: 100%;
+                overflow: hidden;
+            }
+            
             .main-content {
                 margin-left: 0;
                 width: 100%;
@@ -697,22 +703,11 @@
         // Fallback for older iOS versions - update on window resize
         window.addEventListener('resize', updateViewportHeight);
         
-        // Handle keyboard open/close to prevent excessive scrolling
-        const msgInput = document.getElementById('messageInput');
-        if (msgInput) {
-            // When keyboard opens (input focused)
-            msgInput.addEventListener('focus', function() {
-                setTimeout(function() {
-                    // Reset scroll after iOS tries to scroll the input into view
-                    window.scrollTo(0, 0);
-                }, 300);
-            });
-            
-            // When keyboard closes (input blurred)
-            msgInput.addEventListener('blur', function() {
-                setTimeout(function() {
-                    window.scrollTo(0, 0);
-                }, 100);
+        // Prevent page scrolling on iOS when keyboard appears
+        if (window.visualViewport) {
+            // Force scroll to stay at 0,0 when viewport scrolls
+            window.visualViewport.addEventListener('scroll', function() {
+                window.scrollTo(0, 0);
             });
         }
     </script>
