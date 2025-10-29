@@ -32,7 +32,7 @@ const burgerMenu = document.getElementById('burgerMenu');
 const newChatBtn = document.getElementById('newChatBtn');
 const sidebarContent = document.getElementById('sidebarContent');
 const modalOverlay = document.getElementById('modalOverlay');
-const typingIndicator = document.getElementById('typingIndicator');
+// Removed: old typing indicator constant
 const searchInput = document.getElementById('searchInput');
 const searchClearBtn = document.getElementById('searchClearBtn');
 const uploadButton = document.getElementById('uploadButton');
@@ -971,51 +971,23 @@ function addMessage(role, content, imageFile = null) {
     return contentDiv;
 }
 
-// Track when typing indicator was shown
-let typingIndicatorStartTime = null;
-
-// Show/hide typing indicator
-function showTypingIndicator() {
-    // Get element dynamically to avoid stale reference
-    const typingIndicator = document.getElementById('typingIndicator');
-    
-    if (typingIndicator) {
-        console.log('🔵 SHOWING typing indicator');
-        typingIndicator.classList.add('active');
-        typingIndicatorStartTime = Date.now();
-        // Always scroll to show typing indicator
+// === SIMPLE TYPING INDICATOR ===
+function showTyping() {
+    console.log('🔵 SHOWING typing indicator');
+    const typing = document.getElementById('ai-typing');
+    if (typing) {
+        typing.style.display = 'block';
         setTimeout(() => scrollToBottom(), 50);
     } else {
-        console.error('❌ typingIndicator element not found!');
+        console.error('❌ ai-typing element not found!');
     }
 }
 
-function hideTypingIndicator() {
-    // Get element dynamically to avoid stale reference
-    const typingIndicator = document.getElementById('typingIndicator');
-    
-    if (typingIndicator) {
-        console.log('🔴 HIDING typing indicator');
-        
-        // Ensure indicator shows for minimum 500ms for better UX
-        if (typingIndicatorStartTime) {
-            const elapsed = Date.now() - typingIndicatorStartTime;
-            const minDisplayTime = 500; // 500ms minimum
-            
-            if (elapsed < minDisplayTime) {
-                const delay = minDisplayTime - elapsed;
-                console.log(`⏳ Delaying hide by ${delay}ms to show indicator`);
-                setTimeout(() => {
-                    const indicator = document.getElementById('typingIndicator');
-                    if (indicator) {
-                        indicator.classList.remove('active');
-                    }
-                }, delay);
-                return;
-            }
-        }
-        
-        typingIndicator.classList.remove('active');
+function hideTyping() {
+    console.log('🔴 HIDING typing indicator');
+    const typing = document.getElementById('ai-typing');
+    if (typing) {
+        typing.style.display = 'none';
     }
 }
 
@@ -1087,7 +1059,7 @@ async function sendMessage() {
     }
     
     // Show typing indicator
-    showTypingIndicator();
+    showTyping();
     
     // Force scroll to show typing indicator
     setTimeout(() => scrollToBottom(), 100);
@@ -1123,7 +1095,7 @@ async function sendMessage() {
                             // On first chunk, hide typing indicator and create assistant message
                             if (!assistantContent) {
                                 console.log('📥 First chunk received, creating assistant message');
-                                hideTypingIndicator();
+                                hideTyping();
                                 assistantContent = addMessage('assistant', '');
                             }
                             
@@ -1161,9 +1133,9 @@ async function sendMessage() {
     } catch (error) {
         console.error('❌ Error sending message:', error);
         showError('Failed to get response. Please try again.');
-        hideTypingIndicator();
+        hideTyping();
     } finally {
-        hideTypingIndicator();
+        hideTyping();
         isStreaming = false;
         sendButton.disabled = false;
         messageInput.focus();
