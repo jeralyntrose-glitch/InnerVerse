@@ -196,26 +196,27 @@
         .search-clear-btn {
             -webkit-appearance: none;
             appearance: none;
-            background: transparent;
-            background-color: transparent;
-            border: none;
+            background: var(--color-button-bg);
+            border: 1px solid var(--color-input-border);
+            border-radius: 4px;
             outline: none;
             color: var(--color-text-secondary) !important;
-            font-size: 20px;
+            font-size: 18px;
             line-height: 1;
             cursor: pointer;
             padding: 0;
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            transition: color 0.2s;
+            transition: all 0.2s;
             -webkit-tap-highlight-color: transparent;
         }
 
         .search-clear-btn:hover {
+            background: var(--color-button-hover);
             color: var(--color-text-primary) !important;
         }
 
@@ -965,11 +966,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: transparent;
-            border: 1px solid #E5E5E5;
+            background: var(--color-button-bg);
+            border: 1px solid var(--color-input-border);
             border-radius: 8px;
             cursor: pointer;
-            color: #6B6B6B;
+            color: var(--color-text-secondary);
             transition: all 0.15s ease;
             flex-shrink: 0;
             padding: 0;
@@ -1203,15 +1204,15 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: white;
-                border: 1px solid #d0d0d0;
+                background: var(--color-button-bg);
+                border: 1px solid var(--color-input-border);
                 z-index: 1002; /* Above sidebar content */
             }
 
             .burger-menu.sidebar-open::before {
                 content: '×';
                 font-size: 32px;
-                color: #666;
+                color: var(--color-text-secondary);
                 font-weight: 300;
             }
             
