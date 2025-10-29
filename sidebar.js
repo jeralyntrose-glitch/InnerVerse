@@ -560,6 +560,13 @@ messageInput.addEventListener('keypress', (e) => {
     }
 });
 
+// iOS Safari: Scroll to top when keyboard closes to show header
+messageInput.addEventListener('blur', () => {
+    setTimeout(() => {
+        window.scrollTo(0, 0);
+    }, 100);
+});
+
 // === Initialize ===
 // Check if sidebar should be closed on mobile by default
 if (window.innerWidth <= 768) {
