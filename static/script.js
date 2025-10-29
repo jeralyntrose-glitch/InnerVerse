@@ -1423,65 +1423,74 @@ function clearTaggedDocuments() {
 }
 
 async function loadTagLibrary() {
-  const taggedDocs = getTaggedDocuments();
-  const docCount = Object.keys(taggedDocs).length;
-  
-  console.log(`📚 Loading tag library with ${docCount} documents`);
-  
-  if (docCount === 0) {
-    // Show placeholder
-    document.getElementById('tag-cloud').innerHTML = '<div class="tag-cloud-placeholder">Upload documents to see extracted tags...</div>';
-    document.getElementById('tagged-documents-list').innerHTML = '<div class="tagged-documents-placeholder">No tagged documents yet. Upload a PDF to see auto-extracted MBTI tags!</div>';
-    return;
-  }
-  
-  // Build tag frequency map
-  const tagFrequency = {};
-  Object.values(taggedDocs).forEach(doc => {
-    if (doc.tags && Array.isArray(doc.tags)) {
-      doc.tags.forEach(tag => {
-        tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
-      });
+  try {
+    // Fetch from backend API (Pinecone) instead of localStorage
+    const response = await fetch('/api/tagged-documents');
+    const data = await response.json();
+    
+    if (!data.documents || Object.keys(data.documents).length === 0) {
+      document.getElementById('tag-cloud').innerHTML = '<div class="tag-cloud-placeholder">Upload documents to see extracted tags...</div>';
+      document.getElementById('tagged-documents-list').innerHTML = '<div class="tagged-documents-placeholder">No tagged documents yet. Upload a PDF to see auto-extracted MBTI tags!</div>';
+      return;
     }
-  });
-  
-  // Sort tags by frequency
-  const sortedTags = Object.entries(tagFrequency)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 30); // Top 30 tags
-  
-  // Build tag cloud
-  const tagCloudHTML = sortedTags.map(([tag, count]) => 
-    `<div class="tag-badge clickable" onclick="filterByTag('${tag}')">
-      ${tag}
-      <span class="tag-count">${count}</span>
-    </div>`
-  ).join('');
-  
-  document.getElementById('tag-cloud').innerHTML = tagCloudHTML || '<div class="tag-cloud-placeholder">No tags extracted yet</div>';
-  
-  // Build document list
-  const docsArray = Object.entries(taggedDocs)
-    .map(([id, doc]) => ({ id, ...doc }))
-    .sort((a, b) => b.timestamp - a.timestamp);
-  
-  const docsHTML = docsArray.map(doc => `
-    <div class="tagged-document-item">
-      <div class="tagged-document-title">${doc.filename}</div>
-      <div class="tagged-document-tags">
-        ${doc.tags && doc.tags.length > 0 
-          ? doc.tags.map(tag => `<span class="tag-mini">${tag}</span>`).join('')
-          : '<span class="tag-mini" style="opacity: 0.5;">No tags</span>'
-        }
+    
+    const taggedDocs = data.documents;
+    const docCount = Object.keys(taggedDocs).length;
+    
+    console.log(`📚 Loading tag library with ${docCount} documents from Pinecone`);
+    
+    // Build tag frequency map
+    const tagFrequency = {};
+    Object.values(taggedDocs).forEach(doc => {
+      if (doc.tags && Array.isArray(doc.tags)) {
+        doc.tags.forEach(tag => {
+          tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
+        });
+      }
+    });
+    
+    // Sort tags by frequency
+    const sortedTags = Object.entries(tagFrequency)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 30); // Top 30 tags
+    
+    // Build tag cloud
+    const tagCloudHTML = sortedTags.map(([tag, count]) => 
+      `<div class="tag-badge clickable" onclick="filterByTag('${tag}')">
+        ${tag}
+        <span class="tag-count">${count}</span>
+      </div>`
+    ).join('');
+    
+    document.getElementById('tag-cloud').innerHTML = tagCloudHTML || '<div class="tag-cloud-placeholder">No tags extracted yet</div>';
+    
+    // Build document list
+    const docsArray = Object.entries(taggedDocs)
+      .map(([id, doc]) => ({ id, ...doc }))
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    const docsHTML = docsArray.map(doc => `
+      <div class="tagged-document-item">
+        <div class="tagged-document-title">${doc.filename}</div>
+        <div class="tagged-document-tags">
+          ${doc.tags && doc.tags.length > 0 
+            ? doc.tags.map(tag => `<span class="tag-mini">${tag}</span>`).join('')
+            : '<span class="tag-mini" style="opacity: 0.5;">No tags</span>'
+          }
+        </div>
+        <div class="tagged-document-meta">
+          <span>🏷️ ${doc.tags?.length || 0} tags</span>
+          <span>📅 ${new Date(doc.timestamp).toLocaleDateString()}</span>
+        </div>
       </div>
-      <div class="tagged-document-meta">
-        <span>🏷️ ${doc.tags?.length || 0} tags</span>
-        <span>📅 ${new Date(doc.timestamp).toLocaleDateString()}</span>
-      </div>
-    </div>
-  `).join('');
-  
-  document.getElementById('tagged-documents-list').innerHTML = docsHTML;
+    `).join('');
+    
+    document.getElementById('tagged-documents-list').innerHTML = docsHTML;
+    console.log(`✅ Tag library loaded: ${sortedTags.length} tags, ${docsArray.length} documents`);
+  } catch (error) {
+    console.error('❌ Error loading tag library:', error);
+    document.getElementById('tag-cloud').innerHTML = '<div class="tag-cloud-placeholder">Error loading tags...</div>';
+  }
 }
 
 function filterByTag(tag) {
