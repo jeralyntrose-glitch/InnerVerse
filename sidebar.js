@@ -963,14 +963,18 @@ function addMessage(role, content, imageFile = null) {
 // Show/hide typing indicator
 function showTypingIndicator() {
     if (typingIndicator) {
+        console.log('🔵 SHOWING typing indicator');
         typingIndicator.classList.add('active');
         // Always scroll to show typing indicator
         setTimeout(() => scrollToBottom(), 50);
+    } else {
+        console.error('❌ typingIndicator element not found!');
     }
 }
 
 function hideTypingIndicator() {
     if (typingIndicator) {
+        console.log('🔴 HIDING typing indicator');
         typingIndicator.classList.remove('active');
     }
 }
@@ -1071,6 +1075,7 @@ async function sendMessage() {
                         if (data.chunk) {
                             // On first chunk, hide typing indicator and create assistant message
                             if (!assistantContent) {
+                                console.log('📥 First chunk received, creating assistant message');
                                 hideTypingIndicator();
                                 assistantContent = addMessage('assistant', '');
                             }
