@@ -1322,7 +1322,10 @@ async function updateCostTracker() {
     const breakdown = data.by_operation || {};
     const breakdownHtml = `
       <div class="cost-breakdown-item">
-        <span>Chat: <strong>$${(breakdown.chat_completion?.cost || 0).toFixed(4)}</strong></span>
+        <span>Claude: <strong>$${(breakdown.claude_chat?.cost || 0).toFixed(4)}</strong></span>
+      </div>
+      <div class="cost-breakdown-item">
+        <span>GPT Chat: <strong>$${(breakdown.chat_completion?.cost || 0).toFixed(4)}</strong></span>
       </div>
       <div class="cost-breakdown-item">
         <span>Embeddings: <strong>$${(breakdown.query_embedding?.cost || 0).toFixed(4)}</strong></span>
@@ -1362,7 +1365,8 @@ async function updateCostTracker() {
 
 function formatOperation(operation) {
   const formats = {
-    'chat_completion': '💬 Chat',
+    'claude_chat': '🤖 Claude',
+    'chat_completion': '💬 GPT Chat',
     'query_embedding': '📊 Embedding',
     'embedding': '📊 Embedding',
     'whisper': '🎤 Whisper',
@@ -1378,6 +1382,36 @@ setInterval(updateCostTracker, 30000);
 
 } // end init function
 })(); // end IIFE
+
+// === YouTube Collapsible Toggle ===
+const youtubeToggle = document.getElementById('youtube-toggle');
+const youtubeContent = document.getElementById('youtube-content');
+
+// Start collapsed by default (closed)
+if (youtubeToggle && youtubeContent) {
+  youtubeToggle.classList.add('collapsed');
+  youtubeContent.classList.add('collapsed');
+  
+  youtubeToggle.addEventListener('click', () => {
+    youtubeToggle.classList.toggle('collapsed');
+    youtubeContent.classList.toggle('collapsed');
+  });
+}
+
+// === Text to PDF - Start OPEN by default ===
+const textPdfToggle = document.getElementById('text-pdf-toggle');
+const textPdfContent = document.getElementById('text-pdf-content');
+
+if (textPdfToggle && textPdfContent) {
+  // Remove collapsed class to start open
+  textPdfToggle.classList.remove('collapsed');
+  textPdfContent.classList.remove('collapsed');
+  
+  textPdfToggle.addEventListener('click', () => {
+    textPdfToggle.classList.toggle('collapsed');
+    textPdfContent.classList.toggle('collapsed');
+  });
+}
 
 // === Tag Library Collapsible Toggle ===
 const tagLibraryToggle = document.getElementById('tag-library-toggle');

@@ -79,6 +79,8 @@ PRICING = {
     "gpt-3.5-turbo-input": 0.0005,     # per 1K tokens
     "gpt-3.5-turbo-output": 0.0015,    # per 1K tokens
     "whisper-1": 0.006,                # per minute of audio
+    "claude-sonnet-4-input": 0.003,    # per 1K tokens
+    "claude-sonnet-4-output": 0.015,   # per 1K tokens
 }
 
 # === Database Functions ===

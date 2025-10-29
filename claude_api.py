@@ -424,6 +424,19 @@ You are the Axis of Mind - where CS Joseph's specialized knowledge meets practic
             timeout=60.0  # 60-second timeout to prevent hanging
         )
         
+        # Log Claude API usage
+        if hasattr(response, 'usage'):
+            input_tokens = getattr(response.usage, 'input_tokens', 0)
+            output_tokens = getattr(response.usage, 'output_tokens', 0)
+            cost = (input_tokens / 1000 * 0.003) + (output_tokens / 1000 * 0.015)
+            
+            # Import log function from main.py
+            try:
+                from main import log_api_usage
+                log_api_usage("claude_chat", "claude-sonnet-4", input_tokens, output_tokens, cost)
+            except Exception as e:
+                print(f"⚠️ Could not log Claude usage: {e}")
+        
         if response.stop_reason == "end_turn":
             for block in response.content:
                 if hasattr(block, 'text'):
