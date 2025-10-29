@@ -1179,8 +1179,11 @@ console.log('sendButton element:', sendButton);
 console.log('messageInput element:', messageInput);
 
 if (sendButton) {
-    sendButton.addEventListener('click', () => {
+    sendButton.addEventListener('click', (e) => {
         console.log('🖱️ SEND BUTTON CLICKED!');
+        e.preventDefault(); // Prevent any default behavior
+        e.stopPropagation(); // Stop event bubbling
+        console.log('🛡️ Default prevented, propagation stopped');
         sendMessage();
     });
     console.log('✅ Click listener added to send button');
@@ -1193,6 +1196,7 @@ if (messageInput) {
         console.log('⌨️ KEY PRESSED:', e.key);
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
+            e.stopPropagation();
             console.log('✅ ENTER KEY - SENDING MESSAGE!');
             sendMessage();
         }

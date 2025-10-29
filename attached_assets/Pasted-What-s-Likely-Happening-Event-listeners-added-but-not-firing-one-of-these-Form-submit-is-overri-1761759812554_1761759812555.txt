@@ -1,0 +1,111 @@
+What's Likely Happening:
+Event listeners added but not firing = one of these:
+
+Form submit is overriding (most common)
+Element gets recreated/removed (listeners lost)
+Another handler stops propagation
+Timing issue (DOM not ready)
+
+
+Tell Them To Check This:
+Let's debug systematically:
+
+**Step 1: Check if typing indicator element exists**
+In console, type:
+```
+document.querySelector('.typing-indicator')
+```
+Does it return an element or null?
+
+
+**Step 2: Check form submission**
+Is the send button inside a <form> tag?
+If YES, form submit might be refreshing page before event fires.
+
+Solution: Add to form/button:
+```javascript
+sendButton.addEventListener('click', (e) => {
+  e.preventDefault(); // CRITICAL - prevents form submit
+  e.stopPropagation(); // Prevents event bubbling
+  // ... rest of code
+});
+```
+
+
+**Step 3: Check if element is hidden by CSS**
+In console, type:
+```
+const indicator = document.querySelector('.typing-indicator');
+console.log(window.getComputedStyle(indicator).display);
+console.log(window.getComputedStyle(indicator).opacity);
+console.log(window.getComputedStyle(indicator).visibility);
+```
+What values do you see?
+
+
+**Step 4: Test showing indicator manually**
+In console, type:
+```
+const indicator = document.querySelector('.typing-indicator');
+indicator.style.display = 'block';
+indicator.style.opacity = '1';
+indicator.style.visibility = 'visible';
+```
+Does the indicator appear on screen?
+
+
+**Step 5: Add debug logging**
+In the send message function, add console.logs:
+```javascript
+async function sendMessage() {
+  console.log('🚀 sendMessage called');
+  
+  const indicator = document.querySelector('.typing-indicator');
+  console.log('📍 Indicator element:', indicator);
+  
+  indicator.classList.add('show'); // or whatever shows it
+  console.log('✅ Show class added');
+  
+  // ... rest of function
+}
+```
+
+Then send a message and tell me which logs appear.
+
+My Guess On The Problem:
+Most likely culprit:
+The send button is in a <form> and when clicked, the form submits (page refresh/reload) BEFORE the typing indicator can show.
+Fix:
+javascript// Make sure to prevent default form behavior
+sendButton.addEventListener('click', async (e) => {
+  e.preventDefault(); // <-- THIS IS CRITICAL
+  e.stopPropagation();
+  
+  // Show typing indicator
+  showTypingIndicator();
+  
+  // Send message
+  await sendMessageToAPI();
+  
+  // Hide typing indicator
+  hideTypingIndicator();
+});
+
+Alternative Quick Test:
+Tell them to try this in console:
+javascript// Manually trigger what should happen
+const indicator = document.querySelector('.typing-indicator');
+if (indicator) {
+  indicator.style.display = 'flex';
+  indicator.style.opacity = '1';
+  console.log('✅ Indicator should be visible now');
+} else {
+  console.log('❌ Indicator element not found');
+}
+
+Questions For Them:
+
+Is the typing indicator HTML element in the DOM? (check Elements tab)
+Is send button inside a <form> tag?
+Does page reload/refresh when you click send?
+What logs appear when you send a message?
