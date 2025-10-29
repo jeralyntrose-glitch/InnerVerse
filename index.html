@@ -34,7 +34,7 @@
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: #F7F7F8;
+            background: #FFFFFF;
             height: 100vh;
             overflow: hidden;
             font-size: 16px;
@@ -545,7 +545,7 @@
             display: flex;
             flex-direction: column;
             gap: 0;
-            background: #F7F7F8;
+            background: #FFFFFF;
         }
 
         /* Sleek Compact Message Styles */
@@ -561,16 +561,17 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* User Messages - iPhone Bubble Style */
+        /* User Messages - iPhone Bubble Style (Right-aligned) */
         .message.user {
             background: #E5E5EA;
             padding: 10px 14px;
             width: fit-content;
             max-width: 70%;
             border-radius: 18px;
-            margin-left: 12px;
-            margin-right: auto;
+            margin-left: auto;
+            margin-right: 12px;
             word-wrap: break-word;
+            align-self: flex-end;
         }
 
         .message.user .message-content {
@@ -583,7 +584,7 @@
         @media (max-width: 768px) {
             .message.user {
                 max-width: 75%;
-                margin-left: 8px;
+                margin-right: 8px;
             }
         }
 
@@ -695,6 +696,12 @@
             width: 16px;
             height: 16px;
             transition: opacity 0.15s ease;
+        }
+        
+        /* Copy button for user messages - positioned to the left of bubble */
+        .message.user .copy-btn {
+            right: auto;
+            left: -36px;
         }
 
         /* Desktop: Show on message hover */
