@@ -1,0 +1,893 @@
+Phase 6: Vision & Image Upload Capability
+
+Add image upload and AI vision analysis to enable screenshot-based typing and cognitive function analysis.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CRITICAL: This is a COMPLEX feature involving:
+- File upload handling
+- Image preview/display
+- Claude Vision API integration
+- Message format changes (text + image)
+- Mobile camera access
+- Error handling
+
+Build incrementally and test at each step.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**PURPOSE:**
+
+Enable users to upload images (screenshots, photos) containing text for AI analysis. Primary use case: Upload screenshot of text messages, social media posts, or handwritten notes → AI analyzes text for MBTI type and cognitive functions.
+
+**KEY USE CASES:**
+
+1. Type someone from their text messages (screenshot)
+2. Analyze Instagram/social media captions (screenshot)
+3. Analyze Reddit comments or forum posts (screenshot)
+4. Read and analyze handwritten notes (photo)
+5. Type someone based on their writing style in images
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 1: FILE UPLOAD UI (Build This First)
+
+**LOCATION:**
+
+Input Area (Bottom of Chat):
+- Add image upload button next to message input
+- Position: Left of text input field, before message box
+
+**VISUAL DESIGN:**
+
+Upload Button:
+- Icon: 📎 (paperclip) or 🖼️ (image) or camera SVG
+- Size: 36px × 36px (comfortable tap target)
+- Position: Left side of input container
+- Background: Transparent or light grey (#F7F7F8)
+- Border: 1px solid #E5E5E5 (subtle)
+- Border-radius: 8px (slightly rounded)
+- Cursor: pointer
+- Margin-right: 8px (spacing from text input)
+
+Button States:
+- Default: Grey icon (#6B6B6B)
+- Hover: Teal icon (#10A37F)
+- Active (file selected): Teal background (#E6F7F4) with teal icon
+- Disabled: Light grey (#CCCCCC), not clickable
+
+Tooltip:
+- On hover: "Upload image"
+- Font-size: 12px
+- Position: Above button
+- Background: #2D2D2D
+- Color: #FFFFFF
+
+**INPUT LAYOUT UPDATE:**
+
+Current Layout:
+```
+[Text Input Field..................] [Send Button]
+```
+
+New Layout:
+```
+[📎] [Text Input Field................] [Send Button]
+```
+
+Spacing:
+- Upload button: 36px width + 8px margin-right
+- Text input: Remaining space (flex: 1)
+- Send button: 36px width
+
+Container:
+- Display: flex
+- Align-items: center
+- Gap: 8px
+- Padding: 12px
+- Background: #FFFFFF
+- Border-top: 1px solid #E5E5E5
+
+**FILE INPUT ELEMENT:**
+
+Hidden File Input:
+- Use hidden <input type="file"> element
+- Accept: image/jpeg, image/png, image/gif, image/webp
+- Multiple: false (one image at a time for now)
+- Max file size: 5MB
+```html
+<input
+  type="file"
+  id="image-upload"
+  accept="image/jpeg,image/png,image/gif,image/webp"
+  style="display: none"
+/>
+```
+
+Click Flow:
+1. User clicks upload button (📎)
+2. Triggers hidden file input click
+3. OS file picker opens
+4. User selects image
+5. Image preview appears
+
+**MOBILE CAMERA ACCESS:**
+
+On Mobile:
+- File input should also trigger camera option
+- Accept attribute enables camera: accept="image/*"
+- User gets choice: "Camera" or "Photo Library"
+- Capture attribute: capture="environment" (back camera default)
+
+Mobile-Specific:
+```html
+<input
+  type="file"
+  accept="image/*"
+  capture="environment"
+  style="display: none"
+/>
+```
+
+**FILE VALIDATION:**
+
+Validate on Selection:
+- File type: Must be image (JPEG, PNG, GIF, WebP)
+- File size: Max 5MB (5,242,880 bytes)
+- File exists: Not null/undefined
+
+Error Messages:
+- Invalid type: "Please upload an image file (JPEG, PNG, GIF, or WebP)"
+- Too large: "Image must be under 5MB. Your file is [X]MB"
+- No file: "No file selected"
+
+Error Display:
+- Show error message in red text below input
+- Error dismisses after 5 seconds
+- Allow user to try again
+
+**TEST CRITERIA - PART 1:**
+
+Upload Button:
+✅ Upload button appears left of text input
+✅ Button has correct icon and styling
+✅ Hover state works (icon turns teal)
+✅ Click opens file picker
+✅ Only shows image files in picker
+
+File Selection:
+✅ Can select JPEG image
+✅ Can select PNG image
+✅ Can select GIF image
+✅ Can select WebP image
+✅ Cannot select non-image files
+
+Validation:
+✅ Files under 5MB accepted
+✅ Files over 5MB rejected with error message
+✅ Non-image files rejected with error message
+✅ Error messages display correctly
+
+Mobile:
+✅ Upload button works on mobile
+✅ Camera option appears on mobile
+✅ Can take photo with camera
+✅ Can select from photo library
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STOP AND TEST PART 1 BEFORE PROCEEDING
+
+Confirm file upload UI works, validation works, mobile works.
+Reply: "Part 1 working! Ready for Part 2."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 2: IMAGE PREVIEW (Build After Part 1 Works)
+
+**PURPOSE:**
+
+Show user a preview of selected image before sending, allow them to add text description, and give option to remove image.
+
+**LOCATION:**
+
+Preview Container:
+- Appears above text input area
+- Below last message in chat
+- Temporary overlay until sent
+
+**VISUAL DESIGN:**
+
+Preview Container:
+- Width: 100% of input area
+- Background: #F7F7F8 (light grey)
+- Border: 1px solid #E5E5E5
+- Border-radius: 8px
+- Padding: 12px
+- Margin-bottom: 8px (space above text input)
+- Display: flex
+- Align-items: flex-start
+- Gap: 12px
+
+Image Thumbnail:
+- Size: 80px × 80px (square)
+- Object-fit: cover (crop to square)
+- Border-radius: 6px
+- Border: 1px solid #E5E5E5
+- Cursor: pointer (click to view full size)
+
+Image Info:
+- Display: flex
+- Flex-direction: column
+- Flex: 1
+- Gap: 4px
+
+File Name:
+- Font-size: 14px
+- Font-weight: 600
+- Color: #2D2D2D
+- Truncate if too long (max 40 chars)
+- Example: "screenshot_2024_10_28.png"
+
+File Size:
+- Font-size: 12px
+- Color: #6B6B6B
+- Format: "1.2 MB" or "450 KB"
+
+Remove Button:
+- Position: Top-right of preview container
+- Icon: × (close/remove)
+- Size: 24px × 24px
+- Background: rgba(255, 255, 255, 0.9)
+- Border: 1px solid #E5E5E5
+- Border-radius: 50% (circle)
+- Cursor: pointer
+- Hover: Background red (#FF4444), icon white
+
+**LAYOUT EXAMPLE:**
+```
+┌─────────────────────────────────────────┐
+│ [Image]  screenshot_2024.png            │
+│  80x80   1.2 MB                      [×]│
+└─────────────────────────────────────────┘
+[Text Input........................] [Send]
+```
+
+**FUNCTIONALITY:**
+
+Image Selection Flow:
+1. User selects image from file picker
+2. Image validates (type, size)
+3. Preview appears above text input
+4. Text input remains focused and active
+5. User can optionally add text message
+6. User clicks Send to send image + optional text
+
+Optional Text:
+- User can send image alone (no text)
+- User can add text description/question with image
+- Placeholder updates: "Add a message (optional)..."
+
+Remove Image:
+- Click × button: Removes preview
+- Clears selected file
+- Input returns to normal (no image)
+- Text remains if user typed anything
+
+Click Thumbnail:
+- Opens image in larger preview/modal (optional enhancement)
+- For now: Just show thumbnail, can enhance later
+
+**TECHNICAL IMPLEMENTATION:**
+
+File Reading:
+```javascript
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  
+  if (!file) return;
+  
+  // Validate file
+  if (!validateImage(file)) return;
+  
+  // Read file as data URL for preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    setImagePreview({
+      file: file,
+      dataUrl: e.target.result,
+      name: file.name,
+      size: formatFileSize(file.size)
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+```
+
+State Management:
+- Store selected image in component state
+- Store preview data URL
+- Store file metadata (name, size)
+- Clear state when removed or sent
+
+**RESPONSIVE BEHAVIOR:**
+
+Desktop:
+- Preview container: Full width of input area
+- Thumbnail: 80px × 80px
+- All info visible
+
+Mobile:
+- Preview container: Full width
+- Thumbnail: 60px × 60px (slightly smaller)
+- File name truncates more aggressively
+- Remove button: 28px × 28px (larger tap target)
+
+**TEST CRITERIA - PART 2:**
+
+Preview Display:
+✅ Preview appears after image selected
+✅ Thumbnail shows correct image
+✅ File name displays correctly
+✅ File size displays correctly (KB/MB format)
+✅ Preview looks clean and professional
+
+Functionality:
+✅ Remove button (×) works
+✅ Clicking × clears preview
+✅ Can add text with image
+✅ Can send image without text
+✅ Text input still works with preview shown
+
+Layout:
+✅ Preview doesn't break input layout
+✅ Preview responsive on mobile
+✅ Thumbnail proper size on all screens
+✅ Remove button accessible on mobile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STOP AND TEST PART 2 BEFORE PROCEEDING
+
+Confirm preview works, remove works, layout good.
+Reply: "Part 2 working! Ready for Part 3."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 3: SEND IMAGE MESSAGE (Build After Part 2 Works)
+
+**PURPOSE:**
+
+Send image to backend, display in chat, prepare for AI analysis.
+
+**MESSAGE FORMAT:**
+
+User Message with Image:
+- Contains: Image + optional text
+- Display: Image thumbnail in user bubble + text below (if provided)
+- Alignment: Right side (like normal user messages)
+
+Structure:
+```
+User Message (Right-aligned):
+┌──────────────────────┐
+│ [Image Thumbnail]    │
+│ "Can you type this   │
+│ person based on their│
+│ text messages?"      │
+└──────────────────────┘
+```
+
+**VISUAL DESIGN:**
+
+User Message with Image:
+- Background: #10A37F (teal bubble, same as text-only)
+- Padding: 12px
+- Border-radius: 18px
+- Max-width: 70%
+- Alignment: Right
+
+Image in Message:
+- Display: Above text (if text provided)
+- Width: 100% of bubble (max 300px)
+- Height: Auto (maintain aspect ratio)
+- Border-radius: 12px (rounded, matches bubble)
+- Margin-bottom: 8px (if text below)
+- Cursor: pointer (click to view full size)
+
+Text Below Image:
+- Color: #FFFFFF (white on teal)
+- Font-size: 16px
+- Line-height: 1.6
+- Margin-top: 8px (if image above)
+
+Image-Only Message:
+- Just image in teal bubble
+- No text
+- Same styling
+
+**SEND BEHAVIOR:**
+
+Click Send Button:
+1. Validate image still selected
+2. Validate file size again (safety check)
+3. Convert image to base64 or upload to storage
+4. Create message object:
+```javascript
+   {
+     id: messageId,
+     role: 'user',
+     content: userText || null,
+     image: {
+       data: base64String,
+       mimeType: 'image/jpeg',
+       fileName: file.name
+     },
+     timestamp: new Date()
+   }
+```
+5. Display message in chat immediately (optimistic UI)
+6. Send to backend for AI processing
+7. Clear preview
+8. Clear text input
+9. Reset file input
+
+**BACKEND INTEGRATION:**
+
+API Endpoint Update:
+- Existing: POST /api/message
+- Update to handle image data
+
+Request Format:
+```javascript
+{
+  conversationId: "abc123",
+  message: "Can you type this person?",
+  image: {
+    data: "base64EncodedImageString...",
+    mimeType: "image/jpeg"
+  }
+}
+```
+
+OR use multipart/form-data:
+```
+POST /api/message
+Content-Type: multipart/form-data
+
+conversationId: abc123
+message: Can you type this person?
+image: [binary file data]
+```
+
+Backend Processing:
+- Receive image + text
+- Validate image
+- Send to Claude Vision API
+- Include image in API request
+- Return AI analysis
+
+**CLAUDE VISION API INTEGRATION:**
+
+API Call Format:
+```python
+import anthropic
+
+client = anthropic.Anthropic(api_key="your-key")
+
+response = client.messages.create(
+    model="claude-sonnet-4-5-20250929",
+    max_tokens=4000,
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/jpeg",
+                        "data": base64_image_data
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": user_message or "Please analyze the text in this image for MBTI type and cognitive functions."
+                }
+            ]
+        }
+    ],
+    system=your_system_prompt
+)
+```
+
+System Prompt Update:
+- Add context about image analysis capability
+- Guide AI to analyze text in images
+- Instruct AI on typing from screenshots
+
+Example Addition:
+```
+When user uploads an image, analyze any text visible in the image. 
+Common use cases:
+- Screenshots of text messages: Type the person based on their writing
+- Social media posts: Analyze cognitive functions shown
+- Handwritten notes: Read and analyze the text
+
+Focus on the TEXT CONTENT in images, not the visual design.
+```
+
+**AI RESPONSE DISPLAY:**
+
+AI Message After Image:
+- Normal AI response format (full-width grey background)
+- Contains analysis of image
+- Streams normally (letter-by-letter)
+
+Example Response:
+```
+AI Response:
+Based on the text messages in the screenshot, this person shows:
+
+**Dominant Functions:**
+- Ne Hero: Jumping between topics, seeing connections
+- Fi Parent: Strong personal values evident
+
+**Cognitive Analysis:**
+[detailed analysis...]
+
+**Likely Type:** ENFP
+```
+
+**ERROR HANDLING:**
+
+Image Upload Failures:
+- Network error: "Failed to upload image. Check connection."
+- File too large (double-check): "Image too large. Max 5MB."
+- Invalid format: "Invalid image format."
+- Server error: "Server error. Try again."
+
+Claude API Errors:
+- Vision API error: "Could not analyze image. Try another image."
+- Rate limit: "Too many requests. Wait a moment."
+- Invalid image: "Image could not be processed."
+
+Error Display:
+- Show error message in chat (like AI message)
+- User message with image still visible
+- User can try again with different image
+
+**TECHNICAL IMPLEMENTATION:**
+
+Image Encoding:
+```javascript
+function encodeImageToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1]; // Remove data:image/jpeg;base64,
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+```
+
+Send with Image:
+```javascript
+async function sendMessageWithImage(text, imageFile) {
+  try {
+    // Encode image
+    const base64Image = await encodeImageToBase64(imageFile);
+    
+    // Send to backend
+    const response = await fetch('/api/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversationId: currentConversationId,
+        message: text || null,
+        image: {
+          data: base64Image,
+          mimeType: imageFile.type
+        }
+      })
+    });
+    
+    // Handle response...
+  } catch (error) {
+    showError('Failed to send image');
+  }
+}
+```
+
+**DATABASE STORAGE:**
+
+Store Image Messages:
+- Save user message with image reference
+- Options:
+  1. Store base64 in database (simple, works for low volume)
+  2. Upload to cloud storage (S3/similar), store URL
+  3. Store in database BLOB field
+
+Recommended Approach:
+- For now: Store base64 in message content field
+- Format:
+```json
+  {
+    "role": "user",
+    "content": "User text",
+    "image_data": "base64...",
+    "image_type": "image/jpeg"
+  }
+```
+
+Load Messages with Images:
+- When loading conversation history
+- Fetch messages from database
+- Include image data
+- Render images in chat
+
+**RESPONSIVE BEHAVIOR:**
+
+Desktop:
+- Image in user message: Max 300px width
+- Full-size preview on click (optional)
+- Clear layout
+
+Mobile:
+- Image in user message: Max width of bubble (70% screen)
+- Touch to view full-size (optional)
+- Responsive image sizing
+
+**TEST CRITERIA - PART 3:**
+
+Sending:
+✅ Can send image with text
+✅ Can send image without text
+✅ Image displays in user message bubble
+✅ Text displays below/with image correctly
+✅ Message appears immediately (optimistic UI)
+
+Backend:
+✅ Image uploaded successfully
+✅ Backend receives image data
+✅ Claude Vision API called correctly
+✅ AI response generated
+✅ AI analyzes text in image
+
+Display:
+✅ User message with image looks good
+✅ Image thumbnail clear and readable
+✅ Layout responsive on mobile
+✅ Images load correctly in chat
+
+Error Handling:
+✅ Upload failures show error message
+✅ API errors handled gracefully
+✅ User can retry on error
+✅ No crashes on error
+
+Persistence:
+✅ Messages with images save to database
+✅ Images load when reopening conversation
+✅ Image data persists across sessions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STOP AND TEST PART 3 BEFORE PROCEEDING
+
+Confirm image sends, displays, AI analyzes, everything works.
+Reply: "Part 3 working! Ready for Part 4."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 4: POLISH & ENHANCEMENTS (Build After Part 3 Works)
+
+**PURPOSE:**
+
+Add final touches, optimize UX, handle edge cases.
+
+**ENHANCEMENTS:**
+
+1. Click Image to View Full-Size:
+
+Modal Overlay:
+- Click image thumbnail in message
+- Opens modal with full-size image
+- Dark overlay background (rgba(0,0,0,0.8))
+- Image centered on screen
+- Close button (×) in top-right
+- Click outside image to close
+- ESC key to close
+
+Full-Size Display:
+- Max-width: 90vw
+- Max-height: 90vh
+- Maintain aspect ratio
+- Image centered (flexbox)
+- Smooth zoom-in animation
+
+2. Loading State While Sending:
+
+Upload Progress:
+- Show loading indicator while encoding/uploading
+- Progress spinner on preview
+- Text: "Uploading image..."
+- Disable send button during upload
+
+AI Processing State:
+- After image sent, show "Analyzing image..." in AI area
+- Typing indicator active
+- User knows AI is working
+
+3. Image Compression (Optional):
+
+Client-Side Compression:
+- If image over 2MB, compress before sending
+- Use canvas API to resize/compress
+- Target: Max 1-2MB for faster upload
+- Maintain reasonable quality
+
+Example:
+```javascript
+function compressImage(file, maxSizeMB = 2) {
+  // Use canvas to resize/compress
+  // Return compressed blob
+}
+```
+
+4. Multiple Images (Future Enhancement):
+
+For Now:
+- One image per message
+- Keep it simple
+
+Future:
+- Allow multiple images
+- Carousel display
+- Send in single message
+
+Note: Implement later, not in Phase 6
+
+5. Copy Button on Image Messages:
+
+Consistency:
+- Image messages should also have copy button
+- Copies text portion (if provided)
+- Same behavior as text-only messages
+
+6. Image in Search Results:
+
+Search Consideration:
+- If searching conversations
+- Should image messages appear in results?
+- Search text content, not image itself
+- For now: Image messages searchable by text only
+
+**ACCESSIBILITY:**
+
+Image Alt Text:
+- Add alt text to images: "Uploaded image" or file name
+- Screen reader announces image presence
+
+Keyboard Navigation:
+- Tab to upload button
+- Enter/Space to trigger upload
+- ESC to close preview
+- Full keyboard support for modal
+
+Touch Optimization:
+- Large tap targets (44px minimum)
+- Smooth touch interactions
+- No hover-dependent features
+
+**PERFORMANCE OPTIMIZATION:**
+
+Image Loading:
+- Lazy load images in long conversations
+- Blur placeholder while loading
+- Compress large images client-side
+
+Caching:
+- Cache uploaded images
+- Avoid re-uploading same image
+- Store in browser cache or localStorage
+
+Network Efficiency:
+- Only send image once
+- Don't re-send on conversation reload
+- Efficient base64 encoding
+
+**SECURITY CONSIDERATIONS:**
+
+File Validation:
+- Server-side validation (don't trust client)
+- Check file type on backend
+- Check file size on backend
+- Scan for malicious content (optional)
+
+XSS Prevention:
+- Sanitize file names
+- No script execution from images
+- Safe image rendering
+
+Privacy:
+- Images stored securely
+- No public URLs without auth
+- Encrypted transmission (HTTPS)
+
+**FINAL TEST CRITERIA - PART 4:**
+
+Enhancements:
+✅ Click image opens full-size view
+✅ Modal displays correctly
+✅ ESC and × button close modal
+✅ Loading states show during upload
+✅ "Analyzing..." shows while AI processes
+
+Polish:
+✅ Smooth animations
+✅ Professional appearance
+✅ No janky behavior
+✅ Fast and responsive
+
+Accessibility:
+✅ Keyboard navigation works
+✅ Screen readers announce images
+✅ Touch targets appropriate size
+
+Performance:
+✅ Large images don't slow down app
+✅ Upload is reasonably fast
+✅ No memory leaks
+✅ Smooth scrolling with images
+
+Security:
+✅ File validation on backend
+✅ No XSS vulnerabilities
+✅ Safe image rendering
+✅ Secure transmission
+
+Integration:
+✅ Works with existing features (search, copy, folders)
+✅ Doesn't break anything
+✅ Professional and polished
+✅ Ready for production use
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PHASE 6 COMPLETE!
+
+Once all 4 parts are built and tested, you have:
+✅ Full image upload capability
+✅ Claude Vision AI integration
+✅ Screenshot-based typing
+✅ Your competitive advantage feature
+
+This is your KILLER FEATURE! 🔥
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IMPLEMENTATION ORDER:
+
+1. Build Part 1 (Upload UI)
+2. Test thoroughly
+3. Build Part 2 (Preview)
+4. Test thoroughly
+5. Build Part 3 (Send + AI)
+6. Test thoroughly
+7. Build Part 4 (Polish)
+8. Final testing
+9. Ship it! 🚀
+
+DO NOT skip testing between parts. This is complex - build incrementally!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
