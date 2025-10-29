@@ -775,14 +775,23 @@
             opacity: 1;
         }
 
-        /* Typing Indicator - iPhone Style */
+        /* Typing Indicator - iPhone Style with Fixed Positioning */
         #ai-typing {
+            position: absolute;
+            bottom: 0;
+            left: 0;
             width: fit-content;
             background: #E5E5EA;
             padding: 12px 16px;
             border-radius: 18px;
             margin-left: 12px;
             margin-bottom: 12px;
+            z-index: 10;
+        }
+        
+        /* Add padding to messages container to prevent content hiding behind typing indicator */
+        .messages {
+            padding-bottom: 60px; /* Extra space at bottom for typing indicator */
         }
 
         .typing-dots {
