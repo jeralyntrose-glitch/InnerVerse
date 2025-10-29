@@ -595,23 +595,29 @@
                 box-shadow: none;
                 position: relative;
                 padding-top: env(safe-area-inset-top, 0);
+                display: flex;
+                flex-direction: column;
             }
             
             .header {
                 padding: 20px 20px 10px;
+                flex-shrink: 0;
             }
             
             .chat-container {
-                height: 100%;
+                flex: 1;
                 position: relative;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
             }
             
             .messages {
-                height: 100%;
+                flex: 1;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
-                padding-bottom: 100px; /* Extra space so messages don't hide behind fixed input */
+                padding-bottom: 80px; /* Space for fixed input bar */
             }
 
             .input-container {
@@ -623,6 +629,7 @@
                 background: white;
                 border-top: 1px solid #e0e0e0;
                 z-index: 100;
+                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
             }
             
             .message-input {
