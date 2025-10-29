@@ -1171,10 +1171,18 @@ async function sendMessage() {
 }
 
 // === Event Listeners ===
-sendButton.addEventListener('click', sendMessage);
+console.log('🔗 Setting up event listeners - sendButton:', sendButton, 'messageInput:', messageInput);
+
+sendButton.addEventListener('click', () => {
+    console.log('🖱️ SEND BUTTON CLICKED!');
+    sendMessage();
+});
+
 messageInput.addEventListener('keypress', (e) => {
+    console.log('⌨️ KEY PRESSED:', e.key);
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        console.log('✅ ENTER KEY - SENDING MESSAGE!');
         sendMessage();
     }
 });
