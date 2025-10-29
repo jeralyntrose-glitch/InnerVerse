@@ -702,9 +702,11 @@
             transform: scale(1.05);
         }
 
-        .copy-btn:focus {
+        .copy-btn:focus,
+        .copy-btn:focus-visible {
             outline: 2px solid #10A37F;
             outline-offset: 2px;
+            opacity: 1; /* Make visible for keyboard users */
         }
 
         /* Success state after copy */
