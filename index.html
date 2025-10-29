@@ -133,6 +133,7 @@
         .search-clear-btn {
             background: none;
             border: none;
+            outline: none;
             color: #6B6B6B;
             font-size: 20px;
             line-height: 1;
@@ -145,10 +146,21 @@
             justify-content: center;
             flex-shrink: 0;
             transition: color 0.2s;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .search-clear-btn:hover {
             color: #2D2D2D;
+        }
+
+        .search-clear-btn:focus {
+            outline: none;
+            border: none;
+        }
+
+        .search-clear-btn:active {
+            outline: none;
+            border: none;
         }
 
         /* Empty search state */
