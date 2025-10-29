@@ -1185,6 +1185,28 @@ messageInput.addEventListener('blur', () => {
     }, 100);
 });
 
+// === THEME TOGGLE ===
+const themeToggle = document.getElementById('themeToggle');
+
+// Get current theme from DOM (set by inline script)
+let currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+
+// Toggle theme function
+function toggleTheme() {
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    localStorage.setItem('theme', currentTheme);
+    console.log(`🌓 Theme switched to: ${currentTheme}`);
+}
+
+// Add click listener to toggle button
+if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+    console.log('✅ Theme toggle button initialized');
+} else {
+    console.error('❌ Theme toggle button not found!');
+}
+
 // === Initialize ===
 // Check if sidebar should be closed on mobile by default
 if (window.innerWidth <= 768) {

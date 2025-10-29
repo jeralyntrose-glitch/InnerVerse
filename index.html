@@ -12,6 +12,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="/node_modules/marked/lib/marked.umd.js"></script>
     <script src="/node_modules/dompurify/dist/purify.min.js"></script>
+    
+    <!-- Prevent flash of wrong theme on load -->
+    <script>
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    
     <style>
         * {
             margin: 0;
@@ -525,6 +536,62 @@
 
         .header p {
             display: none; /* Hide subtitle for sleek minimal header */
+        }
+        
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            width: 40px;
+            height: 40px;
+            padding: 8px;
+            background: transparent;
+            border: 1px solid #E5E5E5;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            z-index: 200; /* Above sidebar */
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        
+        .theme-toggle:hover {
+            background: #F0F0F0;
+            border-color: #10A37F;
+        }
+        
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+        
+        .theme-icon {
+            color: #6B6B6B;
+            transition: color 0.15s ease;
+        }
+        
+        .theme-toggle:hover .theme-icon {
+            color: #10A37F;
+        }
+        
+        /* Show moon in light mode, sun in dark mode */
+        [data-theme="light"] .sun-icon {
+            display: none;
+        }
+        
+        [data-theme="dark"] .moon-icon {
+            display: none;
+        }
+        
+        [data-theme="light"] .moon-icon {
+            display: block;
+        }
+        
+        [data-theme="dark"] .sun-icon {
+            display: block;
         }
 
         .brain-logo {
@@ -1204,6 +1271,24 @@
                     </svg>
                     <span>InnerVerse</span>
                 </h1>
+                
+                <!-- Theme Toggle Button -->
+                <button class="theme-toggle" id="themeToggle" type="button" title="Toggle dark/light mode">
+                    <svg class="theme-icon moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <svg class="theme-icon sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+                        <line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
             </div>
 
             <div class="chat-container">
