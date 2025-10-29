@@ -1331,6 +1331,9 @@ async function updateCostTracker() {
         <span>Embeddings: <strong>$${(breakdown.query_embedding?.cost || 0).toFixed(4)}</strong></span>
       </div>
       <div class="cost-breakdown-item">
+        <span>Auto-Tagging: <strong>$${(breakdown.auto_tagging?.cost || 0).toFixed(4)}</strong></span>
+      </div>
+      <div class="cost-breakdown-item">
         <span>Whisper: <strong>$${(breakdown.whisper?.cost || 0).toFixed(4)}</strong></span>
       </div>
       <div class="cost-breakdown-item">
@@ -1369,6 +1372,7 @@ function formatOperation(operation) {
     'chat_completion': '💬 GPT Chat',
     'query_embedding': '📊 Embedding',
     'embedding': '📊 Embedding',
+    'auto_tagging': '🏷️ Auto-Tag',
     'whisper': '🎤 Whisper',
     'text_fix': '✨ Text Fix'
   };
