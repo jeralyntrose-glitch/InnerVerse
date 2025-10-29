@@ -1,0 +1,335 @@
+Phase 5 Part 2: Copy Message Functionality
+
+Add copy button to all messages so users can easily copy and share content.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**PURPOSE:**
+Allow users to copy any message (user or AI) to clipboard for sharing or saving.
+
+**LOCATION:**
+Copy button appears on each message (both user messages and AI messages)
+
+**VISUAL DESIGN:**
+
+Copy Button Container:
+- Position: absolute
+- Top: 8px
+- Right: 8px
+- Z-index: 10 (floats above message content)
+- Size: 28px × 28px (includes padding)
+
+Copy Button Icon:
+- Icon: 📋 or copy/clipboard SVG
+- Size: 16px × 16px (icon itself)
+- Background: rgba(255, 255, 255, 0.9) (semi-transparent white)
+- Border: 1px solid #E5E5E5
+- Border-radius: 4px
+- Padding: 6px (total button size 28px)
+- Cursor: pointer
+- Box-shadow: 0 1px 3px rgba(0,0,0,0.1) (subtle depth)
+
+Icon Colors:
+- On AI messages (grey background): Icon color #6B6B6B (medium grey)
+- On User messages (teal bubble): Icon color #FFFFFF (white) for visibility
+- On hover: Icon color darkens slightly
+
+Visibility Behavior:
+- Desktop: 
+  * Default: Hidden (opacity: 0)
+  * On message hover: Visible (opacity: 1, transition: 150ms)
+- Mobile:
+  * Always visible (opacity: 1)
+  * No hover state needed
+
+Button States:
+- Default: Copy icon
+- Hover (desktop only): 
+  * Background: rgba(255, 255, 255, 1) (fully opaque)
+  * Transform: scale(1.05)
+  * Transition: 150ms ease
+- Active (clicked): 
+  * Icon changes to checkmark ✓
+  * Background: #10A37F (teal - success color)
+  * Icon color: #FFFFFF (white)
+- After 2 seconds: Returns to default copy icon
+
+Tooltip (optional but recommended):
+- Shows on hover (desktop)
+- Text: "Copy message"
+- After click: "Copied!"
+- Position: Above button (top: -32px)
+- Font-size: 12px
+- Background: #2D2D2D
+- Color: #FFFFFF
+- Padding: 4px 8px
+- Border-radius: 4px
+- Pointer-events: none (doesn't interfere with clicks)
+
+**FUNCTIONALITY:**
+
+Copy Behavior:
+- Click copy button → Copies message text to clipboard
+- Uses Clipboard API: navigator.clipboard.writeText()
+- Copies PLAIN TEXT only (no formatting, no markdown symbols)
+- For AI messages: Copy rendered text (not raw markdown)
+- For user messages: Copy exact text user typed
+
+When Copy Button Appears:
+- User messages: Immediately when message sent
+- AI messages: Only after message is COMPLETE (not during streaming)
+- System messages (if any): No copy button
+- Welcome messages: No copy button
+
+Success Feedback:
+- Button icon changes to checkmark ✓
+- Button background changes to teal (#10A37F)
+- Optional: Brief "Copied!" tooltip
+- After 2 seconds: Button returns to copy icon and normal styling
+
+What Gets Copied:
+- AI messages: Clean text without markdown formatting
+  * "**bold**" becomes "bold"
+  * "## Header" becomes "Header"  
+  * "- list item" becomes "• list item" or "list item"
+  * Remove all markdown symbols, copy readable plain text
+- User messages: Exact text as typed (already plain text)
+- Preserve:
+  * Line breaks (\n)
+  * Paragraph spacing (double \n)
+  * Basic structure
+- Remove:
+  * Markdown symbols (**, __, *, _, #, -, `, etc.)
+  * HTML tags (if any)
+  * Metadata (timestamps, sender names, etc.)
+
+**POSITIONING DETAILS:**
+
+AI Messages (Full-Width Grey Background):
+- Message has position: relative
+- Copy button position: absolute, top: 8px, right: 8px
+- Button floats in top-right corner
+- Doesn't push text or interfere with layout
+- On grey background (#F7F7F8), button easily visible
+
+User Messages (Teal Bubble, Right-Aligned):
+- Bubble has position: relative
+- Copy button position: absolute, top: 8px, right: 8px
+- On teal background (#10A37F), white icon (#FFFFFF) for contrast
+- Button stays within bubble bounds
+- Doesn't overflow bubble
+
+Responsive Behavior:
+- Desktop (>768px): Hover to show copy button
+- Mobile (≤768px): Copy button always visible
+- Both: Same positioning (top-right corner)
+
+**TECHNICAL IMPLEMENTATION:**
+
+Clipboard API (Modern Browsers):
+```javascript
+async function copyMessageToClipboard(messageText) {
+  try {
+    // Strip markdown if AI message
+    const plainText = stripMarkdown(messageText);
+    
+    // Copy to clipboard
+    await navigator.clipboard.writeText(plainText);
+    
+    // Show success feedback
+    showCopySuccess();
+  } catch (err) {
+    console.error('Clipboard error:', err);
+    // Try fallback method
+    fallbackCopy(plainText);
+  }
+}
+```
+
+Markdown Stripping Function:
+- Remove bold: **text** → text
+- Remove italic: *text* → text
+- Remove headers: ## Header → Header
+- Remove code: `code` → code
+- Remove lists: - item → item
+- Preserve line breaks and spacing
+- Use library (like remove-markdown) or regex
+
+Fallback for Older Browsers:
+```javascript
+function fallbackCopy(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    document.execCommand('copy');
+    showCopySuccess();
+  } catch (err) {
+    showCopyError();
+  }
+  
+  document.body.removeChild(textarea);
+}
+```
+
+State Management:
+- Track copy button state per message (default, copied, error)
+- Reset to default after 2 seconds
+- Handle multiple copy actions (don't break if clicked rapidly)
+
+**EDGE CASES:**
+
+Long messages:
+- Copy entire message regardless of length
+- No truncation (clipboard can handle large text)
+- Full text copied preserving structure
+
+Code blocks in AI messages:
+- Copy code as plain text
+- Preserve indentation (spaces/tabs)
+- Preserve line breaks
+- Remove syntax highlighting markers
+- Example: ```javascript\ncode\n``` → code (plain)
+
+Multiple paragraphs:
+- Preserve paragraph breaks (double \n\n)
+- Don't collapse whitespace
+- Maintain readability
+
+Special characters:
+- Handle emojis correctly (copy as-is)
+- Handle unicode characters
+- Handle line breaks (\n)
+
+Empty or very short messages:
+- Still show copy button
+- Copy whatever text exists
+- If truly empty (shouldn't happen), copy empty string
+
+Clipboard permission denied:
+- Catch permission error
+- Show error state on button (red X icon)
+- Show error message: "Clipboard access denied"
+- Suggest manual copy: "Select text and press Ctrl/Cmd+C"
+- Return to normal after 2 seconds
+
+Rapid clicking:
+- Debounce copy action (prevent spam)
+- If clicked multiple times fast, only process once
+- Don't break button state
+
+Message still generating (AI streaming):
+- Do NOT show copy button while AI is typing
+- Only show copy button after message complete
+- Prevents copying partial messages
+
+Mobile touch:
+- Button always visible (20px × 20px minimum tap target with padding = 28px)
+- Works with touch events (touchstart/touchend)
+- No hover state (not possible on touch devices)
+- Tactile feedback on click (button state change)
+
+**ACCESSIBILITY:**
+
+Keyboard Support:
+- Copy button is focusable (tabindex="0")
+- Tab navigation reaches copy button
+- Enter key: Trigger copy
+- Space key: Trigger copy
+- Focus visible: Show outline on keyboard focus
+
+Screen Reader Support:
+- Button has aria-label="Copy message"
+- After copy: aria-live region announces "Message copied"
+- Error state: aria-live region announces error
+- Button role: button (semantic HTML)
+
+Visual Indicators:
+- High contrast (button visible on both backgrounds)
+- Clear state changes (icon swap, color change)
+- Not relying on color alone (icon changes too)
+
+**TEST CRITERIA:**
+
+Basic Functionality:
+✅ Click copy button on AI message → text copied
+✅ Click copy button on user message → text copied
+✅ Paste copied text → correct plain text appears
+✅ AI messages: All markdown stripped
+✅ User messages: Exact text copied
+✅ Line breaks and paragraphs preserved
+
+Button Behavior:
+✅ Desktop: Button appears on message hover
+✅ Mobile: Button always visible
+✅ Button shows checkmark ✓ after copy
+✅ Button turns teal (#10A37F) on success
+✅ Button returns to normal after 2 seconds
+✅ Tooltip shows "Copy" on hover (desktop)
+✅ Tooltip shows "Copied!" after click
+
+Visual/Layout:
+✅ Button positioned in top-right corner of messages
+✅ Button doesn't interfere with message text
+✅ Button visible on grey AI message background
+✅ Button visible on teal user message bubble (white icon)
+✅ Looks clean and professional
+✅ No layout breaking on any message length
+
+Edge Cases:
+✅ Long messages (1000+ words): Copy entire text
+✅ Code blocks: Copy as plain text, preserve formatting
+✅ Multiple paragraphs: Preserve spacing
+✅ Emojis: Copy correctly
+✅ Special characters: Handle properly
+✅ Empty message: Button works (edge case)
+
+Error Handling:
+✅ Clipboard permission denied: Show error gracefully
+✅ Fallback method works on older browsers
+✅ No crashes or console errors
+
+Mobile:
+✅ Button visible and accessible on mobile
+✅ Touch target large enough (28px minimum)
+✅ Works with touch events
+✅ No hover issues (button always visible)
+
+Accessibility:
+✅ Keyboard: Tab to button, Enter/Space to copy
+✅ Focus visible: Outline shows on keyboard focus
+✅ Screen reader: Announces "Copy message" and "Copied"
+✅ High contrast: Button visible on both backgrounds
+
+Performance:
+✅ No lag when copying long messages
+✅ Button state updates smoothly
+✅ No memory leaks on repeated copies
+✅ Debounce prevents spam clicking issues
+
+Integration:
+✅ Works with existing Phase 4 styling
+✅ Doesn't break message layout
+✅ Doesn't interfere with scrolling
+✅ Search still works (Phase 5 Part 1)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IMPLEMENTATION NOTES:
+
+1. Build copy button component first
+2. Add to AI messages
+3. Test thoroughly
+4. Add to user messages
+5. Test on both message types
+6. Test on mobile
+7. Test edge cases
+8. Confirm with client
+
+DO NOT ship until all test criteria pass.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
