@@ -43,6 +43,15 @@ if (window.innerWidth <= 768) {
     sidebar.classList.add('closed');
 }
 
+// === Auto-expand textarea ===
+function autoExpandTextarea() {
+    messageInput.style.height = 'auto'; // Reset height
+    messageInput.style.height = Math.min(messageInput.scrollHeight, 150) + 'px'; // Expand to content, max 150px
+}
+
+// Add auto-expand on input
+messageInput.addEventListener('input', autoExpandTextarea);
+
 // === Phase 6: Image Upload ===
 let selectedImage = null;
 
@@ -987,6 +996,7 @@ async function sendMessage() {
     if ((!message && !hasImage) || isStreaming || !conversationId) return;
 
     messageInput.value = '';
+    messageInput.style.height = 'auto'; // Reset textarea height
     isStreaming = true;
     sendButton.disabled = true;
 

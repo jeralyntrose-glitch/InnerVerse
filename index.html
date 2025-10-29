@@ -947,6 +947,11 @@
             color: var(--color-text-primary);
             outline: none;
             transition: border-color 0.15s ease;
+            resize: none;
+            overflow-y: auto;
+            min-height: 40px;
+            max-height: 150px;
+            line-height: 1.5;
         }
 
         .message-input:focus {
@@ -1213,13 +1218,13 @@
                         </svg>
                     </button>
                     
-                    <input 
-                        type="text" 
+                    <textarea 
                         class="message-input" 
                         id="messageInput" 
                         placeholder="Type your message..."
                         autocomplete="off"
-                    >
+                        rows="1"
+                    ></textarea>
                     <button class="send-button" id="sendButton">Send</button>
                 </div>
                 
