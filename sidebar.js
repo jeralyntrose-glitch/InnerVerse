@@ -1021,11 +1021,18 @@ function showError(message) {
 
 // === Send Message ===
 async function sendMessage() {
+    console.log('🚀 sendMessage CALLED');
+    
     const message = messageInput.value.trim();
     const hasImage = selectedImage !== null;
     
+    console.log('📝 Message:', message, '| hasImage:', hasImage, '| isStreaming:', isStreaming, '| conversationId:', conversationId);
+    
     // Allow sending if there's a message OR an image
-    if ((!message && !hasImage) || isStreaming || !conversationId) return;
+    if ((!message && !hasImage) || isStreaming || !conversationId) {
+        console.log('❌ Blocked from sending - conditions not met');
+        return;
+    }
 
     messageInput.value = '';
     messageInput.style.height = 'auto'; // Reset textarea height
