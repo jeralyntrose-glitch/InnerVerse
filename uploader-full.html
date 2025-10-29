@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Axis Mind - Upload & Chat</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="page-wrapper">
+    <div class="branding">
+      <h1 class="brand-title">🧠 AXIS MIND</h1>
+      <p class="tagline">The mind decoded. Start uploading.</p>
+    </div>
+
+    <div id="drop-area" class="drop-area">
+      <p class="drop-text">Drag and drop your PDF here</p>
+      <span class="or-text">or</span>
+      <label for="fileElem" class="custom-file-upload">Browse files</label>
+      <input type="file" id="fileElem" accept="application/pdf" />
+    </div>
+
+    <div id="status" class="status"></div>
+  </div>
+
+  <!-- Floating Chat Button -->
+  <div id="chat-toggle" class="chat-toggle">💬</div>
+
+  <!-- Chat Window (starts hidden) -->
+  <div id="chat-container" class="chat-container hidden">
+    <div class="chat-header">
+      <span>Axis Mind Chat</span>
+      <button id="chat-close">×</button>
+    </div>
+    <div id="chat-log" class="chat-log"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chatInput" placeholder="Ask a question..." />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
