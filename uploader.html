@@ -101,6 +101,22 @@
 
     <div id="status" class="status"></div>
 
+    <!-- 🎵 Audio Upload Section -->
+    <div class="audio-section">
+      <div class="audio-header">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
+          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>
+        <span>Audio Upload & Transcription</span>
+      </div>
+      <p class="audio-description">Upload MP3, M4A, or WAV files to transcribe with Whisper AI (~$0.006/min)</p>
+      <div class="audio-input-group">
+        <label for="audioFileElem" class="btn-audio-upload">📁 Choose Audio File</label>
+        <input type="file" id="audioFileElem" accept="audio/mp3,audio/m4a,audio/wav,audio/x-m4a,audio/mpeg,video/mp4" style="display: none;" />
+      </div>
+      <div id="audio-status" class="audio-status hidden"></div>
+    </div>
+
     <!-- 🎬 YouTube Transcription Section -->
     <div class="youtube-section">
       <div class="youtube-header">
@@ -145,6 +161,58 @@
           <div class="text-pdf-status-text"></div>
           <div class="text-pdf-progress-bar-container">
             <div class="text-pdf-progress-bar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 💰 Cost Tracker Section -->
+    <div class="cost-tracker-section">
+      <button class="cost-tracker-toggle" id="cost-tracker-toggle">
+        <div class="cost-tracker-toggle-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <polyline points="17 5 12 1 7 5"></polyline>
+            <polyline points="7 19 12 23 17 19"></polyline>
+          </svg>
+          <span>API Cost Tracker</span>
+        </div>
+        <svg class="cost-tracker-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      
+      <div class="cost-stats" id="cost-tracker-content">
+        <div class="cost-stat-row">
+          <div class="cost-stat-item">
+            <div class="cost-stat-label">Total Cost</div>
+            <div id="total-cost" class="cost-stat-value">$0.00</div>
+          </div>
+          <div class="cost-stat-item">
+            <div class="cost-stat-label">Last 24 Hours</div>
+            <div id="cost-24h" class="cost-stat-value">$0.00</div>
+          </div>
+        </div>
+        
+        <div class="cost-breakdown">
+          <div class="cost-breakdown-label">By Operation</div>
+          <div id="cost-by-operation" class="cost-breakdown-items">
+            <div class="cost-breakdown-item">
+              <span>Chat: <strong>$0.00</strong></span>
+            </div>
+            <div class="cost-breakdown-item">
+              <span>Embeddings: <strong>$0.00</strong></span>
+            </div>
+            <div class="cost-breakdown-item">
+              <span>Whisper: <strong>$0.00</strong></span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="recent-calls-section">
+          <div class="recent-calls-label">Recent Calls</div>
+          <div id="recent-calls" class="recent-calls-list">
+            <div class="recent-call-placeholder">No recent activity</div>
           </div>
         </div>
       </div>
