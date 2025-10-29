@@ -725,8 +725,8 @@ function showCopySuccess(button) {
         button.setAttribute('data-tooltip', 'Copy message');
         button.innerHTML = `
             <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M3 10V3C3 2.44772 3.44772 2 4 2H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M3.5 10.5V3.5C3.5 2.67 4.17 2 5 2H10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
             </svg>
         `;
     }, 2000);
@@ -788,8 +788,8 @@ function addMessage(role, content) {
     copyButton.setAttribute('tabindex', '0');
     copyButton.innerHTML = `
         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M3 10V3C3 2.44772 3.44772 2 4 2H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M3.5 10.5V3.5C3.5 2.67 4.17 2 5 2H10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
         </svg>
     `;
     
