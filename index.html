@@ -545,36 +545,39 @@
             right: 16px;
             width: 40px;
             height: 40px;
-            padding: 8px;
+            padding: 0;
             background: transparent;
-            border: 1px solid #E5E5E5;
-            border-radius: 8px;
+            border: none;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             z-index: 200; /* Above sidebar */
             -webkit-appearance: none;
             appearance: none;
         }
         
-        .theme-toggle:hover {
-            background: #F0F0F0;
-            border-color: #10A37F;
-        }
-        
         .theme-toggle:active {
-            transform: scale(0.95);
+            transform: scale(0.9);
         }
         
         .theme-icon {
-            color: #6B6B6B;
-            transition: color 0.15s ease;
+            color: #F59E0B;
+            transition: all 0.2s ease;
+        }
+        
+        .moon-icon {
+            color: #6366F1;
+        }
+        
+        .sun-icon {
+            color: #F59E0B;
         }
         
         .theme-toggle:hover .theme-icon {
-            color: #10A37F;
+            opacity: 0.7;
+            transform: rotate(20deg);
         }
         
         /* Show moon in light mode, sun in dark mode */
