@@ -705,7 +705,27 @@
         // Fallback for older iOS versions - update on window resize
         window.addEventListener('resize', updateViewportHeight);
         
-        // No scroll prevention needed with absolute positioning
+        // Scroll to top when keyboard closes (iOS Safari fix)
+        const messageInput = document.getElementById('messageInput');
+        const messagesContainer = document.getElementById('messages');
+        
+        if (messageInput && messagesContainer) {
+            // When input loses focus (keyboard closes), scroll back to top
+            messageInput.addEventListener('blur', function() {
+                setTimeout(() => {
+                    messagesContainer.scrollTop = 0;
+                    window.scrollTo(0, 0);
+                }, 100);
+            });
+            
+            // Also scroll to top when keyboard opens to ensure header is visible
+            messageInput.addEventListener('focus', function() {
+                setTimeout(() => {
+                    messagesContainer.scrollTop = 0;
+                    window.scrollTo(0, 0);
+                }, 100);
+            });
+        }
     </script>
     <script src="/static/sidebar.js"></script>
 </body>
