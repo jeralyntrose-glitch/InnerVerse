@@ -34,7 +34,8 @@ Preferred communication style: Simple, everyday language.
         - **Mobile**: Gray background extends to top notch area (safe-area-inset-top) for polished look
         - **Markdown Support**: Full rendering via marked.js - headers, bold, italic, code blocks, lists, blockquotes, links (open in new tab)
         - **Security**: Comprehensive XSS protection via DOMPurify sanitization (markdown), HTML escaping (sidebar), and DOM API value assignment (modals)
-    - **Vision/Image Analysis**: Full Claude vision mode support for image upload and analysis via background processing. Users can upload images (JPEG, PNG, GIF, WebP up to 5MB) via the paperclip button, see image previews before sending, and receive AI analysis. Images display inline within chat messages with proper styling.
+    - **Vision/Image Analysis (Phase 6)**: Full Claude vision mode support for image upload and analysis. Features paperclip button (📎) positioned left of input, mobile camera access, file validation (5MB max, JPEG/PNG/GIF/WebP), image preview with thumbnail/filename/filesize, remove button (×), and inline image display in chat messages. Backend leverages Claude Sonnet 4 Vision API with base64 image encoding. Primary use cases: screenshot-based MBTI typing from text messages, social media captions, forum posts, and handwritten notes.
+    - **Auto-Expanding Textarea (Phase 6)**: Message input uses multi-line textarea that auto-expands as user types (max 150px height, then scrolls). Supports Shift+Enter for new lines and Enter to send. Resets to single line after sending.
 - **Migration Dashboard (`/migration`)**: Provides a real-time dashboard for upgrading embeddings with progress tracking and live logs.
 
 ## Backend Architecture
