@@ -17,17 +17,19 @@ Preferred communication style: Simple, everyday language.
     - **Real-time Updates**: 3-second polling for conversation status checks unread responses and processing messages. Background refreshes skip renderSidebar() to prevent sidebar from reopening on mobile.
     - **PWA Support**: Full Progressive Web App capabilities including offline support, installability, and manifest configuration with professional teal brain icon.
     - **Performance**: Optimized for speed using HTML template strings, event delegation, optimistic UI updates, and parallel API fetches.
-    - **Chat Styling (Sleek Compact)**: 
-        - **Header**: Thin minimal bar (50px max), light grey (#F7F7F8), centered title only
-        - **User messages**: Small teal bubbles (#10A37F), right-aligned, 60% max-width (70% mobile), compact padding (10px 14px), 16px border-radius
+    - **Chat Styling (ChatGPT-Inspired Minimal)**: 
+        - **Header**: Thin minimal bar (50px), light grey (#F7F7F8), minimalist teal brain logo (SVG), centered title with refined typography
+        - **Burger Menu**: Clean white button with border, positioned inside header bounds, teal hover state
+        - **User messages**: ChatGPT-style - light grey background (#F7F7F8), left-aligned, full-width, 16px font, 1.6 line-height
         - **AI messages**: White background (#FFFFFF), left-aligned, full-width, compact padding (16px 20px), markdown rendered
-        - **Typography**: Inter font, 15-16px base, 1.5-1.6 line-height, clean black text (#2D2D2D)
+        - **Typography**: Inter font, 16px base, 1.6 line-height, clean black text (#2D2D2D)
         - **Sidebar**: Compact spacing - reduced padding throughout, smaller folder icons (14px), tight conversation items (6px padding)
         - **New Chat Button**: Sleek white button with 1px border, teal hover (#E6F7F4), compact (8px vertical padding)
         - **Send Button**: Teal (#10A37F) with darker hover (#0D8C6C), compact (40px height, 10px padding)
         - **Input Area**: Sleeker design - reduced padding (12px), smaller input (10px 14px), 15px font
         - **Spacing**: Tight margins - 12px between messages, 4px between folders, 1px between conversations
         - **Typing Indicator**: Animated dots, compact padding (16px 20px)
+        - **Mobile**: Gray background extends to top notch area (safe-area-inset-top) for polished look
         - **Markdown Support**: Full rendering via marked.js - headers, bold, italic, code blocks, lists, blockquotes, links (open in new tab)
         - **Security**: Comprehensive XSS protection via DOMPurify sanitization (markdown), HTML escaping (sidebar), and DOM API value assignment (modals)
     - **Vision/Image Analysis**: Full Claude vision mode support for image upload and analysis via background processing. Users can upload images (JPEG, PNG, GIF, WebP up to 5MB) via the paperclip button, see image previews before sending, and receive AI analysis. Images display inline within chat messages with proper styling.
