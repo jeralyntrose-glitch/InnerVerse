@@ -4112,7 +4112,7 @@ def health_check():
 
 @app.get("/", include_in_schema=False)
 def serve_frontend():
-    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse("uploader.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/privacy", include_in_schema=False)
 def serve_privacy():
