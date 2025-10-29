@@ -75,8 +75,8 @@
             --color-text-tertiary: #707070;
             --color-border: #3A3A3A;
             --color-border-light: #2D2D2D;
-            --color-input-bg: #252525;
-            --color-input-border: #3A3A3A;
+            --color-input-bg: #40414F;
+            --color-input-border: #565869;
             --color-button-bg: #2D2D2D;
             --color-button-hover: #353535;
             --color-accent: #10A37F;
@@ -265,9 +265,9 @@
         .new-chat-btn {
             width: 100%;
             padding: 8px 12px;
-            background: white;
-            color: #2D2D2D;
-            border: 1px solid #E5E5E5;
+            background: var(--color-accent);
+            color: white;
+            border: 1px solid var(--color-accent);
             border-radius: 6px;
             font-size: 14px;
             font-weight: 500;
@@ -277,7 +277,7 @@
         }
 
         .new-chat-btn:hover {
-            background: #E6F7F4;
+            background: var(--color-accent-hover);
         }
 
         .sidebar-content {
@@ -324,7 +324,7 @@
             flex: 1;
             font-size: 13px;
             font-weight: 500;
-            color: #333;
+            color: var(--color-text-primary);
         }
 
         .folder-count {
@@ -363,7 +363,7 @@
         .conversation-title {
             flex: 1;
             font-size: 13px;
-            color: #555;
+            color: var(--color-text-secondary);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1086,24 +1086,30 @@
 
         .message-input {
             flex: 1;
-            padding: 10px 14px;
-            border: 1px solid var(--color-border);
-            border-radius: 6px;
+            padding: 12px 16px;
+            border: 1px solid var(--color-input-border);
+            border-radius: 12px;
             font-size: 15px;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--color-page-bg);
+            background: var(--color-input-bg);
             color: var(--color-text-primary);
             outline: none;
-            transition: border-color 0.15s ease;
+            transition: all 0.15s ease;
             resize: none;
             overflow-y: auto;
-            min-height: 40px;
+            min-height: 44px;
             max-height: 150px;
             line-height: 1.5;
         }
 
         .message-input:focus {
             border-color: var(--color-accent);
+            background: var(--color-input-bg);
+        }
+        
+        /* ChatGPT-style placeholder */
+        .message-input::placeholder {
+            color: var(--color-text-tertiary);
         }
 
         .send-button {
