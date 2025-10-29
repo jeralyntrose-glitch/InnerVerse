@@ -9,7 +9,7 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Frontend Architecture
-- **UI/UX (Phase 4 - Professional Design)**: Claude.ai-inspired professional interface with clean, spacious aesthetic. Features Inter font, exact professional color scheme (#10A37F teal user bubbles, #F7F7F8 grey AI backgrounds), full markdown rendering (headers, code blocks, lists, links), animated typing indicator, and responsive mobile design. Glassmorphic header with purple gradient remains for branding.
+- **UI/UX (Claude Minimalist Design)**: Pure minimalist interface matching Claude.ai aesthetic. Features Inter font, clean grey/white color scheme (user messages: #F5F5F5 grey blocks, AI messages: white background), full markdown rendering (headers, code blocks, lists, links), animated typing indicator, and responsive mobile design. All messages left-aligned, full-width rectangular blocks. Glassmorphic header with purple gradient remains for branding.
 - **Chat Interface (`/chat` and `/claude`)**: A professional, Claude.ai-inspired chat interface with full feature parity. It uses a clean, minimal aesthetic with neutral colors and the Inter font. Key features include:
     - **Sidebar**: Collapsible project folders (7 categories) with compact 4px spacing, no descriptions shown, search functionality for conversations and messages, and conversation management (load, rename, delete). Mobile-optimized with burger menu that stays closed during background refreshes (renderSidebar preserves closed state), auto-closes on conversation selection, and batch-fetches all data before rendering to prevent flickering.
     - **Conversation Management**: Persistent conversation history stored in PostgreSQL, smart auto-naming for new chats, and responsive design for mobile. "All Chats" section displays all conversations across all projects (up to 100, sorted by most recent).
@@ -17,13 +17,14 @@ Preferred communication style: Simple, everyday language.
     - **Real-time Updates**: 3-second polling for conversation status checks unread responses and processing messages. Background refreshes skip renderSidebar() to prevent sidebar from reopening on mobile.
     - **PWA Support**: Full Progressive Web App capabilities including offline support, installability, and manifest configuration with professional teal brain icon.
     - **Performance**: Optimized for speed using HTML template strings, event delegation, optimistic UI updates, and parallel API fetches.
-    - **Chat Styling (Phase 4)**: 
-        - **User messages**: Teal bubbles (#10A37F) with white text, right-aligned, 70% max-width (85% on mobile), 18px border-radius, subtle shadow
-        - **AI messages**: Full-width grey background (#F7F7F8), 24px padding (16px mobile), markdown rendered with syntax highlighting for code blocks
-        - **Typography**: Inter font, 16px base, 1.6 line-height, professional color scheme (#2D2D2D primary text)
+    - **Chat Styling (Claude Minimalist)**: 
+        - **User messages**: Light grey blocks (#F5F5F5), left-aligned, full-width, 20-24px padding, rectangular (no bubbles)
+        - **AI messages**: White background (#FFFFFF), left-aligned, full-width, 20-24px padding, markdown rendered with syntax highlighting
+        - **Typography**: Inter font, 16px base, 1.6 line-height, clean black text (#2D2D2D)
         - **Typing Indicator**: Animated dots during AI response generation
         - **Markdown Support**: Full rendering via marked.js - headers, bold, italic, code blocks, lists, blockquotes, links (open in new tab)
         - **Security**: Comprehensive XSS protection via DOMPurify sanitization (markdown), HTML escaping (sidebar), and DOM API value assignment (modals)
+        - **Send Button**: Dark grey (#2D2D2D) with darker hover state (#1A1A1A)
     - **Vision/Image Analysis**: Full Claude vision mode support for image upload and analysis via background processing. Users can upload images (JPEG, PNG, GIF, WebP up to 5MB) via the paperclip button, see image previews before sending, and receive AI analysis. Images display inline within chat messages with proper styling.
 - **Migration Dashboard (`/migration`)**: Provides a real-time dashboard for upgrading embeddings with progress tracking and live logs.
 
