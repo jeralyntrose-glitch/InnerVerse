@@ -1078,7 +1078,9 @@ async function sendMessage() {
     }
     
     // Show typing indicator
+    alert('ABOUT TO SHOW TYPING INDICATOR!');
     showTypingIndicator();
+    alert('TYPING INDICATOR SHOULD BE VISIBLE NOW!');
     
     // Force scroll to show typing indicator
     setTimeout(() => scrollToBottom(), 100);
