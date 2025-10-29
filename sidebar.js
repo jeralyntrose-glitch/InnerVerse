@@ -960,11 +960,15 @@ function addMessage(role, content, imageFile = null) {
     return contentDiv;
 }
 
+// Track when typing indicator was shown
+let typingIndicatorStartTime = null;
+
 // Show/hide typing indicator
 function showTypingIndicator() {
     if (typingIndicator) {
         console.log('🔵 SHOWING typing indicator');
         typingIndicator.classList.add('active');
+        typingIndicatorStartTime = Date.now();
         // Always scroll to show typing indicator
         setTimeout(() => scrollToBottom(), 50);
     } else {
@@ -975,6 +979,22 @@ function showTypingIndicator() {
 function hideTypingIndicator() {
     if (typingIndicator) {
         console.log('🔴 HIDING typing indicator');
+        
+        // Ensure indicator shows for minimum 500ms for better UX
+        if (typingIndicatorStartTime) {
+            const elapsed = Date.now() - typingIndicatorStartTime;
+            const minDisplayTime = 500; // 500ms minimum
+            
+            if (elapsed < minDisplayTime) {
+                const delay = minDisplayTime - elapsed;
+                console.log(`⏳ Delaying hide by ${delay}ms to show indicator`);
+                setTimeout(() => {
+                    typingIndicator.classList.remove('active');
+                }, delay);
+                return;
+            }
+        }
+        
         typingIndicator.classList.remove('active');
     }
 }
