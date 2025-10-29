@@ -9,7 +9,7 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Frontend Architecture
-- **UI/UX (Claude Minimalist Design)**: Pure minimalist interface matching Claude.ai aesthetic. Features Inter font, clean grey/white color scheme (user messages: #F5F5F5 grey blocks, AI messages: white background), full markdown rendering (headers, code blocks, lists, links), animated typing indicator, and responsive mobile design. All messages left-aligned, full-width rectangular blocks. Glassmorphic header with purple gradient remains for branding.
+- **UI/UX (Sleek Compact Design)**: Apple-inspired minimalist interface with sleek, tight, refined aesthetic. Features Inter font, thin minimal header (50px, light grey), teal accent colors (#10A37F), compact spacing throughout, and responsive mobile design. Professional productivity tool aesthetic with reduced padding and tighter margins while maintaining usability.
 - **Chat Interface (`/chat` and `/claude`)**: A professional, Claude.ai-inspired chat interface with full feature parity. It uses a clean, minimal aesthetic with neutral colors and the Inter font. Key features include:
     - **Sidebar**: Collapsible project folders (7 categories) with compact 4px spacing, no descriptions shown, search functionality for conversations and messages, and conversation management (load, rename, delete). Mobile-optimized with burger menu that stays closed during background refreshes (renderSidebar preserves closed state), auto-closes on conversation selection, and batch-fetches all data before rendering to prevent flickering.
     - **Conversation Management**: Persistent conversation history stored in PostgreSQL, smart auto-naming for new chats, and responsive design for mobile. "All Chats" section displays all conversations across all projects (up to 100, sorted by most recent).
@@ -17,14 +17,19 @@ Preferred communication style: Simple, everyday language.
     - **Real-time Updates**: 3-second polling for conversation status checks unread responses and processing messages. Background refreshes skip renderSidebar() to prevent sidebar from reopening on mobile.
     - **PWA Support**: Full Progressive Web App capabilities including offline support, installability, and manifest configuration with professional teal brain icon.
     - **Performance**: Optimized for speed using HTML template strings, event delegation, optimistic UI updates, and parallel API fetches.
-    - **Chat Styling (Claude Minimalist)**: 
-        - **User messages**: Light grey blocks (#F5F5F5), left-aligned, full-width, 20-24px padding, rectangular (no bubbles)
-        - **AI messages**: White background (#FFFFFF), left-aligned, full-width, 20-24px padding, markdown rendered with syntax highlighting
-        - **Typography**: Inter font, 16px base, 1.6 line-height, clean black text (#2D2D2D)
-        - **Typing Indicator**: Animated dots during AI response generation
+    - **Chat Styling (Sleek Compact)**: 
+        - **Header**: Thin minimal bar (50px max), light grey (#F7F7F8), centered title only
+        - **User messages**: Small teal bubbles (#10A37F), right-aligned, 60% max-width (70% mobile), compact padding (10px 14px), 16px border-radius
+        - **AI messages**: White background (#FFFFFF), left-aligned, full-width, compact padding (16px 20px), markdown rendered
+        - **Typography**: Inter font, 15-16px base, 1.5-1.6 line-height, clean black text (#2D2D2D)
+        - **Sidebar**: Compact spacing - reduced padding throughout, smaller folder icons (14px), tight conversation items (6px padding)
+        - **New Chat Button**: Sleek white button with 1px border, teal hover (#E6F7F4), compact (8px vertical padding)
+        - **Send Button**: Teal (#10A37F) with darker hover (#0D8C6C), compact (40px height, 10px padding)
+        - **Input Area**: Sleeker design - reduced padding (12px), smaller input (10px 14px), 15px font
+        - **Spacing**: Tight margins - 12px between messages, 4px between folders, 1px between conversations
+        - **Typing Indicator**: Animated dots, compact padding (16px 20px)
         - **Markdown Support**: Full rendering via marked.js - headers, bold, italic, code blocks, lists, blockquotes, links (open in new tab)
         - **Security**: Comprehensive XSS protection via DOMPurify sanitization (markdown), HTML escaping (sidebar), and DOM API value assignment (modals)
-        - **Send Button**: Dark grey (#2D2D2D) with darker hover state (#1A1A1A)
     - **Vision/Image Analysis**: Full Claude vision mode support for image upload and analysis via background processing. Users can upload images (JPEG, PNG, GIF, WebP up to 5MB) via the paperclip button, see image previews before sending, and receive AI analysis. Images display inline within chat messages with proper styling.
 - **Migration Dashboard (`/migration`)**: Provides a real-time dashboard for upgrading embeddings with progress tracking and live logs.
 
