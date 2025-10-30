@@ -1587,13 +1587,13 @@ window.editDocumentTitle = async function(docId, currentTitle) {
     }
     
     // Also update in localStorage if it exists
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem('axis_mind_uploads');
     if (stored) {
       const files = JSON.parse(stored);
       const fileIndex = files.findIndex(f => f.id === docId);
       if (fileIndex !== -1) {
         files[fileIndex].name = newTitle;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(files));
+        localStorage.setItem('axis_mind_uploads', JSON.stringify(files));
       }
     }
     
