@@ -1514,7 +1514,15 @@ async function loadTagLibrary() {
     
     const docsHTML = docsArray.map(doc => `
       <div class="tagged-document-item">
-        <div class="tagged-document-title">${doc.filename}</div>
+        <div class="tagged-document-header">
+          <div class="tagged-document-title" id="doc-title-${doc.id}">${doc.filename}</div>
+          <button class="doc-edit-btn" onclick="editDocumentTitle('${doc.id}', '${(doc.filename || '').replace(/'/g, "\\'")}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+        </div>
         <div class="tagged-document-tags">
           ${doc.tags && doc.tags.length > 0 
             ? doc.tags.map(tag => `<span class="tag-mini">${tag}</span>`).join('')
@@ -1541,4 +1549,58 @@ function filterByTag(tag) {
   // TODO: Could implement filtering in the document list
   // For now, just highlight the tag
   alert(`Filter by tag: ${tag}\n\nThis will search documents tagged with "${tag}"`);
+}
+
+// Edit document title in tag library
+async function editDocumentTitle(docId, currentTitle) {
+  const newTitle = prompt('Rename document:', currentTitle);
+  
+  if (!newTitle || newTitle === currentTitle) {
+    return; // User cancelled or didn't change title
+  }
+  
+  if (newTitle.trim() === '') {
+    alert('Document title cannot be empty!');
+    return;
+  }
+  
+  try {
+    console.log(`✏️ Renaming document ${docId} from "${currentTitle}" to "${newTitle}"`);
+    
+    const response = await fetch(`/documents/${docId}/rename`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_filename: newTitle })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to rename document');
+    }
+    
+    const result = await response.json();
+    console.log(`✅ Document renamed: ${result.vectors_updated} vectors updated`);
+    
+    // Update the UI
+    const titleElement = document.getElementById(`doc-title-${docId}`);
+    if (titleElement) {
+      titleElement.textContent = newTitle;
+    }
+    
+    // Also update in localStorage if it exists
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const files = JSON.parse(stored);
+      const fileIndex = files.findIndex(f => f.id === docId);
+      if (fileIndex !== -1) {
+        files[fileIndex].name = newTitle;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(files));
+      }
+    }
+    
+    alert(`✅ Document renamed to "${newTitle}"`);
+  } catch (error) {
+    console.error('❌ Error renaming document:', error);
+    alert(`Failed to rename document: ${error.message}`);
+  }
 }

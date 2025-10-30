@@ -1908,19 +1908,54 @@ label,
   transform: translateX(4px);
 }
 
+.tagged-document-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
 .tagged-document-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
 }
 
 .tagged-document-title::before {
   content: "📄";
   font-size: 16px;
+}
+
+.doc-edit-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  flex-shrink: 0;
+}
+
+.doc-edit-btn:hover {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  transform: scale(1.05);
+}
+
+.doc-edit-btn svg {
+  display: block;
 }
 
 .tagged-document-tags {
