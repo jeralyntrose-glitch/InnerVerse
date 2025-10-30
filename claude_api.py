@@ -37,6 +37,18 @@ def get_pinecone_index():
     pc = Pinecone(api_key=PINECONE_API_KEY)
     return pc.Index(PINECONE_INDEX)
 
+def extract_follow_up_question(text: str) -> str:
+    """
+    Extract follow-up question from Claude's response.
+    Pattern: [FOLLOW-UP: question?]
+    Returns: The extracted question string, or None if not found
+    """
+    import re
+    follow_up_match = re.search(r'\[FOLLOW-UP:\s*(.+?)\]', text, re.IGNORECASE)
+    if follow_up_match:
+        return follow_up_match.group(1).strip()
+    return None
+
 def query_innerverse_local(question: str) -> str:
     """
     IMPROVED HYBRID SEARCH for MBTI content:
@@ -459,16 +471,15 @@ Examples:
                 if hasattr(block, 'text'):
                     # Extract follow-up question if present
                     full_text = block.text
-                    follow_up_question = None
-                    main_text = full_text
+                    follow_up_question = extract_follow_up_question(full_text)
                     
-                    # Look for [FOLLOW-UP: ...] pattern
-                    import re
-                    follow_up_match = re.search(r'\[FOLLOW-UP:\s*(.+?)\]', full_text, re.IGNORECASE)
-                    if follow_up_match:
-                        follow_up_question = follow_up_match.group(1).strip()
-                        # Remove the [FOLLOW-UP: ...] from the main text
-                        main_text = full_text[:follow_up_match.start()].strip()
+                    # Remove the [FOLLOW-UP: ...] from the main text
+                    main_text = full_text
+                    if follow_up_question:
+                        import re
+                        follow_up_match = re.search(r'\[FOLLOW-UP:\s*(.+?)\]', full_text, re.IGNORECASE)
+                        if follow_up_match:
+                            main_text = full_text[:follow_up_match.start()].strip()
                     
                     return (main_text, tool_use_details, follow_up_question)
         
