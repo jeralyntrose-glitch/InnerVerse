@@ -710,7 +710,8 @@ async def rename_document(document_id: str, request: RenameDocumentRequest):
                 content={"error": "Pinecone client not initialized"})
         
         # First, fetch all vectors for this document
-        dummy_vector = [0.0] * 1536
+        # Use 3072 dimensions for text-embedding-3-large
+        dummy_vector = [0.0] * 3072
         query_response = pinecone_index.query(
             vector=dummy_vector,
             filter={"doc_id": document_id},
