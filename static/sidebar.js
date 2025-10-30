@@ -248,9 +248,20 @@ imageUpload.addEventListener('change', async (e) => {
         return;
     }
     
+    console.log('📷 Original image size:', file.size, 'bytes (' + formatFileSize(file.size) + ')');
+    
     try {
         // Compress image if needed (handles large files automatically)
         const processedFile = await compressImage(file);
+        
+        console.log('📦 Processed image size:', processedFile.size, 'bytes (' + formatFileSize(processedFile.size) + ')');
+        
+        if (processedFile.size !== file.size) {
+            const reduction = ((1 - processedFile.size/file.size) * 100).toFixed(1);
+            console.log('✂️ Reduced by:', reduction + '%');
+        } else {
+            console.log('ℹ️ Image not compressed (already under size limit)');
+        }
         
         // File is valid and compressed - read it and show preview
         const reader = new FileReader();
@@ -258,12 +269,12 @@ imageUpload.addEventListener('change', async (e) => {
             selectedImage = processedFile;
             uploadButton.classList.add('file-selected');
             showImagePreview(processedFile, e.target.result);
-            console.log('Image ready:', processedFile.name, formatFileSize(processedFile.size));
+            console.log('✅ Image ready for sending:', processedFile.name, formatFileSize(processedFile.size));
         };
         reader.readAsDataURL(processedFile);
     } catch (error) {
         // Compression failed or image too large
-        console.error('Image processing error:', error);
+        console.error('❌ Image processing error:', error);
         showUploadError(error.message);
         imageUpload.value = ''; // Clear the input
     }
@@ -1134,6 +1145,8 @@ async function sendMessage() {
     
     // If there's an image, convert to base64 and add to payload
     if (hasImage) {
+        console.log('📤 Preparing to send image:', selectedImage.name, selectedImage.size, 'bytes (' + formatFileSize(selectedImage.size) + ')');
+        
         const reader = new FileReader();
         const imageDataPromise = new Promise((resolve, reject) => {
             reader.onload = () => resolve(reader.result);
@@ -1145,6 +1158,10 @@ async function sendMessage() {
             const imageDataUrl = await imageDataPromise;
             // Backend expects image data as a base64 string
             messagePayload.image = imageDataUrl;
+            
+            // Log base64 size (will be larger due to encoding)
+            console.log('📡 Base64 encoded size:', imageDataUrl.length, 'chars');
+            console.log('💾 Estimated size being sent to API:', formatFileSize(imageDataUrl.length * 0.75)); // Base64 is ~33% larger
         } catch (error) {
             console.error('Error reading image:', error);
             showError('Failed to process image. Please try again.');
