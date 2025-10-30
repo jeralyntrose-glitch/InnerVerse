@@ -902,7 +902,7 @@
         /* Typing Indicator - iPhone Style, positioned above input bar */
         #ai-typing {
             position: absolute;
-            bottom: 20px; /* Lower position, closer to input bar */
+            bottom: 70px; /* Moved up higher to avoid paperclip overlap */
             left: 0;
             width: fit-content;
             background: var(--color-user-bubble);
@@ -1283,6 +1283,11 @@
             /* Mobile adjustments for assistant messages */
             .message.assistant {
                 padding: 14px 15px;
+            }
+            
+            /* Mobile: Move typing indicator higher on mobile */
+            #ai-typing {
+                bottom: 90px; /* Higher on mobile to avoid paperclip overlap */
             }
         }
 
