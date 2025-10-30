@@ -766,24 +766,28 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* User Messages - iPhone Bubble Style (Right-aligned) */
+        /* User Messages - Clean Bubble Style (Right-aligned) */
         .message.user {
-            background: var(--color-user-bubble);
-            padding: 10px 14px;
-            padding-right: 40px; /* Extra space for copy button */
+            background: transparent;
+            padding: 0;
             width: fit-content;
             max-width: 70%;
-            border-radius: 18px;
             margin-left: auto;
             margin-right: 12px;
-            word-wrap: break-word;
             align-self: flex-end;
+            position: relative;
         }
 
         .message.user .message-content {
+            background: var(--color-user-bubble);
+            padding: 10px 14px;
+            padding-right: 40px; /* Extra space for copy button */
+            border-radius: 18px;
             color: var(--color-text-primary);
             font-size: 16px;
             line-height: 1.4;
+            word-wrap: break-word;
+            display: block;
         }
         
         /* Mobile: User messages can be wider */
@@ -878,8 +882,8 @@
         /* Phase 5 Part 2: Copy Button Styles - Seamless Blend */
         .copy-btn {
             position: absolute;
-            top: 8px;
-            right: 8px;
+            top: 6px;
+            right: 6px;
             width: 24px;
             height: 24px;
             padding: 4px;
@@ -900,7 +904,7 @@
         
         /* Light mode: Match message backgrounds perfectly */
         .message.user .copy-btn {
-            background: #E5E5EA; /* Match user bubble exactly */
+            background: var(--color-user-bubble); /* Match user bubble exactly */
         }
         
         .message.assistant .copy-btn {
@@ -1279,29 +1283,38 @@
         }
 
         .send-button {
-            padding: 10px 20px;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background: var(--color-accent);
             color: white;
             border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
+            border-radius: 50%;
             cursor: pointer;
-            min-height: 40px;
-            transition: background 0.15s ease;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
         }
 
         .send-button:hover:not(:disabled) {
             background: var(--color-accent-hover);
+            transform: scale(1.05);
         }
 
         .send-button:active {
-            transform: scale(0.98);
+            transform: scale(0.95);
         }
 
         .send-button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+        
+        .send-button svg {
+            width: 18px;
+            height: 18px;
         }
 
         /* Smooth scrolling */
