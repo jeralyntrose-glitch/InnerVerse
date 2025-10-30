@@ -899,6 +899,36 @@
             opacity: 1;
         }
 
+        /* Dark mode copy button styling */
+        [data-theme="dark"] .copy-btn {
+            background: rgba(45, 45, 45, 0.9);
+            border-color: #3A3A3A;
+        }
+
+        [data-theme="dark"] .copy-btn svg path,
+        [data-theme="dark"] .copy-btn svg rect {
+            stroke: #A0A0A0;
+        }
+
+        [data-theme="dark"] .copy-btn:hover {
+            background: rgba(16, 163, 127, 0.15);
+            border-color: #10A37F;
+        }
+
+        [data-theme="dark"] .copy-btn:hover svg path,
+        [data-theme="dark"] .copy-btn:hover svg rect {
+            stroke: #10A37F;
+        }
+
+        [data-theme="dark"] .copy-btn.copied {
+            background: rgba(16, 163, 127, 0.2);
+            border-color: #10A37F;
+        }
+
+        [data-theme="dark"] .copy-btn.copied svg path {
+            stroke: #10A37F;
+        }
+
         /* Phase 9: Follow-Up Question Button */
         .follow-up-question {
             margin-top: 12px;
