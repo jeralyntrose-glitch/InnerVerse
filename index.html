@@ -1068,9 +1068,10 @@
             left: 12px;
             width: fit-content;
             background: var(--color-user-bubble);
-            padding: 6px 12px; /* Reduced vertical padding for thinner look */
-            border-radius: 14px;
+            padding: 12px 18px; /* Larger padding for more prominent indicator */
+            border-radius: 18px;
             z-index: 10;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
         }
         
         /* Add padding to messages container to prevent content hiding behind typing indicator */
@@ -1080,13 +1081,13 @@
 
         .typing-dots {
             display: inline-flex;
-            gap: 4px;
+            gap: 6px; /* Increased gap between dots */
             align-items: center;
         }
 
         .typing-dots span {
-            width: 6px;
-            height: 6px;
+            width: 10px; /* Larger dots */
+            height: 10px;
             background: #8E8E93;
             border-radius: 50%;
             animation: typingDot 1.4s infinite ease-in-out;
@@ -1102,12 +1103,12 @@
 
         @keyframes typingDot {
             0%, 60%, 100% { 
-                opacity: 0.4; 
+                opacity: 0.5; 
                 transform: scale(0.8) translateY(0); 
             }
             30% { 
                 opacity: 1; 
-                transform: scale(1.1) translateY(-3px); /* Reduced bounce height */
+                transform: scale(1.2) translateY(-6px); /* Bigger bounce */
             }
         }
 
