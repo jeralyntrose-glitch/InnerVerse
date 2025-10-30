@@ -885,11 +885,6 @@ function addMessage(role, content, imageFile = null, followUpQuestion = null) {
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
     
-    // === Phase 9: Strip [FOLLOW-UP: ...] from AI message content ===
-    if (role === 'assistant' && content) {
-        content = content.replace(/\[FOLLOW-UP:.*?\]/g, '').trim();
-    }
-    
     // === Phase 6: Add image if provided (for user messages) ===
     if (imageFile && role === 'user') {
         const reader = new FileReader();
@@ -935,21 +930,6 @@ function addMessage(role, content, imageFile = null, followUpQuestion = null) {
     }
 
     messageDiv.appendChild(contentDiv);
-    
-    // === Phase 9: Add Follow-Up Question (AI messages only) ===
-    if (role === 'assistant' && followUpQuestion) {
-        const followUpDiv = document.createElement('div');
-        followUpDiv.className = 'follow-up-question';
-        // Remove brackets from display
-        const cleanQuestion = followUpQuestion.replace(/^\[FOLLOW-UP:\s*/, '').replace(/\]$/, '').trim();
-        followUpDiv.textContent = cleanQuestion;
-        followUpDiv.addEventListener('click', () => {
-            // Populate input and send (use clean question without brackets)
-            messageInput.value = cleanQuestion;
-            sendMessage();
-        });
-        messageDiv.appendChild(followUpDiv);
-    }
     
     // === Phase 5 Part 2: Add Copy Button ===
     const copyButton = document.createElement('button');
