@@ -1105,9 +1105,11 @@ async function sendMessage() {
                             }
                             
                             fullResponse += data.chunk;
+                            // Strip [FOLLOW-UP: ...] brackets from display
+                            let displayResponse = fullResponse.replace(/\[FOLLOW-UP:\s*/g, '').replace(/\]/g, '');
                             // Update with markdown rendering + sanitization
                             if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
-                                const rawHTML = marked.parse(fullResponse);
+                                const rawHTML = marked.parse(displayResponse);
                                 const cleanHTML = DOMPurify.sanitize(rawHTML, {
                                     ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
                                                   'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a', 'hr'],
@@ -1115,7 +1117,7 @@ async function sendMessage() {
                                 });
                                 assistantContent.innerHTML = cleanHTML;
                             } else {
-                                assistantContent.textContent = fullResponse;
+                                assistantContent.textContent = displayResponse;
                             }
                             // Only auto-scroll if user is already at bottom
                             if (shouldAutoScroll()) {
