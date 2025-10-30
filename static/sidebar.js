@@ -58,7 +58,7 @@ messageInput.addEventListener('input', autoExpandTextarea);
 let selectedImage = null;
 
 // File validation constants
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB in bytes (safe limit for Claude API)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 // Show error message
@@ -79,7 +79,7 @@ function formatFileSize(bytes) {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-// Validate image file
+// Validate image file (basic checks only - size handled by compression)
 function validateImage(file) {
     if (!file) {
         showUploadError('No file selected');
@@ -92,14 +92,106 @@ function validateImage(file) {
         return false;
     }
     
-    // Check file size
-    if (file.size > MAX_FILE_SIZE) {
-        const fileSize = formatFileSize(file.size);
-        showUploadError(`Image must be under 5MB. Your file is ${fileSize}`);
-        return false;
+    return true;
+}
+
+// Compress image if over size limits using canvas
+async function compressImage(file) {
+    // GIF/WebP: Allow up to 5MB (Claude's actual limit) since they don't compress well
+    // JPEG/PNG: Target 4MB for safety since they compress well
+    const isAnimatedFormat = file.type === 'image/gif' || file.type === 'image/webp';
+    const sizeLimit = isAnimatedFormat ? 5 * 1024 * 1024 : MAX_FILE_SIZE;
+    
+    // If already under appropriate limit, return as-is
+    if (file.size <= sizeLimit) {
+        return file;
     }
     
-    return true;
+    // GIF/WebP over 5MB: Don't compress (would lose animation), reject instead
+    if (isAnimatedFormat) {
+        throw new Error('GIF/WebP images must be under 5MB. Please upload a smaller file.');
+    }
+    
+    console.log(`🗜️ Compressing image: ${file.name} (${formatFileSize(file.size)})`);
+    
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const img = new Image();
+            
+            img.onload = () => {
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Calculate new dimensions (maintain aspect ratio)
+                let width = img.width;
+                let height = img.height;
+                const maxDimension = 2048; // Max width or height
+                
+                // Resize if too large
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = (height / width) * maxDimension;
+                        width = maxDimension;
+                    } else {
+                        width = (width / height) * maxDimension;
+                        height = maxDimension;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Draw image on canvas
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Determine output format (preserve PNG if source was PNG for transparency)
+                const outputFormat = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                const fileExtension = outputFormat === 'image/png' ? '.png' : '.jpg';
+                
+                // Try different quality levels to get under 4MB
+                let quality = 0.9;
+                const tryCompress = () => {
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            reject(new Error('Compression failed'));
+                            return;
+                        }
+                        
+                        console.log(`   Quality ${quality.toFixed(1)}: ${formatFileSize(blob.size)}`);
+                        
+                        // If still too large and quality can be reduced, try again
+                        if (blob.size > MAX_FILE_SIZE && quality > 0.5) {
+                            quality -= 0.1;
+                            tryCompress();
+                        } else if (blob.size > MAX_FILE_SIZE) {
+                            // Even at lowest quality, still too large
+                            reject(new Error('Image too large. Please upload a smaller image (under 4MB).'));
+                        } else {
+                            // Success! Convert blob to file with appropriate extension
+                            const originalName = file.name.replace(/\.[^.]+$/, '');
+                            const compressedFile = new File([blob], originalName + fileExtension, {
+                                type: outputFormat,
+                                lastModified: Date.now()
+                            });
+                            console.log(`✅ Compressed: ${formatFileSize(file.size)} → ${formatFileSize(compressedFile.size)}`);
+                            resolve(compressedFile);
+                        }
+                    }, outputFormat, quality);
+                };
+                
+                tryCompress();
+            };
+            
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = e.target.result;
+        };
+        
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
 }
 
 // Upload button click handler
@@ -143,28 +235,38 @@ function clearImagePreview() {
 }
 
 // File input change handler
-imageUpload.addEventListener('change', (e) => {
+imageUpload.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     
     if (!file) {
         return;
     }
     
-    // Validate file
+    // Validate file type
     if (!validateImage(file)) {
         imageUpload.value = ''; // Clear the input
         return;
     }
     
-    // File is valid - read it and show preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        selectedImage = file;
-        uploadButton.classList.add('file-selected');
-        showImagePreview(file, e.target.result);
-        console.log('Image selected:', file.name, formatFileSize(file.size));
-    };
-    reader.readAsDataURL(file);
+    try {
+        // Compress image if needed (handles large files automatically)
+        const processedFile = await compressImage(file);
+        
+        // File is valid and compressed - read it and show preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            selectedImage = processedFile;
+            uploadButton.classList.add('file-selected');
+            showImagePreview(processedFile, e.target.result);
+            console.log('Image ready:', processedFile.name, formatFileSize(processedFile.size));
+        };
+        reader.readAsDataURL(processedFile);
+    } catch (error) {
+        // Compression failed or image too large
+        console.error('Image processing error:', error);
+        showUploadError(error.message);
+        imageUpload.value = ''; // Clear the input
+    }
 });
 
 // === Sidebar Toggle ===
