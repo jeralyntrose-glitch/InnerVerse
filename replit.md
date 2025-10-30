@@ -22,7 +22,7 @@ Preferred communication style: Simple, everyday language.
     - **Performance**: Optimized with HTML template strings, event delegation, optimistic UI, and parallel API fetches.
     - **Chat Styling**: ChatGPT-inspired minimal design with distinct user and AI message styling, auto-expanding textarea, and full markdown rendering via `marked.js`.
     - **Security**: Comprehensive XSS protection via DOMPurify, HTML escaping, and DOM API value assignment.
-    - **Vision/Image Analysis**: Support for image upload and analysis using Claude Sonnet 4 Vision API. Features client-side automatic image compression (4MB target using canvas API with progressive quality reduction), image preview with thumbnail/filename/filesize, remove button, and inline image display in chat messages.
+    - **Vision/Image Analysis**: Support for image upload and analysis using Claude Sonnet 4 Vision API. Features client-side automatic image compression (3MB target accounting for base64 encoding overhead, using canvas API with progressive quality reduction 0.9→0.5), image preview with thumbnail/filename/filesize, remove button, and inline image display in chat messages. GIF/WebP animations preserved up to 3.75MB.
     - **Dark/Light Mode**: Full theme switching with persistent localStorage preference and a comprehensive CSS custom property system.
 - **Migration Dashboard (`/migration`)**: Real-time dashboard for upgrading embeddings with progress tracking.
 - **AXIS MIND Uploader (`/uploader`)**: Document upload and management interface with drag & drop PDF upload, YouTube transcription, Text-to-PDF conversion with AI grammar fixes, tag library, API cost tracker, and document reporting.
