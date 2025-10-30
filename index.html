@@ -797,7 +797,7 @@
             color: var(--color-text-secondary);
         }
 
-        /* Phase 5 Part 2: Copy Button Styles */
+        /* Phase 5 Part 2: Copy Button Styles - Seamless Blend */
         .copy-btn {
             position: absolute;
             top: 8px;
@@ -805,8 +805,8 @@
             width: 24px;
             height: 24px;
             padding: 4px;
-            background: rgba(229, 229, 234, 0.8);
-            border: 1px solid rgba(0, 0, 0, 0.08);
+            background: transparent;
+            border: none;
             border-radius: 4px;
             cursor: pointer;
             display: flex;
@@ -820,15 +820,24 @@
             opacity: 0; /* Hidden by default on desktop */
         }
         
-        /* Light mode: Different backgrounds for user vs AI messages */
+        /* Light mode: Match message backgrounds perfectly */
         .message.user .copy-btn {
-            background: rgba(229, 229, 234, 0.8);
-            border-color: rgba(0, 0, 0, 0.08);
+            background: #E5E5EA; /* Match user bubble exactly */
         }
         
         .message.assistant .copy-btn {
-            background: rgba(247, 247, 248, 0.9);
-            border-color: rgba(0, 0, 0, 0.08);
+            background: #FFFFFF; /* Match AI message exactly */
+        }
+        
+        /* Light mode: Icon color for visibility */
+        .message.user .copy-btn svg path,
+        .message.user .copy-btn svg rect {
+            stroke: #6B6B6B;
+        }
+        
+        .message.assistant .copy-btn svg path,
+        .message.assistant .copy-btn svg rect {
+            stroke: #A0A0A0;
         }
 
         .copy-btn svg {
@@ -863,9 +872,9 @@
             }
         }
 
+        /* Hover states - subtle teal highlight */
         .copy-btn:hover {
-            background: rgba(16, 163, 127, 0.15);
-            border-color: #10A37F;
+            background: rgba(16, 163, 127, 0.2);
             transform: scale(1.05);
         }
         
@@ -879,15 +888,6 @@
             outline: 2px solid #D0D0D0;
             outline-offset: 2px;
             opacity: 1; /* Make visible for keyboard users */
-        }
-
-        /* Success state after copy */
-        .copy-btn.copied {
-            background: #10A37F;
-        }
-
-        .copy-btn.copied svg {
-            fill: #FFFFFF;
         }
 
         /* Tooltip */
@@ -916,20 +916,29 @@
             opacity: 1;
         }
 
-        /* Dark mode copy button styling */
-        [data-theme="dark"] .copy-btn {
-            background: rgba(45, 45, 45, 0.9);
-            border-color: #3A3A3A;
+        /* Dark mode: Match message backgrounds perfectly */
+        [data-theme="dark"] .message.user .copy-btn {
+            background: #2D2D2D; /* Match dark user bubble exactly */
         }
 
-        [data-theme="dark"] .copy-btn svg path,
-        [data-theme="dark"] .copy-btn svg rect {
+        [data-theme="dark"] .message.assistant .copy-btn {
+            background: #252525; /* Match dark AI message exactly */
+        }
+
+        /* Dark mode: Icon color for visibility */
+        [data-theme="dark"] .message.user .copy-btn svg path,
+        [data-theme="dark"] .message.user .copy-btn svg rect {
             stroke: #A0A0A0;
         }
 
+        [data-theme="dark"] .message.assistant .copy-btn svg path,
+        [data-theme="dark"] .message.assistant .copy-btn svg rect {
+            stroke: #A0A0A0;
+        }
+
+        /* Dark mode hover - same teal highlight */
         [data-theme="dark"] .copy-btn:hover {
-            background: rgba(16, 163, 127, 0.15);
-            border-color: #10A37F;
+            background: rgba(16, 163, 127, 0.25);
         }
 
         [data-theme="dark"] .copy-btn:hover svg path,
@@ -937,11 +946,16 @@
             stroke: #10A37F;
         }
 
-        [data-theme="dark"] .copy-btn.copied {
-            background: rgba(16, 163, 127, 0.2);
-            border-color: #10A37F;
+        /* Copied state - teal confirmation (both modes) */
+        .copy-btn.copied {
+            background: rgba(16, 163, 127, 0.3);
         }
 
+        [data-theme="dark"] .copy-btn.copied {
+            background: rgba(16, 163, 127, 0.3);
+        }
+
+        .copy-btn.copied svg path,
         [data-theme="dark"] .copy-btn.copied svg path {
             stroke: #10A37F;
         }
