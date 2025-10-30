@@ -1551,8 +1551,8 @@ function filterByTag(tag) {
   alert(`Filter by tag: ${tag}\n\nThis will search documents tagged with "${tag}"`);
 }
 
-// Edit document title in tag library
-async function editDocumentTitle(docId, currentTitle) {
+// Edit document title in tag library (exposed globally for onclick)
+window.editDocumentTitle = async function(docId, currentTitle) {
   const newTitle = prompt('Rename document:', currentTitle);
   
   if (!newTitle || newTitle === currentTitle) {
