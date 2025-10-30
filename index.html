@@ -1369,10 +1369,17 @@
                 left: 0;
                 right: 0;
                 padding: 4px 12px;
-                background: transparent;
+                background: var(--color-page-bg);
                 z-index: 100;
                 padding-bottom: calc(4px + env(safe-area-inset-bottom, 0));
                 max-width: 100%;
+            }
+            
+            /* Detect keyboard open: viewport shrinks to less than 500px height */
+            @media (max-height: 500px) {
+                .input-container {
+                    background: transparent !important;
+                }
             }
             
             .message-input {
