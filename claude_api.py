@@ -827,10 +827,10 @@ Examples:
                         # Done! Extract follow-up question and close stream
                         import json
                         follow_up = extract_follow_up_question("".join(full_response_text))
-                        yield "data: " + json.dumps({"done": true, "follow_up": follow_up}) + "\n\n"
+                        yield "data: " + json.dumps({"done": True, "follow_up": follow_up}) + "\n\n"
                         return
     
     # Max iterations reached - send done with follow-up
     import json
     follow_up = extract_follow_up_question("".join(full_response_text))
-    yield "data: " + json.dumps({"done": true, "follow_up": follow_up}) + "\n\n"
+    yield "data: " + json.dumps({"done": True, "follow_up": follow_up}) + "\n\n"
