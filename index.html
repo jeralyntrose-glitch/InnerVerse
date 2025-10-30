@@ -985,20 +985,18 @@
         /* Typing Indicator - iPhone Style, positioned above input bar */
         #ai-typing {
             position: absolute;
-            bottom: 70px; /* Moved up higher to avoid paperclip overlap */
-            left: 0;
+            bottom: 80px; /* Positioned above input area */
+            left: 12px;
             width: fit-content;
             background: var(--color-user-bubble);
             padding: 6px 12px; /* Reduced vertical padding for thinner look */
             border-radius: 14px;
-            margin-left: 12px;
-            margin-bottom: 8px;
             z-index: 10;
         }
         
         /* Add padding to messages container to prevent content hiding behind typing indicator */
         .messages {
-            padding-bottom: 60px; /* Extra space at bottom for typing indicator */
+            padding-bottom: 20px; /* Reduced - bring messages up */
         }
 
         .typing-dots {
@@ -1344,7 +1342,7 @@
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
-                padding-bottom: 30px; /* Extra buffer at bottom */
+                padding-bottom: 15px; /* Reduced - bring messages up on mobile */
             }
 
             .input-container {
@@ -1370,7 +1368,8 @@
             
             /* Mobile: Position typing indicator like a message bubble */
             #ai-typing {
-                bottom: 35px; /* Brought down 25px lower, closer to input */
+                bottom: 85px; /* Positioned above input area on mobile */
+                left: 15px;
             }
         }
 
