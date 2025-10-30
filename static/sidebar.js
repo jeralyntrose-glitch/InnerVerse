@@ -58,7 +58,8 @@ messageInput.addEventListener('input', autoExpandTextarea);
 let selectedImage = null;
 
 // File validation constants
-const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB in bytes (safe limit for Claude API)
+// Target 3MB for file size because base64 encoding adds ~33% (3MB → 4MB after encoding, safely under 5MB limit)
+const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB in bytes (accounts for base64 inflation)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 // Show error message
@@ -97,19 +98,19 @@ function validateImage(file) {
 
 // Compress image if over size limits using canvas
 async function compressImage(file) {
-    // GIF/WebP: Allow up to 5MB (Claude's actual limit) since they don't compress well
-    // JPEG/PNG: Target 4MB for safety since they compress well
+    // GIF/WebP: Allow up to 3.75MB (will be ~5MB after base64 encoding)
+    // JPEG/PNG: Target 3MB (will be ~4MB after base64 encoding)
     const isAnimatedFormat = file.type === 'image/gif' || file.type === 'image/webp';
-    const sizeLimit = isAnimatedFormat ? 5 * 1024 * 1024 : MAX_FILE_SIZE;
+    const sizeLimit = isAnimatedFormat ? 3.75 * 1024 * 1024 : MAX_FILE_SIZE;
     
     // If already under appropriate limit, return as-is
     if (file.size <= sizeLimit) {
         return file;
     }
     
-    // GIF/WebP over 5MB: Don't compress (would lose animation), reject instead
+    // GIF/WebP over 3.75MB: Don't compress (would lose animation), reject instead
     if (isAnimatedFormat) {
-        throw new Error('GIF/WebP images must be under 5MB. Please upload a smaller file.');
+        throw new Error('GIF/WebP images must be under 3.75MB. Please upload a smaller file.');
     }
     
     console.log(`🗜️ Compressing image: ${file.name} (${formatFileSize(file.size)})`);
@@ -168,7 +169,7 @@ async function compressImage(file) {
                             tryCompress();
                         } else if (blob.size > MAX_FILE_SIZE) {
                             // Even at lowest quality, still too large
-                            reject(new Error('Image too large. Please upload a smaller image (under 4MB).'));
+                            reject(new Error('Image too large. Please upload a smaller image (under 3MB).'));
                         } else {
                             // Success! Convert blob to file with appropriate extension
                             const originalName = file.name.replace(/\.[^.]+$/, '');
