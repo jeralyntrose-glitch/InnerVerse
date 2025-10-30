@@ -1313,10 +1313,21 @@ if (messageInput) {
     messageInput.addEventListener('keypress', (e) => {
         console.log('⌨️ KEY PRESSED:', e.key);
         if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('✅ ENTER KEY - SENDING MESSAGE!');
-            sendMessage();
+            // On mobile, allow Enter to create new lines
+            // Only send on desktop
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+            
+            if (!isMobile) {
+                // Desktop: Enter sends, Shift+Enter for new line
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('✅ ENTER KEY (Desktop) - SENDING MESSAGE!');
+                sendMessage();
+            } else {
+                // Mobile: Enter creates new line, use send button to send
+                console.log('📱 ENTER KEY (Mobile) - NEW LINE');
+                // Let default behavior happen (new line)
+            }
         }
     });
     console.log('✅ Keypress listener added to message input');
