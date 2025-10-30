@@ -385,6 +385,59 @@ input[type="file"] {
   transform: scale(1.05);
 }
 
+/* YouTube Collapsible Toggle */
+.youtube-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0 0 16px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0;
+  transition: all 0.2s ease;
+}
+
+.youtube-toggle:hover {
+  opacity: 0.8;
+}
+
+.youtube-toggle-content {
+  display: flex;
+  align-items: center;
+}
+
+.youtube-toggle-content svg {
+  color: #ef4444;
+}
+
+.youtube-chevron {
+  color: var(--text-secondary);
+  transition: transform 0.3s ease;
+}
+
+.youtube-toggle.collapsed .youtube-chevron {
+  transform: rotate(-90deg);
+}
+
+.youtube-content {
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
+  opacity: 1;
+  margin-top: 0;
+}
+
+.youtube-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
+
 /* === Text to PDF Section === */
 .text-to-pdf-section {
   background: var(--card-bg);
