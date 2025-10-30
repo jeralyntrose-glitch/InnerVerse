@@ -503,7 +503,7 @@ async function loadConversation(id) {
         messagesDiv.innerHTML = '';
         if (data.messages && data.messages.length > 0) {
             data.messages.forEach(msg => {
-                addMessage(msg.role, msg.content);
+                addMessage(msg.role, msg.content, null, msg.follow_up_question);
             });
             
             // Scroll to bottom after loading all messages
@@ -877,8 +877,8 @@ function showCopyError(button) {
     }, 2000);
 }
 
-// Professional Phase 4 & 6: Markdown-enabled message rendering with image support
-function addMessage(role, content, imageFile = null) {
+// Professional Phase 4 & 6 & 9: Markdown-enabled message rendering with image support and follow-up questions
+function addMessage(role, content, imageFile = null, followUpQuestion = null) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
 
@@ -930,6 +930,19 @@ function addMessage(role, content, imageFile = null) {
     }
 
     messageDiv.appendChild(contentDiv);
+    
+    // === Phase 9: Add Follow-Up Question (AI messages only) ===
+    if (role === 'assistant' && followUpQuestion) {
+        const followUpDiv = document.createElement('div');
+        followUpDiv.className = 'follow-up-question';
+        followUpDiv.textContent = followUpQuestion;
+        followUpDiv.addEventListener('click', () => {
+            // Populate input and send
+            messageInput.value = followUpQuestion;
+            sendMessage();
+        });
+        messageDiv.appendChild(followUpDiv);
+    }
     
     // === Phase 5 Part 2: Add Copy Button ===
     const copyButton = document.createElement('button');

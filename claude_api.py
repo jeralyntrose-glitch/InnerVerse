@@ -409,7 +409,24 @@ Help users:
 - Apply to real situations (make it practical)
 - Feel like learning from CS Joseph himself
 
-You are the Axis of Mind - where CS Joseph's specialized knowledge meets practical understanding. Query first, synthesize deeply, teach clearly. 🧠✨"""
+You are the Axis of Mind - where CS Joseph's specialized knowledge meets practical understanding. Query first, synthesize deeply, teach clearly. 🧠✨
+
+## Follow-Up Question Format
+
+After EVERY response, suggest ONE relevant follow-up question to help the user explore deeper. Format it exactly like this at the very end:
+
+[FOLLOW-UP: Your suggested question here?]
+
+The follow-up should be:
+- Directly related to what you just explained
+- Curious and engaging (not obvious)
+- Helps user go deeper or explore related concepts
+- Phrased naturally, like the user would ask it
+
+Examples:
+- [FOLLOW-UP: How do these cognitive functions show up in romantic relationships?]
+- [FOLLOW-UP: What's the difference between Fe and Fi in conflict situations?]
+- [FOLLOW-UP: How can I tell if someone is using their shadow functions?]"""
     
     tool_use_details = []
     max_iterations = 3
@@ -440,7 +457,20 @@ You are the Axis of Mind - where CS Joseph's specialized knowledge meets practic
         if response.stop_reason == "end_turn":
             for block in response.content:
                 if hasattr(block, 'text'):
-                    return block.text, tool_use_details
+                    # Extract follow-up question if present
+                    full_text = block.text
+                    follow_up_question = None
+                    main_text = full_text
+                    
+                    # Look for [FOLLOW-UP: ...] pattern
+                    import re
+                    follow_up_match = re.search(r'\[FOLLOW-UP:\s*(.+?)\]', full_text, re.IGNORECASE)
+                    if follow_up_match:
+                        follow_up_question = follow_up_match.group(1).strip()
+                        # Remove the [FOLLOW-UP: ...] from the main text
+                        main_text = full_text[:follow_up_match.start()].strip()
+                    
+                    return (main_text, tool_use_details, follow_up_question)
         
         elif response.stop_reason == "tool_use":
             for block in response.content:
@@ -506,21 +536,23 @@ You are the Axis of Mind - where CS Joseph's specialized knowledge meets practic
             continue
         
         else:
-            return "I encountered an error processing your request.", tool_use_details
+            return "I encountered an error processing your request.", tool_use_details, None
     
-    return "I reached the maximum number of processing steps. Please try rephrasing your question.", tool_use_details
+    return "I reached the maximum number of processing steps. Please try rephrasing your question.", tool_use_details, None
 
 
 def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: int):
     """
     Send messages to Claude with STREAMING enabled for real-time response display
     Yields chunks as they arrive from Claude
+    RETURNS: Yields SSE events, final event includes follow-up question if present
     """
     if not ANTHROPIC_API_KEY:
         yield "data: " + '{"error": "ANTHROPIC_API_KEY not set"}\n\n'
         return
     
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    full_response_text = []  # Accumulate response for follow-up extraction
     
     tools = [
         {
@@ -675,7 +707,24 @@ Help users:
 - Apply to real situations (make it practical)
 - Feel like learning from CS Joseph himself
 
-You are the Axis of Mind - where CS Joseph's specialized knowledge meets practical understanding. Query first, synthesize deeply, teach clearly. 🧠✨"""
+You are the Axis of Mind - where CS Joseph's specialized knowledge meets practical understanding. Query first, synthesize deeply, teach clearly. 🧠✨
+
+## Follow-Up Question Format
+
+After EVERY response, suggest ONE relevant follow-up question to help the user explore deeper. Format it exactly like this at the very end:
+
+[FOLLOW-UP: Your suggested question here?]
+
+The follow-up should be:
+- Directly related to what you just explained
+- Curious and engaging (not obvious)
+- Helps user go deeper or explore related concepts
+- Phrased naturally, like the user would ask it
+
+Examples:
+- [FOLLOW-UP: How do these cognitive functions show up in romantic relationships?]
+- [FOLLOW-UP: What's the difference between Fe and Fi in conflict situations?]
+- [FOLLOW-UP: How can I tell if someone is using their shadow functions?]"""
     
     max_iterations = 3
     
@@ -700,7 +749,9 @@ You are the Axis of Mind - where CS Joseph's specialized knowledge meets practic
                     if hasattr(event.delta, "text"):
                         # Stream text chunks to frontend immediately (no batching for max speed)
                         import json
-                        yield "data: " + json.dumps({"chunk": event.delta.text}) + "\n\n"
+                        text_chunk = event.delta.text
+                        full_response_text.append(text_chunk)  # Accumulate for follow-up extraction
+                        yield "data: " + json.dumps({"chunk": text_chunk}) + "\n\n"
                         
                 elif event.type == "message_stop":
                     # Check if we hit a tool use
@@ -762,8 +813,13 @@ You are the Axis of Mind - where CS Joseph's specialized knowledge meets practic
                         # Continue to next iteration to get final response with context
                         continue
                     else:
-                        # Done! Close stream
-                        yield "data: " + '{"done": true}\n\n'
+                        # Done! Extract follow-up question and close stream
+                        import json
+                        follow_up = extract_follow_up_question("".join(full_response_text))
+                        yield "data: " + json.dumps({"done": true, "follow_up": follow_up}) + "\n\n"
                         return
     
-    yield "data: " + '{"done": true}\n\n'
+    # Max iterations reached - send done with follow-up
+    import json
+    follow_up = extract_follow_up_question("".join(full_response_text))
+    yield "data: " + json.dumps({"done": true, "follow_up": follow_up}) + "\n\n"

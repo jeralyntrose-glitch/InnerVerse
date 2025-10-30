@@ -3207,7 +3207,7 @@ async def get_conversation_detail(conversation_id: int):
             raise HTTPException(status_code=404, detail="Conversation not found")
         
         cursor.execute("""
-            SELECT id, role, content, created_at, status
+            SELECT id, role, content, created_at, status, follow_up_question
             FROM messages
             WHERE conversation_id = %s
             ORDER BY created_at ASC
@@ -3266,13 +3266,13 @@ async def send_message(conversation_id: int, request: Request):
                 "content": msg["content"]
             })
         
-        assistant_response, tool_details = chat_with_claude(claude_messages, conversation_id)
+        assistant_response, tool_details, follow_up_question = chat_with_claude(claude_messages, conversation_id)
         
         cursor.execute("""
-            INSERT INTO messages (conversation_id, role, content)
-            VALUES (%s, 'assistant', %s)
-            RETURNING id, role, content, created_at
-        """, (conversation_id, assistant_response))
+            INSERT INTO messages (conversation_id, role, content, follow_up_question)
+            VALUES (%s, 'assistant', %s, %s)
+            RETURNING id, role, content, created_at, follow_up_question
+        """, (conversation_id, assistant_response, follow_up_question))
         assistant_msg = cursor.fetchone()
         
         cursor.execute("""
@@ -3380,18 +3380,28 @@ async def send_message_streaming(conversation_id: int, request: Request):
         # Create generator for streaming
         def generate():
             full_response = []
+            follow_up_question = None
             
             try:
                 for chunk in chat_with_claude_streaming(claude_messages, conversation_id):
                     yield chunk
                     
-                    # Collect text chunks for database storage
+                    # Collect text chunks and follow-up for database storage
                     if '"chunk"' in chunk:
                         import json
                         try:
                             chunk_data = json.loads(chunk.replace("data: ", ""))
                             if "chunk" in chunk_data:
                                 full_response.append(chunk_data["chunk"])
+                        except:
+                            pass
+                    elif '"done"' in chunk:
+                        # Extract follow-up question from done event
+                        import json
+                        try:
+                            done_data = json.loads(chunk.replace("data: ", ""))
+                            if "follow_up" in done_data:
+                                follow_up_question = done_data.get("follow_up")
                         except:
                             pass
                 
@@ -3403,9 +3413,9 @@ async def send_message_streaming(conversation_id: int, request: Request):
                         try:
                             save_cursor = save_conn.cursor()
                             save_cursor.execute("""
-                                INSERT INTO messages (conversation_id, role, content)
-                                VALUES (%s, 'assistant', %s)
-                            """, (conversation_id, assistant_text))
+                                INSERT INTO messages (conversation_id, role, content, follow_up_question)
+                                VALUES (%s, 'assistant', %s, %s)
+                            """, (conversation_id, assistant_text, follow_up_question))
                             save_cursor.execute("""
                                 UPDATE conversations SET updated_at = NOW() WHERE id = %s
                             """, (conversation_id,))
@@ -3509,7 +3519,7 @@ def process_message_background(conversation_id: int, user_message: str, assistan
         
         # Get response from Claude
         print(f"🤖 [BACKGROUND] Calling Claude API...")
-        assistant_response, tool_details = chat_with_claude(claude_messages, conversation_id)
+        assistant_response, tool_details, follow_up_question = chat_with_claude(claude_messages, conversation_id)
         print(f"✅ [BACKGROUND] Claude response received: {len(assistant_response)} chars")
         
         # Update assistant message with response
@@ -3519,9 +3529,9 @@ def process_message_background(conversation_id: int, user_message: str, assistan
                 cursor = conn.cursor()
                 cursor.execute("""
                     UPDATE messages
-                    SET content = %s, status = 'completed', updated_at = NOW()
+                    SET content = %s, status = 'completed', updated_at = NOW(), follow_up_question = %s
                     WHERE id = %s
-                """, (assistant_response, assistant_message_id))
+                """, (assistant_response, follow_up_question, assistant_message_id))
                 
                 # Mark conversation as having unread response
                 cursor.execute("""
