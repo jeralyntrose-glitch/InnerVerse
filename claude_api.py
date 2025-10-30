@@ -824,8 +824,22 @@ Examples:
                         # Continue to next iteration to get final response with context
                         continue
                     else:
-                        # Done! Extract follow-up question and close stream
+                        # Done! Log usage and extract follow-up question
                         import json
+                        
+                        # Log Claude API usage
+                        if hasattr(final_message, 'usage'):
+                            input_tokens = getattr(final_message.usage, 'input_tokens', 0)
+                            output_tokens = getattr(final_message.usage, 'output_tokens', 0)
+                            cost = (input_tokens / 1000 * 0.003) + (output_tokens / 1000 * 0.015)
+                            
+                            try:
+                                from main import log_api_usage
+                                log_api_usage("claude_chat_stream", "claude-sonnet-4", input_tokens, output_tokens, cost)
+                                print(f"💰 Logged streaming Claude usage: ${cost:.6f}")
+                            except Exception as e:
+                                print(f"⚠️ Could not log streaming Claude usage: {e}")
+                        
                         follow_up = extract_follow_up_question("".join(full_response_text))
                         yield "data: " + json.dumps({"done": True, "follow_up": follow_up}) + "\n\n"
                         return
