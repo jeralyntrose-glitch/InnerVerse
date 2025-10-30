@@ -5,6 +5,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from pinecone import Pinecone
 import openai
+import time
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -258,6 +259,43 @@ def search_web_brave(query: str) -> str:
         print(f"❌ Web search error: {str(e)}")
         return "Unable to perform web search at this time."
 
+def make_claude_api_call_with_retry(client, **kwargs):
+    """
+    Make Claude API call with exponential backoff retry logic for overloaded errors.
+    Retries: 2s wait, then 4s wait. Max 3 attempts total.
+    """
+    max_retries = 2
+    retry_delays = [2, 4]  # Exponential backoff: 2s, then 4s
+    
+    for attempt in range(max_retries + 1):
+        try:
+            response = client.messages.create(**kwargs)
+            return response
+        
+        except anthropic.InternalServerError as e:
+            # Check if it's an overloaded error
+            error_message = str(e).lower()
+            is_overloaded = 'overloaded' in error_message
+            
+            if is_overloaded and attempt < max_retries:
+                wait_time = retry_delays[attempt]
+                print(f"⚠️ Claude API overloaded (attempt {attempt + 1}/{max_retries + 1}). Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+                continue
+            
+            # If not overloaded or max retries reached, re-raise
+            if is_overloaded:
+                raise Exception("Claude API is temporarily busy. Please try again in a moment.")
+            else:
+                raise
+        
+        except Exception as e:
+            # For other errors, don't retry - just raise immediately
+            raise
+    
+    # This shouldn't be reached, but just in case
+    raise Exception("Claude API is temporarily busy. Please try again in a moment.")
+
 def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tuple[str, List[Dict]]:
     """
     Send messages to Claude and get response with automatic InnerVerse backend queries
@@ -444,14 +482,25 @@ Examples:
     max_iterations = 3
     
     for iteration in range(max_iterations):
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4096,
-            system=system_message,
-            tools=tools,
-            messages=messages,
-            timeout=60.0  # 60-second timeout to prevent hanging
-        )
+        try:
+            response = make_claude_api_call_with_retry(
+                client,
+                model="claude-sonnet-4-20250514",
+                max_tokens=4096,
+                system=system_message,
+                tools=tools,
+                messages=messages,
+                timeout=60.0  # 60-second timeout to prevent hanging
+            )
+        except Exception as e:
+            # Catch user-friendly error messages from retry logic
+            error_msg = str(e)
+            if "temporarily busy" in error_msg.lower():
+                # Return the user-friendly message to the frontend
+                return (error_msg, tool_use_details, None)
+            else:
+                # Re-raise other unexpected errors
+                raise
         
         # Log Claude API usage
         if hasattr(response, 'usage'):

@@ -32,6 +32,7 @@ Preferred communication style: Simple, everyday language.
 - **Design Pattern**: Stateless API.
 - **Deployment**: VM deployment with health checks and robust logging.
 - **API Management**: Logs OpenAI API costs to PostgreSQL, accessible via `/api/usage`, with a rate limit.
+- **Retry Logic**: Automatic retry with exponential backoff for Claude API overload errors (2s, then 4s, max 3 attempts). User-friendly error messages after exhausting retries.
 - **Migration System**: Background task-based API for live embedding upgrades.
 
 ## Document Processing Pipeline
