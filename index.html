@@ -674,6 +674,19 @@
             gap: 0;
             background: var(--color-main-bg);
         }
+        
+        /* ALL message containers must be transparent - only bubbles have color */
+        .message-container,
+        .message-wrapper,
+        .user-message-container,
+        .ai-message-container,
+        .chat-message-wrapper,
+        .message-outer,
+        .message-inner {
+            background: transparent !important;
+            background-color: transparent !important;
+            border: none !important;
+        }
 
         /* Sleek Compact Message Styles */
         .message {
@@ -681,6 +694,9 @@
             margin-bottom: 12px;
             animation: fadeIn 0.15s ease;
             position: relative; /* For copy button positioning */
+            background: transparent !important;
+            background-color: transparent !important;
+            border: none !important;
         }
 
         @keyframes fadeIn {
