@@ -902,18 +902,28 @@ function stripMarkdown(text) {
 
 // Copy message to clipboard with fallback
 async function copyMessageToClipboard(messageText, isAIMessage, button) {
-    console.log('📋 copyMessageToClipboard called', { isAIMessage, textLength: messageText.length });
+    console.log('📋 copyMessageToClipboard called', { 
+        isAIMessage, 
+        textLength: messageText?.length || 0,
+        hasText: !!messageText 
+    });
+    
+    if (!messageText) {
+        console.error('❌ No message text to copy!');
+        showCopyError(button);
+        return;
+    }
     
     try {
         // Strip markdown if AI message
         const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
-        console.log('📋 Plain text prepared:', plainText.substring(0, 100));
+        console.log('📋 Plain text prepared (length: ' + plainText.length + '):', plainText.substring(0, 100));
         
         // Try modern Clipboard API
         if (navigator.clipboard && navigator.clipboard.writeText) {
             console.log('📋 Using modern Clipboard API');
             await navigator.clipboard.writeText(plainText);
-            console.log('✅ Copy successful!');
+            console.log('✅ Copy successful! Copied ' + plainText.length + ' characters');
             showCopySuccess(button);
         } else {
             console.log('📋 Using fallback copy method');
@@ -1063,19 +1073,28 @@ function addMessage(role, content, imageFile = null, followUpQuestion = null) {
         </svg>
     `;
     
+    // Store content in data attribute for reliable access
+    const contentToCopy = content || '';
+    copyButton.dataset.messageContent = contentToCopy;
+    copyButton.dataset.messageRole = role;
+    
     // Add click handler
     copyButton.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent any parent click handlers
         e.preventDefault(); // Prevent default action
-        console.log('📋 Copy button clicked!', { content: content.substring(0, 50), role });
-        copyMessageToClipboard(content, role === 'assistant', copyButton);
+        const textToCopy = e.currentTarget.dataset.messageContent;
+        const messageRole = e.currentTarget.dataset.messageRole;
+        console.log('📋 Copy button clicked!', { textLength: textToCopy.length, role: messageRole, preview: textToCopy.substring(0, 50) });
+        copyMessageToClipboard(textToCopy, messageRole === 'assistant', copyButton);
     });
     
     // Add keyboard support (Enter and Space)
     copyButton.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            copyMessageToClipboard(content, role === 'assistant', copyButton);
+            const textToCopy = e.currentTarget.dataset.messageContent;
+            const messageRole = e.currentTarget.dataset.messageRole;
+            copyMessageToClipboard(textToCopy, messageRole === 'assistant', copyButton);
         }
     });
     
