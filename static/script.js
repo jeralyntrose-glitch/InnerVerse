@@ -1148,9 +1148,8 @@ function cancelYoutubeTranscription() {
 const textPdfToggle = document.getElementById('text-pdf-toggle');
 const textPdfContent = document.getElementById('text-pdf-content');
 
-// Start collapsed by default
-textPdfToggle.classList.add('collapsed');
-textPdfContent.classList.add('collapsed');
+// Start OPEN by default (no collapsed class)
+// textPdfToggle and textPdfContent start without 'collapsed' class
 
 textPdfToggle.addEventListener('click', () => {
   textPdfToggle.classList.toggle('collapsed');
