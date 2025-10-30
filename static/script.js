@@ -1421,10 +1421,15 @@ if (textPdfToggle && textPdfContent) {
 const tagLibraryToggle = document.getElementById('tag-library-toggle');
 const tagLibraryContent = document.getElementById('tag-library-content');
 
-// Start collapsed by default
+// Start OPEN by default
 if (tagLibraryToggle && tagLibraryContent) {
-  tagLibraryToggle.classList.add('collapsed');
-  tagLibraryContent.classList.add('collapsed');
+  tagLibraryToggle.classList.remove('collapsed');
+  tagLibraryContent.classList.remove('collapsed');
+  tagLibraryToggle.classList.add('open');
+  tagLibraryContent.classList.add('open');
+  
+  // Load tag library immediately since it's open
+  loadTagLibrary();
   
   tagLibraryToggle.addEventListener('click', () => {
     tagLibraryToggle.classList.toggle('collapsed');

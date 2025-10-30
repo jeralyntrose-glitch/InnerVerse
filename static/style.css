@@ -359,14 +359,14 @@ input[type="file"] {
 
 .youtube-cancel-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 8px;
+  right: 8px;
   background: #ef4444;
   color: white;
   border: none;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 11px;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -377,7 +377,7 @@ input[type="file"] {
   justify-content: center;
   line-height: 1;
   z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .youtube-cancel-btn:hover {
@@ -1756,8 +1756,8 @@ label,
   color: var(--text-secondary);
 }
 
-.tag-library-toggle.open .tag-library-chevron {
-  transform: rotate(180deg);
+.tag-library-toggle.collapsed .tag-library-chevron {
+  transform: rotate(-90deg);
 }
 
 .tag-library-content {
