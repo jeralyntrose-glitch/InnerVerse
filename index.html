@@ -805,19 +805,30 @@
             width: 24px;
             height: 24px;
             padding: 4px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #E5E5E5;
+            background: rgba(229, 229, 234, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: 4px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.15s ease;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: none;
             z-index: 10;
             -webkit-appearance: none;
             appearance: none;
             opacity: 0; /* Hidden by default on desktop */
+        }
+        
+        /* Light mode: Different backgrounds for user vs AI messages */
+        .message.user .copy-btn {
+            background: rgba(229, 229, 234, 0.8);
+            border-color: rgba(0, 0, 0, 0.08);
+        }
+        
+        .message.assistant .copy-btn {
+            background: rgba(247, 247, 248, 0.9);
+            border-color: rgba(0, 0, 0, 0.08);
         }
 
         .copy-btn svg {
@@ -853,8 +864,14 @@
         }
 
         .copy-btn:hover {
-            background: rgba(240, 240, 240, 1);
+            background: rgba(16, 163, 127, 0.15);
+            border-color: #10A37F;
             transform: scale(1.05);
+        }
+        
+        .copy-btn:hover svg path,
+        .copy-btn:hover svg rect {
+            stroke: #10A37F;
         }
 
         .copy-btn:focus,
