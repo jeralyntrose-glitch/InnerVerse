@@ -1373,13 +1373,12 @@
                 z-index: 100;
                 padding-bottom: calc(4px + env(safe-area-inset-bottom, 0));
                 max-width: 100%;
+                transition: background 0.2s ease;
             }
             
-            /* Detect keyboard open: viewport shrinks to less than 500px height */
-            @media (max-height: 500px) {
-                .input-container {
-                    background: transparent !important;
-                }
+            /* When input is focused (keyboard open), make background transparent */
+            .input-container:focus-within {
+                background: transparent !important;
             }
             
             .message-input {
