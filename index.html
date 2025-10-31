@@ -1455,9 +1455,8 @@
             /* When input is focused (keyboard open), make it super compact like iPhone Messages */
             .input-container:focus-within {
                 background: transparent !important;
-                padding: 2px 8px !important; /* Much tighter - minimal spacing above and below */
-                padding-top: 2px !important; /* Compact spacing above */
-                padding-bottom: calc(2px + env(safe-area-inset-bottom, 0)) !important; /* Hug the keyboard */
+                padding: 0 8px !important; /* NO top/bottom padding - completely flush */
+                padding-bottom: calc(4px + env(safe-area-inset-bottom, 0)) !important; /* Just a bit of space at bottom */
             }
             
             /* Also reduce gap above input container on mobile when keyboard is open */
