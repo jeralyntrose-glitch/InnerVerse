@@ -1068,12 +1068,12 @@
         /* Typing Indicator - Compact Style */
         #ai-typing {
             position: absolute;
-            bottom: 70px; /* Moved down closer to input */
+            bottom: 50px; /* Closer to input */
             left: 12px;
             width: fit-content;
             background: var(--color-user-bubble);
-            padding: 8px 12px; /* Smaller, more compact */
-            border-radius: 16px;
+            padding: 6px 10px; /* Even more compact */
+            border-radius: 14px;
             z-index: 10;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
@@ -1085,13 +1085,13 @@
 
         .typing-dots {
             display: inline-flex;
-            gap: 4px; /* Smaller gap */
+            gap: 3px; /* Tighter spacing */
             align-items: center;
         }
 
         .typing-dots span {
-            width: 7px; /* Smaller dots */
-            height: 7px;
+            width: 5px; /* Even smaller dots */
+            height: 5px;
             background: #8E8E93;
             border-radius: 50%;
             animation: typingDot 1.4s infinite ease-in-out;
@@ -1112,7 +1112,7 @@
             }
             30% { 
                 opacity: 1; 
-                transform: scale(1.2) translateY(-4px); /* Smaller bounce */
+                transform: scale(1.2) translateY(-3px); /* Tiny subtle bounce */
             }
         }
 
@@ -1485,7 +1485,7 @@
             
             /* Mobile: Position typing indicator like a message bubble */
             #ai-typing {
-                bottom: 75px; /* Moved down closer to input on mobile */
+                bottom: 55px; /* Closer to input on mobile */
                 left: 15px;
             }
         }
