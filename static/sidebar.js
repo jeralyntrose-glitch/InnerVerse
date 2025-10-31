@@ -1335,12 +1335,21 @@ if (messageInput) {
     console.error('❌ messageInput is NULL - cannot add event listener!');
 }
 
-// iOS Safari: Scroll to top when keyboard closes to show header
-messageInput.addEventListener('blur', () => {
-    setTimeout(() => {
-        window.scrollTo(0, 0);
-    }, 100);
-});
+// Toggle keyboard-active class to remove white space above input
+const chatContainer = document.querySelector('.chat-container');
+if (chatContainer && messageInput) {
+    messageInput.addEventListener('focus', () => {
+        chatContainer.classList.add('keyboard-active');
+    });
+    
+    messageInput.addEventListener('blur', () => {
+        chatContainer.classList.remove('keyboard-active');
+        // iOS Safari: Scroll to top when keyboard closes to show header
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 100);
+    });
+}
 
 // === THEME TOGGLE ===
 const themeToggle = document.getElementById('themeToggle');

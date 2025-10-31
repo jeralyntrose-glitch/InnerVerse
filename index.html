@@ -1429,6 +1429,12 @@
                 display: flex;
                 flex-direction: column;
                 margin-bottom: 140px; /* Large fixed space for input bar on mobile */
+                transition: margin-bottom 0.2s ease;
+            }
+            
+            /* REMOVE THE WHITE SPACE when keyboard is open (using JS class) */
+            .chat-container.keyboard-active {
+                margin-bottom: 0 !important; /* NO SPACE when typing */
             }
             
             .messages {
@@ -1740,6 +1746,6 @@
         });
     </script>
     
-    <script src="/static/sidebar.js?v=20251030-mobile-enter"></script>
+    <script src="/static/sidebar.js?v=20251031-whitespace-fix"></script>
 </body>
 </html>
