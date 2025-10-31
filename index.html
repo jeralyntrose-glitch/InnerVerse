@@ -1436,7 +1436,7 @@
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
-                padding-bottom: 60px; /* Compact - just enough clearance on mobile */
+                padding-bottom: 10px; /* Minimal gap when keyboard opens */
             }
 
             .input-container {
@@ -1452,16 +1452,13 @@
                 transition: background 0.2s ease, padding 0.2s ease;
             }
             
-            /* When input is focused (keyboard open), make it super compact like iPhone Messages */
+            /* When input is focused (keyboard open), remove ALL white space */
             .input-container:focus-within {
                 background: transparent !important;
-                padding: 0 8px !important; /* NO top/bottom padding - completely flush */
-                padding-bottom: calc(4px + env(safe-area-inset-bottom, 0)) !important; /* Just a bit of space at bottom */
-            }
-            
-            /* Also reduce gap above input container on mobile when keyboard is open */
-            .input-container:focus-within + * {
-                margin-top: 0 !important;
+                padding: 0 !important; /* ZERO padding - completely flush */
+                padding-left: 8px !important; /* Just side margins for buttons */
+                padding-right: 8px !important;
+                padding-bottom: calc(4px + env(safe-area-inset-bottom, 0)) !important; /* Just space for keyboard */
             }
             
             .message-input {
