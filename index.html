@@ -1469,11 +1469,18 @@
                 font-size: 16px; /* Prevents zoom on iOS */
             }
             
-            /* When keyboard is open (textarea focused), make it super compact like iPhone Messages */
+            /* When keyboard is open (textarea focused), remove white box entirely like iPhone Messages */
             .message-input:focus {
-                padding: 8px 12px !important; /* Reduced from 12px 16px */
-                min-height: 36px !important; /* Reduced from 44px */
-                border-radius: 20px !important; /* Slightly smaller radius */
+                padding: 8px 12px !important; /* Reduced padding */
+                min-height: 36px !important; /* Compact height */
+                background: transparent !important; /* Remove white background */
+                border: 1px solid rgba(0, 0, 0, 0.08) !important; /* Subtle border */
+                border-radius: 20px !important;
+            }
+            
+            /* Dark mode: adjust border when focused */
+            [data-theme="dark"] .message-input:focus {
+                border: 1px solid rgba(255, 255, 255, 0.12) !important;
             }
             
             /* Mobile adjustments for assistant messages */
