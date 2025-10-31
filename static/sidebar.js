@@ -848,6 +848,24 @@ function scrollToBottom() {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+// ChatGPT-style scroll: Show user message at top with room for AI response below
+function scrollToShowUserMessage() {
+    // Find the last user message
+    const userMessages = messagesDiv.querySelectorAll('.message.user');
+    if (userMessages.length === 0) {
+        scrollToBottom();
+        return;
+    }
+    
+    const lastUserMessage = userMessages[userMessages.length - 1];
+    
+    // Scroll so the user message appears near the top with room below for AI
+    // offsetTop gives position relative to scrollable container
+    const targetScroll = lastUserMessage.offsetTop - 20; // 20px from top for breathing room
+    
+    messagesDiv.scrollTop = targetScroll;
+}
+
 // === Phase 5 Part 2: Copy Message Functionality ===
 
 // Strip markdown from AI messages to get plain text
@@ -1194,8 +1212,8 @@ async function sendMessage() {
     // Display user message (with or without image)
     addMessage('user', message, hasImage ? selectedImage : null);
     
-    // Force scroll to show user message
-    scrollToBottom();
+    // ChatGPT-style scroll: Show user message at top with room for AI response below
+    setTimeout(() => scrollToShowUserMessage(), 50);
     
     // Clear image preview after adding to chat
     if (hasImage) {
@@ -1205,7 +1223,7 @@ async function sendMessage() {
     // Show typing indicator
     showTyping();
     
-    // Force scroll to show typing indicator
+    // Scroll again after typing indicator appears to ensure it's visible
     setTimeout(() => scrollToBottom(), 100);
 
     let assistantContent = null;
@@ -1258,10 +1276,8 @@ async function sendMessage() {
                             } else {
                                 assistantContent.textContent = displayResponse;
                             }
-                            // Only auto-scroll if user is already at bottom
-                            if (shouldAutoScroll()) {
-                                scrollToBottom();
-                            }
+                            // Always auto-scroll during streaming to show new AI text
+                            scrollToBottom();
                         }
 
                         if (data.error) {
