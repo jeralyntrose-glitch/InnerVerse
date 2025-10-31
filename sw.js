@@ -1,7 +1,7 @@
 // Minimal Service Worker - Just for PWA Installation
 // No offline caching, no complex features
 
-const CACHE_NAME = 'innerverse-v1';
+const CACHE_NAME = 'innerverse-v2-zindex-fix';
 
 // Install event - required for PWA
 self.addEventListener('install', (event) => {

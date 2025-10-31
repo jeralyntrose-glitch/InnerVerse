@@ -1125,6 +1125,8 @@
             box-shadow: none;
             max-width: 800px;
             margin: 0 auto;
+            touch-action: manipulation; /* iOS PWA: Enable proper touch handling */
+            -webkit-tap-highlight-color: transparent;
         }
         
         /* Upload button */
@@ -1270,6 +1272,9 @@
             min-height: 44px;
             max-height: 150px;
             line-height: 1.5;
+            touch-action: manipulation; /* iOS PWA: Enable keyboard on tap */
+            -webkit-user-select: text;
+            user-select: text;
         }
 
         .message-input:focus {
@@ -1456,6 +1461,8 @@
                 padding-bottom: calc(32px + env(safe-area-inset-bottom, 0)); /* Breathing room when keyboard is closed */
                 max-width: 100%;
                 transition: background 0.2s ease, padding 0.2s ease;
+                touch-action: manipulation; /* iOS PWA: Enable proper touch handling */
+                -webkit-tap-highlight-color: transparent;
             }
             
             /* When input is focused (keyboard open), compact but with proper background */
@@ -1609,7 +1616,13 @@
                         id="messageInput" 
                         placeholder="Type your message..."
                         autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="sentences"
+                        spellcheck="true"
+                        inputmode="text"
+                        enterkeyhint="send"
                         rows="1"
+                        style="touch-action: manipulation; -webkit-user-select: text; user-select: text;"
                     ></textarea>
                     <button class="send-button" id="sendButton" title="Send message">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
