@@ -4,7 +4,7 @@ InnerVerse is a FastAPI-based PDF Q&A application that provides intelligent know
 
 # User Preferences
 
-Preferred communication style: Simple, everyday language.
+Preferred communication style: Simple, everyday language with a decent amount of emojis (not excessive, but engaging).
 
 # System Architecture
 
@@ -20,7 +20,7 @@ Preferred communication style: Simple, everyday language.
     - **Real-time Updates**: 3-second polling for conversation status and unread responses.
     - **PWA Support**: Full Progressive Web App implementation with manifest, icons, service worker, custom install UI, and iOS support.
     - **Performance**: Optimized with HTML template strings, event delegation, optimistic UI, and parallel API fetches.
-    - **Chat Styling**: ChatGPT-inspired minimal design with distinct user and AI message styling, auto-expanding textarea, full markdown rendering via `marked.js`, and enhanced visual hierarchy (bold teal headings with H1: 24px/700, H2: 20px/600, H3: 18px/600, increased spacing, and emoji-friendly design).
+    - **Chat Styling**: ChatGPT-inspired minimal design with distinct user and AI message styling, auto-expanding textarea, full markdown rendering via `marked.js`, and enhanced visual hierarchy (bold teal headings with H1: 28px/700, H2: 24px/600, H3: 20px/600, increased spacing, and emoji-friendly design for engaging, scannable responses).
     - **Security**: Comprehensive XSS protection via DOMPurify, HTML escaping, and DOM API value assignment.
     - **Vision/Image Analysis**: Support for image upload and analysis using Claude Sonnet 4 Vision API. Features client-side automatic image compression (3MB target accounting for base64 encoding overhead, using canvas API with progressive quality reduction 0.9→0.5), image preview with thumbnail/filename/filesize, remove button, and inline image display in chat messages. GIF/WebP animations preserved up to 3.75MB.
     - **Dark/Light Mode**: Full theme switching with persistent localStorage preference and a comprehensive CSS custom property system.
