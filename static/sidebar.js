@@ -848,6 +848,33 @@ function scrollToBottom() {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+// Smart auto-scroll: Keep AI text visible with 100px clearance below
+function scrollToKeepAIVisible() {
+    // Find the last AI message
+    const aiMessages = messagesDiv.querySelectorAll('.message.assistant');
+    if (aiMessages.length === 0) {
+        scrollToBottom();
+        return;
+    }
+    
+    const lastAIMessage = aiMessages[aiMessages.length - 1];
+    
+    // Get the bottom position of the AI message relative to the scrollable container
+    const messageBottom = lastAIMessage.offsetTop + lastAIMessage.offsetHeight;
+    
+    // Calculate scroll position to maintain 100px clearance below the AI message
+    const containerHeight = messagesDiv.clientHeight;
+    const targetScroll = messageBottom - containerHeight + 100; // 100px clearance
+    
+    // Only scroll if we need to (AI message is below visible area)
+    if (messagesDiv.scrollTop < targetScroll) {
+        messagesDiv.scrollTo({
+            top: targetScroll,
+            behavior: 'smooth'
+        });
+    }
+}
+
 // ChatGPT-style scroll: Show user message at top with room for AI response below
 function scrollToShowUserMessage() {
     // Find the last user message
@@ -1276,8 +1303,8 @@ async function sendMessage() {
                             } else {
                                 assistantContent.textContent = displayResponse;
                             }
-                            // Always auto-scroll during streaming to show new AI text
-                            scrollToBottom();
+                            // Smart auto-scroll: Keep AI text visible with 100px clearance
+                            scrollToKeepAIVisible();
                         }
 
                         if (data.error) {
