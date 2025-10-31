@@ -1447,14 +1447,15 @@
                 padding: 4px 12px;
                 background: var(--color-page-bg);
                 z-index: 100;
-                padding-bottom: calc(32px + env(safe-area-inset-bottom, 0)); /* Increased from 4px to 32px for breathing room on curved screens */
+                padding-bottom: calc(32px + env(safe-area-inset-bottom, 0)); /* Breathing room when keyboard is closed */
                 max-width: 100%;
-                transition: background 0.2s ease;
+                transition: background 0.2s ease, padding-bottom 0.2s ease;
             }
             
-            /* When input is focused (keyboard open), make background transparent */
+            /* When input is focused (keyboard open), reduce bottom padding to be compact like iPhone Messages */
             .input-container:focus-within {
                 background: transparent !important;
+                padding-bottom: calc(8px + env(safe-area-inset-bottom, 0)) !important; /* Much tighter spacing when keyboard is open */
             }
             
             .message-input {
