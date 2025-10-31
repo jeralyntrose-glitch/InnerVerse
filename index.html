@@ -1078,9 +1078,9 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
         
-        /* Add padding to messages container to prevent content hiding behind typing indicator */
+        /* Add padding to messages container to prevent content hiding behind input and typing indicator */
         .messages {
-            padding-bottom: 60px; /* Compact - just enough clearance */
+            padding-bottom: 100px; /* Generous clearance so AI messages are fully visible */
         }
 
         .typing-dots {
@@ -1442,7 +1442,7 @@
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
-                padding-bottom: 10px; /* Minimal gap when keyboard opens */
+                padding-bottom: 120px; /* Extra space on mobile so messages aren't cut off */
             }
 
             .input-container {
