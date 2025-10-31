@@ -1481,13 +1481,12 @@
 
             .input-container {
                 position: fixed;
-                bottom: 0;
+                bottom: env(safe-area-inset-bottom, 0); /* Position ABOVE iPhone safe area */
                 left: 0;
                 right: 0;
-                padding: 4px 12px;
+                padding: 8px 12px; /* Consistent padding */
                 background: var(--color-page-bg);
                 z-index: 1100; /* Above sidebar (1000) and other overlays */
-                padding-bottom: max(4px, env(safe-area-inset-bottom, 0)); /* Minimal padding, use safe area if available */
                 max-width: 100%;
                 transition: background 0.2s ease, padding 0.2s ease;
             }
@@ -1496,7 +1495,6 @@
             .input-container:focus-within {
                 background: var(--color-page-bg) !important; /* Proper background, not transparent */
                 padding: 6px 8px !important; /* Minimal padding - just enough */
-                padding-bottom: calc(6px + env(safe-area-inset-bottom, 0)) !important; /* Space for keyboard */
             }
             
             .message-input {
@@ -1764,6 +1762,6 @@
         });
     </script>
     
-    <script src="/static/sidebar.js?v=20251031-input-position-fix"></script>
+    <script src="/static/sidebar.js?v=20251031-safe-area-fix"></script>
 </body>
 </html>
