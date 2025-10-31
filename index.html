@@ -1453,7 +1453,7 @@
                 padding: 4px 12px;
                 background: var(--color-page-bg);
                 z-index: 1100; /* Above sidebar (1000) and other overlays */
-                padding-bottom: calc(32px + env(safe-area-inset-bottom, 0)); /* Breathing room when keyboard is closed */
+                padding-bottom: calc(8px + env(safe-area-inset-bottom, 0)); /* Compact - buttons fully visible */
                 max-width: 100%;
                 transition: background 0.2s ease, padding 0.2s ease;
             }
@@ -1730,6 +1730,6 @@
         });
     </script>
     
-    <script src="/static/sidebar.js?v=20251031-smart-scroll"></script>
+    <script src="/static/sidebar.js?v=20251031-compact-input"></script>
 </body>
 </html>
