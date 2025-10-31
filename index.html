@@ -1458,40 +1458,24 @@
                 transition: background 0.2s ease, padding 0.2s ease;
             }
             
-            /* FORCE ALL BACKGROUNDS TO TRANSPARENT WHEN TYPING */
-            .input-container:focus-within,
-            .input-container:focus-within *,
-            .input-area:focus-within,
-            .message-input-container:focus-within {
-                background: transparent !important;
-                background-color: transparent !important;
-            }
-            
-            /* When input is focused (keyboard open), remove ALL white space */
+            /* When input is focused (keyboard open), compact but with proper background */
             .input-container:focus-within {
-                padding: 0 !important; /* ZERO padding - completely flush */
-                padding-left: 8px !important; /* Just side margins for buttons */
-                padding-right: 8px !important;
-                padding-bottom: calc(4px + env(safe-area-inset-bottom, 0)) !important; /* Just space for keyboard */
+                background: var(--color-page-bg) !important; /* Proper background, not transparent */
+                padding: 6px 8px !important; /* Minimal padding - just enough */
+                padding-bottom: calc(6px + env(safe-area-inset-bottom, 0)) !important; /* Space for keyboard */
             }
             
             .message-input {
                 font-size: 16px; /* Prevents zoom on iOS */
             }
             
-            /* When keyboard is open (textarea focused), remove white box entirely like iPhone Messages */
+            /* When keyboard is open (textarea focused), keep white background with compact sizing */
             .message-input:focus {
                 padding: 8px 12px !important; /* Reduced padding */
                 min-height: 36px !important; /* Compact height */
-                background: transparent !important; /* Remove white background */
-                background-color: transparent !important; /* Force it */
-                border: 1px solid rgba(0, 0, 0, 0.08) !important; /* Subtle border */
+                background: var(--color-input-bg) !important; /* Keep white background */
+                border: 1px solid #D1D1D6 !important; /* Normal border */
                 border-radius: 20px !important;
-            }
-            
-            /* Dark mode: adjust border when focused */
-            [data-theme="dark"] .message-input:focus {
-                border: 1px solid rgba(255, 255, 255, 0.12) !important;
             }
             
             /* Mobile adjustments for assistant messages */
