@@ -1456,7 +1456,13 @@
             .input-container:focus-within {
                 background: transparent !important;
                 padding: 2px 8px !important; /* Much tighter - minimal spacing above and below */
+                padding-top: 2px !important; /* Compact spacing above */
                 padding-bottom: calc(2px + env(safe-area-inset-bottom, 0)) !important; /* Hug the keyboard */
+            }
+            
+            /* Also reduce gap above input container on mobile when keyboard is open */
+            .input-container:focus-within + * {
+                margin-top: 0 !important;
             }
             
             .message-input {
