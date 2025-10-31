@@ -1448,6 +1448,12 @@
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
                 padding-bottom: 120px; /* Extra space on mobile so messages aren't cut off */
+                transition: padding-bottom 0.2s ease;
+            }
+            
+            /* When keyboard is active, reduce bottom padding so iOS can scroll input into view */
+            .chat-container.keyboard-active .messages {
+                padding-bottom: 20px !important; /* Minimal padding when keyboard is open */
             }
 
             .input-container {
@@ -1743,6 +1749,6 @@
         });
     </script>
     
-    <script src="/static/sidebar.js?v=20251031-smart-scroll"></script>
+    <script src="/static/sidebar.js?v=20251031-pwa-keyboard-fix"></script>
 </body>
 </html>
