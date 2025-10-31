@@ -1065,17 +1065,17 @@
             transform: translateY(-1px);
         }
 
-        /* Typing Indicator - iPhone Style, positioned above input bar */
+        /* Typing Indicator - Compact Style */
         #ai-typing {
             position: absolute;
-            bottom: 80px; /* Positioned above input area */
+            bottom: 70px; /* Moved down closer to input */
             left: 12px;
             width: fit-content;
             background: var(--color-user-bubble);
-            padding: 12px 18px; /* Larger padding for more prominent indicator */
-            border-radius: 18px;
+            padding: 8px 12px; /* Smaller, more compact */
+            border-radius: 16px;
             z-index: 10;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
         
         /* Add padding to messages container to prevent content hiding behind typing indicator */
@@ -1085,13 +1085,13 @@
 
         .typing-dots {
             display: inline-flex;
-            gap: 6px; /* Increased gap between dots */
+            gap: 4px; /* Smaller gap */
             align-items: center;
         }
 
         .typing-dots span {
-            width: 10px; /* Larger dots */
-            height: 10px;
+            width: 7px; /* Smaller dots */
+            height: 7px;
             background: #8E8E93;
             border-radius: 50%;
             animation: typingDot 1.4s infinite ease-in-out;
@@ -1112,7 +1112,7 @@
             }
             30% { 
                 opacity: 1; 
-                transform: scale(1.2) translateY(-6px); /* Bigger bounce */
+                transform: scale(1.2) translateY(-4px); /* Smaller bounce */
             }
         }
 
@@ -1468,7 +1468,7 @@
             
             /* Mobile: Position typing indicator like a message bubble */
             #ai-typing {
-                bottom: 85px; /* Positioned above input area on mobile */
+                bottom: 75px; /* Moved down closer to input on mobile */
                 left: 15px;
             }
         }
