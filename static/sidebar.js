@@ -1356,27 +1356,6 @@ const chatContainer = document.querySelector('.chat-container');
 if (chatContainer && messageInput) {
     messageInput.addEventListener('focus', () => {
         chatContainer.classList.add('keyboard-active');
-        
-        // iOS PWA: Scroll input into view after keyboard appears
-        // Use multiple strategies for maximum compatibility
-        setTimeout(() => {
-            // Strategy 1: scrollIntoView
-            messageInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // Strategy 2: Manual scroll (fallback for iOS PWA)
-            setTimeout(() => {
-                const inputRect = messageInput.getBoundingClientRect();
-                const viewportHeight = window.innerHeight;
-                
-                // If input is below viewport center, scroll it into view
-                if (inputRect.top > viewportHeight * 0.5) {
-                    window.scrollBy({
-                        top: inputRect.top - (viewportHeight * 0.3),
-                        behavior: 'smooth'
-                    });
-                }
-            }, 100);
-        }, 300); // Wait for keyboard animation
     });
     
     messageInput.addEventListener('blur', () => {

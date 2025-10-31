@@ -1125,8 +1125,6 @@
             box-shadow: none;
             max-width: 800px;
             margin: 0 auto;
-            touch-action: manipulation; /* iOS PWA: Enable proper touch handling */
-            -webkit-tap-highlight-color: transparent;
         }
         
         /* Upload button */
@@ -1272,9 +1270,6 @@
             min-height: 44px;
             max-height: 150px;
             line-height: 1.5;
-            touch-action: manipulation; /* iOS PWA: Enable keyboard on tap */
-            -webkit-user-select: text;
-            user-select: text;
         }
 
         .message-input:focus {
@@ -1447,13 +1442,7 @@
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
-                padding-bottom: 120px; /* Extra space on mobile so messages aren't cut off */
-                transition: padding-bottom 0.2s ease;
-            }
-            
-            /* When keyboard is active, reduce bottom padding so iOS can scroll input into view */
-            .chat-container.keyboard-active .messages {
-                padding-bottom: 20px !important; /* Minimal padding when keyboard is open */
+                padding-bottom: 10px; /* Minimal gap when keyboard opens */
             }
 
             .input-container {
@@ -1467,8 +1456,6 @@
                 padding-bottom: calc(32px + env(safe-area-inset-bottom, 0)); /* Breathing room when keyboard is closed */
                 max-width: 100%;
                 transition: background 0.2s ease, padding 0.2s ease;
-                touch-action: manipulation; /* iOS PWA: Enable proper touch handling */
-                -webkit-tap-highlight-color: transparent;
             }
             
             /* When input is focused (keyboard open), compact but with proper background */
@@ -1622,13 +1609,7 @@
                         id="messageInput" 
                         placeholder="Type your message..."
                         autocomplete="off"
-                        autocorrect="off"
-                        autocapitalize="sentences"
-                        spellcheck="true"
-                        inputmode="text"
-                        enterkeyhint="send"
                         rows="1"
-                        style="touch-action: manipulation; -webkit-user-select: text; user-select: text;"
                     ></textarea>
                     <button class="send-button" id="sendButton" title="Send message">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1749,6 +1730,6 @@
         });
     </script>
     
-    <script src="/static/sidebar.js?v=20251031-pwa-keyboard-fix"></script>
+    <script src="/static/sidebar.js?v=20251031-rollback"></script>
 </body>
 </html>

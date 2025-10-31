@@ -1,7 +1,7 @@
 // Minimal Service Worker - Just for PWA Installation
 // No offline caching, no complex features
 
-const CACHE_NAME = 'innerverse-v3-pwa-keyboard-scroll';
+const CACHE_NAME = 'innerverse-v4-rollback-stable';
 
 // Install event - required for PWA
 self.addEventListener('install', (event) => {
