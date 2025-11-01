@@ -1621,11 +1621,12 @@
                 <div id="imagePreviewContainer" style="display: none; padding: 0 16px;"></div>
                 
                 <div class="input-container">
-                    <!-- Hidden file input for image upload -->
+                    <!-- Hidden file input for image upload - supports multiple images -->
                     <input 
                         type="file" 
                         id="imageUpload" 
                         accept="image/*"
+                        multiple
                         style="display: none"
                     >
                     
@@ -1762,6 +1763,6 @@
         });
     </script>
     
-    <script src="/static/sidebar.js?v=20251031-safe-area-fix"></script>
+    <script src="/static/sidebar.js?v=20251101-multi-image-part1"></script>
 </body>
 </html>

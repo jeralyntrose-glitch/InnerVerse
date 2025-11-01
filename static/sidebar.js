@@ -55,11 +55,12 @@ function autoExpandTextarea() {
 messageInput.addEventListener('input', autoExpandTextarea);
 
 // === Phase 6: Image Upload ===
-let selectedImage = null;
+let selectedImages = []; // Changed to array for multiple images
 
 // File validation constants
 // Target 3MB for file size because base64 encoding adds ~33% (3MB → 4MB after encoding, safely under 5MB limit)
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB in bytes (accounts for base64 inflation)
+const MAX_IMAGES = 5; // Maximum number of images per message
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 // Show error message
@@ -227,7 +228,7 @@ function showImagePreview(file, dataUrl) {
 
 // Clear image preview
 function clearImagePreview() {
-    selectedImage = null;
+    selectedImages = [];
     imagePreviewContainer.innerHTML = '';
     imagePreviewContainer.style.display = 'none';
     imageUpload.value = '';
@@ -235,49 +236,71 @@ function clearImagePreview() {
     messageInput.placeholder = 'Type your message...';
 }
 
-// File input change handler
+// File input change handler - NOW SUPPORTS MULTIPLE IMAGES
 imageUpload.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
+    const files = Array.from(e.target.files);
     
-    if (!file) {
+    if (files.length === 0) {
         return;
     }
     
-    // Validate file type
-    if (!validateImage(file)) {
-        imageUpload.value = ''; // Clear the input
+    // ===  VALIDATION: Max 5 images ===
+    if (files.length > MAX_IMAGES) {
+        showUploadError(`Maximum ${MAX_IMAGES} images allowed. You selected ${files.length}.`);
+        imageUpload.value = '';
         return;
     }
     
-    console.log('📷 Original image size:', file.size, 'bytes (' + formatFileSize(file.size) + ')');
+    console.log(`📷 Selected ${files.length} image(s)`);
     
-    try {
-        // Compress image if needed (handles large files automatically)
-        const processedFile = await compressImage(file);
-        
-        console.log('📦 Processed image size:', processedFile.size, 'bytes (' + formatFileSize(processedFile.size) + ')');
-        
-        if (processedFile.size !== file.size) {
-            const reduction = ((1 - processedFile.size/file.size) * 100).toFixed(1);
-            console.log('✂️ Reduced by:', reduction + '%');
-        } else {
-            console.log('ℹ️ Image not compressed (already under size limit)');
+    // === VALIDATION: Check each file type and size ===
+    for (const file of files) {
+        // Check type
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            showUploadError(`${file.name} is not a supported image type. Use JPEG, PNG, GIF, or WebP.`);
+            imageUpload.value = '';
+            return;
         }
         
-        // File is valid and compressed - read it and show preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            selectedImage = processedFile;
-            uploadButton.classList.add('file-selected');
-            showImagePreview(processedFile, e.target.result);
-            console.log('✅ Image ready for sending:', processedFile.name, formatFileSize(processedFile.size));
-        };
-        reader.readAsDataURL(processedFile);
+        // Check raw size (before compression) - reject if over 10MB
+        if (file.size > 10 * 1024 * 1024) {
+            showUploadError(`${file.name} is too large (over 10MB). Please use smaller images.`);
+            imageUpload.value = '';
+            return;
+        }
+    }
+    
+    console.log('✅ All files passed validation');
+    
+    // === COMPRESS AND PROCESS ALL IMAGES ===
+    try {
+        selectedImages = [];
+        
+        for (const file of files) {
+            console.log(`📷 Processing: ${file.name} (${formatFileSize(file.size)})`);
+            
+            // Compress image if needed
+            const processedFile = await compressImage(file);
+            
+            if (processedFile.size !== file.size) {
+                const reduction = ((1 - processedFile.size/file.size) * 100).toFixed(1);
+                console.log(`✂️ Compressed ${file.name} by ${reduction}%`);
+            }
+            
+            selectedImages.push(processedFile);
+        }
+        
+        console.log(`✅ Processed ${selectedImages.length} image(s) successfully`);
+        
+        // Update UI - show all previews (Part 2 will implement this)
+        uploadButton.classList.add('file-selected');
+        showImagePreview(selectedImages[0], null); // TEMPORARY: Show first image only for now
+        
     } catch (error) {
-        // Compression failed or image too large
         console.error('❌ Image processing error:', error);
         showUploadError(error.message);
-        imageUpload.value = ''; // Clear the input
+        imageUpload.value = '';
+        selectedImages = [];
     }
 });
 
@@ -1190,12 +1213,12 @@ async function sendMessage() {
     console.log('🚀 sendMessage CALLED');
     
     const message = messageInput.value.trim();
-    const hasImage = selectedImage !== null;
+    const hasImages = selectedImages.length > 0;
     
-    console.log('📝 Message:', message, '| hasImage:', hasImage, '| isStreaming:', isStreaming, '| conversationId:', conversationId);
+    console.log('📝 Message:', message, '| hasImages:', hasImages, '| imageCount:', selectedImages.length, '| isStreaming:', isStreaming, '| conversationId:', conversationId);
     
-    // Allow sending if there's a message OR an image
-    if ((!message && !hasImage) || isStreaming || !conversationId) {
+    // Allow sending if there's a message OR images
+    if ((!message && !hasImages) || isStreaming || !conversationId) {
         console.log('❌ Blocked from sending - conditions not met');
         return;
     }
@@ -1208,18 +1231,23 @@ async function sendMessage() {
     // Prepare message payload
     let messagePayload = { message: message || '' };
     
-    // If there's an image, convert to base64 and add to payload
-    if (hasImage) {
-        console.log('📤 Preparing to send image:', selectedImage.name, selectedImage.size, 'bytes (' + formatFileSize(selectedImage.size) + ')');
-        
-        const reader = new FileReader();
-        const imageDataPromise = new Promise((resolve, reject) => {
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(selectedImage);
-        });
+    // If there are images, convert to base64 and add to payload
+    if (hasImages) {
+        console.log(`📤 Preparing to send ${selectedImages.length} image(s)`);
         
         try {
+            // For now, send only the first image (Part 3 will handle multiple)
+            // TODO: Part 3 will send all images in an array
+            const firstImage = selectedImages[0];
+            console.log('📤 Sending image:', firstImage.name, formatFileSize(firstImage.size));
+            
+            const reader = new FileReader();
+            const imageDataPromise = new Promise((resolve, reject) => {
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(firstImage);
+            });
+            
             const imageDataUrl = await imageDataPromise;
             // Backend expects image data as a base64 string
             messagePayload.image = imageDataUrl;
@@ -1227,6 +1255,10 @@ async function sendMessage() {
             // Log base64 size (will be larger due to encoding)
             console.log('📡 Base64 encoded size:', imageDataUrl.length, 'chars');
             console.log('💾 Estimated size being sent to API:', formatFileSize(imageDataUrl.length * 0.75)); // Base64 is ~33% larger
+            
+            if (selectedImages.length > 1) {
+                console.log(`⚠️ Note: ${selectedImages.length - 1} additional image(s) selected but not sent yet (Part 3 will enable this)`);
+            }
         } catch (error) {
             console.error('Error reading image:', error);
             showError('Failed to process image. Please try again.');
@@ -1236,14 +1268,14 @@ async function sendMessage() {
         }
     }
 
-    // Display user message (with or without image)
-    addMessage('user', message, hasImage ? selectedImage : null);
+    // Display user message (with or without images)
+    addMessage('user', message, hasImages ? selectedImages[0] : null); // Show first image for now
     
     // ChatGPT-style scroll: Show user message at top with room for AI response below
     setTimeout(() => scrollToShowUserMessage(), 50);
     
     // Clear image preview after adding to chat
-    if (hasImage) {
+    if (hasImages) {
         clearImagePreview();
     }
     
