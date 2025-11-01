@@ -1654,14 +1654,16 @@
             
             /* Desktop: Narrow AI messages for better readability */
             .message.assistant {
-                max-width: calc(100% - 300px); /* 150px margin on each side */
+                max-width: 1200px; /* Match input bar width */
                 margin-left: auto;
                 margin-right: auto;
             }
             
-            /* Desktop: Bring user bubbles in from right edge */
+            /* Desktop: Bring user bubbles in from right edge, aligned with input bar */
             .message.user {
-                margin-right: 150px; /* Match AI message margins (150px each side) */
+                max-width: 1200px;
+                margin-left: auto;
+                margin-right: auto;
             }
         }
     </style>
@@ -1884,6 +1886,6 @@
         });
     </script>
     
-    <script src="/static/sidebar.js?v=20251101-input-fix"></script>
+    <script src="/static/sidebar.js?v=20251101-align-messages"></script>
 </body>
 </html>
