@@ -1252,28 +1252,33 @@ function addMessage(role, content, imageFile = null, followUpQuestion = null) {
         </svg>
     `;
     
-    // Store content in data attribute for reliable access
-    const contentToCopy = content || '';
-    copyButton.dataset.messageContent = contentToCopy;
-    copyButton.dataset.messageRole = role;
+    // IMPORTANT: Capture content in closure to avoid reference issues when loading multiple messages
+    const messageCopy = String(content || '');
+    const roleCopy = String(role);
     
-    // Add click handler
-    copyButton.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent any parent click handlers
-        e.preventDefault(); // Prevent default action
-        const textToCopy = e.currentTarget.dataset.messageContent;
-        const messageRole = e.currentTarget.dataset.messageRole;
-        console.log('📋 Copy button clicked!', { textLength: textToCopy.length, role: messageRole, preview: textToCopy.substring(0, 50) });
-        copyMessageToClipboard(textToCopy, messageRole === 'assistant', copyButton);
+    // Store in data attributes as backup
+    copyButton.dataset.messageContent = messageCopy;
+    copyButton.dataset.messageRole = roleCopy;
+    
+    // Add click handler with closure-captured values
+    copyButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        // Use closure variable, not dataset (more reliable)
+        console.log('📋 Copy button clicked!', { 
+            textLength: messageCopy.length, 
+            role: roleCopy, 
+            preview: messageCopy.substring(0, 50) 
+        });
+        copyMessageToClipboard(messageCopy, roleCopy === 'assistant', copyButton);
     });
     
     // Add keyboard support (Enter and Space)
-    copyButton.addEventListener('keydown', (e) => {
+    copyButton.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            const textToCopy = e.currentTarget.dataset.messageContent;
-            const messageRole = e.currentTarget.dataset.messageRole;
-            copyMessageToClipboard(textToCopy, messageRole === 'assistant', copyButton);
+            // Use closure variable
+            copyMessageToClipboard(messageCopy, roleCopy === 'assistant', copyButton);
         }
     });
     
