@@ -201,29 +201,95 @@ uploadButton.addEventListener('click', () => {
     imageUpload.click();
 });
 
-// Show image preview
-function showImagePreview(file, dataUrl) {
-    const fileName = file.name.length > 40 ? file.name.substring(0, 37) + '...' : file.name;
-    const fileSize = formatFileSize(file.size);
+// Show multi-image preview with thumbnails
+async function showMultiImagePreview() {
+    const count = selectedImages.length;
     
-    imagePreviewContainer.innerHTML = `
-        <div class="image-preview">
-            <img src="${dataUrl}" alt="Preview" class="image-preview-thumbnail">
-            <div class="image-preview-info">
-                <div class="image-preview-filename">${fileName}</div>
-                <div class="image-preview-filesize">${fileSize}</div>
+    if (count === 0) {
+        clearImagePreview();
+        return;
+    }
+    
+    // Build header with count and clear button
+    const plural = count > 1 ? 's' : '';
+    let html = `
+        <div class="multi-image-preview">
+            <div class="multi-image-header">
+                <span class="image-count">${count} image${plural} selected</span>
+                <button class="clear-all-btn" id="clearAllBtn">× Clear All</button>
             </div>
-            <button class="image-preview-remove" id="removeImageBtn" type="button">×</button>
+            <div class="image-thumbnail-list" id="thumbnailList">
+    `;
+    
+    // Generate thumbnails (we'll add them after rendering)
+    html += `
+            </div>
         </div>
     `;
     
+    imagePreviewContainer.innerHTML = html;
     imagePreviewContainer.style.display = 'block';
     
     // Update placeholder
     messageInput.placeholder = 'Add a message (optional)...';
     
-    // Add event listener for remove button
-    document.getElementById('removeImageBtn').addEventListener('click', clearImagePreview);
+    // Now load thumbnails asynchronously
+    const thumbnailList = document.getElementById('thumbnailList');
+    
+    for (let i = 0; i < selectedImages.length; i++) {
+        const file = selectedImages[i];
+        
+        // Read file as data URL
+        const reader = new FileReader();
+        const dataUrl = await new Promise((resolve) => {
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+        });
+        
+        // Create thumbnail element
+        const thumbItem = document.createElement('div');
+        thumbItem.className = 'image-thumbnail-item';
+        thumbItem.dataset.index = i;
+        thumbItem.innerHTML = `
+            <img src="${dataUrl}" class="image-thumbnail-thumb" alt="Image ${i + 1}">
+            <button class="remove-thumb-btn" data-index="${i}">×</button>
+        `;
+        
+        thumbnailList.appendChild(thumbItem);
+    }
+    
+    // Add event listeners
+    document.getElementById('clearAllBtn').addEventListener('click', clearImagePreview);
+    
+    // Add remove button listeners for each thumbnail
+    document.querySelectorAll('.remove-thumb-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            removeImageAtIndex(index);
+        });
+    });
+}
+
+// Remove image at specific index
+function removeImageAtIndex(index) {
+    console.log(`🗑️ Removing image at index ${index}`);
+    
+    // Remove from array
+    selectedImages.splice(index, 1);
+    
+    // Update file input (rebuild FileList)
+    const dataTransfer = new DataTransfer();
+    selectedImages.forEach(file => dataTransfer.items.add(file));
+    imageUpload.files = dataTransfer.files;
+    
+    // Refresh preview
+    if (selectedImages.length > 0) {
+        showMultiImagePreview();
+    } else {
+        clearImagePreview();
+    }
+    
+    console.log(`✅ ${selectedImages.length} image(s) remaining`);
 }
 
 // Clear image preview
@@ -292,9 +358,9 @@ imageUpload.addEventListener('change', async (e) => {
         
         console.log(`✅ Processed ${selectedImages.length} image(s) successfully`);
         
-        // Update UI - show all previews (Part 2 will implement this)
+        // Update UI - show all previews with thumbnails
         uploadButton.classList.add('file-selected');
-        showImagePreview(selectedImages[0], null); // TEMPORARY: Show first image only for now
+        await showMultiImagePreview();
         
     } catch (error) {
         console.error('❌ Image processing error:', error);
