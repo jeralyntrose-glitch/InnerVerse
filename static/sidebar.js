@@ -1034,7 +1034,7 @@ function stripMarkdown(text) {
     return plain;
 }
 
-// Copy message to clipboard with fallback
+// Copy message to clipboard with improved fallback
 async function copyMessageToClipboard(messageText, isAIMessage, button) {
     console.log('📋 copyMessageToClipboard called', { 
         isAIMessage, 
@@ -1048,51 +1048,71 @@ async function copyMessageToClipboard(messageText, isAIMessage, button) {
         return;
     }
     
+    // Strip markdown if AI message
+    const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
+    console.log('📋 Plain text prepared (length: ' + plainText.length + ')');
+    
+    // Try modern Clipboard API first
     try {
-        // Strip markdown if AI message
-        const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
-        console.log('📋 Plain text prepared (length: ' + plainText.length + '):', plainText.substring(0, 100));
-        
-        // Try modern Clipboard API
         if (navigator.clipboard && navigator.clipboard.writeText) {
-            console.log('📋 Using modern Clipboard API');
+            console.log('📋 Attempting Clipboard API...');
             await navigator.clipboard.writeText(plainText);
-            console.log('✅ Copy successful! Copied ' + plainText.length + ' characters');
+            console.log('✅ Clipboard API success!');
             showCopySuccess(button);
-        } else {
-            console.log('📋 Using fallback copy method');
-            // Fallback for older browsers
-            fallbackCopy(plainText, button);
+            return;
         }
     } catch (err) {
-        console.error('❌ Clipboard error:', err);
-        // Try fallback method
-        const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
-        fallbackCopy(plainText, button);
+        console.warn('⚠️ Clipboard API failed, trying fallback:', err.message);
     }
+    
+    // Fallback method for all cases where Clipboard API isn't available or fails
+    console.log('📋 Using fallback copy method');
+    fallbackCopy(plainText, button);
 }
 
-// Fallback copy method for older browsers
+// Improved fallback copy method
 function fallbackCopy(text, button) {
+    console.log('📋 Fallback copy starting...');
     const textarea = document.createElement('textarea');
     textarea.value = text;
+    
+    // Better positioning to ensure it works on all browsers
     textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.width = '2em';
+    textarea.style.height = '2em';
+    textarea.style.padding = '0';
+    textarea.style.border = 'none';
+    textarea.style.outline = 'none';
+    textarea.style.boxShadow = 'none';
+    textarea.style.background = 'transparent';
     textarea.style.opacity = '0';
-    textarea.style.left = '-9999px';
+    textarea.setAttribute('readonly', '');
+    
     document.body.appendChild(textarea);
     
     try {
+        // Focus and select the textarea
+        textarea.focus();
         textarea.select();
-        textarea.setSelectionRange(0, textarea.value.length);
+        
+        // For iOS
+        textarea.setSelectionRange(0, 999999);
+        
+        // Execute copy command
         const success = document.execCommand('copy');
+        console.log('📋 execCommand result:', success);
         
         if (success) {
+            console.log('✅ Fallback copy successful!');
             showCopySuccess(button);
         } else {
+            console.error('❌ execCommand returned false');
             showCopyError(button);
         }
     } catch (err) {
-        console.error('Fallback copy failed:', err);
+        console.error('❌ Fallback copy exception:', err);
         showCopyError(button);
     } finally {
         document.body.removeChild(textarea);
