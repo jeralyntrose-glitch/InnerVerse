@@ -1148,17 +1148,42 @@ function addMessage(role, content, imageFile = null, followUpQuestion = null) {
         content = content.replace(/\[FOLLOW-UP:\s*/g, '').replace(/\]/g, '');
     }
     
-    // === Phase 6: Add image if provided (for user messages) ===
+    // === Phase 6: Add image(s) if provided (for user messages) ===
     if (imageFile && role === 'user') {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const imgElement = document.createElement('img');
-            imgElement.src = e.target.result;
-            imgElement.className = 'message-image';
-            imgElement.style.cssText = 'max-width: 300px; width: 100%; height: auto; border-radius: 12px; margin-bottom: 8px; display: block;';
-            contentDiv.insertBefore(imgElement, contentDiv.firstChild);
-        };
-        reader.readAsDataURL(imageFile);
+        // Handle both single image (backward compat) and multiple images
+        const images = Array.isArray(imageFile) ? imageFile : [imageFile];
+        
+        // Create container for images if multiple
+        if (images.length > 1) {
+            const imageContainer = document.createElement('div');
+            imageContainer.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px;';
+            
+            images.forEach((img, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = e.target.result;
+                    imgElement.className = 'message-image';
+                    imgElement.style.cssText = 'width: 100%; height: auto; border-radius: 8px; object-fit: cover; max-height: 200px;';
+                    imgElement.alt = `Image ${index + 1}`;
+                    imageContainer.appendChild(imgElement);
+                };
+                reader.readAsDataURL(img);
+            });
+            
+            contentDiv.insertBefore(imageContainer, contentDiv.firstChild);
+        } else {
+            // Single image - keep existing behavior
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imgElement = document.createElement('img');
+                imgElement.src = e.target.result;
+                imgElement.className = 'message-image';
+                imgElement.style.cssText = 'max-width: 300px; width: 100%; height: auto; border-radius: 12px; margin-bottom: 8px; display: block;';
+                contentDiv.insertBefore(imgElement, contentDiv.firstChild);
+            };
+            reader.readAsDataURL(images[0]);
+        }
     }
     
     // Render markdown for AI messages, plain text for user messages
@@ -1297,45 +1322,52 @@ async function sendMessage() {
     // Prepare message payload
     let messagePayload = { message: message || '' };
     
-    // If there are images, convert to base64 and add to payload
+    // If there are images, convert ALL to base64 and add to payload
     if (hasImages) {
         console.log(`📤 Preparing to send ${selectedImages.length} image(s)`);
         
         try {
-            // For now, send only the first image (Part 3 will handle multiple)
-            // TODO: Part 3 will send all images in an array
-            const firstImage = selectedImages[0];
-            console.log('📤 Sending image:', firstImage.name, formatFileSize(firstImage.size));
+            const imageDataUrls = [];
+            let totalSize = 0;
             
-            const reader = new FileReader();
-            const imageDataPromise = new Promise((resolve, reject) => {
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(firstImage);
-            });
-            
-            const imageDataUrl = await imageDataPromise;
-            // Backend expects image data as a base64 string
-            messagePayload.image = imageDataUrl;
-            
-            // Log base64 size (will be larger due to encoding)
-            console.log('📡 Base64 encoded size:', imageDataUrl.length, 'chars');
-            console.log('💾 Estimated size being sent to API:', formatFileSize(imageDataUrl.length * 0.75)); // Base64 is ~33% larger
-            
-            if (selectedImages.length > 1) {
-                console.log(`⚠️ Note: ${selectedImages.length - 1} additional image(s) selected but not sent yet (Part 3 will enable this)`);
+            // Convert all images to base64
+            for (let i = 0; i < selectedImages.length; i++) {
+                const image = selectedImages[i];
+                console.log(`📤 Processing image ${i + 1}/${selectedImages.length}: ${image.name} (${formatFileSize(image.size)})`);
+                
+                const reader = new FileReader();
+                const imageDataUrl = await new Promise((resolve, reject) => {
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(image);
+                });
+                
+                imageDataUrls.push(imageDataUrl);
+                totalSize += imageDataUrl.length;
             }
+            
+            // Send as array if multiple images, single string if one image (for backward compatibility)
+            if (imageDataUrls.length === 1) {
+                messagePayload.image = imageDataUrls[0];
+            } else {
+                messagePayload.images = imageDataUrls;
+            }
+            
+            // Log transmission stats
+            console.log(`📡 Sending ${imageDataUrls.length} image(s) - Total base64 size: ${totalSize.toLocaleString()} chars`);
+            console.log(`💾 Estimated total size: ${formatFileSize(totalSize * 0.75)}`); // Base64 is ~33% larger
+            
         } catch (error) {
-            console.error('Error reading image:', error);
-            showError('Failed to process image. Please try again.');
+            console.error('Error reading images:', error);
+            showError('Failed to process images. Please try again.');
             isStreaming = false;
             sendButton.disabled = false;
             return;
         }
     }
 
-    // Display user message (with or without images)
-    addMessage('user', message, hasImages ? selectedImages[0] : null); // Show first image for now
+    // Display user message (with all images)
+    addMessage('user', message, hasImages ? selectedImages : null);
     
     // ChatGPT-style scroll: Show user message at top with room for AI response below
     setTimeout(() => scrollToShowUserMessage(), 50);
