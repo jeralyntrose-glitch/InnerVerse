@@ -1049,19 +1049,18 @@ async function copyMessageToClipboard(messageText, isAIMessage, button) {
         return;
     }
     
-    // Strip markdown if AI message
-    const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
-    console.log('📋 Plain text prepared', { 
-        originalLength: messageText.length, 
-        plainLength: plainText.length,
-        plainPreview: plainText.substring(0, 100)
+    // Keep formatting (headers, emojis, etc.) - don't strip markdown
+    const textToCopy = messageText;
+    console.log('📋 Text prepared for copy', { 
+        length: textToCopy.length,
+        preview: textToCopy.substring(0, 100)
     });
     
     // Try modern Clipboard API first
     try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             console.log('📋 Attempting Clipboard API...');
-            await navigator.clipboard.writeText(plainText);
+            await navigator.clipboard.writeText(textToCopy);
             console.log('✅ Clipboard API success!');
             showCopySuccess(button);
             return;
@@ -1072,7 +1071,7 @@ async function copyMessageToClipboard(messageText, isAIMessage, button) {
     
     // Fallback method for all cases where Clipboard API isn't available or fails
     console.log('📋 Using fallback copy method');
-    fallbackCopy(plainText, button);
+    fallbackCopy(textToCopy, button);
 }
 
 // Improved fallback copy method
