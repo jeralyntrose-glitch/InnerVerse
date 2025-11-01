@@ -1151,14 +1151,15 @@
         }
 
         .input-container {
-            padding: 4px 12px;
+            padding: 4px 16px;
             background: transparent;
             display: flex;
             align-items: center;
             gap: 6px;
             box-shadow: none;
-            max-width: 800px;
+            max-width: 1200px; /* Wider for desktop - full-width with breathing room */
             margin: 0 auto;
+            width: 100%; /* Ensure it stretches to max-width */
         }
         
         /* Upload button */
@@ -1595,18 +1596,19 @@
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding: 15px;
-                padding-bottom: 15px; /* No special bottom padding - scroll handles visibility */
+                padding-bottom: 120px; /* Extra padding for raised input bar (24px lift + input height) */
             }
 
             .input-container {
                 position: fixed;
-                bottom: env(safe-area-inset-bottom, 0); /* Position ABOVE iPhone safe area */
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); /* Raised 24px above safe area */
                 left: 0;
                 right: 0;
                 padding: 8px 12px; /* Consistent padding */
                 background: var(--color-page-bg);
                 z-index: 1100; /* Above sidebar (1000) and other overlays */
                 max-width: 100%;
+                margin-bottom: 0; /* Bottom margin via calc above */
                 transition: background 0.2s ease, padding 0.2s ease;
             }
             
@@ -1882,6 +1884,6 @@
         });
     </script>
     
-    <script src="/static/sidebar.js?v=20251101-multi-image-part3"></script>
+    <script src="/static/sidebar.js?v=20251101-input-fix"></script>
 </body>
 </html>
