@@ -1,0 +1,815 @@
+Feature: Upload Multiple Images in Single Message
+
+Add ability to select and send 2-5 images in one message for comparison and analysis.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**PURPOSE:**
+
+Allow users to upload multiple images at once for:
+- Compare text messages from different people
+- Analyze multiple screenshots side-by-side
+- Type multiple people in one conversation
+- Show progression/changes over time
+
+**KEY REQUIREMENTS:**
+
+- Select 2-5 images at once (not just 1)
+- Preview all selected images before sending
+- Send all images together in single message
+- Claude analyzes all images in context
+- Compress each image properly (under 5MB after base64)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 1: FILE INPUT MODIFICATION (Build This First)
+
+**CURRENT BEHAVIOR:**
+
+File input allows only 1 image:
+```html
+<input type="file" accept="image/*" />
+```
+
+**NEW BEHAVIOR:**
+
+File input allows multiple images:
+```html
+<input 
+  type="file" 
+  accept="image/*" 
+  multiple
+  id="image-upload"
+/>
+```
+
+**Key Change:**
+- Add `multiple` attribute to file input
+- Allows selecting multiple files from picker
+- Browser shows multi-select dialog
+
+**VALIDATION:**
+
+Check total number of files:
+```javascript
+const MAX_IMAGES = 5;
+
+fileInput.addEventListener('change', (e) => {
+  const files = Array.from(e.target.files);
+  
+  // Validate count
+  if (files.length > MAX_IMAGES) {
+    alert(`Maximum ${MAX_IMAGES} images allowed. You selected ${files.length}.`);
+    fileInput.value = ''; // Clear selection
+    return;
+  }
+  
+  if (files.length === 0) {
+    return; // No files selected
+  }
+  
+  // Validate each file
+  for (const file of files) {
+    // Check type
+    if (!file.type.startsWith('image/')) {
+      alert(`${file.name} is not an image file.`);
+      fileInput.value = '';
+      return;
+    }
+    
+    // Check size (before compression)
+    if (file.size > 10 * 1024 * 1024) { // 10MB raw
+      alert(`${file.name} is too large (over 10MB).`);
+      fileInput.value = '';
+      return;
+    }
+  }
+  
+  // All valid - show previews
+  showImagePreviews(files);
+});
+```
+
+**TEST CRITERIA - PART 1:**
+
+File Selection:
+✅ Can select multiple images (2-5) from picker
+✅ Can select 1 image (backwards compatible)
+✅ Cannot select more than 5 images (validation)
+✅ Cannot select non-image files (validation)
+✅ Large files rejected (over 10MB)
+
+Validation:
+✅ Error shows if too many files selected
+✅ Error shows if wrong file type
+✅ Error shows if file too large
+✅ File input clears on error
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STOP AND TEST PART 1 BEFORE PROCEEDING
+
+Confirm can select multiple images, validation works.
+Reply: "Part 1 working! Ready for Part 2."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 2: MULTI-IMAGE PREVIEW (Build After Part 1 Works)
+
+**PURPOSE:**
+
+Show thumbnails of all selected images before sending, allow removing individual images.
+
+**PREVIEW LAYOUT:**
+
+Horizontal scrollable row of thumbnails:
+```
+┌─────────────────────────────────────────────┐
+│ [img1] [img2] [img3] [img4]     [×] Clear  │
+│  [×]    [×]    [×]    [×]                   │
+└─────────────────────────────────────────────┘
+[Text input (optional)........................]
+```
+
+**HTML STRUCTURE:**
+```html
+<div id="image-preview-container" style="display: none;">
+  <div class="image-preview-header">
+    <span class="image-count">3 images selected</span>
+    <button class="clear-all-btn">× Clear All</button>
+  </div>
+  
+  <div class="image-preview-list">
+    <!-- Thumbnails inserted here dynamically -->
+  </div>
+</div>
+```
+
+**CSS STYLING:**
+```css
+#image-preview-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.image-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.image-count {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.clear-all-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.clear-all-btn:hover {
+  color: var(--error);
+}
+
+.image-preview-list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.image-preview-item {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.image-preview-thumb {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid var(--border-light);
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--error);
+  color: white;
+  border: 2px solid white;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.remove-image-btn:hover {
+  background: #DC2626;
+}
+```
+
+**JAVASCRIPT - SHOW PREVIEWS:**
+```javascript
+let selectedImages = []; // Store selected files
+
+function showImagePreviews(files) {
+  selectedImages = Array.from(files);
+  
+  const container = document.getElementById('image-preview-container');
+  const list = container.querySelector('.image-preview-list');
+  const countSpan = container.querySelector('.image-count');
+  
+  // Clear previous previews
+  list.innerHTML = '';
+  
+  // Update count
+  countSpan.textContent = `${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''} selected`;
+  
+  // Show container
+  container.style.display = 'block';
+  
+  // Create thumbnail for each image
+  selectedImages.forEach((file, index) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const item = document.createElement('div');
+      item.className = 'image-preview-item';
+      item.dataset.index = index;
+      
+      item.innerHTML = `
+        <img src="${e.target.result}" class="image-preview-thumb" alt="Preview ${index + 1}">
+        <button class="remove-image-btn" onclick="removeImage(${index})">×</button>
+      `;
+      
+      list.appendChild(item);
+    };
+    
+    reader.readAsDataURL(file);
+  });
+}
+
+function removeImage(index) {
+  // Remove from array
+  selectedImages.splice(index, 1);
+  
+  // Update file input
+  const dataTransfer = new DataTransfer();
+  selectedImages.forEach(file => dataTransfer.items.add(file));
+  document.getElementById('image-upload').files = dataTransfer.files;
+  
+  // Refresh preview
+  if (selectedImages.length > 0) {
+    showImagePreviews(selectedImages);
+  } else {
+    hideImagePreviews();
+  }
+}
+
+function hideImagePreviews() {
+  document.getElementById('image-preview-container').style.display = 'none';
+  selectedImages = [];
+}
+
+// Clear all button
+document.querySelector('.clear-all-btn').addEventListener('click', () => {
+  document.getElementById('image-upload').value = '';
+  hideImagePreviews();
+});
+```
+
+**PREVIEW FEATURES:**
+
+Each Thumbnail Shows:
+- 80x80px preview of image
+- × button in top-right corner to remove
+- Image number indicator (optional)
+
+Preview Container Shows:
+- Count: "3 images selected"
+- "Clear All" button to remove all
+- Horizontal scroll if many images
+
+User Can:
+- Remove individual images (click ×)
+- Clear all images (click "Clear All")
+- Add more images (click + again)
+- Scroll through thumbnails
+
+**MOBILE OPTIMIZATION:**
+```css
+@media (max-width: 768px) {
+  .image-preview-thumb {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .image-preview-list {
+    gap: 6px;
+  }
+}
+```
+
+**TEST CRITERIA - PART 2:**
+
+Preview Display:
+✅ Preview container appears after selecting images
+✅ All selected images show as thumbnails
+✅ Count shows correct number
+✅ Thumbnails are clear and recognizable
+
+Functionality:
+✅ Can remove individual images (click ×)
+✅ Preview updates after removal
+✅ Can clear all images at once
+✅ Preview hides when no images selected
+
+Layout:
+✅ Thumbnails scroll horizontally if many
+✅ Looks good on desktop
+✅ Looks good on mobile (smaller thumbs)
+✅ Remove buttons accessible on mobile
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STOP AND TEST PART 2 BEFORE PROCEEDING
+
+Confirm previews work, can remove images, looks good.
+Reply: "Part 2 working! Ready for Part 3."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 3: SEND MULTIPLE IMAGES (Build After Part 2 Works)
+
+**PURPOSE:**
+
+Compress and send all selected images to Claude API in single message.
+
+**IMAGE COMPRESSION:**
+
+Compress EACH image individually:
+```javascript
+async function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const img = new Image();
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Calculate dimensions (max 2000px either dimension)
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 2000;
+        
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = (height / width) * maxDimension;
+            width = maxDimension;
+          } else {
+            width = (width / height) * maxDimension;
+            height = maxDimension;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Target: 3MB max to stay under 5MB after base64
+        const quality = 0.85;
+        canvas.toBlob((blob) => {
+          resolve(blob);
+        }, file.type, quality);
+      };
+      
+      img.src = e.target.result;
+    };
+    
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressAllImages(files) {
+  const compressed = [];
+  
+  for (const file of files) {
+    const compressedBlob = await compressImage(file);
+    compressed.push(compressedBlob);
+  }
+  
+  return compressed;
+}
+```
+
+**SEND MESSAGE WITH MULTIPLE IMAGES:**
+```javascript
+async function sendMessageWithImages(text, imageFiles) {
+  try {
+    // Show loading
+    showTypingIndicator();
+    
+    // Compress all images
+    const compressedImages = await compressAllImages(imageFiles);
+    
+    // Convert to base64
+    const imageDataArray = await Promise.all(
+      compressedImages.map(blob => blobToBase64(blob))
+    );
+    
+    // Verify sizes
+    for (let i = 0; i < imageDataArray.length; i++) {
+      const sizeInBytes = imageDataArray[i].length * 0.75; // Approximate
+      const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(1);
+      
+      console.log(`Image ${i + 1} size: ${sizeInMB} MB`);
+      
+      if (sizeInBytes > 5 * 1024 * 1024) {
+        throw new Error(`Image ${i + 1} is too large after compression (${sizeInMB} MB)`);
+      }
+    }
+    
+    // Send to backend
+    const response = await fetch('/api/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversationId: currentConversationId,
+        message: text || 'Please analyze these images.',
+        images: imageDataArray.map((data, i) => ({
+          data: data,
+          mimeType: compressedImages[i].type,
+          index: i
+        }))
+      })
+    });
+    
+    // Handle response...
+    hideTypingIndicator();
+    
+    // Clear previews
+    hideImagePreviews();
+    
+  } catch (error) {
+    console.error('Error sending images:', error);
+    alert('Failed to send images: ' + error.message);
+    hideTypingIndicator();
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+```
+
+**BACKEND API UPDATE:**
+
+Update `/api/message` endpoint to handle array of images:
+```python
+@app.route('/api/message', methods=['POST'])
+def send_message():
+    data = request.json
+    message_text = data.get('message')
+    images = data.get('images', [])  # Array of image objects
+    
+    # Build Claude API content array
+    content = []
+    
+    # Add images first
+    for img in images:
+        content.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": img['mimeType'],
+                "data": img['data']
+            }
+        })
+    
+    # Add text
+    if message_text:
+        content.append({
+            "type": "text",
+            "text": message_text
+        })
+    
+    # Call Claude API
+    response = client.messages.create(
+        model="claude-sonnet-4-5-20250929",
+        max_tokens=4000,
+        messages=[{
+            "role": "user",
+            "content": content
+        }],
+        system=system_prompt
+    )
+    
+    # Return response...
+```
+
+**USER MESSAGE DISPLAY:**
+
+Show multiple images in user message bubble:
+```html
+<div class="user-message">
+  <div class="user-images-grid">
+    <img src="..." class="user-message-image">
+    <img src="..." class="user-message-image">
+    <img src="..." class="user-message-image">
+  </div>
+  <div class="user-message-text">
+    Can you type these people and compare?
+  </div>
+</div>
+```
+```css
+.user-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.user-message-image {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* 2 images: side by side */
+.user-images-grid:has(> :nth-child(2):last-child) {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* 3+ images: flexible grid */
+.user-images-grid:has(> :nth-child(3)) {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+```
+
+**TEST CRITERIA - PART 3:**
+
+Compression:
+✅ Each image compressed individually
+✅ All images under 5MB after base64
+✅ Quality remains good
+✅ Console logs show sizes
+
+Sending:
+✅ Can send 2 images together
+✅ Can send 3 images together
+✅ Can send 5 images together
+✅ Can send images with text
+✅ Can send images without text
+
+Display:
+✅ User message shows all images in grid
+✅ Images display correctly
+✅ Grid layout adapts (2, 3, 4, 5 images)
+✅ Click image to view full size (optional)
+
+Backend:
+✅ Backend receives all images
+✅ Claude API gets all images
+✅ AI analyzes all images together
+✅ Response references multiple images
+
+Error Handling:
+✅ Error if compression fails
+✅ Error if image too large
+✅ Error if API fails
+✅ User-friendly error messages
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STOP AND TEST PART 3 BEFORE PROCEEDING
+
+Send multiple images, verify AI analyzes all of them.
+Reply: "Part 3 working! Ready for Part 4."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 4: POLISH & EDGE CASES (Build After Part 3 Works)
+
+**PURPOSE:**
+
+Handle edge cases and add final polish.
+
+**ADDITIONAL FEATURES:**
+
+**1. Image Reordering (Optional):**
+
+Allow drag-and-drop to reorder images:
+```javascript
+// Make thumbnails draggable
+thumb.draggable = true;
+thumb.addEventListener('dragstart', handleDragStart);
+thumb.addEventListener('dragover', handleDragOver);
+thumb.addEventListener('drop', handleDrop);
+```
+
+**2. Add More Images:**
+
+After selecting some, can click + to add more (up to limit):
+```javascript
+fileInput.addEventListener('change', (e) => {
+  const newFiles = Array.from(e.target.files);
+  
+  // Add to existing
+  const totalFiles = [...selectedImages, ...newFiles];
+  
+  if (totalFiles.length > MAX_IMAGES) {
+    alert(`Maximum ${MAX_IMAGES} images total.`);
+    return;
+  }
+  
+  selectedImages = totalFiles;
+  showImagePreviews(selectedImages);
+});
+```
+
+**3. Image Counter Badge:**
+
+Show number on + button when images selected:
+```html
+<button class="upload-button">
+  <span class="upload-icon">+</span>
+  <span class="upload-count">3</span>
+</button>
+```
+```css
+.upload-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--accent-primary);
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+```
+
+**4. Loading States:**
+
+Show progress while compressing multiple images:
+```javascript
+async function compressAllImages(files) {
+  const total = files.length;
+  let completed = 0;
+  
+  showProgress(`Compressing images: 0/${total}`);
+  
+  const compressed = [];
+  
+  for (const file of files) {
+    const blob = await compressImage(file);
+    compressed.push(blob);
+    
+    completed++;
+    updateProgress(`Compressing images: ${completed}/${total}`);
+  }
+  
+  hideProgress();
+  return compressed;
+}
+```
+
+**5. Click Image to View Full:**
+
+Modal to view full-size image:
+```javascript
+thumb.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('remove-image-btn')) {
+    showImageModal(thumb.src);
+  }
+});
+
+function showImageModal(src) {
+  // Show full-size image in modal overlay
+  // Click outside or ESC to close
+}
+```
+
+**EDGE CASES TO HANDLE:**
+
+**Mixed Image Types:**
+- JPEG + PNG + GIF together
+- Handle each type's optimal compression
+
+**Very Different Sizes:**
+- One tiny image + one huge image
+- Normalize sizes in display grid
+
+**Rapid Clicking:**
+- User clicks + multiple times fast
+- Debounce or disable during processing
+
+**Memory Management:**
+- Release blob URLs after use
+- Clear canvas after compression
+- Prevent memory leaks
+
+**Mobile Camera:**
+- Can select from camera + gallery
+- Can take multiple photos in sequence
+
+**FINAL TEST CHECKLIST:**
+
+User Experience:
+✅ Intuitive to select multiple images
+✅ Easy to remove unwanted images
+✅ Clear visual feedback (count, previews)
+✅ Smooth, no lag with 5 images
+
+Functionality:
+✅ Works with 1 image (backwards compatible)
+✅ Works with 2-5 images
+✅ Compression works for all images
+✅ All images send successfully
+✅ AI analyzes all images correctly
+
+Display:
+✅ User message shows all images nicely
+✅ Grid layout looks good (2, 3, 4, 5 images)
+✅ Responsive on mobile
+✅ Images clickable to enlarge (optional)
+
+Polish:
+✅ Loading states during compression
+✅ Progress indicator for multiple images
+✅ Counter badge on + button
+✅ Smooth animations
+
+Error Handling:
+✅ Graceful failure if one image fails
+✅ Clear error messages
+✅ Can retry after error
+✅ No crashes or broken states
+
+Performance:
+✅ No lag with 5 images
+✅ Compression reasonably fast
+✅ Memory cleaned up properly
+✅ No memory leaks
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MULTI-IMAGE UPLOAD COMPLETE!
+
+Once all 4 parts built and tested:
+✅ Can select 2-5 images at once
+✅ Preview all before sending
+✅ Compress each properly
+✅ Send all together
+✅ AI analyzes all images in context
+
+Power feature for comparing and analyzing multiple sources! 📸📸📸
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IMPLEMENTATION ORDER:
+
+1. Part 1: Add `multiple` attribute, validation
+2. Part 2: Preview thumbnails, remove/clear
+3. Part 3: Compress all, send to API, display
+4. Part 4: Polish, edge cases, loading states
+
+Build sequentially. Test between parts. Ship it! 🚀
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
