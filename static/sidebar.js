@@ -1039,7 +1039,8 @@ async function copyMessageToClipboard(messageText, isAIMessage, button) {
     console.log('📋 copyMessageToClipboard called', { 
         isAIMessage, 
         textLength: messageText?.length || 0,
-        hasText: !!messageText 
+        hasText: !!messageText,
+        preview: messageText?.substring(0, 100)
     });
     
     if (!messageText) {
@@ -1050,7 +1051,11 @@ async function copyMessageToClipboard(messageText, isAIMessage, button) {
     
     // Strip markdown if AI message
     const plainText = isAIMessage ? stripMarkdown(messageText) : messageText;
-    console.log('📋 Plain text prepared (length: ' + plainText.length + ')');
+    console.log('📋 Plain text prepared', { 
+        originalLength: messageText.length, 
+        plainLength: plainText.length,
+        plainPreview: plainText.substring(0, 100)
+    });
     
     // Try modern Clipboard API first
     try {
@@ -1062,7 +1067,7 @@ async function copyMessageToClipboard(messageText, isAIMessage, button) {
             return;
         }
     } catch (err) {
-        console.warn('⚠️ Clipboard API failed, trying fallback:', err.message);
+        console.error('❌ Clipboard API error:', err.message, err);
     }
     
     // Fallback method for all cases where Clipboard API isn't available or fails
@@ -1256,15 +1261,10 @@ function addMessage(role, content, imageFile = null, followUpQuestion = null) {
     const messageCopy = String(content || '');
     const roleCopy = String(role);
     
-    // Store in data attributes as backup
-    copyButton.dataset.messageContent = messageCopy;
-    copyButton.dataset.messageRole = roleCopy;
-    
-    // Add click handler with closure-captured values
-    copyButton.addEventListener('click', function(e) {
+    // Add click handler with closure-captured values (arrow function to preserve context)
+    copyButton.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
-        // Use closure variable, not dataset (more reliable)
         console.log('📋 Copy button clicked!', { 
             textLength: messageCopy.length, 
             role: roleCopy, 
@@ -1274,10 +1274,9 @@ function addMessage(role, content, imageFile = null, followUpQuestion = null) {
     });
     
     // Add keyboard support (Enter and Space)
-    copyButton.addEventListener('keydown', function(e) {
+    copyButton.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            // Use closure variable
             copyMessageToClipboard(messageCopy, roleCopy === 'assistant', copyButton);
         }
     });
