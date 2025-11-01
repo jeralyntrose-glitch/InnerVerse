@@ -1283,6 +1283,29 @@ function addMessage(role, content, imageFile = null, followUpQuestion = null) {
     });
     
     messageDiv.appendChild(copyButton);
+    
+    // === Phase 9: Add AI-suggested follow-up question for conversation continuation ===
+    if (followUpQuestion && role === 'assistant') {
+        const followUpContainer = document.createElement('div');
+        followUpContainer.className = 'follow-up-question-container';
+        followUpContainer.style.cssText = 'margin-top: 12px; padding: 10px 14px; background: rgba(16, 163, 127, 0.08); border-radius: 8px; border-left: 3px solid #10A37F;';
+        
+        const questionButton = document.createElement('button');
+        questionButton.className = 'suggested-question';
+        questionButton.textContent = followUpQuestion;
+        questionButton.style.cssText = 'background: none; border: none; color: #10A37F; font-size: 14px; cursor: pointer; text-align: left; width: 100%; padding: 0; font-family: inherit;';
+        
+        questionButton.addEventListener('click', () => {
+            messageInput.value = followUpQuestion;
+            messageInput.focus();
+            messageInput.style.height = 'auto';
+            messageInput.style.height = messageInput.scrollHeight + 'px';
+        });
+        
+        followUpContainer.appendChild(questionButton);
+        messageDiv.appendChild(followUpContainer);
+    }
+    
     messagesDiv.appendChild(messageDiv);
 
     // Only auto-scroll if user is already at bottom
