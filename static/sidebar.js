@@ -1168,9 +1168,9 @@ function addMessage(role, content, imageFile = null, followUpQuestion = null) {
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
     
-    // === Phase 9: Strip [FOLLOW-UP: ...] brackets from AI message content ===
+    // === Phase 9: REMOVE entire [FOLLOW-UP: ...] from AI message content (shown separately as green button) ===
     if (role === 'assistant' && content) {
-        content = content.replace(/\[FOLLOW-UP:\s*/g, '').replace(/\]/g, '');
+        content = content.replace(/\[FOLLOW-UP:.*?\]/g, '').trim();
     }
     
     // === Phase 6: Add image(s) if provided (for user messages) ===
