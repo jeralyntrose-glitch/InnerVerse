@@ -1,0 +1,363 @@
+Feature: Scroll to Bottom Button
+
+Add floating button that appears when user scrolls up, allowing quick jump back to latest messages.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**PURPOSE:**
+
+When user scrolls up to read old messages, provide easy way to jump back to the bottom/latest messages with one click.
+
+**KEY BEHAVIOR:**
+
+- Button hidden by default (when at bottom)
+- Appears when user scrolls up 200+ pixels
+- Click button → smooth scroll to bottom
+- Fades in/out smoothly
+- Floats over chat content
+- Always accessible, never blocked
+
+**SIMILAR TO:**
+- YouTube comments "scroll to top" button
+- Slack "jump to latest" button
+- Discord "new messages" indicator
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IMPLEMENTATION:
+
+**HTML:**
+
+Add button in chat container:
+```html
+<div class="chat-container">
+  <div class="messages-area">
+    <!-- Messages here -->
+  </div>
+  
+  <!-- Scroll to bottom button -->
+  <button id="scroll-to-bottom" class="scroll-to-bottom-btn" style="display: none;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 5v14M19 12l-7 7-7-7"/>
+    </svg>
+  </button>
+  
+  <div class="input-area">
+    <!-- Input here -->
+  </div>
+</div>
+```
+
+**CSS:**
+```css
+.scroll-to-bottom-btn {
+  position: fixed;
+  bottom: 100px; /* Above input area */
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%; /* Circle */
+  background: var(--accent-primary); /* Teal */
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 200ms ease;
+  pointer-events: none;
+}
+
+/* Visible state */
+.scroll-to-bottom-btn.visible {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+/* Hover state */
+.scroll-to-bottom-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Active state */
+.scroll-to-bottom-btn:active {
+  transform: scale(0.95);
+}
+
+/* Dark mode */
+[data-theme="dark"] .scroll-to-bottom-btn {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile positioning */
+@media (max-width: 768px) {
+  .scroll-to-bottom-btn {
+    bottom: 80px; /* Adjust for mobile input */
+    right: 16px;
+    width: 44px;
+    height: 44px;
+  }
+}
+```
+
+**JAVASCRIPT:**
+```javascript
+// Get elements
+const scrollBtn = document.getElementById('scroll-to-bottom');
+const messagesArea = document.querySelector('.messages-area');
+
+// Check if user is at bottom
+function isAtBottom() {
+  const threshold = 100; // pixels from bottom
+  const scrollTop = messagesArea.scrollTop;
+  const scrollHeight = messagesArea.scrollHeight;
+  const clientHeight = messagesArea.clientHeight;
+  
+  return (scrollHeight - scrollTop - clientHeight) < threshold;
+}
+
+// Show/hide button based on scroll position
+function updateScrollButton() {
+  if (isAtBottom()) {
+    scrollBtn.classList.remove('visible');
+  } else {
+    scrollBtn.classList.add('visible');
+  }
+}
+
+// Scroll to bottom smoothly
+function scrollToBottom() {
+  messagesArea.scrollTo({
+    top: messagesArea.scrollHeight,
+    behavior: 'smooth'
+  });
+}
+
+// Listen for scroll events
+messagesArea.addEventListener('scroll', updateScrollButton);
+
+// Button click handler
+scrollBtn.addEventListener('click', scrollToBottom);
+
+// Initial check
+updateScrollButton();
+
+// Also check after new messages arrive
+// Call updateScrollButton() after AI response completes
+```
+
+**ADVANCED: Show Unread Count (Optional)**
+
+If you want to show number of new messages:
+```html
+<button id="scroll-to-bottom" class="scroll-to-bottom-btn">
+  <svg>...</svg>
+  <span class="unread-badge">3</span>
+</button>
+```
+```css
+.unread-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #EF4444; /* Red */
+  color: white;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  min-width: 18px;
+  text-align: center;
+}
+```
+```javascript
+let unreadCount = 0;
+
+function incrementUnread() {
+  if (!isAtBottom()) {
+    unreadCount++;
+    updateUnreadBadge();
+  }
+}
+
+function updateUnreadBadge() {
+  const badge = document.querySelector('.unread-badge');
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Reset when scrolling to bottom
+scrollBtn.addEventListener('click', () => {
+  scrollToBottom();
+  unreadCount = 0;
+  updateUnreadBadge();
+});
+```
+
+**BEHAVIOR DETAILS:**
+
+When to Show:
+- User scrolls up 200+ pixels from bottom
+- New message arrives while scrolled up
+- User manually scrolls to read old messages
+
+When to Hide:
+- User at bottom of chat (within 100px)
+- User clicks button (after scrolling complete)
+- New conversation starts
+
+Visual:
+- Circular button (48x48px)
+- Teal background (matches brand)
+- White downward arrow icon
+- Subtle shadow for depth
+- Smooth fade in/out
+
+Position:
+- Fixed position (follows viewport)
+- Bottom-right corner
+- Above input area (100px from bottom)
+- Always visible when active
+- Doesn't block content
+
+Animation:
+- Fade in: opacity 0 → 1
+- Scale in: 0.8 → 1
+- Duration: 200ms
+- Easing: ease
+- Hover: slight scale up (1.05)
+
+**EDGE CASES:**
+
+New Message While Scrolled Up:
+- Button stays visible
+- Optional: Show unread count
+- User can click to see new messages
+
+Multiple Rapid Scrolls:
+- Debounce scroll event (check every 100ms)
+- Prevent jank from too many checks
+
+Mobile Keyboard:
+- Button stays above keyboard
+- Remains tappable at all times
+
+Chat Empty:
+- Hide button if no messages
+- Or disable until messages exist
+
+**ACCESSIBILITY:**
+```html
+<button 
+  id="scroll-to-bottom" 
+  class="scroll-to-bottom-btn"
+  aria-label="Scroll to bottom"
+  title="Jump to latest messages"
+>
+  <svg aria-hidden="true">...</svg>
+</button>
+```
+
+Keyboard Support:
+- Tab to focus button
+- Enter/Space to activate
+- ESC to dismiss (optional)
+
+Screen Reader:
+- Announces "Scroll to bottom button"
+- Announces when new messages arrive (optional)
+
+**PERFORMANCE:**
+
+Scroll Event Optimization:
+```javascript
+// Throttle scroll checks
+let scrollTimeout;
+messagesArea.addEventListener('scroll', () => {
+  if (scrollTimeout) return;
+  
+  scrollTimeout = setTimeout(() => {
+    updateScrollButton();
+    scrollTimeout = null;
+  }, 100);
+});
+```
+
+**MOBILE CONSIDERATIONS:**
+
+Touch-Friendly:
+- 44x44px minimum (iOS guideline)
+- Large tap target
+- No hover states needed
+
+Positioning:
+- Above keyboard when open
+- Visible in safe area
+- Not too close to screen edge
+
+**TEST CRITERIA:**
+
+Visibility:
+✅ Hidden when at bottom
+✅ Appears when scrolled up 200px
+✅ Smooth fade in/out animation
+✅ Visible on desktop
+✅ Visible on mobile
+
+Functionality:
+✅ Click scrolls to bottom smoothly
+✅ Hides after reaching bottom
+✅ Works with new messages arriving
+✅ Doesn't interfere with input
+
+Positioning:
+✅ Above input area
+✅ Bottom-right corner
+✅ Doesn't block content
+✅ Accessible on mobile
+✅ Above keyboard (mobile)
+
+Visual:
+✅ Clean, professional appearance
+✅ Matches brand colors (teal)
+✅ Clear icon (downward arrow)
+✅ Appropriate shadow/depth
+✅ Hover effect works (desktop)
+
+Performance:
+✅ No lag when scrolling
+✅ Smooth animations
+✅ Throttled scroll checks
+✅ No jank or stuttering
+
+Accessibility:
+✅ Keyboard accessible
+✅ Screen reader friendly
+✅ ARIA labels present
+✅ Tooltip shows on hover
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMPLETE!
+
+Once implemented:
+✅ Floating scroll-to-bottom button
+✅ Appears when scrolled up
+✅ Smooth scroll to latest messages
+✅ Professional UX pattern
+✅ Mobile-friendly
+
+Makes navigating long conversations much easier! ⬇️✨
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

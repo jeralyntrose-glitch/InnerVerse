@@ -1602,6 +1602,50 @@ if (themeToggle) {
     console.error('❌ Theme toggle button not found!');
 }
 
+// === SCROLL TO BOTTOM BUTTON ===
+const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+
+// Check if user is at bottom of messages
+function isAtBottom() {
+    const threshold = 100; // pixels from bottom
+    const scrollTop = messagesDiv.scrollTop;
+    const scrollHeight = messagesDiv.scrollHeight;
+    const clientHeight = messagesDiv.clientHeight;
+    
+    return (scrollHeight - scrollTop - clientHeight) < threshold;
+}
+
+// Update scroll button visibility
+let scrollCheckTimeout;
+function updateScrollButton() {
+    if (isAtBottom()) {
+        scrollToBottomBtn.classList.remove('visible');
+    } else {
+        scrollToBottomBtn.classList.add('visible');
+    }
+}
+
+// Throttled scroll event listener
+messagesDiv.addEventListener('scroll', () => {
+    if (scrollCheckTimeout) return;
+    
+    scrollCheckTimeout = setTimeout(() => {
+        updateScrollButton();
+        scrollCheckTimeout = null;
+    }, 100);
+});
+
+// Scroll to bottom when button clicked
+scrollToBottomBtn.addEventListener('click', () => {
+    messagesDiv.scrollTo({
+        top: messagesDiv.scrollHeight,
+        behavior: 'smooth'
+    });
+});
+
+// Initial check
+updateScrollButton();
+
 // === Initialize ===
 // Check if sidebar should be closed on mobile by default
 if (window.innerWidth <= 768) {

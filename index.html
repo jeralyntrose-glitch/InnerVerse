@@ -1493,6 +1493,49 @@
             border-radius: 8px;
             margin: 10px 20px;
         }
+        
+        /* Scroll to Bottom Button */
+        .scroll-to-bottom-btn {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--color-accent);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 200ms ease;
+            pointer-events: none;
+        }
+        
+        .scroll-to-bottom-btn.visible {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+        
+        .scroll-to-bottom-btn:hover {
+            background: var(--color-accent-hover);
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .scroll-to-bottom-btn:active {
+            transform: scale(0.95);
+        }
+        
+        [data-theme="dark"] .scroll-to-bottom-btn {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
 
         /* Mobile Styles */
         @media (max-width: 768px) {
@@ -1645,6 +1688,14 @@
                 bottom: 55px; /* Closer to input on mobile */
                 left: 15px;
             }
+            
+            /* Mobile: Scroll to bottom button positioning */
+            .scroll-to-bottom-btn {
+                bottom: 80px; /* Adjust for mobile input */
+                right: 16px;
+                width: 44px;
+                height: 44px;
+            }
         }
 
         @media (min-width: 769px) {
@@ -1746,6 +1797,13 @@
 
                 <!-- Image Preview Container (hidden by default) -->
                 <div id="imagePreviewContainer" style="display: none; padding: 0 16px;"></div>
+                
+                <!-- Scroll to Bottom Button -->
+                <button id="scrollToBottomBtn" class="scroll-to-bottom-btn" aria-label="Scroll to bottom" title="Jump to latest messages" style="display: none;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14M19 12l-7 7-7-7"/>
+                    </svg>
+                </button>
                 
                 <div class="input-container">
                     <!-- Hidden file input for image upload - supports multiple images -->
@@ -1890,6 +1948,6 @@
         });
     </script>
     
-    <script src="/static/sidebar.js?v=20251101-sidebar-scroll-fix"></script>
+    <script src="/static/sidebar.js?v=20251102-scroll-to-bottom-btn"></script>
 </body>
 </html>
