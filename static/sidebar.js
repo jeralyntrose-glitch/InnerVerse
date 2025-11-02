@@ -374,6 +374,13 @@ imageUpload.addEventListener('change', async (e) => {
 burgerMenu.addEventListener('click', () => {
     sidebar.classList.toggle('closed');
     burgerMenu.classList.toggle('sidebar-open');
+    
+    // Lock body scroll when sidebar is open on mobile
+    if (!sidebar.classList.contains('closed')) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
 });
 
 // Close sidebar when clicking outside on mobile
@@ -382,6 +389,7 @@ document.addEventListener('click', (e) => {
         if (!sidebar.contains(e.target) && !burgerMenu.contains(e.target) && !sidebar.classList.contains('closed')) {
             sidebar.classList.add('closed');
             burgerMenu.classList.remove('sidebar-open');
+            document.body.style.overflow = ''; // Restore body scroll
         }
     }
 });
@@ -393,6 +401,7 @@ newChatBtn.addEventListener('click', async () => {
     if (window.innerWidth <= 768) {
         sidebar.classList.add('closed');
         burgerMenu.classList.remove('sidebar-open');
+        document.body.style.overflow = ''; // Restore body scroll
     }
 });
 
@@ -636,6 +645,7 @@ async function selectConversation(id) {
     if (window.innerWidth <= 768) {
         sidebar.classList.add('closed');
         burgerMenu.classList.remove('sidebar-open');
+        document.body.style.overflow = ''; // Restore body scroll
     }
 }
 
