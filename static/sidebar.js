@@ -1366,9 +1366,15 @@ async function sendMessage() {
     
     // Allow sending if there's a message OR images
     if ((!message && !hasImages) || isStreaming || !conversationId) {
-        console.log('❌ Blocked from sending - conditions not met');
+        console.log('❌ BLOCKED FROM SENDING!');
+        console.log('  - Message empty?', !message);
+        console.log('  - No images?', !hasImages);
+        console.log('  - Already streaming?', isStreaming);
+        console.log('  - No conversation ID?', !conversationId);
         return;
     }
+    
+    console.log('✅ CHECKS PASSED - SENDING MESSAGE TO SERVER!');
 
     messageInput.value = '';
     messageInput.style.height = 'auto'; // Reset textarea height
@@ -1443,11 +1449,16 @@ async function sendMessage() {
     let fullResponse = '';
 
     try {
+        console.log('📡 FETCHING:', `/claude/conversations/${conversationId}/message/stream`);
+        console.log('📦 PAYLOAD:', messagePayload);
+        
         const response = await fetch(`/claude/conversations/${conversationId}/message/stream`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(messagePayload)
         });
+        
+        console.log('📬 RESPONSE STATUS:', response.status, response.ok);
 
         if (!response.ok) throw new Error('Failed to send message');
 
