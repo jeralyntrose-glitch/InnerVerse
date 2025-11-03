@@ -788,112 +788,119 @@ Examples:
     
     max_iterations = 3
     
-    for iteration in range(max_iterations):
-        # Send search status to frontend
-        if iteration > 0:
-            yield "data: " + '{"status": "searching"}\n\n'
-        
-        with client.messages.stream(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4096,
-            system=system_message,
-            tools=tools,
-            messages=messages,
-            timeout=60.0  # 60-second timeout to prevent hanging
-        ) as stream:
-            for event in stream:
-                if event.type == "content_block_start":
-                    continue
-                    
-                elif event.type == "content_block_delta":
-                    if hasattr(event.delta, "text"):
-                        # Stream text chunks to frontend immediately (no batching for max speed)
-                        import json
-                        text_chunk = event.delta.text
-                        full_response_text.append(text_chunk)  # Accumulate for follow-up extraction
-                        yield "data: " + json.dumps({"chunk": text_chunk}) + "\n\n"
-                        
-                elif event.type == "message_stop":
-                    # Check if we hit a tool use
-                    final_message = stream.get_final_message()
-                    
-                    if final_message.stop_reason == "tool_use":
-                        # Handle tool use (Pinecone search or web search)
-                        for block in final_message.content:
-                            if block.type == "tool_use":
-                                if block.name == "query_innerverse_backend":
-                                    question = block.input.get("question", "")
-                                    
-                                    # Query Pinecone locally (FAST!)
-                                    yield "data: " + '{"status": "searching_pinecone"}\n\n'
-                                    backend_result = query_innerverse_local(question)
-                                    
-                                    # Add tool result to messages and continue streaming
-                                    messages.append({
-                                        "role": "assistant",
-                                        "content": final_message.content
-                                    })
-                                    
-                                    messages.append({
-                                        "role": "user",
-                                        "content": [
-                                            {
-                                                "type": "tool_result",
-                                                "tool_use_id": block.id,
-                                                "content": backend_result if backend_result else "No relevant content found in knowledge base."
-                                            }
-                                        ]
-                                    })
-                                    break
-                                    
-                                elif block.name == "search_web":
-                                    query = block.input.get("query", "")
-                                    
-                                    # Search web with Brave API
-                                    yield "data: " + '{"status": "searching_web"}\n\n'
-                                    web_result = search_web_brave(query)
-                                    
-                                    # Add tool result to messages and continue streaming
-                                    messages.append({
-                                        "role": "assistant",
-                                        "content": final_message.content
-                                    })
-                                    
-                                    messages.append({
-                                        "role": "user",
-                                        "content": [
-                                            {
-                                                "type": "tool_result",
-                                                "tool_use_id": block.id,
-                                                "content": web_result
-                                            }
-                                        ]
-                                    })
-                                    break
-                        # Continue to next iteration to get final response with context
+    try:
+        for iteration in range(max_iterations):
+            # Send search status to frontend
+            if iteration > 0:
+                yield "data: " + '{"status": "searching"}\n\n'
+            
+            with client.messages.stream(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4096,
+                system=system_message,
+                tools=tools,
+                messages=messages,
+                timeout=60.0  # 60-second timeout to prevent hanging
+            ) as stream:
+                for event in stream:
+                    if event.type == "content_block_start":
                         continue
-                    else:
-                        # Done! Log usage and extract follow-up question
-                        import json
                         
-                        # Log Claude API usage
-                        if hasattr(final_message, 'usage'):
-                            input_tokens = getattr(final_message.usage, 'input_tokens', 0)
-                            output_tokens = getattr(final_message.usage, 'output_tokens', 0)
-                            cost = (input_tokens / 1000 * 0.003) + (output_tokens / 1000 * 0.015)
+                    elif event.type == "content_block_delta":
+                        if hasattr(event.delta, "text"):
+                            # Stream text chunks to frontend immediately (no batching for max speed)
+                            import json
+                            text_chunk = event.delta.text
+                            full_response_text.append(text_chunk)  # Accumulate for follow-up extraction
+                            yield "data: " + json.dumps({"chunk": text_chunk}) + "\n\n"
                             
-                            try:
-                                from main import log_api_usage
-                                log_api_usage("claude_chat_stream", "claude-sonnet-4", input_tokens, output_tokens, cost)
-                                print(f"💰 Logged streaming Claude usage: ${cost:.6f}")
-                            except Exception as e:
-                                print(f"⚠️ Could not log streaming Claude usage: {e}")
+                    elif event.type == "message_stop":
+                        # Check if we hit a tool use
+                        final_message = stream.get_final_message()
                         
-                        follow_up = extract_follow_up_question("".join(full_response_text))
-                        yield "data: " + json.dumps({"done": True, "follow_up": follow_up}) + "\n\n"
-                        return
+                        if final_message.stop_reason == "tool_use":
+                            # Handle tool use (Pinecone search or web search)
+                            for block in final_message.content:
+                                if block.type == "tool_use":
+                                    if block.name == "query_innerverse_backend":
+                                        question = block.input.get("question", "")
+                                        
+                                        # Query Pinecone locally (FAST!)
+                                        yield "data: " + '{"status": "searching_pinecone"}\n\n'
+                                        backend_result = query_innerverse_local(question)
+                                        
+                                        # Add tool result to messages and continue streaming
+                                        messages.append({
+                                            "role": "assistant",
+                                            "content": final_message.content
+                                        })
+                                        
+                                        messages.append({
+                                            "role": "user",
+                                            "content": [
+                                                {
+                                                    "type": "tool_result",
+                                                    "tool_use_id": block.id,
+                                                    "content": backend_result if backend_result else "No relevant content found in knowledge base."
+                                                }
+                                            ]
+                                        })
+                                        break
+                                        
+                                    elif block.name == "search_web":
+                                        query = block.input.get("query", "")
+                                        
+                                        # Search web with Brave API
+                                        yield "data: " + '{"status": "searching_web"}\n\n'
+                                        web_result = search_web_brave(query)
+                                        
+                                        # Add tool result to messages and continue streaming
+                                        messages.append({
+                                            "role": "assistant",
+                                            "content": final_message.content
+                                        })
+                                        
+                                        messages.append({
+                                            "role": "user",
+                                            "content": [
+                                                {
+                                                    "type": "tool_result",
+                                                    "tool_use_id": block.id,
+                                                    "content": web_result
+                                                }
+                                            ]
+                                        })
+                                        break
+                            # Continue to next iteration to get final response with context
+                            continue
+                        else:
+                            # Done! Log usage and extract follow-up question
+                            import json
+                            
+                            # Log Claude API usage
+                            if hasattr(final_message, 'usage'):
+                                input_tokens = getattr(final_message.usage, 'input_tokens', 0)
+                                output_tokens = getattr(final_message.usage, 'output_tokens', 0)
+                                cost = (input_tokens / 1000 * 0.003) + (output_tokens / 1000 * 0.015)
+                                
+                                try:
+                                    from main import log_api_usage
+                                    log_api_usage("claude_chat_stream", "claude-sonnet-4", input_tokens, output_tokens, cost)
+                                    print(f"💰 Logged streaming Claude usage: ${cost:.6f}")
+                                except Exception as e:
+                                    print(f"⚠️ Could not log streaming Claude usage: {e}")
+                            
+                            follow_up = extract_follow_up_question("".join(full_response_text))
+                            yield "data: " + json.dumps({"done": True, "follow_up": follow_up}) + "\n\n"
+                            return
     
-    # Max iterations reached - send done with follow-up
-    import json
-    follow_up = extract_follow_up_question("".join(full_response_text))
-    yield "data: " + json.dumps({"done": True, "follow_up": follow_up}) + "\n\n"
+        # Max iterations reached - send done with follow-up
+        import json
+        follow_up = extract_follow_up_question("".join(full_response_text))
+        yield "data: " + json.dumps({"done": True, "follow_up": follow_up}) + "\n\n"
+    
+    except Exception as e:
+        import json
+        error_msg = str(e)
+        print(f"❌ Claude streaming error: {error_msg}")
+        yield "data: " + json.dumps({"error": f"Sorry, I encountered an error: {error_msg}. Please try again."}) + "\n\n"
