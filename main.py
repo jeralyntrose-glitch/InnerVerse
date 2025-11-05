@@ -72,12 +72,14 @@ def get_youtube_session_with_cookies():
 usage_log = deque(maxlen=1000)  # Keep last 1000 API calls
 request_timestamps = deque(maxlen=1000)  # For rate limiting
 
-# Pricing per 1K tokens (as of Oct 2025)
+# Pricing per 1K tokens (as of Nov 2025)
 PRICING = {
     "text-embedding-ada-002": 0.0001,  # per 1K tokens (legacy)
     "text-embedding-3-large": 0.00013,  # per 1K tokens (improved semantic matching)
     "gpt-3.5-turbo-input": 0.0005,     # per 1K tokens
     "gpt-3.5-turbo-output": 0.0015,    # per 1K tokens
+    "gpt-4o-mini-input": 0.00015,      # per 1K tokens (better structured output, cheaper than 3.5!)
+    "gpt-4o-mini-output": 0.0006,      # per 1K tokens
     "whisper-1": 0.006,                # per minute of audio
     "claude-sonnet-4-input": 0.003,    # per 1K tokens
     "claude-sonnet-4-output": 0.015,   # per 1K tokens
@@ -284,115 +286,106 @@ def load_innerverse_schema():
         return None
 
 
-# Auto-tag document using GPT and InnerVerse schema
+# Auto-tag document using GPT-4o-mini for structured metadata extraction
 async def auto_tag_document(text, filename, openai_client):
     """
-    Analyze document content and extract MBTI/Jungian taxonomy tags using GPT.
-    Returns a list of relevant tags from the InnerVerse Intelligence Layer.
+    Analyze document content and extract structured MBTI/Jungian metadata using GPT-4o-mini.
+    Returns a structured metadata dictionary for CS Joseph's teaching system.
     """
-    schema = load_innerverse_schema()
-    if not schema:
-        return []
-    
     # Sample first 3000 chars for analysis (balance cost vs accuracy)
     sample_text = text[:3000] if len(text) > 3000 else text
     
-    # Build prompt with schema context
-    prompt = f"""You are an expert in MBTI, Jungian psychology, and cognitive functions. Analyze this document and extract ALL relevant taxonomy tags from the InnerVerse Intelligence Layer schema.
+    # Build structured metadata extraction prompt
+    prompt = f"""You are an expert in CS Joseph's MBTI/Jungian Analytical Psychology system. Analyze this transcript and extract structured metadata.
 
-Document Title: {filename}
-Document Sample: {sample_text}
+TRANSCRIPT TITLE: {filename}
+TRANSCRIPT TEXT (first 3000 chars): {sample_text}
 
-TAXONOMY SCHEMA (6 Layers):
+Extract the following metadata and return as valid JSON:
 
-1. COGNITIVE ARCHITECTURE
-- Cognitive Functions: Fe, Fi, Te, Ti, Ne, Ni, Se, Si
-- Function Axes: Fe-Ti, Te-Fi, Ne-Si, Ni-Se
-- Cognitive Roles: Hero, Parent, Child, Inferior, Nemesis, Critic, Trickster, Demon
-- Cognitive Polarities: Thinking vs Feeling, Intuition vs Sensing, Judging vs Perceiving
+{{
+  "content_type": "main_season | csj_responds | special | cutting_edge | celebrity_typing",
+  "difficulty": "foundation | intermediate | advanced | expert",
+  "primary_category": "cognitive_functions | type_profiles | relationships | personal_development | typing_methodology | four_sides | octagram | compatibility | celebrity_example",
+  "types_discussed": ["INTJ", "ENFP"],
+  "functions_covered": ["Ni", "Te", "Fi", "Se"],
+  "relationship_type": "golden_pair | pedagogue_pair | bronze_pair | dyad_pair | none",
+  "quadra": "alpha | beta | gamma | delta | multi | none",
+  "temple": "soul | heart | mind | body | multi | none",
+  "topics": ["se_demon", "trust_issues", "octagram_variants"],
+  "use_case": ["self_improvement", "relationship_help", "typing_others", "understanding_theory"]
+}}
 
-2. TYPOLOGICAL STRUCTURES
-- Four Sides of Mind: Ego, Subconscious, Unconscious, Shadow, Superego
-- Interaction Styles: Directing, Initiating, Responding, Informing
-- Temperaments: Artisan, Guardian, Idealist, Rational
-- Quadras: Alpha, Beta, Gamma, Delta
-- Loops & Grips: Ne-Fi loop, Ti-Ne loop, Se-Ni grip, etc.
+RULES:
+- Return ONLY valid JSON, no extra text
+- Use "none" for fields that don't apply
+- Use empty arrays [] for list fields with no data
+- Be specific but concise
+- Max 5 topics
+- Infer content_type from filename patterns (Season X = main_season, CSJ Responds = csj_responds, etc.)
 
-3. TYPE-SPECIFIC INDEXING
-- MBTI Types: INTJ, INTP, ENTJ, ENTP, INFJ, INFP, ENFJ, ENFP, ISTJ, ISFJ, ESTJ, ESFJ, ISTP, ISFP, ESTP, ESFP
-- Type Pair Dynamics: Golden Pair, Silver Pair, Shadow Pair
-- Intertype Relations: Duality, Conflict, Mirage, Supervision, Activation
-- Compatibility Themes: Love Languages, Empathy Mismatches
-- Developmental Stages: Childhood Imprinting, Midlife Individuation
-
-4. DEPTH PSYCHOLOGY & JUNGIAN
-- Archetypes: Hero, Anima, Animus, Shadow, Self, Trickster
-- Shadow Integration, Individuation Process
-- Complexes: Mother Complex, Father Complex, Inferiority Complex
-- Dream Symbolism, Active Imagination
-
-5. BEHAVIORAL EXPRESSION
-- Communication Styles: Fe Harmony Speech, Ti Precision Speech, etc.
-- Emotional Regulation: Fi Internal Processing, Fe External Harmony
-- Conflict Resolution, Energy Management
-- Shadow Triggers & Defense Mechanisms
-
-6. INTEGRATION & META
-- Function Interaction Maps: Fe → Ne, Ti → Si, etc.
-- Cross-System Overlays: MBTI + Enneagram, MBTI + Temperament
-- Type Evolution: Type Maturation, Age-Based Development
-- Consciousness Levels, Metaphorical Frameworks
-
-INSTRUCTIONS:
-1. Read the document sample carefully
-2. Identify ALL relevant tags from the taxonomy above
-3. Return ONLY short tag names - NO category prefixes (e.g., "Sexual Compatibility" NOT "Compatibility Themes: Sexual Compatibility")
-4. Return ONLY a JSON array of tag strings, nothing else
-5. Be thorough - include any tag that's clearly discussed in the document
-6. Format: ["tag1", "tag2", "tag3"]
-
-CORRECT examples:
-["Fe", "ENFJ", "Fe-Ti", "Golden Pair", "Shadow Integration", "Sexual Compatibility", "Emotional Compatibility"]
-
-WRONG examples (DO NOT DO THIS):
-["Compatibility Themes: Sexual Compatibility", "Developmental Stages: Relationship Success"]
-
-Your response (JSON array only):"""
+Your response (valid JSON only):"""
 
     try:
-        print(f"🏷️ Auto-tagging document: {filename}")
+        print(f"🏷️ Auto-tagging document with structured metadata: {filename}")
         
         response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an expert MBTI/Jungian analyst. Extract taxonomy tags from documents."},
+                {"role": "system", "content": "You are an expert in CS Joseph's MBTI/Jungian system. Extract structured metadata from transcripts as valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,
-            max_tokens=500
+            max_tokens=800
         )
         
         # Track usage (calculate cost from input + output tokens)
         input_tokens = response.usage.prompt_tokens
         output_tokens = response.usage.completion_tokens
-        cost = (input_tokens / 1000) * PRICING["gpt-3.5-turbo-input"] + \
-               (output_tokens / 1000) * PRICING["gpt-3.5-turbo-output"]
-        log_api_usage("auto_tagging", "gpt-3.5-turbo", 
+        cost = (input_tokens / 1000) * PRICING["gpt-4o-mini-input"] + \
+               (output_tokens / 1000) * PRICING["gpt-4o-mini-output"]
+        log_api_usage("auto_tagging", "gpt-4o-mini", 
                       input_tokens=input_tokens, 
                       output_tokens=output_tokens, 
                       cost=cost)
         
-        # Parse tags from response
+        # Parse structured metadata from response
         response_text = response.choices[0].message.content.strip()
-        tags = json.loads(response_text)
         
-        print(f"✅ Extracted {len(tags)} tags: {tags[:5]}..." if len(tags) > 5 else f"✅ Extracted {len(tags)} tags: {tags}")
+        # Remove markdown code blocks if present
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+            response_text = response_text.strip()
         
-        return tags
+        structured_metadata = json.loads(response_text)
+        
+        print(f"✅ Extracted structured metadata:")
+        print(f"   📁 Content Type: {structured_metadata.get('content_type', 'unknown')}")
+        print(f"   📊 Difficulty: {structured_metadata.get('difficulty', 'unknown')}")
+        print(f"   🎯 Category: {structured_metadata.get('primary_category', 'unknown')}")
+        print(f"   👥 Types: {structured_metadata.get('types_discussed', [])}")
+        print(f"   🧠 Functions: {structured_metadata.get('functions_covered', [])}")
+        print(f"   🔗 Topics: {structured_metadata.get('topics', [])[:3]}...")
+        
+        return structured_metadata
         
     except Exception as e:
         print(f"⚠️ Auto-tagging failed: {str(e)}")
-        return []
+        # Return empty structured metadata on failure
+        return {
+            "content_type": "none",
+            "difficulty": "none",
+            "primary_category": "none",
+            "types_discussed": [],
+            "functions_covered": [],
+            "relationship_type": "none",
+            "quadra": "none",
+            "temple": "none",
+            "topics": [],
+            "use_case": []
+        }
 
 
 
@@ -479,8 +472,8 @@ async def upload_pdf_base64(data: Base64Upload):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
 
-        # Auto-tag document with InnerVerse taxonomy
-        tags = await auto_tag_document(text, data.filename, openai_client)
+        # Auto-tag document with structured metadata (GPT-4o-mini)
+        structured_metadata = await auto_tag_document(text, data.filename, openai_client)
         
         # Extract enriched metadata
         enriched_meta = extract_enriched_metadata(data.filename, text[:2000])
@@ -496,16 +489,26 @@ async def upload_pdf_base64(data: Base64Upload):
                 input=chunk, model="text-embedding-3-large", timeout=60)
             vector = response.data[0].embedding
             
-            # Build comprehensive metadata
+            # Build comprehensive metadata with structured fields
             chunk_metadata = {
                 "text": chunk,
                 "doc_id": doc_id,
                 "filename": data.filename,
                 "upload_timestamp": datetime.now().isoformat(),
-                "tags": tags,
-                "chunk_index": i
+                "chunk_index": i,
+                # Structured metadata from GPT-4o-mini
+                "content_type": structured_metadata.get("content_type", "none"),
+                "difficulty": structured_metadata.get("difficulty", "none"),
+                "primary_category": structured_metadata.get("primary_category", "none"),
+                "types_discussed": structured_metadata.get("types_discussed", []),
+                "functions_covered": structured_metadata.get("functions_covered", []),
+                "relationship_type": structured_metadata.get("relationship_type", "none"),
+                "quadra": structured_metadata.get("quadra", "none"),
+                "temple": structured_metadata.get("temple", "none"),
+                "topics": structured_metadata.get("topics", []),
+                "use_case": structured_metadata.get("use_case", [])
             }
-            # Add enriched metadata
+            # Add enriched metadata (season/episode parsed from filename)
             chunk_metadata.update(enriched_meta)
             
             vectors_to_upsert.append((f"{doc_id}-{i}", vector, chunk_metadata))
@@ -524,11 +527,10 @@ async def upload_pdf_base64(data: Base64Upload):
             print(f"✅ Successfully uploaded {len(vectors_to_upsert)} total chunks")
 
         return {
-            "message": "PDF uploaded and indexed with InnerVerse Intelligence Layer",
+            "message": "PDF uploaded and indexed with structured metadata",
             "document_id": doc_id,
             "chunks_count": len(chunks),
-            "tags": tags,
-            "tags_count": len(tags)
+            "structured_metadata": structured_metadata
         }
 
     except Exception as e:
@@ -563,8 +565,8 @@ async def upload_pdf(file: UploadFile = File(...)):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
 
-        # Auto-tag document with InnerVerse taxonomy
-        tags = await auto_tag_document(text, file.filename, openai_client)
+        # Auto-tag document with structured metadata (GPT-4o-mini)
+        structured_metadata = await auto_tag_document(text, file.filename, openai_client)
         
         # Extract enriched metadata
         enriched_meta = extract_enriched_metadata(file.filename, text[:2000])
@@ -584,16 +586,26 @@ async def upload_pdf(file: UploadFile = File(...)):
                     input=chunk, model="text-embedding-3-large", timeout=120)  # Upgraded model
                 vector = response.data[0].embedding
                 
-                # Build comprehensive metadata
+                # Build comprehensive metadata with structured fields
                 chunk_metadata = {
                     "text": chunk,
                     "doc_id": doc_id,
                     "filename": file.filename,
                     "upload_timestamp": datetime.now().isoformat(),
-                    "tags": tags,
-                    "chunk_index": i
+                    "chunk_index": i,
+                    # Structured metadata from GPT-4o-mini
+                    "content_type": structured_metadata.get("content_type", "none"),
+                    "difficulty": structured_metadata.get("difficulty", "none"),
+                    "primary_category": structured_metadata.get("primary_category", "none"),
+                    "types_discussed": structured_metadata.get("types_discussed", []),
+                    "functions_covered": structured_metadata.get("functions_covered", []),
+                    "relationship_type": structured_metadata.get("relationship_type", "none"),
+                    "quadra": structured_metadata.get("quadra", "none"),
+                    "temple": structured_metadata.get("temple", "none"),
+                    "topics": structured_metadata.get("topics", []),
+                    "use_case": structured_metadata.get("use_case", [])
                 }
-                # Add enriched metadata
+                # Add enriched metadata (season/episode parsed from filename)
                 chunk_metadata.update(enriched_meta)
                 
                 vectors_to_upsert.append((f"{doc_id}-{i}", vector, chunk_metadata))
@@ -623,12 +635,11 @@ async def upload_pdf(file: UploadFile = File(...)):
             print(f"⏱️ Total time: {total_elapsed:.1f}s (upload: {upsert_elapsed:.1f}s)")
 
         return {
-            "message": "PDF uploaded and indexed with InnerVerse Intelligence Layer",
+            "message": "PDF uploaded and indexed with structured metadata",
             "document_id": doc_id,
             "chunks_count": len(chunks),
             "filename": file.filename,
-            "tags": tags,
-            "tags_count": len(tags)
+            "structured_metadata": structured_metadata
         }
 
     except Exception as e:
@@ -2373,8 +2384,8 @@ async def upload_audio(file: UploadFile = File(...)):
                     status_code=500,
                     content={"error": "Pinecone client not initialized"})
             
-            # Auto-tag document with InnerVerse taxonomy
-            tags = await auto_tag_document(text, pdf_filename, openai_client)
+            # Auto-tag document with structured metadata (GPT-4o-mini)
+            structured_metadata = await auto_tag_document(text, pdf_filename, openai_client)
             
             # Extract enriched metadata
             enriched_meta = extract_enriched_metadata(pdf_filename, text[:2000])
@@ -2389,15 +2400,25 @@ async def upload_audio(file: UploadFile = File(...)):
                     input=chunk, model="text-embedding-3-large", timeout=120)
                 vector = response.data[0].embedding
                 
-                # Build comprehensive metadata
+                # Build comprehensive metadata with structured fields
                 chunk_metadata = {
                     "text": chunk,
                     "doc_id": doc_id,
                     "filename": pdf_filename,
                     "upload_timestamp": datetime.now().isoformat(),
-                    "tags": tags,
                     "source": "audio_upload",
-                    "chunk_index": i
+                    "chunk_index": i,
+                    # Structured metadata from GPT-4o-mini
+                    "content_type": structured_metadata.get("content_type", "none"),
+                    "difficulty": structured_metadata.get("difficulty", "none"),
+                    "primary_category": structured_metadata.get("primary_category", "none"),
+                    "types_discussed": structured_metadata.get("types_discussed", []),
+                    "functions_covered": structured_metadata.get("functions_covered", []),
+                    "relationship_type": structured_metadata.get("relationship_type", "none"),
+                    "quadra": structured_metadata.get("quadra", "none"),
+                    "temple": structured_metadata.get("temple", "none"),
+                    "topics": structured_metadata.get("topics", []),
+                    "use_case": structured_metadata.get("use_case", [])
                 }
                 chunk_metadata.update(enriched_meta)
                 
@@ -2417,12 +2438,11 @@ async def upload_audio(file: UploadFile = File(...)):
                 print(f"✅ Successfully indexed {len(vectors_to_upsert)} chunks in Pinecone")
             
             return {
-                "message": "Audio transcribed and indexed with InnerVerse Intelligence Layer",
+                "message": "Audio transcribed and indexed with structured metadata",
                 "document_id": doc_id,
                 "filename": pdf_filename,
                 "chunks_count": len(chunks),
-                "tags": tags,
-                "tags_count": len(tags),
+                "structured_metadata": structured_metadata,
                 "duration_minutes": round(duration_minutes, 2),
                 "whisper_cost": round(whisper_cost, 4)
             }
@@ -2690,8 +2710,8 @@ async def download_youtube(request: YouTubeDownloadRequest):
                     "error": "Pinecone client not initialized"
                 })
             
-            # Auto-tag document
-            tags = await auto_tag_document(text, pdf_filename, openai_client)
+            # Auto-tag document with structured metadata (GPT-4o-mini)
+            structured_metadata = await auto_tag_document(text, pdf_filename, openai_client)
             
             # Extract enriched metadata
             enriched_meta = extract_enriched_metadata(pdf_filename, text[:2000])
@@ -2706,15 +2726,25 @@ async def download_youtube(request: YouTubeDownloadRequest):
                     input=chunk, model="text-embedding-3-large", timeout=120)
                 vector = response.data[0].embedding
                 
-                # Build comprehensive metadata
+                # Build comprehensive metadata with structured fields
                 chunk_metadata = {
                     "text": chunk,
                     "doc_id": doc_id,
                     "filename": pdf_filename,
                     "upload_timestamp": datetime.now().isoformat(),
-                    "tags": tags,
                     "source": "youtube_url",
-                    "chunk_index": i
+                    "chunk_index": i,
+                    # Structured metadata from GPT-4o-mini
+                    "content_type": structured_metadata.get("content_type", "none"),
+                    "difficulty": structured_metadata.get("difficulty", "none"),
+                    "primary_category": structured_metadata.get("primary_category", "none"),
+                    "types_discussed": structured_metadata.get("types_discussed", []),
+                    "functions_covered": structured_metadata.get("functions_covered", []),
+                    "relationship_type": structured_metadata.get("relationship_type", "none"),
+                    "quadra": structured_metadata.get("quadra", "none"),
+                    "temple": structured_metadata.get("temple", "none"),
+                    "topics": structured_metadata.get("topics", []),
+                    "use_case": structured_metadata.get("use_case", [])
                 }
                 chunk_metadata.update(enriched_meta)
                 
@@ -2734,13 +2764,12 @@ async def download_youtube(request: YouTubeDownloadRequest):
                 print(f"✅ Successfully indexed {len(vectors_to_upsert)} chunks in Pinecone")
             
             return {
-                "message": "YouTube video downloaded, transcribed, and indexed successfully",
+                "message": "YouTube video downloaded, transcribed, and indexed with structured metadata",
                 "document_id": doc_id,
                 "filename": pdf_filename,
                 "video_title": video_title,
                 "chunks_count": len(chunks),
-                "tags": tags,
-                "tags_count": len(tags),
+                "structured_metadata": structured_metadata,
                 "duration_minutes": round(duration_minutes, 2),
                 "whisper_cost": round(whisper_cost, 4),
                 "file_size_mb": round(file_size_mb, 2)
@@ -2946,10 +2975,13 @@ Return ONLY the cleaned transcript with proper formatting, nothing else."""
                 "error": "Failed to generate PDF from transcript"
             })
         
-        # Step 6: Auto-tag with MBTI taxonomy
-        print("🏷️ Auto-tagging with MBTI taxonomy...")
-        tags = await auto_tag_document(cleaned_transcript, pdf_filename, openai_client)
-        print(f"✅ Auto-tagged with {len(tags)} tags: {tags[:5]}...")
+        # Step 6: Auto-tag with structured metadata (GPT-4o-mini)
+        print("🏷️ Auto-tagging with structured metadata...")
+        structured_metadata = await auto_tag_document(cleaned_transcript, pdf_filename, openai_client)
+        print(f"✅ Structured metadata extracted:")
+        print(f"   Content Type: {structured_metadata.get('content_type')}")
+        print(f"   Difficulty: {structured_metadata.get('difficulty')}")
+        print(f"   Topics: {structured_metadata.get('topics', [])[:3]}...")
         
         # Step 7: Index in Pinecone
         print("📚 Indexing in Pinecone...")
@@ -2967,7 +2999,7 @@ Return ONLY the cleaned transcript with proper formatting, nothing else."""
                     "error": "Pinecone client not initialized"
                 })
             
-            # Create embeddings and vectors
+            # Create embeddings and vectors with structured metadata
             vectors_to_upsert = []
             for i, chunk in enumerate(chunks):
                 try:
@@ -2981,9 +3013,19 @@ Return ONLY the cleaned transcript with proper formatting, nothing else."""
                             "filename": pdf_filename,
                             "chunk_index": i,
                             "text": chunk[:1000],
-                            "tags": tags,
                             "source": "youtube_transcript",
-                            "video_url": youtube_url
+                            "video_url": youtube_url,
+                            # Structured metadata from GPT-4o-mini
+                            "content_type": structured_metadata.get("content_type", "none"),
+                            "difficulty": structured_metadata.get("difficulty", "none"),
+                            "primary_category": structured_metadata.get("primary_category", "none"),
+                            "types_discussed": structured_metadata.get("types_discussed", []),
+                            "functions_covered": structured_metadata.get("functions_covered", []),
+                            "relationship_type": structured_metadata.get("relationship_type", "none"),
+                            "quadra": structured_metadata.get("quadra", "none"),
+                            "temple": structured_metadata.get("temple", "none"),
+                            "topics": structured_metadata.get("topics", []),
+                            "use_case": structured_metadata.get("use_case", [])
                         }
                     })
                 except Exception as e:
@@ -3003,13 +3045,12 @@ Return ONLY the cleaned transcript with proper formatting, nothing else."""
                 print(f"✅ Successfully indexed {len(vectors_to_upsert)} chunks in Pinecone")
             
             return {
-                "message": "YouTube transcript fetched, cleaned, tagged, and indexed successfully!",
+                "message": "YouTube transcript fetched, cleaned, and indexed with structured metadata!",
                 "document_id": doc_id,
                 "filename": pdf_filename,
                 "video_title": video_title,
                 "chunks_count": len(chunks),
-                "tags": tags,
-                "tags_count": len(tags),
+                "structured_metadata": structured_metadata,
                 "transcript_length": len(cleaned_transcript),
                 "cleanup_cost": round(gpt_cost, 4),
                 "total_cost": round(gpt_cost, 4),
