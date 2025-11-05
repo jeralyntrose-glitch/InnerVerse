@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="format-detection" content="telephone=no" />
   <title>Content Atlas - InnerVerse</title>
-  <link rel="stylesheet" href="/static/style.css?v=40" />
+  <link rel="stylesheet" href="/static/style.css?v=41" />
 </head>
 <body>
   <!-- Top Navigation -->
@@ -36,20 +36,43 @@
   <div class="page-wrapper content-atlas-page">
     <div class="branding">
       <h1 class="brand-title">CONTENT ATLAS</h1>
-      <p class="tagline">Knowledge visualization loading...</p>
+      <p class="tagline" id="tagline">Explore 340 documents with structured metadata</p>
     </div>
 
     <div class="content-atlas-container">
-      <div class="atlas-placeholder">
-        <p style="font-size: 18px; color: var(--text-secondary); margin: 40px 0;">
-          🗺️ Interactive knowledge tree coming soon...
-        </p>
+      <!-- Search and Controls -->
+      <div class="atlas-controls">
+        <input 
+          type="text" 
+          id="search-input" 
+          class="atlas-search" 
+          placeholder="Search by title, topic, or MBTI type..."
+        />
+      </div>
+
+      <!-- Documents Grid -->
+      <div id="documents-grid" class="documents-grid">
+        <!-- Loading state -->
+        <div class="loading-state">
+          <div class="loading-spinner"></div>
+          <p style="margin-top: 20px; color: var(--text-secondary);">Loading documents...</p>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div id="pagination-controls" class="pagination-controls" style="display: none;">
+        <button id="prev-btn" class="pagination-btn">← Previous</button>
+        <span id="pagination-info" class="pagination-info"></span>
+        <button id="next-btn" class="pagination-btn">Next →</button>
       </div>
     </div>
   </div>
 
+  <!-- Content Atlas Application -->
+  <script src="/static/content-atlas-app.js?v=1"></script>
+
+  <!-- Theme Toggle -->
   <script>
-    // Theme toggle functionality
     const themeToggle = document.getElementById('theme-toggle');
     const sunIcon = themeToggle.querySelector('.sun-icon');
     const moonIcon = themeToggle.querySelector('.moon-icon');

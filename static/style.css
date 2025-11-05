@@ -2348,3 +2348,284 @@ label,
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* ========================================
+   CONTENT ATLAS - METADATA TREE VIEW
+   ======================================== */
+
+/* Content Atlas Page Layout */
+.content-atlas-page {
+  max-width: 100%;
+  width: 100%;
+  margin-top: 0;
+  padding: 40px 20px;
+}
+
+.content-atlas-container {
+  max-width: 1400px;
+  margin: 40px auto 0;
+  width: 100%;
+}
+
+/* Document Grid */
+.documents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .documents-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Metadata Tree View Card */
+.metadata-tree-view {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
+  transition: all 0.2s ease;
+}
+
+.metadata-tree-view:hover {
+  box-shadow: 0 4px 16px var(--shadow-color);
+  transform: translateY(-2px);
+}
+
+/* Document Header */
+.document-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.upload-date {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+/* Metadata Sections */
+.metadata-section {
+  margin-bottom: 24px;
+}
+
+.metadata-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-heading {
+  font-size: 14px;
+  font-weight: 700;
+  color: #10A37F;
+  margin-bottom: 12px;
+  letter-spacing: 0.3px;
+}
+
+/* Metadata Rows */
+.metadata-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.metadata-row:last-child {
+  margin-bottom: 0;
+}
+
+.metadata-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 80px;
+  flex-shrink: 0;
+  padding-top: 6px;
+}
+
+.metadata-value {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Pills */
+.metadata-pill {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.25);
+  transition: all 0.2s ease;
+}
+
+.metadata-pill.na {
+  background: var(--text-secondary);
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.metadata-pill.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .metadata-tree-view {
+    padding: 20px;
+  }
+  
+  .document-title {
+    font-size: 16px;
+  }
+  
+  .metadata-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .metadata-label {
+    min-width: 0;
+    padding-top: 0;
+  }
+  
+  .metadata-value {
+    width: 100%;
+  }
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border-color);
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Search and Controls */
+.atlas-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.atlas-search {
+  flex: 1;
+  min-width: 250px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.atlas-search:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.atlas-search::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Pagination */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 40px;
+  padding: 20px 0;
+}
+
+.pagination-btn {
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  color: white;
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .atlas-controls {
+    flex-direction: column;
+  }
+  
+  .atlas-search {
+    width: 100%;
+  }
+  
+  .pagination-controls {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .pagination-btn {
+    flex: 1;
+    min-width: 100px;
+  }
+}

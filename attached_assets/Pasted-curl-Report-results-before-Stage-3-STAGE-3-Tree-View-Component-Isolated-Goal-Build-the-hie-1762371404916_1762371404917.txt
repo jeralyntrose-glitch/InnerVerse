@@ -1,0 +1,154 @@
+curl. Report results before Stage 3.
+
+🎯 STAGE 3: Tree View Component (Isolated)
+Goal: Build the hierarchical metadata display component in isolation.
+Instructions for Replit Agent:
+STAGE 3: Content Atlas - Tree View Component
+
+Create a reusable component for displaying document metadata hierarchically.
+
+REQUIREMENTS:
+1. Create new file: /src/components/MetadataTreeView.jsx
+
+2. Component props:
+   {
+     metadata: {
+       content_type: string,
+       difficulty: string,
+       primary_category: string,
+       types_discussed: string[],
+       functions_covered: string[],
+       relationship_type: string,
+       quadra: string,
+       temple: string,
+       topics: string[],
+       use_case: string[]
+     },
+     title: string,
+     uploadDate: string
+   }
+
+3. Layout structure:
+   <div class="metadata-tree-view">
+     <h3>{title}</h3>
+     <p class="upload-date">{uploadDate}</p>
+     
+     <section class="metadata-section">
+       <h4>📑 Content Structure</h4>
+       <div class="metadata-row">
+         <span class="label">Type:</span>
+         <span class="pill">{content_type}</span>
+       </div>
+       <div class="metadata-row">
+         <span class="label">Level:</span>
+         <span class="pill">{difficulty}</span>
+       </div>
+       <div class="metadata-row">
+         <span class="label">Focus:</span>
+         <span class="pill">{primary_category}</span>
+       </div>
+     </section>
+
+     <section class="metadata-section">
+       <h4>👤 Personality Framework</h4>
+       <div class="metadata-row">
+         <span class="label">Types:</span>
+         <div class="pill-group">
+           {types_discussed.map(type => <span class="pill">{type}</span>)}
+         </div>
+       </div>
+       <div class="metadata-row">
+         <span class="label">Functions:</span>
+         <div class="pill-group">
+           {functions_covered.map(fn => <span class="pill">{fn}</span>)}
+         </div>
+       </div>
+       <div class="metadata-row">
+         <span class="label">Quadra:</span>
+         <span class="pill">{quadra || "N/A"}</span>
+       </div>
+       <div class="metadata-row">
+         <span class="label">Temple:</span>
+         <span class="pill">{temple || "N/A"}</span>
+       </div>
+     </section>
+
+     <section class="metadata-section">
+       <h4>💕 Relationships</h4>
+       <div class="metadata-row">
+         <span class="label">Context:</span>
+         <span class="pill">{relationship_type || "N/A"}</span>
+       </div>
+     </section>
+
+     <section class="metadata-section">
+       <h4>📚 Content Themes</h4>
+       <div class="metadata-row">
+         <span class="label">Topics:</span>
+         <div class="pill-group">
+           {topics.map(topic => <span class="pill">{topic}</span>)}
+         </div>
+       </div>
+     </section>
+
+     <section class="metadata-section">
+       <h4>💡 Practical Application</h4>
+       <div class="metadata-row">
+         <span class="label">Use For:</span>
+         <div class="pill-group">
+           {use_case.map(uc => <span class="pill">{uc}</span>)}
+         </div>
+       </div>
+     </section>
+   </div>
+
+4. Styling requirements:
+   - Use existing purple gradient theme for pills
+   - Section headers: bold, with emoji icons
+   - Sections separated by 24px margin
+   - Metadata rows: flex layout, label on left, pills on right
+   - Pills: existing pill component/styling
+   - Responsive: stack on mobile (<768px)
+   - Handle empty arrays: show "N/A" in gray
+   - Handle null/undefined: show "N/A" in gray
+
+5. Performance optimizations:
+   - Memoize component (React.memo)
+   - Use proper React keys for array maps
+   - No unnecessary re-renders
+
+6. DO NOT:
+   - Fetch data in this component
+   - Add click handlers yet
+   - Modify existing pill components
+
+7. Create test/demo file: /src/pages/TreeViewDemo.jsx
+   - Import MetadataTreeView
+   - Pass hardcoded mock data
+   - Render 2-3 examples with different metadata
+   - Navigate to /tree-demo to verify
+
+VERIFICATION STEPS:
+- Visit /tree-demo route
+- Verify all sections render correctly
+- Check pills display properly
+- Test with empty arrays (should show N/A)
+- Test responsive behavior (resize browser)
+- No console errors
+What Could Go Wrong:
+
+Missing null checks causing crashes
+Array.map without keys causing warnings
+CSS conflicts with existing styles
+Pills not rendering with gradient
+Sections colliding on mobile
+Performance issues with many pills
+
+Success Criteria:
+✅ Demo page displays 2-3 mock documents
+✅ All sections render with proper icons
+✅ Pills use existing gradient styling
+✅ Empty/null values show "N/A"
+✅ Responsive layout works
+✅ No console errors/warnings
+STOP HERE. Verify component works in isolation before Stage 4.
