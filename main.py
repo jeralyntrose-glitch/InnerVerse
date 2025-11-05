@@ -36,9 +36,6 @@ from http.cookiejar import MozillaCookieJar
 import threading
 import asyncio
 
-# Knowledge Graph Manager
-from knowledge_graph_manager import KnowledgeGraphManager
-
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
@@ -5070,6 +5067,7 @@ async def get_content_atlas_analytics():
 # === Knowledge Graph API Endpoints ===
 
 # Initialize Knowledge Graph Manager
+from src.services.knowledge_graph_manager import KnowledgeGraphManager
 kg_manager = KnowledgeGraphManager()
 
 @app.get("/api/knowledge-graph")
@@ -5083,7 +5081,7 @@ async def get_knowledge_graph():
     try:
         print("📊 Fetching knowledge graph...")
         graph = kg_manager.load_graph()
-        stats = kg_manager.get_graph_stats()
+        stats = await kg_manager.get_graph_stats()
         
         response = {
             "nodes": graph.get("nodes", []),
@@ -5115,7 +5113,7 @@ async def get_knowledge_graph_stats():
         JSON object with stats only
     """
     try:
-        stats = kg_manager.get_graph_stats()
+        stats = await kg_manager.get_graph_stats()
         return stats
         
     except Exception as e:
@@ -5141,7 +5139,7 @@ async def get_concept_details(concept_id: str):
         print(f"🔍 Fetching concept: {concept_id}")
         
         # Get the node
-        node = kg_manager.get_node_by_id(concept_id)
+        node = await kg_manager.get_node_by_id(concept_id)
         
         if not node:
             return JSONResponse(
@@ -5150,7 +5148,7 @@ async def get_concept_details(concept_id: str):
             )
         
         # Get connected nodes
-        connected_nodes = kg_manager.get_connected_nodes(concept_id)
+        connected_nodes = await kg_manager.get_connected_nodes(concept_id)
         
         # Get source documents from node
         source_docs = node.get("sources", [])
@@ -5185,13 +5183,14 @@ async def create_node(node_data: dict):
     Request body:
         {
             "label": "Shadow Integration",
-            "type": "concept",
-            "properties": {"description": "..."},
-            "source_doc": "doc_id_123"
+            "type": "process",
+            "category": "foundational",
+            "definition": "...",
+            "source_documents": ["doc_1", "doc_2"]
         }
     """
     try:
-        node = kg_manager.add_node(node_data)
+        node = await kg_manager.add_node(node_data)
         return {
             "success": True,
             "node": node,
@@ -5214,14 +5213,14 @@ async def create_edge(edge_data: dict):
     Request body:
         {
             "source": "shadow_integration",
-            "target": "cognitive_functions",
-            "type": "relates_to",
-            "evidence": "Evidence text from document",
+            "target": "inferior_function",
+            "relationship_type": "requires_understanding",
+            "evidence_samples": ["Evidence text from document"],
             "properties": {}
         }
     """
     try:
-        edge = kg_manager.add_edge(edge_data)
+        edge = await kg_manager.add_edge(edge_data)
         return {
             "success": True,
             "edge": edge,

@@ -157,7 +157,7 @@ class KnowledgeGraphManager:
         similar_nodes.sort(key=lambda x: x["similarity"], reverse=True)
         return similar_nodes
     
-    def add_node(self, node_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def add_node(self, node_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Add a node to the knowledge graph.
         If a similar node exists, increment frequency and add source.
@@ -165,15 +165,23 @@ class KnowledgeGraphManager:
         Args:
             node_data: Dict with keys:
                 - label (str): Node label/name
-                - type (str): Node type (e.g., "concept", "person", "document")
+                - type (str): Node type (e.g., "concept", "process", "person")
+                - category (str): Node category (e.g., "foundational", "advanced")
+                - definition (str): Definition or description
                 - properties (dict): Additional properties
-                - source_doc (str): Document ID this came from
+                - source_documents (list): List of document IDs this came from
+                - source_doc (str): Single document ID (backwards compatibility)
                 
         Returns:
             Dict: The node (new or updated)
         """
         graph = self.load_graph()
         label = node_data.get("label", "")
+        
+        # Handle both source_documents (plural) and source_doc (singular) for backwards compatibility
+        source_docs = node_data.get("source_documents") or []
+        if node_data.get("source_doc"):
+            source_docs = [node_data.get("source_doc")]
         
         # Check for similar existing nodes
         similar_nodes = self.find_similar_nodes(label, threshold=0.85)
@@ -189,10 +197,18 @@ class KnowledgeGraphManager:
                     # Increment frequency
                     node["frequency"] = node.get("frequency", 1) + 1
                     
-                    # Add source document if not already present
-                    source_doc = node_data.get("source_doc")
-                    if source_doc and source_doc not in node.get("sources", []):
-                        node.setdefault("sources", []).append(source_doc)
+                    # Add source documents if not already present
+                    for doc in source_docs:
+                        if doc and doc not in node.get("sources", []):
+                            node.setdefault("sources", []).append(doc)
+                    
+                    # Update definition if provided
+                    if node_data.get("definition"):
+                        node["definition"] = node_data.get("definition")
+                    
+                    # Update category if provided
+                    if node_data.get("category"):
+                        node["category"] = node_data.get("category")
                     
                     # Update timestamp
                     node["last_updated"] = datetime.utcnow().isoformat()
@@ -216,9 +232,11 @@ class KnowledgeGraphManager:
             "id": node_id,
             "label": label,
             "type": node_data.get("type", "concept"),
+            "category": node_data.get("category", ""),
+            "definition": node_data.get("definition", ""),
             "properties": node_data.get("properties", {}),
             "frequency": 1,
-            "sources": [node_data.get("source_doc")] if node_data.get("source_doc") else [],
+            "sources": source_docs,
             "created_at": datetime.utcnow().isoformat(),
             "last_updated": datetime.utcnow().isoformat()
         }
@@ -228,7 +246,7 @@ class KnowledgeGraphManager:
         print(f"✅ Created new node: {label} (ID: {node_id})")
         return new_node
     
-    def add_edge(self, edge_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def add_edge(self, edge_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Add an edge (relationship) to the knowledge graph.
         If the same edge exists, increment strength and add evidence.
@@ -237,9 +255,11 @@ class KnowledgeGraphManager:
             edge_data: Dict with keys:
                 - source (str): Source node ID
                 - target (str): Target node ID
-                - type (str): Relationship type (e.g., "relates_to", "causes")
+                - relationship_type (str): Relationship type (e.g., "relates_to", "requires_understanding")
+                - type (str): Alternative to relationship_type (backwards compatibility)
                 - properties (dict): Additional properties
-                - evidence (str): Evidence text for this relationship
+                - evidence_samples (list): List of evidence strings
+                - evidence (str): Single evidence string (backwards compatibility)
                 
         Returns:
             Dict: The edge (new or updated)
@@ -247,7 +267,14 @@ class KnowledgeGraphManager:
         graph = self.load_graph()
         source = edge_data.get("source")
         target = edge_data.get("target")
-        edge_type = edge_data.get("type", "relates_to")
+        
+        # Handle both relationship_type and type for backwards compatibility
+        edge_type = edge_data.get("relationship_type") or edge_data.get("type", "relates_to")
+        
+        # Handle both evidence_samples (plural) and evidence (singular) for backwards compatibility
+        evidence_samples = edge_data.get("evidence_samples") or []
+        if edge_data.get("evidence"):
+            evidence_samples = [edge_data.get("evidence")]
         
         # Check if edge already exists (same source, target, and type)
         for edge in graph["edges"]:
@@ -258,13 +285,13 @@ class KnowledgeGraphManager:
                 # Update existing edge
                 edge["strength"] = edge.get("strength", 1) + 1
                 
-                # Add evidence
-                evidence = edge_data.get("evidence")
-                if evidence:
-                    edge.setdefault("evidence", []).append({
-                        "text": evidence,
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
+                # Add evidence samples
+                for evidence in evidence_samples:
+                    if evidence:
+                        edge.setdefault("evidence", []).append({
+                            "text": evidence,
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
                 
                 edge["last_updated"] = datetime.utcnow().isoformat()
                 
@@ -275,6 +302,15 @@ class KnowledgeGraphManager:
         # Create new edge
         edge_id = f"{source}__{edge_type}__{target}"
         
+        # Build evidence array
+        evidence_array = []
+        for evidence in evidence_samples:
+            if evidence:
+                evidence_array.append({
+                    "text": evidence,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+        
         new_edge = {
             "id": edge_id,
             "source": source,
@@ -282,7 +318,7 @@ class KnowledgeGraphManager:
             "type": edge_type,
             "properties": edge_data.get("properties", {}),
             "strength": 1,
-            "evidence": [{"text": edge_data.get("evidence", ""), "timestamp": datetime.utcnow().isoformat()}] if edge_data.get("evidence") else [],
+            "evidence": evidence_array,
             "created_at": datetime.utcnow().isoformat(),
             "last_updated": datetime.utcnow().isoformat()
         }
@@ -292,7 +328,7 @@ class KnowledgeGraphManager:
         print(f"✅ Created new edge: {source} -> {target} (type: {edge_type})")
         return new_edge
     
-    def get_node_by_id(self, node_id: str) -> Optional[Dict[str, Any]]:
+    async def get_node_by_id(self, node_id: str) -> Optional[Dict[str, Any]]:
         """
         Get a single node by its ID.
         
@@ -308,7 +344,7 @@ class KnowledgeGraphManager:
                 return node
         return None
     
-    def get_connected_nodes(self, node_id: str) -> List[Dict[str, Any]]:
+    async def get_connected_nodes(self, node_id: str) -> List[Dict[str, Any]]:
         """
         Get all nodes connected to the given node.
         
@@ -325,7 +361,7 @@ class KnowledgeGraphManager:
         for edge in graph["edges"]:
             if edge["source"] == node_id:
                 # Outgoing edge
-                target_node = self.get_node_by_id(edge["target"])
+                target_node = await self.get_node_by_id(edge["target"])
                 if target_node:
                     connected.append({
                         "node": target_node,
@@ -335,7 +371,7 @@ class KnowledgeGraphManager:
                     })
             elif edge["target"] == node_id:
                 # Incoming edge
-                source_node = self.get_node_by_id(edge["source"])
+                source_node = await self.get_node_by_id(edge["source"])
                 if source_node:
                     connected.append({
                         "node": source_node,
@@ -346,7 +382,7 @@ class KnowledgeGraphManager:
         
         return connected
     
-    def get_graph_stats(self) -> Dict[str, Any]:
+    async def get_graph_stats(self) -> Dict[str, Any]:
         """
         Get statistics about the knowledge graph.
         

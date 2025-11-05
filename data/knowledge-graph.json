@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2025-11-05T21:56:53.206024",
+  "last_updated": "2025-11-05T22:14:55.149221",
   "nodes": [
     {
       "id": "shadow_integration",
@@ -9,13 +9,17 @@
       "properties": {
         "description": "The process of integrating shadow functions"
       },
-      "frequency": 2,
+      "frequency": 6,
       "sources": [
         "test_doc_001",
-        "test_doc_003"
+        "test_doc_003",
+        "doc_1",
+        "doc_2"
       ],
       "created_at": "2025-11-05T21:56:33.342663",
-      "last_updated": "2025-11-05T21:56:53.206014"
+      "last_updated": "2025-11-05T22:14:30.602169",
+      "definition": "Test definition",
+      "category": "foundational"
     },
     {
       "id": "cognitive_functions",
@@ -30,6 +34,20 @@
       ],
       "created_at": "2025-11-05T21:56:34.775739",
       "last_updated": "2025-11-05T21:56:34.775746"
+    },
+    {
+      "id": "inferior_function",
+      "label": "Inferior Function",
+      "type": "concept",
+      "category": "foundational",
+      "definition": "The 4th cognitive function in the stack",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "test_doc_001"
+      ],
+      "created_at": "2025-11-05T22:14:55.149212",
+      "last_updated": "2025-11-05T22:14:55.149218"
     }
   ],
   "edges": [
@@ -50,11 +68,31 @@
       ],
       "created_at": "2025-11-05T21:56:42.778365",
       "last_updated": "2025-11-05T21:56:42.778367"
+    },
+    {
+      "id": "shadow_integration__requires_understanding__inferior_function",
+      "source": "shadow_integration",
+      "target": "inferior_function",
+      "type": "requires_understanding",
+      "properties": {},
+      "strength": 2,
+      "evidence": [
+        {
+          "text": "Test evidence",
+          "timestamp": "2025-11-05T22:13:36.610496"
+        },
+        {
+          "text": "Test evidence",
+          "timestamp": "2025-11-05T22:14:30.610151"
+        }
+      ],
+      "created_at": "2025-11-05T22:13:36.610502",
+      "last_updated": "2025-11-05T22:14:30.610156"
     }
   ],
   "metadata": {
     "total_documents_processed": 0,
-    "total_concepts": 2,
-    "total_relationships": 1
+    "total_concepts": 3,
+    "total_relationships": 2
   }
 }
