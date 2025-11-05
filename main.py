@@ -3070,6 +3070,203 @@ Return ONLY the cleaned transcript with proper formatting, nothing else."""
         })
 
 
+# === Batch Re-Tagging System ===
+@app.post("/api/batch-retag")
+async def batch_retag_documents():
+    """
+    Batch re-tag ALL existing Pinecone documents with new structured metadata system.
+    
+    Process:
+    1. Query all vectors from Pinecone
+    2. Group by document_id
+    3. For each document, extract text and run GPT-4o-mini tagging
+    4. Update all chunks with new structured metadata
+    5. Return progress updates
+    """
+    try:
+        print("\n" + "="*60)
+        print("🚀 BATCH RE-TAGGING STARTED")
+        print("="*60)
+        
+        # Initialize clients
+        openai_client = get_openai_client()
+        if not openai_client:
+            return JSONResponse(status_code=500, content={
+                "error": "OpenAI client not initialized"
+            })
+        
+        pinecone_index = get_pinecone_client()
+        if not pinecone_index:
+            return JSONResponse(status_code=500, content={
+                "error": "Pinecone client not initialized"
+            })
+        
+        # Step 1: Query all vectors from Pinecone
+        print("\n📊 Step 1: Querying all vectors from Pinecone...")
+        
+        # Create a dummy query vector (3072 dimensions for text-embedding-3-large)
+        dummy_query = [0.0] * 3072
+        
+        # Query with max top_k (Pinecone limit is 10,000)
+        results = pinecone_index.query(
+            vector=dummy_query,
+            top_k=10000,
+            include_metadata=True
+        )
+        
+        total_vectors = len(results.matches)
+        print(f"✅ Found {total_vectors} vectors to process")
+        
+        if total_vectors == 0:
+            return {
+                "message": "No documents found in Pinecone",
+                "documents_processed": 0,
+                "vectors_updated": 0
+            }
+        
+        if total_vectors == 10000:
+            print("⚠️ WARNING: Hit Pinecone query limit (10,000). Some documents may not be processed.")
+        
+        # Step 2: Group vectors by document_id
+        print("\n📚 Step 2: Grouping vectors by document_id...")
+        documents = {}  # {doc_id: [vectors]}
+        
+        for match in results.matches:
+            metadata = match.metadata
+            doc_id = metadata.get('doc_id') or metadata.get('document_id')
+            
+            if not doc_id:
+                print(f"⚠️ Skipping vector {match.id} - no document_id found")
+                continue
+            
+            if doc_id not in documents:
+                documents[doc_id] = []
+            
+            documents[doc_id].append({
+                'id': match.id,
+                'metadata': metadata,
+                'values': match.values if hasattr(match, 'values') else None
+            })
+        
+        total_documents = len(documents)
+        print(f"✅ Found {total_documents} unique documents")
+        
+        # Step 3: Process each document
+        print("\n🏷️ Step 3: Re-tagging documents with GPT-4o-mini...")
+        
+        processed = 0
+        updated_vectors = 0
+        failed = 0
+        errors = []
+        
+        for doc_id, vectors in documents.items():
+            try:
+                processed += 1
+                
+                # Extract text from first few chunks (up to 3000 chars for tagging)
+                combined_text = ""
+                filename = vectors[0]['metadata'].get('filename', 'Unknown')
+                
+                for vec in vectors[:5]:  # Use first 5 chunks
+                    chunk_text = vec['metadata'].get('text', '')
+                    combined_text += chunk_text + " "
+                    if len(combined_text) > 3000:
+                        break
+                
+                combined_text = combined_text[:3000].strip()
+                
+                print(f"\n📄 [{processed}/{total_documents}] Processing: {filename}")
+                print(f"   Document ID: {doc_id}")
+                print(f"   Chunks: {len(vectors)}")
+                
+                # Run auto-tagging with GPT-4o-mini
+                structured_metadata = await auto_tag_document(combined_text, filename, openai_client)
+                
+                print(f"   ✅ Structured metadata extracted:")
+                print(f"      Content Type: {structured_metadata.get('content_type')}")
+                print(f"      Difficulty: {structured_metadata.get('difficulty')}")
+                print(f"      Primary Category: {structured_metadata.get('primary_category')}")
+                print(f"      Topics: {len(structured_metadata.get('topics', []))} topics")
+                
+                # Step 4: Update all chunks for this document
+                vectors_to_update = []
+                
+                for vec in vectors:
+                    # Fetch original vector if we don't have values
+                    if vec['values'] is None:
+                        fetch_result = pinecone_index.fetch(ids=[vec['id']])
+                        if vec['id'] in fetch_result.vectors:
+                            vec['values'] = fetch_result.vectors[vec['id']].values
+                        else:
+                            print(f"   ⚠️ Could not fetch vector {vec['id']} - skipping")
+                            continue
+                    
+                    # Keep all existing metadata, just add/update structured fields
+                    updated_metadata = vec['metadata'].copy()
+                    updated_metadata.update({
+                        'content_type': structured_metadata.get('content_type', 'none'),
+                        'difficulty': structured_metadata.get('difficulty', 'none'),
+                        'primary_category': structured_metadata.get('primary_category', 'none'),
+                        'types_discussed': structured_metadata.get('types_discussed', []),
+                        'functions_covered': structured_metadata.get('functions_covered', []),
+                        'relationship_type': structured_metadata.get('relationship_type', 'none'),
+                        'quadra': structured_metadata.get('quadra', 'none'),
+                        'temple': structured_metadata.get('temple', 'none'),
+                        'topics': structured_metadata.get('topics', []),
+                        'use_case': structured_metadata.get('use_case', [])
+                    })
+                    
+                    vectors_to_update.append({
+                        'id': vec['id'],
+                        'values': vec['values'],
+                        'metadata': updated_metadata
+                    })
+                
+                # Batch upsert to Pinecone
+                if vectors_to_update:
+                    batch_size = 50
+                    for i in range(0, len(vectors_to_update), batch_size):
+                        batch = vectors_to_update[i:i + batch_size]
+                        pinecone_index.upsert(vectors=batch)
+                    
+                    updated_vectors += len(vectors_to_update)
+                    print(f"   ✅ Updated {len(vectors_to_update)} chunks in Pinecone")
+                
+            except Exception as e:
+                failed += 1
+                error_msg = f"Document {doc_id} ({filename}): {str(e)}"
+                errors.append(error_msg)
+                print(f"   ❌ Error: {str(e)}")
+                print(f"   ⏭️ Skipping to next document...")
+                continue
+        
+        # Summary
+        print("\n" + "="*60)
+        print("✅ BATCH RE-TAGGING COMPLETE")
+        print("="*60)
+        print(f"📊 Summary:")
+        print(f"   Total documents: {total_documents}")
+        print(f"   Successfully processed: {processed - failed}")
+        print(f"   Failed: {failed}")
+        print(f"   Total vectors updated: {updated_vectors}")
+        print("="*60 + "\n")
+        
+        return {
+            "message": "Batch re-tagging completed successfully!",
+            "total_documents": total_documents,
+            "documents_processed": processed - failed,
+            "documents_failed": failed,
+            "total_vectors_updated": updated_vectors,
+            "errors": errors if errors else None
+        }
+        
+    except Exception as e:
+        print(f"\n❌ FATAL ERROR in batch re-tagging: {str(e)}")
+        return JSONResponse(status_code=500, content={
+            "error": f"Batch re-tagging failed: {str(e)}"
+        })
+
+
 # === Claude Chat Endpoints ===
 from claude_api import PROJECTS, chat_with_claude, chat_with_claude_streaming
 
