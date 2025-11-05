@@ -4890,6 +4890,180 @@ async def get_content_atlas(
         )
 
 
+@app.get("/api/content-atlas/analytics")
+async def get_content_atlas_analytics():
+    """
+    Get aggregated analytics from all documents in Content Atlas.
+    
+    Returns statistics on:
+    - Total documents
+    - Distribution by content type
+    - Distribution by difficulty
+    - Distribution by quadra
+    - Top 10 MBTI types
+    - Top 10 cognitive functions
+    - Top 15 topics
+    """
+    try:
+        # Get Pinecone client
+        pinecone_index = get_pinecone_client()
+        if not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Pinecone client not initialized"}
+            )
+        
+        print("\n📊 Fetching Content Atlas analytics...")
+        
+        # Query Pinecone for all vectors
+        dummy_vector = [0.0] * 3072  # text-embedding-3-large dimension
+        
+        try:
+            query_response = pinecone_index.query(
+                vector=dummy_vector,
+                top_k=10000,
+                include_metadata=True
+            )
+        except Exception as pinecone_error:
+            print(f"❌ Pinecone query error: {str(pinecone_error)}")
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"Pinecone query failed: {str(pinecone_error)}"}
+            )
+        
+        # Extract matches
+        try:
+            matches = query_response.matches if hasattr(query_response, 'matches') else query_response.get('matches', [])
+        except Exception:
+            matches = []
+        
+        if not matches:
+            return {
+                "total_documents": 0,
+                "by_content_type": {},
+                "by_difficulty": {},
+                "by_quadra": {},
+                "top_types": [],
+                "top_functions": [],
+                "top_topics": []
+            }
+        
+        # Group by doc_id to get unique documents
+        documents_map = {}
+        
+        for match in matches:
+            try:
+                metadata = match.metadata if hasattr(match, 'metadata') else match.get('metadata', {})
+                doc_id = metadata.get('doc_id') or metadata.get('document_id')
+                
+                if not doc_id or doc_id in documents_map:
+                    continue
+                
+                # Store full metadata for aggregation
+                documents_map[doc_id] = metadata
+            except Exception as match_error:
+                continue
+        
+        # Initialize counters
+        from collections import Counter
+        
+        content_type_counts = Counter()
+        difficulty_counts = Counter()
+        quadra_counts = Counter()
+        type_counts = Counter()
+        function_counts = Counter()
+        topic_counts = Counter()
+        
+        # Aggregate data from unique documents
+        for doc_id, metadata in documents_map.items():
+            # Content type
+            content_type = metadata.get("content_type", "unknown")
+            content_type_counts[content_type] += 1
+            
+            # Difficulty
+            difficulty = metadata.get("difficulty", "unknown")
+            difficulty_counts[difficulty] += 1
+            
+            # Quadra
+            quadra = metadata.get("quadra", "unknown")
+            if quadra and quadra != "unknown" and quadra != "n/a":
+                quadra_counts[quadra] += 1
+            
+            # Types discussed (can be list or string)
+            types_discussed = metadata.get("types_discussed", [])
+            if isinstance(types_discussed, str):
+                types_discussed = [types_discussed]
+            elif not isinstance(types_discussed, list):
+                types_discussed = []
+            
+            for mbti_type in types_discussed:
+                if mbti_type and mbti_type != "n/a":
+                    type_counts[mbti_type] += 1
+            
+            # Functions covered (can be list or string)
+            functions_covered = metadata.get("functions_covered", [])
+            if isinstance(functions_covered, str):
+                functions_covered = [functions_covered]
+            elif not isinstance(functions_covered, list):
+                functions_covered = []
+            
+            for func in functions_covered:
+                if func and func != "n/a":
+                    function_counts[func] += 1
+            
+            # Topics (can be list or string)
+            topics = metadata.get("topics", [])
+            if isinstance(topics, str):
+                topics = [topics]
+            elif not isinstance(topics, list):
+                topics = []
+            
+            for topic in topics:
+                if topic and topic != "n/a":
+                    topic_counts[topic] += 1
+        
+        # Build response
+        total_documents = len(documents_map)
+        
+        analytics = {
+            "total_documents": total_documents,
+            "by_content_type": dict(content_type_counts),
+            "by_difficulty": dict(difficulty_counts),
+            "by_quadra": dict(quadra_counts),
+            "top_types": [
+                {"type": mbti_type, "count": count}
+                for mbti_type, count in type_counts.most_common(10)
+            ],
+            "top_functions": [
+                {"function": func, "count": count}
+                for func, count in function_counts.most_common(10)
+            ],
+            "top_topics": [
+                {"topic": topic, "count": count}
+                for topic, count in topic_counts.most_common(15)
+            ]
+        }
+        
+        print(f"✅ Analytics aggregated: {total_documents} total documents")
+        print(f"   Content Types: {len(content_type_counts)}")
+        print(f"   Difficulties: {len(difficulty_counts)}")
+        print(f"   Quadras: {len(quadra_counts)}")
+        print(f"   Top Types: {len(type_counts)}")
+        print(f"   Top Functions: {len(function_counts)}")
+        print(f"   Top Topics: {len(topic_counts)}")
+        
+        return analytics
+        
+    except Exception as e:
+        print(f"❌ Analytics API error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Internal server error: {str(e)}"}
+        )
+
+
 # === Serve Frontend ===
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
