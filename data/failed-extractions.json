@@ -1,0 +1,27 @@
+[
+  {
+    "document_id": "c5723624-91e2-4a6e-9983-44147c8f8b3d",
+    "timestamp": "2025-11-05T22:52:08.408239",
+    "error": "'KnowledgeGraphManager' object has no attribute 'find_node_by_label'"
+  },
+  {
+    "document_id": "b39bf7da-5f80-4f36-8b56-1eaa607b5b22",
+    "timestamp": "2025-11-05T22:52:23.383573",
+    "error": "'KnowledgeGraphManager' object has no attribute 'find_node_by_label'"
+  },
+  {
+    "document_id": "552c5a77-11fd-4b07-a758-b925802aaa76",
+    "timestamp": "2025-11-05T22:52:33.211351",
+    "error": "'KnowledgeGraphManager' object has no attribute 'find_node_by_label'"
+  },
+  {
+    "document_id": "1d7696de-a4e4-4446-8471-ba7981ed4696",
+    "timestamp": "2025-11-05T22:52:44.484388",
+    "error": "'KnowledgeGraphManager' object has no attribute 'find_node_by_label'"
+  },
+  {
+    "document_id": "5513fc67-3cf6-486e-9c92-75d9320824f4",
+    "timestamp": "2025-11-05T22:52:58.311283",
+    "error": "Extraction returned None"
+  }
+]

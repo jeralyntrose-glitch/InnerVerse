@@ -1,0 +1,31 @@
+{
+  "generated_at": "2025-11-05T22:57:20.236616",
+  "summary": {
+    "total_concepts": 30,
+    "total_relationships": 29,
+    "documents_processed": 5,
+    "avg_relationships_per_concept": 0.97
+  },
+  "quality_metrics": {
+    "orphaned_edges": 0,
+    "nodes_with_no_edges": 0,
+    "orphaned_edge_percentage": 0.0,
+    "isolated_node_percentage": 0.0
+  },
+  "category_distribution": {
+    "advanced": 3,
+    "foundational": 11,
+    "intermediate": 16
+  },
+  "type_distribution": {
+    "concept": 8,
+    "function": 9,
+    "process": 7,
+    "framework": 4,
+    "principle": 2
+  },
+  "relationship_type_distribution": {
+    "unknown": 29
+  },
+  "health_status": "healthy"
+}

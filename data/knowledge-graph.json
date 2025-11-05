@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2025-11-05T22:14:55.149221",
+  "last_updated": "2025-11-05T22:57:20.231693",
   "nodes": [
     {
       "id": "shadow_integration",
@@ -9,17 +9,18 @@
       "properties": {
         "description": "The process of integrating shadow functions"
       },
-      "frequency": 6,
+      "frequency": 8,
       "sources": [
         "test_doc_001",
         "test_doc_003",
         "doc_1",
-        "doc_2"
+        "doc_2",
+        "e725227c-bf7d-4c96-b4af-173d008eb4f9"
       ],
       "created_at": "2025-11-05T21:56:33.342663",
-      "last_updated": "2025-11-05T22:14:30.602169",
-      "definition": "Test definition",
-      "category": "foundational"
+      "last_updated": "2025-11-05T22:56:51.936670",
+      "definition": "Specific example of shadow integration where structure and learning from past failures leads to personal growth and channel development.",
+      "category": "advanced"
     },
     {
       "id": "cognitive_functions",
@@ -28,26 +29,410 @@
       "properties": {
         "description": "The eight cognitive functions in MBTI theory"
       },
-      "frequency": 1,
+      "frequency": 2,
       "sources": [
-        "test_doc_002"
+        "test_doc_002",
+        "a09189e5-7958-438a-a3ba-53a12589cf1f"
       ],
       "created_at": "2025-11-05T21:56:34.775739",
-      "last_updated": "2025-11-05T21:56:34.775746"
+      "last_updated": "2025-11-05T22:57:18.025408",
+      "definition": "The eight mental processes that form the basis of personality type, including thinking, feeling, sensing, and intuition in introverted and extraverted forms.",
+      "category": "foundational"
     },
     {
       "id": "inferior_function",
       "label": "Inferior Function",
       "type": "concept",
       "category": "foundational",
-      "definition": "The 4th cognitive function in the stack",
+      "definition": "The fourth cognitive function that operates in bursts and can become stronger than the hero function when aspirational, but requires significant mental energy.",
+      "properties": {},
+      "frequency": 2,
+      "sources": [
+        "test_doc_001",
+        "11e27c70-54af-48d8-aabd-594e7d40803d"
+      ],
+      "created_at": "2025-11-05T22:14:55.149212",
+      "last_updated": "2025-11-05T22:57:07.310942"
+    },
+    {
+      "id": "trickster_functions",
+      "label": "Trickster Functions",
+      "type": "function",
+      "category": "intermediate",
+      "definition": "Cognitive functions that create blind spots and lead to erroneous conclusions, potentially damaging relationships and causing severe consequences.",
       "properties": {},
       "frequency": 1,
       "sources": [
-        "test_doc_001"
+        "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed"
       ],
-      "created_at": "2025-11-05T22:14:55.149212",
-      "last_updated": "2025-11-05T22:14:55.149218"
+      "created_at": "2025-11-05T22:56:22.973306",
+      "last_updated": "2025-11-05T22:56:22.973314"
+    },
+    {
+      "id": "si_trickster",
+      "label": "Si Trickster",
+      "type": "function",
+      "category": "intermediate",
+      "definition": "Trickster function that impairs decision-making abilities, particularly affecting types like ESTJs who need external guidance for choices.",
+      "properties": {},
+      "frequency": 2,
+      "sources": [
+        "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed"
+      ],
+      "created_at": "2025-11-05T22:56:22.976490",
+      "last_updated": "2025-11-05T22:56:22.985217"
+    },
+    {
+      "id": "si_inferior",
+      "label": "Si Inferior",
+      "type": "function",
+      "category": "intermediate",
+      "definition": "Inferior function that can restore and maintain long-term memories for those with Si trickster through external reminders and shared experiences.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed"
+      ],
+      "created_at": "2025-11-05T22:56:22.982279",
+      "last_updated": "2025-11-05T22:56:22.982285"
+    },
+    {
+      "id": "memory_totems",
+      "label": "Memory Totems",
+      "type": "process",
+      "category": "intermediate",
+      "definition": "External memory aids like notebooks that ENJ types create to compensate for their Si trickster and maintain long-term memory.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed"
+      ],
+      "created_at": "2025-11-05T22:56:22.988027",
+      "last_updated": "2025-11-05T22:56:22.988032"
+    },
+    {
+      "id": "present_focused_perception",
+      "label": "Present-Focused Perception",
+      "type": "concept",
+      "category": "intermediate",
+      "definition": "The tendency of certain types to prioritize present experiences over duty or honor, perceiving the present as the only reality.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed"
+      ],
+      "created_at": "2025-11-05T22:56:22.991690",
+      "last_updated": "2025-11-05T22:56:22.991695"
+    },
+    {
+      "id": "external_decision_guidance",
+      "label": "External Decision Guidance",
+      "type": "process",
+      "category": "intermediate",
+      "definition": "The need for certain types to be told what decisions to make rather than being left to decide independently, particularly for career choices.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed"
+      ],
+      "created_at": "2025-11-05T22:56:22.994869",
+      "last_updated": "2025-11-05T22:56:22.994874"
+    },
+    {
+      "id": "child_function",
+      "label": "Child Function",
+      "type": "function",
+      "category": "foundational",
+      "definition": "A cognitive function capable of producing miracles and is fueled by the inferior function.",
+      "properties": {},
+      "frequency": 2,
+      "sources": [
+        "6e8eae28-dcad-4aaf-a8ae-cd4ba8d65950",
+        "11e27c70-54af-48d8-aabd-594e7d40803d"
+      ],
+      "created_at": "2025-11-05T22:56:35.902214",
+      "last_updated": "2025-11-05T22:57:07.368168"
+    },
+    {
+      "id": "demonic_child",
+      "label": "Demonic Child",
+      "type": "concept",
+      "category": "intermediate",
+      "definition": "When the child function combines with the demon function, creating destructive, selfish behavior focused solely on personal experience.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "6e8eae28-dcad-4aaf-a8ae-cd4ba8d65950"
+      ],
+      "created_at": "2025-11-05T22:56:35.905066",
+      "last_updated": "2025-11-05T22:56:35.905070"
+    },
+    {
+      "id": "fi_child",
+      "label": "Fi Child",
+      "type": "function",
+      "category": "intermediate",
+      "definition": "Introverted Feeling as a child function, which when in demonic mode becomes extremely selfish and focused only on personal experience.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "6e8eae28-dcad-4aaf-a8ae-cd4ba8d65950"
+      ],
+      "created_at": "2025-11-05T22:56:35.926571",
+      "last_updated": "2025-11-05T22:56:35.926579"
+    },
+    {
+      "id": "hero_function",
+      "label": "Hero Function",
+      "type": "function",
+      "category": "foundational",
+      "definition": "The primary cognitive function that can sometimes be outperformed by the aspirational inferior function in short bursts.",
+      "properties": {},
+      "frequency": 2,
+      "sources": [
+        "6e8eae28-dcad-4aaf-a8ae-cd4ba8d65950",
+        "11e27c70-54af-48d8-aabd-594e7d40803d"
+      ],
+      "created_at": "2025-11-05T22:56:35.931963",
+      "last_updated": "2025-11-05T22:57:07.362388"
+    },
+    {
+      "id": "function_stack_combinations",
+      "label": "Function Stack Combinations",
+      "type": "framework",
+      "category": "intermediate",
+      "definition": "The various ways cognitive functions can interact and combine with each other within a personality type's function stack.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "6e8eae28-dcad-4aaf-a8ae-cd4ba8d65950"
+      ],
+      "created_at": "2025-11-05T22:56:35.936930",
+      "last_updated": "2025-11-05T22:56:35.936934"
+    },
+    {
+      "id": "child_nurturing",
+      "label": "Child Nurturing",
+      "type": "principle",
+      "category": "foundational",
+      "definition": "The critical importance of supporting and motivating the child function rather than suppressing its optimism and enthusiasm.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "6e8eae28-dcad-4aaf-a8ae-cd4ba8d65950"
+      ],
+      "created_at": "2025-11-05T22:56:35.939943",
+      "last_updated": "2025-11-05T22:56:35.939947"
+    },
+    {
+      "id": "shadow_focus",
+      "label": "Shadow Focus",
+      "type": "concept",
+      "category": "foundational",
+      "definition": "A state where individuals are primarily operating from their shadow functions, which is common in first world society and represents an immature psychological state.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "e725227c-bf7d-4c96-b4af-173d008eb4f9"
+      ],
+      "created_at": "2025-11-05T22:56:51.888873",
+      "last_updated": "2025-11-05T22:56:51.888881"
+    },
+    {
+      "id": "subconscious_focus",
+      "label": "Subconscious Focus",
+      "type": "concept",
+      "category": "foundational",
+      "definition": "The desired psychological state where individuals operate from their subconscious functions rather than shadow functions, representing psychological maturity.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "e725227c-bf7d-4c96-b4af-173d008eb4f9"
+      ],
+      "created_at": "2025-11-05T22:56:51.894130",
+      "last_updated": "2025-11-05T22:56:51.894137"
+    },
+    {
+      "id": "nemesis_function",
+      "label": "Nemesis Function",
+      "type": "function",
+      "category": "intermediate",
+      "definition": "A cognitive function that typically acts as an opponent or source of difficulty, but can be transformed into an ally through proper development.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "e725227c-bf7d-4c96-b4af-173d008eb4f9"
+      ],
+      "created_at": "2025-11-05T22:56:51.921007",
+      "last_updated": "2025-11-05T22:56:51.921011"
+    },
+    {
+      "id": "nemesis_to_ally_transformation",
+      "label": "Nemesis-to-Ally Transformation",
+      "type": "process",
+      "category": "advanced",
+      "definition": "The process of converting one's nemesis function from a source of opposition into a supportive ally, essential for psychological maturation.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "e725227c-bf7d-4c96-b4af-173d008eb4f9"
+      ],
+      "created_at": "2025-11-05T22:56:51.924223",
+      "last_updated": "2025-11-05T22:56:51.924227"
+    },
+    {
+      "id": "inferior_function_development",
+      "label": "Inferior Function Development",
+      "type": "process",
+      "category": "intermediate",
+      "definition": "The transformation of the inferior function into an aspirational function, parallel to nemesis function development.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "e725227c-bf7d-4c96-b4af-173d008eb4f9"
+      ],
+      "created_at": "2025-11-05T22:56:51.929082",
+      "last_updated": "2025-11-05T22:56:51.929088"
+    },
+    {
+      "id": "psychological_maturation",
+      "label": "Psychological Maturation",
+      "type": "process",
+      "category": "foundational",
+      "definition": "The developmental process of reaching psychological maturity through function integration, described as a rite of passage from boyhood to manhood.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "e725227c-bf7d-4c96-b4af-173d008eb4f9"
+      ],
+      "created_at": "2025-11-05T22:56:51.932937",
+      "last_updated": "2025-11-05T22:56:51.932941"
+    },
+    {
+      "id": "subconscious_side",
+      "label": "Subconscious Side",
+      "type": "framework",
+      "category": "intermediate",
+      "definition": "A side of the mind accessed through the second gateway function, where the inferior function can operate aspirationally.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "11e27c70-54af-48d8-aabd-594e7d40803d"
+      ],
+      "created_at": "2025-11-05T22:57:07.315996",
+      "last_updated": "2025-11-05T22:57:07.316000"
+    },
+    {
+      "id": "aspirational_state",
+      "label": "Aspirational State",
+      "type": "process",
+      "category": "intermediate",
+      "definition": "A state where one has mastered their fear and channels the inferior function positively, like a knight in shining armor protecting others.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "11e27c70-54af-48d8-aabd-594e7d40803d"
+      ],
+      "created_at": "2025-11-05T22:57:07.350096",
+      "last_updated": "2025-11-05T22:57:07.350103"
+    },
+    {
+      "id": "fear_based_state",
+      "label": "Fear-Based State",
+      "type": "process",
+      "category": "intermediate",
+      "definition": "A negative state where the inferior function manifests as vengeful and violent behavior when one is afraid.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "11e27c70-54af-48d8-aabd-594e7d40803d"
+      ],
+      "created_at": "2025-11-05T22:57:07.354519",
+      "last_updated": "2025-11-05T22:57:07.354523"
+    },
+    {
+      "id": "second_gateway_function",
+      "label": "Second Gateway Function",
+      "type": "function",
+      "category": "advanced",
+      "definition": "The function through which one accesses their subconscious side of mind.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "11e27c70-54af-48d8-aabd-594e7d40803d"
+      ],
+      "created_at": "2025-11-05T22:57:07.358256",
+      "last_updated": "2025-11-05T22:57:07.358260"
+    },
+    {
+      "id": "mental_energy_cost",
+      "label": "Mental Energy Cost",
+      "type": "principle",
+      "category": "intermediate",
+      "definition": "The significant energy expenditure required to use the subconscious aspirationally, limiting its use to short bursts.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "11e27c70-54af-48d8-aabd-594e7d40803d"
+      ],
+      "created_at": "2025-11-05T22:57:07.374160",
+      "last_updated": "2025-11-05T22:57:07.374167"
+    },
+    {
+      "id": "cognitive_attitude",
+      "label": "Cognitive Attitude",
+      "type": "concept",
+      "category": "foundational",
+      "definition": "The directional orientation of cognitive functions, determining how they process information and interact with the world.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "a09189e5-7958-438a-a3ba-53a12589cf1f"
+      ],
+      "created_at": "2025-11-05T22:57:17.987826",
+      "last_updated": "2025-11-05T22:57:17.987831"
+    },
+    {
+      "id": "parent_function",
+      "label": "Parent Function",
+      "type": "function",
+      "category": "foundational",
+      "definition": "The second function in the cognitive stack that provides support and guidance to the Hero function.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "a09189e5-7958-438a-a3ba-53a12589cf1f"
+      ],
+      "created_at": "2025-11-05T22:57:17.995028",
+      "last_updated": "2025-11-05T22:57:17.995034"
+    },
+    {
+      "id": "season_16",
+      "label": "Season 16",
+      "type": "framework",
+      "category": "intermediate",
+      "definition": "A content series focused on exploring cognitive attitudes and their relationship to cognitive functions.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "a09189e5-7958-438a-a3ba-53a12589cf1f"
+      ],
+      "created_at": "2025-11-05T22:57:18.012023",
+      "last_updated": "2025-11-05T22:57:18.012030"
+    },
+    {
+      "id": "typology",
+      "label": "Typology",
+      "type": "framework",
+      "category": "foundational",
+      "definition": "The systematic study and classification of personality types based on cognitive function theory.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "a09189e5-7958-438a-a3ba-53a12589cf1f"
+      ],
+      "created_at": "2025-11-05T22:57:18.061821",
+      "last_updated": "2025-11-05T22:57:18.061831"
     }
   ],
   "edges": [
@@ -88,11 +473,450 @@
       ],
       "created_at": "2025-11-05T22:13:36.610502",
       "last_updated": "2025-11-05T22:14:30.610156"
+    },
+    {
+      "id": "si_trickster__requires_understanding__si_inferior",
+      "source": "si_trickster",
+      "target": "si_inferior",
+      "type": "requires_understanding",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Si trickster is solved by Si inferior",
+          "timestamp": "2025-11-05T22:56:22.998963"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:22.998968",
+      "last_updated": "2025-11-05T22:56:22.998969"
+    },
+    {
+      "id": "si_trickster__leads_to__memory_totems",
+      "source": "si_trickster",
+      "target": "memory_totems",
+      "type": "leads_to",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "The totems that ENJs create by having notebooks, etc., are very important",
+          "timestamp": "2025-11-05T22:56:23.005803"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:23.005809",
+      "last_updated": "2025-11-05T22:56:23.005811"
+    },
+    {
+      "id": "trickster_functions__manifests_as__present_focused_perception",
+      "source": "trickster_functions",
+      "target": "present_focused_perception",
+      "type": "manifests_as",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "These types prioritize present experiences over duty or honor, as they perceive the present as the only reality",
+          "timestamp": "2025-11-05T22:56:23.011132"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:23.011138",
+      "last_updated": "2025-11-05T22:56:23.011140"
+    },
+    {
+      "id": "si_trickster__requires_understanding__external_decision_guidance",
+      "source": "si_trickster",
+      "target": "external_decision_guidance",
+      "type": "requires_understanding",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "They need to be told what to do. You basically need to make the decision for them",
+          "timestamp": "2025-11-05T22:56:23.019524"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:23.019529",
+      "last_updated": "2025-11-05T22:56:23.019531"
+    },
+    {
+      "id": "si_trickster__related_to__external_decision_guidance",
+      "source": "si_trickster",
+      "target": "external_decision_guidance",
+      "type": "related_to",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Supporting them in remembering past events is more beneficial than judging them for forgetfulness",
+          "timestamp": "2025-11-05T22:56:23.024982"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:23.024987",
+      "last_updated": "2025-11-05T22:56:23.024989"
+    },
+    {
+      "id": "child_function__manifests_as__demonic_child",
+      "source": "child_function",
+      "target": "demonic_child",
+      "type": "manifests_as",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "the child function interacts. Also, it can combine with other functions. Like, for example, it can combine with a demon. That's what you call the demonic child.",
+          "timestamp": "2025-11-05T22:56:35.943886"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:35.943890",
+      "last_updated": "2025-11-05T22:56:35.943891"
+    },
+    {
+      "id": "fi_child__manifests_as__demonic_child",
+      "source": "fi_child",
+      "target": "demonic_child",
+      "type": "manifests_as",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Fi child in an INTJ or ISTJ, when it can go demon mode, for example, in an INTJ, it becomes this insanely selfish inner child",
+          "timestamp": "2025-11-05T22:56:35.947605"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:35.947610",
+      "last_updated": "2025-11-05T22:56:35.947612"
+    },
+    {
+      "id": "hero_function__enables__child_function",
+      "source": "hero_function",
+      "target": "child_function",
+      "type": "enables",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "The best team up for the function is the most common team up for the child function is to team up with the hero function",
+          "timestamp": "2025-11-05T22:56:35.952973"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:35.952977",
+      "last_updated": "2025-11-05T22:56:35.952978"
+    },
+    {
+      "id": "child_nurturing__enables__child_function",
+      "source": "child_nurturing",
+      "target": "child_function",
+      "type": "enables",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "motivate the child, support the child, feed the child, be there for the child. Do not take advantage of the child, do not abuse it",
+          "timestamp": "2025-11-05T22:56:35.957459"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:35.957495",
+      "last_updated": "2025-11-05T22:56:35.957496"
+    },
+    {
+      "id": "function_stack_combinations__enables__demonic_child",
+      "source": "function_stack_combinations",
+      "target": "demonic_child",
+      "type": "enables",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "there's a lot of different combinations in the function stack where the child can team up with other functions",
+          "timestamp": "2025-11-05T22:56:35.961752"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:35.961756",
+      "last_updated": "2025-11-05T22:56:35.961757"
+    },
+    {
+      "id": "shadow_focus__contrasts_with__subconscious_focus",
+      "source": "shadow_focus",
+      "target": "subconscious_focus",
+      "type": "contrasts_with",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "first world society is very shadow focused. It's a very rare in first world society to see someone who is subconscious focused. That subconscious focus is where we want to be.",
+          "timestamp": "2025-11-05T22:56:51.942930"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:51.942936",
+      "last_updated": "2025-11-05T22:56:51.942937"
+    },
+    {
+      "id": "shadow_integration__leads_to__subconscious_focus",
+      "source": "shadow_integration",
+      "target": "subconscious_focus",
+      "type": "leads_to",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "what we need to do to get out of shadow focus is to integrate, to integrate our shadow",
+          "timestamp": "2025-11-05T22:56:51.947700"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:51.947705",
+      "last_updated": "2025-11-05T22:56:51.947706"
+    },
+    {
+      "id": "nemesis_to_ally_transformation__part_of__shadow_integration",
+      "source": "nemesis_to_ally_transformation",
+      "target": "shadow_integration",
+      "type": "part_of",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Do not be at odds with your nemesis. Do not treat your nemesis as a villain. Treat it as an ally. You can turn your nemesis into an ally",
+          "timestamp": "2025-11-05T22:56:51.952905"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:51.952909",
+      "last_updated": "2025-11-05T22:56:51.952910"
+    },
+    {
+      "id": "nemesis_to_ally_transformation__related_to__inferior_function_development",
+      "source": "nemesis_to_ally_transformation",
+      "target": "inferior_function_development",
+      "type": "related_to",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "You can turn your nemesis into an ally just as much as the inferior function can turn into an aspirational function",
+          "timestamp": "2025-11-05T22:56:51.958135"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:51.958139",
+      "last_updated": "2025-11-05T22:56:51.958140"
+    },
+    {
+      "id": "nemesis_to_ally_transformation__enables__psychological_maturation",
+      "source": "nemesis_to_ally_transformation",
+      "target": "psychological_maturation",
+      "type": "enables",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "You must turn your nemesis function into an ally to reach maturity",
+          "timestamp": "2025-11-05T22:56:51.964343"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:51.964347",
+      "last_updated": "2025-11-05T22:56:51.964348"
+    },
+    {
+      "id": "shadow_integration__manifests_as__nemesis_to_ally_transformation",
+      "source": "shadow_integration",
+      "target": "nemesis_to_ally_transformation",
+      "type": "manifests_as",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "By integrating my INTJ shadow and using structure in my channel, I've learned from past failures",
+          "timestamp": "2025-11-05T22:56:51.969694"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:51.969698",
+      "last_updated": "2025-11-05T22:56:51.969699"
+    },
+    {
+      "id": "psychological_maturation__requires_understanding__nemesis_function",
+      "source": "psychological_maturation",
+      "target": "nemesis_function",
+      "type": "requires_understanding",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Developing your nemesis function is crucial for success and growth",
+          "timestamp": "2025-11-05T22:56:51.974891"
+        }
+      ],
+      "created_at": "2025-11-05T22:56:51.974896",
+      "last_updated": "2025-11-05T22:56:51.974897"
+    },
+    {
+      "id": "fear_based_state__contrasts_with__aspirational_state",
+      "source": "fear_based_state",
+      "target": "aspirational_state",
+      "type": "contrasts_with",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "When afraid, becomes vengeful and violent, but when aspiring, becomes like a knight in shining armor protecting the innocent",
+          "timestamp": "2025-11-05T22:57:07.382417"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:07.382423",
+      "last_updated": "2025-11-05T22:57:07.382425"
+    },
+    {
+      "id": "second_gateway_function__enables__subconscious_side",
+      "source": "second_gateway_function",
+      "target": "subconscious_side",
+      "type": "enables",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "When going into your subconscious side of your mind, you're going through the second gateway function",
+          "timestamp": "2025-11-05T22:57:07.389086"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:07.389091",
+      "last_updated": "2025-11-05T22:57:07.389092"
+    },
+    {
+      "id": "aspirational_state__leads_to__mental_energy_cost",
+      "source": "aspirational_state",
+      "target": "mental_energy_cost",
+      "type": "leads_to",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "It costs a lot of mental energy to use your subconscious in an aspirational way",
+          "timestamp": "2025-11-05T22:57:07.394759"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:07.394763",
+      "last_updated": "2025-11-05T22:57:07.394764"
+    },
+    {
+      "id": "mental_energy_cost__manifests_as__inferior_function",
+      "source": "mental_energy_cost",
+      "target": "inferior_function",
+      "type": "manifests_as",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "You can only use that aspirational function for a short burst of time because it costs mental energy",
+          "timestamp": "2025-11-05T22:57:07.413054"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:07.413063",
+      "last_updated": "2025-11-05T22:57:07.413066"
+    },
+    {
+      "id": "inferior_function__contrasts_with__hero_function",
+      "source": "inferior_function",
+      "target": "hero_function",
+      "type": "contrasts_with",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Inferior function becomes stronger and more capable than a hero function in certain bursts",
+          "timestamp": "2025-11-05T22:57:07.419256"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:07.419261",
+      "last_updated": "2025-11-05T22:57:07.419262"
+    },
+    {
+      "id": "inferior_function__enables__child_function",
+      "source": "inferior_function",
+      "target": "child_function",
+      "type": "enables",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "The child function is fueled by the inferior function",
+          "timestamp": "2025-11-05T22:57:07.425010"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:07.425016",
+      "last_updated": "2025-11-05T22:57:07.425017"
+    },
+    {
+      "id": "cognitive_attitude__manifests_as__parent_function",
+      "source": "cognitive_attitude",
+      "target": "parent_function",
+      "type": "manifests_as",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Today, we're discussing the cognitive attitude of [the parent function]",
+          "timestamp": "2025-11-05T22:57:18.081360"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:18.081367",
+      "last_updated": "2025-11-05T22:57:18.081368"
+    },
+    {
+      "id": "parent_function__part_of__cognitive_functions",
+      "source": "parent_function",
+      "target": "cognitive_functions",
+      "type": "part_of",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "The second function in the cognitive stack",
+          "timestamp": "2025-11-05T22:57:18.087321"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:18.087326",
+      "last_updated": "2025-11-05T22:57:18.087327"
+    },
+    {
+      "id": "season_16__related_to__cognitive_attitude",
+      "source": "season_16",
+      "target": "cognitive_attitude",
+      "type": "related_to",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Season 16 content series exploring cognitive attitudes",
+          "timestamp": "2025-11-05T22:57:18.139446"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:18.139456",
+      "last_updated": "2025-11-05T22:57:18.139458"
+    },
+    {
+      "id": "typology__builds_on__cognitive_functions",
+      "source": "typology",
+      "target": "cognitive_functions",
+      "type": "builds_on",
+      "properties": {},
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Practical applications of typology in daily life",
+          "timestamp": "2025-11-05T22:57:18.165196"
+        }
+      ],
+      "created_at": "2025-11-05T22:57:18.165204",
+      "last_updated": "2025-11-05T22:57:18.165206"
     }
   ],
   "metadata": {
     "total_documents_processed": 0,
-    "total_concepts": 3,
-    "total_relationships": 2
+    "total_concepts": 30,
+    "total_relationships": 29,
+    "processed_documents": [
+      "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed",
+      "6e8eae28-dcad-4aaf-a8ae-cd4ba8d65950",
+      "e725227c-bf7d-4c96-b4af-173d008eb4f9",
+      "11e27c70-54af-48d8-aabd-594e7d40803d",
+      "a09189e5-7958-438a-a3ba-53a12589cf1f"
+    ]
   }
 }

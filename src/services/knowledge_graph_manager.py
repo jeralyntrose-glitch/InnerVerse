@@ -344,6 +344,23 @@ class KnowledgeGraphManager:
                 return node
         return None
     
+    async def find_node_by_label(self, label: str, threshold: float = 0.85) -> Optional[Dict[str, Any]]:
+        """
+        Find a node by its label using fuzzy matching.
+        
+        Args:
+            label: Label to search for
+            threshold: Similarity threshold (0.85 = 85% match)
+            
+        Returns:
+            Dict: Best matching node or None if no good match found
+        """
+        similar_nodes = self.find_similar_nodes(label, threshold)
+        
+        if similar_nodes:
+            return similar_nodes[0]
+        return None
+    
     async def get_connected_nodes(self, node_id: str) -> List[Dict[str, Any]]:
         """
         Get all nodes connected to the given node.

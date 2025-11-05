@@ -226,7 +226,7 @@ async def process_all_documents() -> Dict[str, Any]:
         all_docs = await get_all_pinecone_documents()
         
         manager = KnowledgeGraphManager()
-        graph = await manager.load_graph()
+        graph = manager.load_graph()
         
         if 'metadata' not in graph:
             graph['metadata'] = {}
@@ -266,7 +266,14 @@ async def process_all_documents() -> Dict[str, Any]:
             
             if not doc_text or len(doc_text.strip()) < 100:
                 print(f"⚠️  Skipping {doc_id}: insufficient text content")
+                
+                graph = manager.load_graph()
+                if 'metadata' not in graph:
+                    graph['metadata'] = {}
+                if 'processed_documents' not in graph['metadata']:
+                    graph['metadata']['processed_documents'] = []
                 graph['metadata']['processed_documents'].append(doc_id)
+                manager.save_graph(graph)
                 continue
             
             try:
@@ -276,7 +283,14 @@ async def process_all_documents() -> Dict[str, Any]:
                     print(f"⚠️  Failed to extract from {doc_id}")
                     error_count += 1
                     await log_failed_extraction(doc_id, "Extraction returned None")
+                    
+                    graph = manager.load_graph()
+                    if 'metadata' not in graph:
+                        graph['metadata'] = {}
+                    if 'processed_documents' not in graph['metadata']:
+                        graph['metadata']['processed_documents'] = []
                     graph['metadata']['processed_documents'].append(doc_id)
+                    manager.save_graph(graph)
                     continue
                 
                 concepts_added = 0
@@ -304,10 +318,15 @@ async def process_all_documents() -> Dict[str, Any]:
                 
                 print(f"   ✅ {concepts_added} concepts, {relationships_added} relationships")
                 
+                graph = manager.load_graph()
+                if 'metadata' not in graph:
+                    graph['metadata'] = {}
+                if 'processed_documents' not in graph['metadata']:
+                    graph['metadata']['processed_documents'] = []
                 graph['metadata']['processed_documents'].append(doc_id)
+                manager.save_graph(graph)
                 
                 if (i + 1) % 10 == 0:
-                    await manager.save_graph(graph)
                     print(f"   💾 Progress saved: {current_num} documents processed")
                 
                 await asyncio.sleep(2)
@@ -316,10 +335,17 @@ async def process_all_documents() -> Dict[str, Any]:
                 print(f"   ❌ Error processing {doc_id}: {error}")
                 error_count += 1
                 await log_failed_extraction(doc_id, str(error))
+                
+                graph = manager.load_graph()
+                if 'metadata' not in graph:
+                    graph['metadata'] = {}
+                if 'processed_documents' not in graph['metadata']:
+                    graph['metadata']['processed_documents'] = []
                 graph['metadata']['processed_documents'].append(doc_id)
+                manager.save_graph(graph)
         
-        await manager.save_graph(graph)
-        graph = await manager.load_graph()
+        manager.save_graph(graph)
+        graph = manager.load_graph()
         
         print("\n" + "=" * 80)
         print("🎉 BATCH PROCESSING COMPLETE!")
