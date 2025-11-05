@@ -39,6 +39,92 @@
       <p class="tagline" id="tagline">Explore 340 documents with structured metadata</p>
     </div>
 
+    <!-- Analytics Dashboard -->
+    <div class="analytics-section">
+      <button id="analytics-toggle" class="analytics-toggle-btn">
+        <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+        <span>Show Analytics</span>
+      </button>
+
+      <div id="analytics-dashboard" class="analytics-dashboard" style="display: none;">
+        <!-- Loading State -->
+        <div id="analytics-loading" class="analytics-loading">
+          <div class="loading-spinner-small"></div>
+          <p style="margin-top: 10px; font-size: 14px; color: var(--text-secondary);">Loading analytics...</p>
+        </div>
+
+        <!-- Analytics Content (hidden until loaded) -->
+        <div id="analytics-content" class="analytics-content" style="display: none;">
+          <!-- Stat Cards -->
+          <div class="stat-cards-grid">
+            <div class="stat-card">
+              <div class="stat-icon">📊</div>
+              <div class="stat-content">
+                <div class="stat-label">Total Documents</div>
+                <div class="stat-value" id="stat-total">-</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🎓</div>
+              <div class="stat-content">
+                <div class="stat-label">Lectures</div>
+                <div class="stat-value" id="stat-lectures">-</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">💬</div>
+              <div class="stat-content">
+                <div class="stat-label">Q&A Sessions</div>
+                <div class="stat-value" id="stat-qa">-</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">📝</div>
+              <div class="stat-content">
+                <div class="stat-label">Responses</div>
+                <div class="stat-value" id="stat-responses">-</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Grid -->
+          <div class="charts-grid">
+            <!-- Difficulty Distribution -->
+            <div class="chart-card">
+              <h3 class="chart-title">Difficulty Distribution</h3>
+              <canvas id="difficulty-chart"></canvas>
+            </div>
+
+            <!-- Quadra Coverage -->
+            <div class="chart-card">
+              <h3 class="chart-title">Quadra Coverage</h3>
+              <canvas id="quadra-chart"></canvas>
+            </div>
+
+            <!-- Top Types -->
+            <div class="chart-card chart-card-wide">
+              <h3 class="chart-title">Top 10 MBTI Types Discussed</h3>
+              <canvas id="types-chart"></canvas>
+            </div>
+
+            <!-- Top Functions -->
+            <div class="chart-card">
+              <h3 class="chart-title">Most Covered Functions</h3>
+              <canvas id="functions-chart"></canvas>
+            </div>
+
+            <!-- Popular Topics -->
+            <div class="chart-card">
+              <h3 class="chart-title">Popular Topics</h3>
+              <canvas id="topics-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="content-atlas-container">
       <!-- Mobile Filter Toggle -->
       <button id="mobile-filter-toggle" class="mobile-filter-toggle">
@@ -99,8 +185,11 @@
     </div> <!-- Close content-atlas-container -->
   </div> <!-- Close page-wrapper -->
 
+  <!-- Chart.js Library for Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
   <!-- Content Atlas Application -->
-  <script src="/static/content-atlas-app.js?v=2"></script>
+  <script src="/static/content-atlas-app.js?v=3"></script>
 
   <!-- Theme Toggle -->
   <script>

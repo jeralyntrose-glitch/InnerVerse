@@ -572,6 +572,310 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ==== ANALYTICS DASHBOARD ====
+  
+  const analyticsToggleBtn = document.getElementById('analytics-toggle');
+  const analyticsDashboard = document.getElementById('analytics-dashboard');
+  const analyticsLoading = document.getElementById('analytics-loading');
+  const analyticsContent = document.getElementById('analytics-content');
+  
+  let analyticsData = null;
+  let chartsInitialized = false;
+  let chartInstances = {};
+
+  // Toggle analytics dashboard
+  if (analyticsToggleBtn && analyticsDashboard) {
+    analyticsToggleBtn.addEventListener('click', () => {
+      const isHidden = analyticsDashboard.style.display === 'none';
+      
+      if (isHidden) {
+        analyticsDashboard.style.display = 'block';
+        analyticsToggleBtn.querySelector('span').textContent = 'Hide Analytics';
+        analyticsToggleBtn.querySelector('.chevron-icon').style.transform = 'rotate(180deg)';
+        sessionStorage.setItem('analyticsExpanded', 'true');
+        
+        // Load analytics if not already loaded
+        if (!analyticsData) {
+          loadAnalytics();
+        }
+      } else {
+        analyticsDashboard.style.display = 'none';
+        analyticsToggleBtn.querySelector('span').textContent = 'Show Analytics';
+        analyticsToggleBtn.querySelector('.chevron-icon').style.transform = 'rotate(0deg)';
+        sessionStorage.setItem('analyticsExpanded', 'false');
+      }
+    });
+
+    // Restore previous state
+    const wasExpanded = sessionStorage.getItem('analyticsExpanded') === 'true';
+    if (wasExpanded) {
+      analyticsToggleBtn.click();
+    }
+  }
+
+  // Load analytics data from API
+  async function loadAnalytics() {
+    try {
+      analyticsLoading.style.display = 'block';
+      analyticsContent.style.display = 'none';
+
+      const response = await fetch('/api/content-atlas/analytics');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      analyticsData = await response.json();
+      
+      // Populate stat cards
+      document.getElementById('stat-total').textContent = analyticsData.total_documents || 0;
+      document.getElementById('stat-lectures').textContent = analyticsData.by_content_type?.lecture || 0;
+      document.getElementById('stat-qa').textContent = analyticsData.by_content_type?.qa || 0;
+      document.getElementById('stat-responses').textContent = analyticsData.by_content_type?.response || 0;
+
+      // Render charts
+      if (!chartsInitialized && typeof Chart !== 'undefined') {
+        renderCharts(analyticsData);
+        chartsInitialized = true;
+      }
+
+      // Show content, hide loading
+      analyticsLoading.style.display = 'none';
+      analyticsContent.style.display = 'block';
+
+    } catch (error) {
+      console.error('Failed to load analytics:', error);
+      analyticsLoading.innerHTML = '<p style="color: var(--error-color); font-size: 14px;">Failed to load analytics. Please try again.</p>';
+    }
+  }
+
+  // Render all charts
+  function renderCharts(data) {
+    const brandColors = {
+      purple: '#9333EA',
+      teal: '#10A37F',
+      blue: '#3B82F6',
+      green: '#22C55E',
+      orange: '#F59E0B',
+      red: '#EF4444'
+    };
+
+    // Difficulty Distribution - Bar Chart
+    if (data.by_difficulty && Object.keys(data.by_difficulty).length > 0) {
+      const difficultyCtx = document.getElementById('difficulty-chart');
+      if (difficultyCtx) {
+        chartInstances.difficulty = new Chart(difficultyCtx, {
+          type: 'bar',
+          data: {
+            labels: Object.keys(data.by_difficulty).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
+            datasets: [{
+              label: 'Documents',
+              data: Object.values(data.by_difficulty),
+              backgroundColor: [brandColors.green, brandColors.orange, brandColors.red],
+              borderRadius: 6,
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                titleColor: '#fff',
+                bodyColor: '#fff'
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { precision: 0 },
+                grid: { color: 'rgba(128, 128, 128, 0.1)' }
+              },
+              x: {
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Quadra Coverage - Pie Chart
+    if (data.by_quadra && Object.keys(data.by_quadra).length > 0) {
+      const quadraCtx = document.getElementById('quadra-chart');
+      if (quadraCtx) {
+        chartInstances.quadra = new Chart(quadraCtx, {
+          type: 'doughnut',
+          data: {
+            labels: Object.keys(data.by_quadra),
+            datasets: [{
+              data: Object.values(data.by_quadra),
+              backgroundColor: [brandColors.purple, brandColors.teal, brandColors.blue, brandColors.orange],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 1.5,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { padding: 15, font: { size: 12 } }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Top 10 Types - Horizontal Bar Chart
+    if (data.top_types && data.top_types.length > 0) {
+      const typesCtx = document.getElementById('types-chart');
+      if (typesCtx) {
+        chartInstances.types = new Chart(typesCtx, {
+          type: 'bar',
+          data: {
+            labels: data.top_types.map(t => t.type),
+            datasets: [{
+              label: 'Mentions',
+              data: data.top_types.map(t => t.count),
+              backgroundColor: brandColors.purple,
+              borderRadius: 6,
+              borderWidth: 0
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { precision: 0 },
+                grid: { color: 'rgba(128, 128, 128, 0.1)' }
+              },
+              y: {
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Top Functions - Horizontal Bar Chart
+    if (data.top_functions && data.top_functions.length > 0) {
+      const functionsCtx = document.getElementById('functions-chart');
+      if (functionsCtx) {
+        chartInstances.functions = new Chart(functionsCtx, {
+          type: 'bar',
+          data: {
+            labels: data.top_functions.map(f => f.function),
+            datasets: [{
+              label: 'Coverage',
+              data: data.top_functions.map(f => f.count),
+              backgroundColor: brandColors.teal,
+              borderRadius: 6,
+              borderWidth: 0
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 1.5,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { precision: 0 },
+                grid: { color: 'rgba(128, 128, 128, 0.1)' }
+              },
+              y: {
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Popular Topics - Horizontal Bar Chart
+    if (data.top_topics && data.top_topics.length > 0) {
+      const topicsCtx = document.getElementById('topics-chart');
+      if (topicsCtx) {
+        chartInstances.topics = new Chart(topicsCtx, {
+          type: 'bar',
+          data: {
+            labels: data.top_topics.map(t => t.topic.length > 30 ? t.topic.substring(0, 30) + '...' : t.topic),
+            datasets: [{
+              label: 'Frequency',
+              data: data.top_topics.map(t => t.count),
+              backgroundColor: brandColors.blue,
+              borderRadius: 6,
+              borderWidth: 0
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 1.2,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                callbacks: {
+                  title: function(context) {
+                    const fullLabel = data.top_topics[context[0].dataIndex].topic;
+                    return fullLabel;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { precision: 0 },
+                grid: { color: 'rgba(128, 128, 128, 0.1)' }
+              },
+              y: {
+                grid: { display: false },
+                ticks: {
+                  font: { size: 11 }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+  }
+
   // Initial load
   console.log('Content Atlas app initialized');
   console.log('Elements found:', {
