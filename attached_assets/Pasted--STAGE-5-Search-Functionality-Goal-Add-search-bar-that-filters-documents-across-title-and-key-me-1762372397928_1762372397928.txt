@@ -1,0 +1,132 @@
+🎯 STAGE 5: Search Functionality
+Goal: Add search bar that filters documents across title and key metadata fields.
+Instructions for Replit Agent:
+STAGE 5: Content Atlas - Search Functionality
+
+Add search capability to Content Atlas page.
+
+REQUIREMENTS:
+1. Update /src/pages/ContentAtlas.jsx
+
+2. Add search state:
+   const [searchQuery, setSearchQuery] = useState('');
+   const [searchDebounceTimer, setSearchDebounceTimer] = useState(null);
+
+3. Update fetchDocuments to include search:
+   async function fetchDocuments(page = 1, search = '') {
+     setLoading(true);
+     setError(null);
+     try {
+       let url = `/api/content-atlas?page=${page}&limit=50`;
+       if (search) url += `&search=${encodeURIComponent(search)}`;
+       
+       const response = await fetch(url);
+       if (!response.ok) throw new Error('Failed to fetch');
+       const data = await response.json();
+       setDocuments(data.documents);
+       setPagination(data.pagination);
+     } catch (err) {
+       setError(err.message);
+     } finally {
+       setLoading(false);
+     }
+   }
+
+4. Debounced search handler:
+   function handleSearchChange(value) {
+     setSearchQuery(value);
+     
+     // Clear existing timer
+     if (searchDebounceTimer) {
+       clearTimeout(searchDebounceTimer);
+     }
+     
+     // Set new timer (500ms delay)
+     const timer = setTimeout(() => {
+       setCurrentPage(1); // Reset to page 1 on new search
+       fetchDocuments(1, value);
+     }, 500);
+     
+     setSearchDebounceTimer(timer);
+   }
+
+5. Cleanup on unmount:
+   useEffect(() => {
+     return () => {
+       if (searchDebounceTimer) {
+         clearTimeout(searchDebounceTimer);
+       }
+     };
+   }, [searchDebounceTimer]);
+
+6. UI addition (place above documents grid):
+   <div class="search-bar-container">
+     <input
+       type="text"
+       placeholder="Search by title, types, functions, or topics..."
+       value={searchQuery}
+       onChange={(e) => handleSearchChange(e.target.value)}
+       class="search-input"
+     />
+     {searchQuery && (
+       <button 
+         class="clear-search"
+         onClick={() => {
+           setSearchQuery('');
+           setCurrentPage(1);
+           fetchDocuments(1, '');
+         }}
+       >
+         ✕ Clear
+       </button>
+     )}
+   </div>
+
+   {searchQuery && pagination && (
+     <p class="search-results-count">
+       Found {pagination.total_documents} documents matching "{searchQuery}"
+     </p>
+   )}
+
+7. Styling:
+   - Search bar: full width, prominent
+   - Search icon on left side
+   - Clear button appears when text entered
+   - Results count below search bar
+   - Highlight search terms in results (optional enhancement)
+
+8. Edge cases to handle:
+   - Empty search string - fetch all documents
+   - Search with no results - show "No documents found" message
+   - Search while loading previous search - cancel previous request
+   - Special characters in search query - properly encode
+
+9. DO NOT:
+   - Add advanced filters yet
+   - Modify backend search logic (unless bugs found)
+
+VERIFICATION STEPS:
+- Type "ENFP" - results filter to ENFP-related content
+- Type "shadow" - results include docs with shadow topic
+- Type "octagram" - filters to octagram content
+- Clear search - returns to full list
+- Type quickly - verify debouncing works (not fetching on every keystroke)
+- Search with no results - proper message displays
+- Check pagination updates with search results
+What Could Go Wrong:
+
+Debounce not working (fires too often)
+Timer not cleared causing memory leaks
+Search not URL-safe (special characters break)
+Results count incorrect
+Pagination broken with search active
+Search state not cleared when it should be
+
+Success Criteria:
+✅ Search filters documents correctly
+✅ Debouncing works (wait 500ms after typing stops)
+✅ Clear button resets search
+✅ Results count accurate
+✅ Pagination works with filtered results
+✅ No console errors
+STOP HERE. Test search edge cases before Stage 6.

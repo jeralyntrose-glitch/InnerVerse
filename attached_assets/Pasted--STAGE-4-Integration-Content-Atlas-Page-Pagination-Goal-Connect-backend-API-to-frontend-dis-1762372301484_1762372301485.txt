@@ -1,0 +1,126 @@
+🎯 STAGE 4: Integration - Content Atlas Page + Pagination
+Goal: Connect backend API to frontend, display real documents with pagination.
+Instructions for Replit Agent:
+STAGE 4: Content Atlas - Page Integration & Pagination
+
+Connect the API endpoint to Content Atlas page with pagination controls.
+
+REQUIREMENTS:
+1. Update /src/pages/ContentAtlas.jsx
+
+2. State management:
+   const [documents, setDocuments] = useState([]);
+   const [pagination, setPagination] = useState(null);
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState(null);
+   const [currentPage, setCurrentPage] = useState(1);
+
+3. Data fetching function:
+   async function fetchDocuments(page = 1) {
+     setLoading(true);
+     setError(null);
+     try {
+       const response = await fetch(
+         `/api/content-atlas?page=${page}&limit=50`
+       );
+       if (!response.ok) throw new Error('Failed to fetch');
+       const data = await response.json();
+       setDocuments(data.documents);
+       setPagination(data.pagination);
+     } catch (err) {
+       setError(err.message);
+     } finally {
+       setLoading(false);
+     }
+   }
+
+4. useEffect to fetch on mount and page change:
+   useEffect(() => {
+     fetchDocuments(currentPage);
+   }, [currentPage]);
+
+5. Page layout:
+   <div class="content-atlas-page">
+     <header>
+       <h1>🗺️ Content Atlas</h1>
+       <p>Complete knowledge map of {pagination.total_documents} documents</p>
+     </header>
+
+     {loading && <LoadingSpinner />}
+     
+     {error && <ErrorMessage>{error}</ErrorMessage>}
+     
+     {!loading && !error && (
+       <>
+         <div class="documents-grid">
+           {documents.map(doc => (
+             <MetadataTreeView
+               key={doc.id}
+               title={doc.title}
+               metadata={doc.metadata}
+               uploadDate={doc.upload_date}
+             />
+           ))}
+         </div>
+
+         <PaginationControls
+           currentPage={pagination.page}
+           totalPages={pagination.total_pages}
+           hasNext={pagination.has_next}
+           hasPrevious={pagination.has_previous}
+           onPageChange={setCurrentPage}
+         />
+       </>
+     )}
+   </div>
+
+6. Create PaginationControls component:
+   - Previous button (disabled if !hasPrevious)
+   - Page number display: "Page X of Y"
+   - Next button (disabled if !hasNext)
+   - Optional: page number input for jump-to-page
+   - Scroll to top on page change
+
+7. Styling:
+   - Grid layout: 1 column on mobile, 2 columns on tablet, 2-3 columns on desktop
+   - Cards have shadow/border to separate
+   - Pagination fixed at bottom or sticky
+   - Loading spinner centered
+   - Error message prominent
+
+8. Performance considerations:
+   - Cancel fetch if component unmounts mid-request
+   - Debounce rapid page changes
+   - Show loading state during page transitions
+
+9. DO NOT:
+   - Add filters yet
+   - Add search yet
+   - Modify Tag Library
+
+VERIFICATION STEPS:
+- Navigate to /content-atlas
+- Verify first page (50 docs) loads
+- Click Next - page 2 loads
+- Click Previous - back to page 1
+- Check total pages count is correct (340 docs ÷ 50 = 7 pages)
+- Test last page (should have remainder docs)
+- Fast-click Next multiple times (should handle gracefully)
+- Check console for errors
+What Could Go Wrong:
+
+Race conditions with rapid page changes
+Memory leak if fetch not cancelled on unmount
+Pagination controls enabled when they shouldn't be
+Grid layout breaks with long document titles
+Scroll position not resetting on page change
+Wrong page number displayed
+
+Success Criteria:
+✅ Page 1 displays 50 documents
+✅ Pagination shows correct total pages
+✅ Next/Previous buttons work
+✅ Page changes update URL (optional but nice)
+✅ Loading states display properly
+✅ No memory leaks or console errors
+STOP HERE. Test pagination thoroughly before Stage 5.
