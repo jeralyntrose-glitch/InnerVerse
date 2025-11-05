@@ -4523,19 +4523,120 @@ async def get_usage_stats():
 
 
 # === Content Atlas API ===
+@app.get("/api/content-atlas/filters")
+async def get_content_atlas_filters():
+    """
+    Get all available filter values from Pinecone metadata.
+    Used to populate filter sidebar options.
+    """
+    try:
+        pinecone_index = get_pinecone_client()
+        if not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Pinecone client not initialized"}
+            )
+        
+        print("\n🔍 Fetching available filters from Pinecone...")
+        
+        # Query all vectors to collect unique metadata values
+        dummy_vector = [0.0] * 3072
+        query_response = pinecone_index.query(
+            vector=dummy_vector,
+            top_k=10000,
+            include_metadata=True
+        )
+        
+        matches = query_response.matches if hasattr(query_response, 'matches') else query_response.get('matches', [])
+        
+        # Collect unique values for each filter field
+        content_types = set()
+        difficulties = set()
+        primary_categories = set()
+        types_discussed = set()
+        functions_covered = set()
+        relationship_types = set()
+        quadras = set()
+        temples = set()
+        topics = set()
+        use_cases = set()
+        
+        for match in matches:
+            try:
+                metadata = match.metadata if hasattr(match, 'metadata') else match.get('metadata', {})
+                
+                # Collect single-value fields
+                if metadata.get("content_type") and metadata.get("content_type") != "unknown":
+                    content_types.add(metadata.get("content_type"))
+                if metadata.get("difficulty") and metadata.get("difficulty") != "unknown":
+                    difficulties.add(metadata.get("difficulty"))
+                if metadata.get("primary_category") and metadata.get("primary_category") != "unknown":
+                    primary_categories.add(metadata.get("primary_category"))
+                if metadata.get("relationship_type") and metadata.get("relationship_type") not in ["n/a", "unknown"]:
+                    relationship_types.add(metadata.get("relationship_type"))
+                if metadata.get("quadra") and metadata.get("quadra") != "unknown":
+                    quadras.add(metadata.get("quadra"))
+                if metadata.get("temple") and metadata.get("temple") != "unknown":
+                    temples.add(metadata.get("temple"))
+                
+                # Collect array fields
+                for t in metadata.get("types_discussed", []):
+                    if t and t != "unknown":
+                        types_discussed.add(t)
+                for f in metadata.get("functions_covered", []):
+                    if f and f != "unknown":
+                        functions_covered.add(f)
+                for topic in metadata.get("topics", []):
+                    if topic and topic != "unknown":
+                        topics.add(topic)
+                for uc in metadata.get("use_case", []):
+                    if uc and uc != "unknown":
+                        use_cases.add(uc)
+                        
+            except Exception as e:
+                continue
+        
+        # Convert to sorted lists
+        filters = {
+            "content_types": sorted(list(content_types)),
+            "difficulties": sorted(list(difficulties)),
+            "primary_categories": sorted(list(primary_categories)),
+            "types_discussed": sorted(list(types_discussed)),
+            "functions_covered": sorted(list(functions_covered)),
+            "relationship_types": sorted(list(relationship_types)),
+            "quadras": sorted(list(quadras)),
+            "temples": sorted(list(temples)),
+            "topics": sorted(list(topics))[:50],  # Limit topics to top 50
+            "use_cases": sorted(list(use_cases))
+        }
+        
+        print(f"✅ Filters collected: {sum(len(v) for v in filters.values())} total options")
+        
+        return filters
+        
+    except Exception as e:
+        print(f"❌ Error fetching filters: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+
 @app.get("/api/content-atlas")
 async def get_content_atlas(
     page: int = 1,
-    limit: int = 50,
-    search: str = None
+    limit: int = 12,
+    search: str = None,
+    filters: str = None
 ):
     """
     Get paginated documents with full structured metadata for Content Atlas visualization.
     
     Query Parameters:
     - page: Page number (default: 1)
-    - limit: Items per page (default: 50, max: 100)
+    - limit: Items per page (default: 12, max: 100)
     - search: Optional search term (matches title, topics, types)
+    - filters: Optional JSON filters object (e.g., {"content_type":["lecture"],"types_discussed":["ENFP"]})
     """
     try:
         # Validate parameters
@@ -4559,7 +4660,7 @@ async def get_content_atlas(
                 content={"error": "Pinecone client not initialized"}
             )
         
-        print(f"\n📊 Content Atlas query: page={page}, limit={limit}, search={search}")
+        print(f"\n📊 Content Atlas query: page={page}, limit={limit}, search={search}, filters={filters}")
         
         # Query Pinecone for all vectors (use dummy vector to get all)
         # Note: Pinecone max top_k is 10,000
@@ -4663,6 +4764,85 @@ async def get_content_atlas(
                     continue
             
             all_documents = filtered_docs
+        
+        # Apply filters if provided
+        if filters and filters.strip():
+            try:
+                import json
+                filters_dict = json.loads(filters)
+                print(f"🔍 Applying filters: {filters_dict}")
+                
+                filtered_docs = []
+                for doc in all_documents:
+                    match = True
+                    metadata = doc["metadata"]
+                    
+                    # Apply each filter (AND logic within same field, OR across fields)
+                    # If a filter field has values, the document must match at least one value in that field
+                    
+                    # Content Type filter
+                    if filters_dict.get("content_type") and len(filters_dict["content_type"]) > 0:
+                        if metadata.get("content_type") not in filters_dict["content_type"]:
+                            match = False
+                    
+                    # Difficulty filter
+                    if match and filters_dict.get("difficulty") and len(filters_dict["difficulty"]) > 0:
+                        if metadata.get("difficulty") not in filters_dict["difficulty"]:
+                            match = False
+                    
+                    # Primary Category filter
+                    if match and filters_dict.get("primary_category") and len(filters_dict["primary_category"]) > 0:
+                        if metadata.get("primary_category") not in filters_dict["primary_category"]:
+                            match = False
+                    
+                    # Relationship Type filter
+                    if match and filters_dict.get("relationship_type") and len(filters_dict["relationship_type"]) > 0:
+                        if metadata.get("relationship_type") not in filters_dict["relationship_type"]:
+                            match = False
+                    
+                    # Quadra filter
+                    if match and filters_dict.get("quadra") and len(filters_dict["quadra"]) > 0:
+                        if metadata.get("quadra") not in filters_dict["quadra"]:
+                            match = False
+                    
+                    # Temple filter
+                    if match and filters_dict.get("temple") and len(filters_dict["temple"]) > 0:
+                        if metadata.get("temple") not in filters_dict["temple"]:
+                            match = False
+                    
+                    # Types Discussed filter (array field - check if ANY selected type is in document)
+                    if match and filters_dict.get("types_discussed") and len(filters_dict["types_discussed"]) > 0:
+                        doc_types = metadata.get("types_discussed", [])
+                        if not any(t in filters_dict["types_discussed"] for t in doc_types):
+                            match = False
+                    
+                    # Functions Covered filter (array field)
+                    if match and filters_dict.get("functions_covered") and len(filters_dict["functions_covered"]) > 0:
+                        doc_functions = metadata.get("functions_covered", [])
+                        if not any(f in filters_dict["functions_covered"] for f in doc_functions):
+                            match = False
+                    
+                    # Topics filter (array field)
+                    if match and filters_dict.get("topics") and len(filters_dict["topics"]) > 0:
+                        doc_topics = metadata.get("topics", [])
+                        if not any(topic in filters_dict["topics"] for topic in doc_topics):
+                            match = False
+                    
+                    # Use Case filter (array field)
+                    if match and filters_dict.get("use_case") and len(filters_dict["use_case"]) > 0:
+                        doc_use_cases = metadata.get("use_case", [])
+                        if not any(uc in filters_dict["use_case"] for uc in doc_use_cases):
+                            match = False
+                    
+                    if match:
+                        filtered_docs.append(doc)
+                
+                all_documents = filtered_docs
+                print(f"✅ Filters applied: {len(all_documents)} documents match")
+                
+            except json.JSONDecodeError as e:
+                print(f"⚠️ Invalid filters JSON: {str(e)}")
+                # Continue without filtering on invalid JSON
         
         # Sort by upload_date DESC (most recent first)
         # Handle unknown dates by putting them last
