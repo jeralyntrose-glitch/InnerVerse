@@ -1,0 +1,152 @@
+🎯 STAGE 6: Filter Sidebar
+Goal: Add sidebar with multi-select filters for all metadata fields.
+Instructions for Replit Agent:
+STAGE 6: Content Atlas - Filter Sidebar
+
+Add comprehensive filtering UI with multi-select checkboxes.
+
+REQUIREMENTS:
+1. Create new component: /src/components/FilterSidebar.jsx
+
+2. Component props:
+   {
+     availableFilters: {
+       content_types: ['lecture', 'qa', 'response'],
+       difficulties: ['beginner', 'intermediate', 'advanced'],
+       primary_categories: [...],
+       types: ['ENFP', 'INFJ', ...],
+       functions: ['Ne', 'Ni', 'Fi', 'Fe', ...],
+       quadras: ['NT', 'NF', 'ST', 'SF'],
+       temples: ['soul', 'heart', 'mind', 'body'],
+       relationship_types: [...],
+       topics: [...],
+       use_cases: [...]
+     },
+     activeFilters: {
+       content_type: ['lecture'],
+       difficulty: [],
+       types_discussed: ['ENFP', 'ISTJ'],
+       ...
+     },
+     onFilterChange: function(filterKey, value, checked)
+   }
+
+3. Sidebar sections (collapsible):
+   Each section has:
+   - Header with icon and count of active filters
+   - Collapse/expand toggle
+   - Checkbox list
+   - "Select All" / "Clear All" buttons
+
+   Sections:
+   - 📑 Content Type
+   - 📊 Difficulty Level
+   - 🎯 Primary Category
+   - 👤 Types Discussed
+   - ⚙️ Functions Covered
+   - 🔷 Quadra
+   - 🏛️ Temple
+   - 💕 Relationship Context
+   - 📚 Topics
+   - 💡 Use Cases
+
+4. Filter logic in parent (ContentAtlas.jsx):
+   const [activeFilters, setActiveFilters] = useState({
+     content_type: [],
+     difficulty: [],
+     primary_category: [],
+     types_discussed: [],
+     functions_covered: [],
+     quadra: [],
+     temple: [],
+     relationship_type: [],
+     topics: [],
+     use_case: []
+   });
+
+   function handleFilterChange(filterKey, value, checked) {
+     setActiveFilters(prev => {
+       const current = prev[filterKey] || [];
+       if (checked) {
+         return { ...prev, [filterKey]: [...current, value] };
+       } else {
+         return { ...prev, [filterKey]: current.filter(v => v !== value) };
+       }
+     });
+   }
+
+   // Apply filters after state update
+   useEffect(() => {
+     setCurrentPage(1);
+     fetchDocuments(1, searchQuery, activeFilters);
+   }, [activeFilters]);
+
+5. Update API endpoint to handle filters:
+   GET /api/content-atlas?page=1&limit=50&filters={"content_type":["lecture"],"types_discussed":["ENFP"]}
+   
+   Backend should:
+   - Parse filters JSON
+   - Apply AND logic within same field (doc must have ALL selected values)
+   - Apply OR logic across fields
+   - Return only matching documents
+
+6. Get available filter options:
+   Create endpoint: GET /api/content-atlas/filters
+   Returns: {
+     content_types: ['lecture', 'qa', ...],
+     difficulties: [...],
+     ...
+   }
+   
+   Fetch this on page load to populate filter sidebar
+
+7. UI behavior:
+   - Sidebar fixed on left, scrollable independently
+   - Filters apply automatically (no "Apply" button needed)
+   - Active filters highlighted
+   - Filter count badge shows total active filters
+   - "Clear All Filters" button at top of sidebar
+   - Collapse all sections by default except "Content Type"
+
+8. Mobile responsive:
+   - Sidebar becomes dropdown/modal on mobile
+   - Toggle button to show/hide filters
+   - Filters overlay content on small screens
+
+9. Performance:
+   - Debounce filter changes (300ms)
+   - Show loading state while filtering
+   - Cache filter options (don't refetch every time)
+
+10. DO NOT:
+    - Modify core search logic
+    - Break existing pagination
+
+VERIFICATION STEPS:
+- Check Content Type - results filter correctly
+- Check multiple filters in same category - AND logic works
+- Check filters across categories - OR logic works
+- Clear all filters - returns to full list
+- Verify filter counts update
+- Test with search + filters combined
+- Mobile view - filters accessible
+- Check performance with many filters selected
+What Could Go Wrong:
+
+Filter state not syncing with UI
+AND/OR logic incorrect
+Filter options not loading
+Sidebar scroll broken
+Mobile overlay not dismissing
+Performance degradation with many active filters
+Filter debouncing conflicts with search debouncing
+
+Success Criteria:
+✅ All filter categories display
+✅ Checkboxes update results correctly
+✅ Multiple filters combine properly
+✅ Clear all filters works
+✅ Works with search simultaneously
+✅ Mobile view functional
+✅ No performance issues
+STOP HERE. Test filter combinations thoroughly before Stage 7.
