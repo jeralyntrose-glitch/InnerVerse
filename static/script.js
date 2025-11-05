@@ -1701,3 +1701,89 @@ window.editDocumentTitle = async function(docId, currentTitle) {
     alert(`Failed to rename document: ${error.message}`);
   }
 }
+
+// === Batch Re-Tagging Function ===
+async function startBatchRetag() {
+  // Confirm with user
+  if (!confirm('⚠️ This will re-tag ALL documents in Pinecone with the new structured metadata system.\n\nThis may take several minutes and will consume API credits.\n\nContinue?')) {
+    return;
+  }
+
+  const button = document.querySelector('.btn-batch-retag');
+  const progressDiv = document.querySelector('.batch-retag-progress');
+  const statusText = document.querySelector('.batch-retag-status-text');
+  const totalStat = document.querySelector('#batch-total-documents');
+  const processedStat = document.querySelector('#batch-processed');
+  const vectorsStat = document.querySelector('#batch-vectors-updated');
+  const resultDiv = document.querySelector('.batch-retag-result');
+
+  try {
+    // Disable button
+    button.disabled = true;
+    button.textContent = '⏳ Processing...';
+    
+    // Show progress section
+    progressDiv.style.display = 'block';
+    statusText.textContent = 'Starting batch re-tagging...';
+    totalStat.textContent = '0';
+    processedStat.textContent = '0';
+    vectorsStat.textContent = '0';
+    resultDiv.innerHTML = '';
+
+    console.log('🚀 Starting batch re-tagging...');
+
+    // Call the API
+    const response = await fetch('/api/batch-retag', {
+      method: 'POST'
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || error.error || 'Failed to start batch re-tagging');
+    }
+
+    const result = await response.json();
+    console.log('✅ Batch re-tagging complete:', result);
+
+    // Update stats
+    totalStat.textContent = result.total_documents || 0;
+    processedStat.textContent = result.documents_processed || 0;
+    vectorsStat.textContent = result.total_vectors_updated || 0;
+
+    // Show success message
+    statusText.textContent = '✅ Batch re-tagging complete!';
+    resultDiv.innerHTML = `
+      <div style="color: #10A37F; font-weight: 600; margin-top: 10px;">
+        🎉 Successfully updated ${result.documents_processed} documents (${result.total_vectors_updated} vectors)
+      </div>
+      ${result.errors && result.errors.length > 0 ? `
+        <div style="color: #FFA500; font-size: 13px; margin-top: 10px;">
+          ⚠️ ${result.errors.length} documents failed. Check console for details.
+        </div>
+      ` : ''}
+    `;
+
+    // Log errors if any
+    if (result.errors && result.errors.length > 0) {
+      console.warn('⚠️ Some documents failed:', result.errors);
+    }
+
+    // Reload tag library to show updated metadata
+    setTimeout(() => {
+      loadTagLibrary();
+    }, 1000);
+
+  } catch (error) {
+    console.error('❌ Error during batch re-tagging:', error);
+    statusText.textContent = '❌ Error occurred';
+    resultDiv.innerHTML = `
+      <div style="color: #ef4444; font-weight: 600; margin-top: 10px;">
+        ❌ Failed: ${error.message}
+      </div>
+    `;
+  } finally {
+    // Re-enable button
+    button.disabled = false;
+    button.textContent = '🔄 Start Batch Re-Tagging';
+  }
+}
