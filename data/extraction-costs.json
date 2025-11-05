@@ -1,0 +1,29 @@
+[
+  {
+    "document_id": "test_short_001",
+    "timestamp": "2025-11-05T22:28:01.272095",
+    "input_tokens": 760,
+    "output_tokens": 951,
+    "cost": 0.016545,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "test_medium_001",
+    "timestamp": "2025-11-05T22:28:15.919748",
+    "input_tokens": 1597,
+    "output_tokens": 1180,
+    "cost": 0.022491,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "test_long_001",
+    "timestamp": "2025-11-05T22:28:33.148117",
+    "input_tokens": 6638,
+    "output_tokens": 1480,
+    "cost": 0.042114,
+    "success": true,
+    "error": null
+  }
+]
