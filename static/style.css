@@ -65,15 +65,15 @@ body {
 .nav-btn {
   width: 45px;
   height: 45px;
-  border-radius: 12px;
+  border-radius: 22px;
   background: var(--theme-toggle-bg);
   border: 1px solid var(--border-color);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 3px var(--shadow-color);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   text-decoration: none;
   color: var(--text-primary);
   font-size: 20px;
@@ -81,16 +81,27 @@ body {
 
 .nav-btn-text {
   width: auto;
-  padding: 0 16px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 12px 24px;
+  height: 45px;
+  border-radius: 22px;
+  font-size: 15px;
+  font-weight: 600;
   white-space: nowrap;
+  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.3);
 }
 
 .nav-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px var(--shadow-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   background: var(--btn-secondary-hover);
+}
+
+.nav-btn-text:hover {
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+  transform: translateY(-1px);
 }
 
 .nav-btn.active {
