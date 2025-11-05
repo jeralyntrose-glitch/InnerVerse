@@ -3111,7 +3111,8 @@ async def batch_retag_documents():
         results = pinecone_index.query(
             vector=dummy_query,
             top_k=10000,
-            include_metadata=True
+            include_metadata=True,
+            include_values=True  # CRITICAL: Must include vector values for re-upsert
         )
         
         total_vectors = len(results.matches)
