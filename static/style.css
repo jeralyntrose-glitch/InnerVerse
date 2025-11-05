@@ -79,6 +79,14 @@ body {
   font-size: 20px;
 }
 
+.nav-btn-text {
+  width: auto;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .nav-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 6px var(--shadow-color);
@@ -1684,6 +1692,11 @@ label,
   .nav-btn {
     width: 44px;
     height: 44px;
+  }
+
+  .nav-btn-text {
+    padding: 0 12px;
+    font-size: 13px;
   }
 
   /* Theme toggle (legacy) */
