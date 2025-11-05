@@ -132,6 +132,13 @@ body {
   color: var(--text-primary);
 }
 
+/* Override for theme toggle inside top-nav to stay in flex flow */
+.top-nav .theme-toggle {
+  position: static;
+  top: auto;
+  right: auto;
+}
+
 .page-wrapper {
   text-align: center;
   max-width: 650px;
