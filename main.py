@@ -4522,6 +4522,194 @@ async def get_usage_stats():
         }
 
 
+# === Content Atlas API ===
+@app.get("/api/content-atlas")
+async def get_content_atlas(
+    page: int = 1,
+    limit: int = 50,
+    search: str = None
+):
+    """
+    Get paginated documents with full structured metadata for Content Atlas visualization.
+    
+    Query Parameters:
+    - page: Page number (default: 1)
+    - limit: Items per page (default: 50, max: 100)
+    - search: Optional search term (matches title, topics, types)
+    """
+    try:
+        # Validate parameters
+        if page < 1:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Page must be >= 1"}
+            )
+        
+        if limit < 1 or limit > 100:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Limit must be between 1 and 100"}
+            )
+        
+        # Get Pinecone client
+        pinecone_index = get_pinecone_client()
+        if not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Pinecone client not initialized"}
+            )
+        
+        print(f"\n📊 Content Atlas query: page={page}, limit={limit}, search={search}")
+        
+        # Query Pinecone for all vectors (use dummy vector to get all)
+        # Note: Pinecone max top_k is 10,000
+        dummy_vector = [0.0] * 3072  # text-embedding-3-large dimension
+        
+        try:
+            query_response = pinecone_index.query(
+                vector=dummy_vector,
+                top_k=10000,  # Get as many as possible
+                include_metadata=True
+            )
+        except Exception as pinecone_error:
+            print(f"❌ Pinecone query error: {str(pinecone_error)}")
+            return JSONResponse(
+                status_code=500,
+                content={"error": f"Pinecone query failed: {str(pinecone_error)}"}
+            )
+        
+        # Extract matches
+        try:
+            matches = query_response.matches if hasattr(query_response, 'matches') else query_response.get('matches', [])
+        except Exception:
+            matches = []
+        
+        if not matches:
+            return {
+                "documents": [],
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total_documents": 0,
+                    "total_pages": 0,
+                    "has_next": False,
+                    "has_previous": False
+                }
+            }
+        
+        # Group by doc_id to get unique documents
+        documents_map = {}
+        
+        for match in matches:
+            try:
+                metadata = match.metadata if hasattr(match, 'metadata') else match.get('metadata', {})
+                doc_id = metadata.get('doc_id') or metadata.get('document_id')
+                
+                if not doc_id or doc_id in documents_map:
+                    continue
+                
+                # Extract structured metadata (10 fields)
+                structured_metadata = {
+                    "content_type": metadata.get("content_type", "unknown"),
+                    "difficulty": metadata.get("difficulty", "unknown"),
+                    "primary_category": metadata.get("primary_category", "unknown"),
+                    "types_discussed": metadata.get("types_discussed", []),
+                    "functions_covered": metadata.get("functions_covered", []),
+                    "relationship_type": metadata.get("relationship_type", "n/a"),
+                    "quadra": metadata.get("quadra", "unknown"),
+                    "temple": metadata.get("temple", "unknown"),
+                    "topics": metadata.get("topics", []),
+                    "use_case": metadata.get("use_case", [])
+                }
+                
+                # Build document object
+                doc = {
+                    "id": doc_id,
+                    "title": metadata.get("filename", "Untitled"),
+                    "metadata": structured_metadata,
+                    "upload_date": metadata.get("upload_date", "unknown")
+                }
+                
+                documents_map[doc_id] = doc
+                
+            except Exception as e:
+                print(f"⚠️ Error processing match: {str(e)}")
+                continue
+        
+        # Convert to list
+        all_documents = list(documents_map.values())
+        
+        # Apply search filter if provided
+        if search and search.strip():
+            search_term = search.lower().strip()
+            filtered_docs = []
+            
+            for doc in all_documents:
+                # Search in title
+                if search_term in doc["title"].lower():
+                    filtered_docs.append(doc)
+                    continue
+                
+                # Search in topics
+                topics = doc["metadata"].get("topics", [])
+                if isinstance(topics, list) and any(search_term in str(topic).lower() for topic in topics):
+                    filtered_docs.append(doc)
+                    continue
+                
+                # Search in types_discussed
+                types = doc["metadata"].get("types_discussed", [])
+                if isinstance(types, list) and any(search_term in str(t).lower() for t in types):
+                    filtered_docs.append(doc)
+                    continue
+            
+            all_documents = filtered_docs
+        
+        # Sort by upload_date DESC (most recent first)
+        # Handle unknown dates by putting them last
+        def sort_key(doc):
+            date_str = doc.get("upload_date", "unknown")
+            if date_str == "unknown":
+                return "0000-00-00"  # Sort to end
+            return date_str
+        
+        all_documents.sort(key=sort_key, reverse=True)
+        
+        # Calculate pagination
+        total_documents = len(all_documents)
+        total_pages = (total_documents + limit - 1) // limit if total_documents > 0 else 0
+        
+        # Get page slice
+        start_idx = (page - 1) * limit
+        end_idx = start_idx + limit
+        page_documents = all_documents[start_idx:end_idx]
+        
+        # Build response
+        response = {
+            "documents": page_documents,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total_documents": total_documents,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_previous": page > 1
+            }
+        }
+        
+        print(f"✅ Returning {len(page_documents)} documents (page {page}/{total_pages})")
+        
+        return response
+        
+    except Exception as e:
+        print(f"❌ Content Atlas API error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Internal server error: {str(e)}"}
+        )
+
+
 # === Serve Frontend ===
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
