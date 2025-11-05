@@ -952,6 +952,157 @@ async def get_tagged_documents():
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# === Get Full Structured Metadata for a Document ===
+@app.get("/api/documents/{doc_id}/metadata")
+async def get_document_metadata(doc_id: str):
+    """Get full structured metadata for a specific document from Pinecone"""
+    try:
+        pinecone_index = get_pinecone_client()
+        
+        if not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Pinecone client not initialized"})
+        
+        # Query Pinecone to get all chunks for this document
+        dummy_vector = [0.0] * 3072
+        
+        query_response = pinecone_index.query(
+            vector=dummy_vector,
+            top_k=10000,
+            include_metadata=True,
+            filter={"doc_id": doc_id}
+        )
+        
+        # Aggregate metadata across all chunks
+        aggregated_metadata = {
+            "doc_id": doc_id,
+            "filename": None,
+            "upload_timestamp": None,
+            "total_chunks": 0,
+            "structured_fields": {
+                "content_type": None,
+                "difficulty": None,
+                "primary_category": None,
+                "types_discussed": set(),
+                "functions_covered": set(),
+                "relationship_type": None,
+                "quadra": None,
+                "temple": None,
+                "topics": set(),
+                "use_case": set()
+            },
+            "enriched_fields": {
+                "season": None,
+                "episode": None,
+                "types_mentioned": set(),
+                "functions_mentioned": set()
+            },
+            "legacy_tags": set()
+        }
+        
+        try:
+            matches = query_response.matches
+        except AttributeError:
+            matches = query_response.get("matches", [])
+        
+        if not matches:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Document {doc_id} not found"})
+        
+        # Aggregate metadata from all chunks
+        for match in matches:
+            metadata = getattr(match, "metadata", None)
+            if not metadata:
+                try:
+                    metadata = match.get("metadata", {})
+                except (AttributeError, TypeError):
+                    metadata = {}
+            
+            if metadata:
+                aggregated_metadata["total_chunks"] += 1
+                
+                # Extract basic info
+                if not aggregated_metadata["filename"]:
+                    aggregated_metadata["filename"] = metadata.get("filename", "Unknown")
+                if not aggregated_metadata["upload_timestamp"]:
+                    aggregated_metadata["upload_timestamp"] = metadata.get("upload_timestamp")
+                
+                # Extract structured fields
+                sf = aggregated_metadata["structured_fields"]
+                if not sf["content_type"]:
+                    sf["content_type"] = metadata.get("content_type")
+                if not sf["difficulty"]:
+                    sf["difficulty"] = metadata.get("difficulty")
+                if not sf["primary_category"]:
+                    sf["primary_category"] = metadata.get("primary_category")
+                if not sf["relationship_type"]:
+                    sf["relationship_type"] = metadata.get("relationship_type")
+                if not sf["quadra"]:
+                    sf["quadra"] = metadata.get("quadra")
+                if not sf["temple"]:
+                    sf["temple"] = metadata.get("temple")
+                
+                # Aggregate array fields
+                types_discussed = metadata.get("types_discussed", [])
+                if isinstance(types_discussed, list):
+                    sf["types_discussed"].update(types_discussed)
+                
+                functions_covered = metadata.get("functions_covered", [])
+                if isinstance(functions_covered, list):
+                    sf["functions_covered"].update(functions_covered)
+                
+                topics = metadata.get("topics", [])
+                if isinstance(topics, list):
+                    sf["topics"].update(topics)
+                
+                use_case = metadata.get("use_case", [])
+                if isinstance(use_case, list):
+                    sf["use_case"].update(use_case)
+                
+                # Extract enriched fields
+                ef = aggregated_metadata["enriched_fields"]
+                if not ef["season"]:
+                    ef["season"] = metadata.get("season")
+                if not ef["episode"]:
+                    ef["episode"] = metadata.get("episode")
+                
+                types_mentioned = metadata.get("types_mentioned", [])
+                if isinstance(types_mentioned, list):
+                    ef["types_mentioned"].update(types_mentioned)
+                
+                functions_mentioned = metadata.get("functions_mentioned", [])
+                if isinstance(functions_mentioned, list):
+                    ef["functions_mentioned"].update(functions_mentioned)
+                
+                # Extract legacy tags
+                tags = metadata.get("tags", [])
+                if isinstance(tags, list):
+                    aggregated_metadata["legacy_tags"].update(tags)
+        
+        # Convert sets to sorted lists for JSON serialization
+        sf = aggregated_metadata["structured_fields"]
+        sf["types_discussed"] = sorted(list(sf["types_discussed"]))
+        sf["functions_covered"] = sorted(list(sf["functions_covered"]))
+        sf["topics"] = sorted(list(sf["topics"]))
+        sf["use_case"] = sorted(list(sf["use_case"]))
+        
+        ef = aggregated_metadata["enriched_fields"]
+        ef["types_mentioned"] = sorted(list(ef["types_mentioned"]))
+        ef["functions_mentioned"] = sorted(list(ef["functions_mentioned"]))
+        
+        aggregated_metadata["legacy_tags"] = sorted(list(aggregated_metadata["legacy_tags"]))
+        
+        print(f"✅ Retrieved full metadata for document {doc_id} ({aggregated_metadata['total_chunks']} chunks)")
+        
+        return aggregated_metadata
+        
+    except Exception as e:
+        print(f"❌ Document metadata retrieval error: {str(e)}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 # === Query PDF for an answer ===
 class QueryRequest(BaseModel):
     document_id: str = ""  # Optional - empty string means search all documents
