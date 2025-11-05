@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "last_updated": "2025-11-05T21:56:53.206024",
+  "nodes": [
+    {
+      "id": "shadow_integration",
+      "label": "Shadow Integration",
+      "type": "concept",
+      "properties": {
+        "description": "The process of integrating shadow functions"
+      },
+      "frequency": 2,
+      "sources": [
+        "test_doc_001",
+        "test_doc_003"
+      ],
+      "created_at": "2025-11-05T21:56:33.342663",
+      "last_updated": "2025-11-05T21:56:53.206014"
+    },
+    {
+      "id": "cognitive_functions",
+      "label": "Cognitive Functions",
+      "type": "concept",
+      "properties": {
+        "description": "The eight cognitive functions in MBTI theory"
+      },
+      "frequency": 1,
+      "sources": [
+        "test_doc_002"
+      ],
+      "created_at": "2025-11-05T21:56:34.775739",
+      "last_updated": "2025-11-05T21:56:34.775746"
+    }
+  ],
+  "edges": [
+    {
+      "id": "shadow_integration__relates_to__cognitive_functions",
+      "source": "shadow_integration",
+      "target": "cognitive_functions",
+      "type": "relates_to",
+      "properties": {
+        "confidence": 0.9
+      },
+      "strength": 1,
+      "evidence": [
+        {
+          "text": "Shadow integration requires understanding of cognitive functions",
+          "timestamp": "2025-11-05T21:56:42.778359"
+        }
+      ],
+      "created_at": "2025-11-05T21:56:42.778365",
+      "last_updated": "2025-11-05T21:56:42.778367"
+    }
+  ],
+  "metadata": {
+    "total_documents_processed": 0,
+    "total_concepts": 2,
+    "total_relationships": 1
+  }
+}

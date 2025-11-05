@@ -1,0 +1,125 @@
+STAGE 1: Knowledge Graph Backend Infrastructure
+
+Create the backend system for storing and managing a dynamic knowledge graph.
+
+REQUIREMENTS:
+
+1. CREATE DATA STRUCTURE
+   File: /data/knowledge-graph.json
+   
+   Initial structure:
+   {
+     "version": "1.0",
+     "last_updated": null,
+     "nodes": [],
+     "edges": [],
+     "metadata": {
+       "total_documents_processed": 0,
+       "total_concepts": 0,
+       "total_relationships": 0
+     }
+   }
+   
+   If /data directory doesn't exist, create it.
+   This file persists across server restarts.
+
+2. CREATE GRAPH MANAGER MODULE
+   File: /src/services/KnowledgeGraphManager.js
+   
+   Class with methods:
+   
+   - loadGraph(): Read from JSON file, return graph object
+   
+   - saveGraph(graph): Write graph object to JSON file
+   
+   - addNode(nodeData): 
+     * Check if node already exists (fuzzy match on label)
+     * If exists: increment frequency, add source doc
+     * If new: create node with ID, return node
+   
+   - addEdge(edgeData):
+     * Check if edge already exists (same source+target+type)
+     * If exists: increment strength, add evidence
+     * If new: create edge with ID, return edge
+   
+   - findSimilarNodes(label): 
+     * Fuzzy string matching
+     * Return nodes with >80% similarity
+     * Used for deduplication
+   
+   - getNodeById(id): Return single node
+   
+   - getConnectedNodes(nodeId): Return all nodes connected to given node
+   
+   - getGraphStats(): Return metadata counts
+
+3. CREATE HELPER UTILITIES
+   File: /src/utils/graphUtils.js
+   
+   Functions:
+   
+   - generateNodeId(label): Create consistent ID from label
+     Example: "Shadow Integration" → "shadow_integration"
+   
+   - fuzzyMatchLabel(label1, label2): Return similarity score 0-1
+     Use library like 'string-similarity' or Levenshtein distance
+   
+   - validateGraphStructure(graph): Check graph integrity
+     * No orphaned edges
+     * All IDs unique
+     * Required fields present
+
+4. CREATE API ENDPOINTS
+   File: /api/knowledge-graph.js (or add to existing API file)
+   
+   GET /api/knowledge-graph
+   - Load full graph from file
+   - Return JSON
+   - Response format:
+     {
+       nodes: [...],
+       edges: [...],
+       stats: {...}
+     }
+   
+   GET /api/knowledge-graph/stats
+   - Return just metadata
+   - Fast endpoint for dashboard
+   
+   GET /api/knowledge-graph/concept/:id
+   - Load graph
+   - Find node by ID
+   - Find all connected edges
+   - Return node + connections + related documents
+
+5. ERROR HANDLING
+   - File read/write errors: Return 500, log error
+   - Invalid graph structure: Log warning, attempt repair
+   - Missing nodes: Return 404
+   - Concurrent writes: Use file locking or mutex
+
+6. TESTING
+   Create test file: /tests/graphManager.test.js
+   
+   Test cases:
+   - Add new node → verify in graph
+   - Add duplicate node → verify frequency increased
+   - Add edge → verify created
+   - Add duplicate edge → verify strength increased
+   - Fuzzy matching → verify similar nodes detected
+   - Save/load → verify persistence
+
+7. DO NOT:
+   - Call Claude API yet
+   - Process any documents
+   - Create visualization yet
+   - This stage is pure backend infrastructure
+
+VERIFICATION STEPS:
+- /data/knowledge-graph.json exists
+- Can add nodes via code
+- Can add edges via code
+- Deduplication works (test with similar labels)
+- API endpoints return valid JSON
+- Tests pass
+- No console errors

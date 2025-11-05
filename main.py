@@ -36,6 +36,9 @@ from http.cookiejar import MozillaCookieJar
 import threading
 import asyncio
 
+# Knowledge Graph Manager
+from knowledge_graph_manager import KnowledgeGraphManager
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
@@ -5061,6 +5064,174 @@ async def get_content_atlas_analytics():
         return JSONResponse(
             status_code=500,
             content={"error": f"Internal server error: {str(e)}"}
+        )
+
+
+# === Knowledge Graph API Endpoints ===
+
+# Initialize Knowledge Graph Manager
+kg_manager = KnowledgeGraphManager()
+
+@app.get("/api/knowledge-graph")
+async def get_knowledge_graph():
+    """
+    Get the full knowledge graph (nodes and edges).
+    
+    Returns:
+        JSON object with nodes, edges, and stats
+    """
+    try:
+        print("📊 Fetching knowledge graph...")
+        graph = kg_manager.load_graph()
+        stats = kg_manager.get_graph_stats()
+        
+        response = {
+            "nodes": graph.get("nodes", []),
+            "edges": graph.get("edges", []),
+            "stats": stats,
+            "version": graph.get("version", "1.0"),
+            "last_updated": graph.get("last_updated")
+        }
+        
+        print(f"✅ Knowledge graph loaded: {stats['total_nodes']} nodes, {stats['total_edges']} edges")
+        return response
+        
+    except Exception as e:
+        print(f"❌ Knowledge graph API error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to load knowledge graph: {str(e)}"}
+        )
+
+
+@app.get("/api/knowledge-graph/stats")
+async def get_knowledge_graph_stats():
+    """
+    Get statistics about the knowledge graph (fast endpoint).
+    
+    Returns:
+        JSON object with stats only
+    """
+    try:
+        stats = kg_manager.get_graph_stats()
+        return stats
+        
+    except Exception as e:
+        print(f"❌ Knowledge graph stats error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to get stats: {str(e)}"}
+        )
+
+
+@app.get("/api/knowledge-graph/concept/{concept_id}")
+async def get_concept_details(concept_id: str):
+    """
+    Get details about a specific concept/node including connections.
+    
+    Args:
+        concept_id: The node ID to fetch
+        
+    Returns:
+        JSON object with node data, connected nodes, and related documents
+    """
+    try:
+        print(f"🔍 Fetching concept: {concept_id}")
+        
+        # Get the node
+        node = kg_manager.get_node_by_id(concept_id)
+        
+        if not node:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Concept '{concept_id}' not found"}
+            )
+        
+        # Get connected nodes
+        connected_nodes = kg_manager.get_connected_nodes(concept_id)
+        
+        # Get source documents from node
+        source_docs = node.get("sources", [])
+        
+        response = {
+            "node": node,
+            "connected_nodes": connected_nodes,
+            "total_connections": len(connected_nodes),
+            "source_documents": source_docs,
+            "total_documents": len(source_docs)
+        }
+        
+        print(f"✅ Concept '{concept_id}' retrieved: {len(connected_nodes)} connections")
+        return response
+        
+    except Exception as e:
+        print(f"❌ Concept details error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to get concept details: {str(e)}"}
+        )
+
+
+@app.post("/api/knowledge-graph/node")
+async def create_node(node_data: dict):
+    """
+    Create a new node in the knowledge graph.
+    (For testing - will be called by document processing later)
+    
+    Request body:
+        {
+            "label": "Shadow Integration",
+            "type": "concept",
+            "properties": {"description": "..."},
+            "source_doc": "doc_id_123"
+        }
+    """
+    try:
+        node = kg_manager.add_node(node_data)
+        return {
+            "success": True,
+            "node": node,
+            "message": f"Node '{node['label']}' created/updated successfully"
+        }
+    except Exception as e:
+        print(f"❌ Create node error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to create node: {str(e)}"}
+        )
+
+
+@app.post("/api/knowledge-graph/edge")
+async def create_edge(edge_data: dict):
+    """
+    Create a new edge in the knowledge graph.
+    (For testing - will be called by document processing later)
+    
+    Request body:
+        {
+            "source": "shadow_integration",
+            "target": "cognitive_functions",
+            "type": "relates_to",
+            "evidence": "Evidence text from document",
+            "properties": {}
+        }
+    """
+    try:
+        edge = kg_manager.add_edge(edge_data)
+        return {
+            "success": True,
+            "edge": edge,
+            "message": f"Edge '{edge['source']} -> {edge['target']}' created/updated successfully"
+        }
+    except Exception as e:
+        print(f"❌ Create edge error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to create edge: {str(e)}"}
         )
 
 
