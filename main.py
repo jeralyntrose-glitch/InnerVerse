@@ -5309,6 +5309,65 @@ async def extract_document_concepts(request: dict):
         )
 
 
+@app.get("/api/batch-progress")
+async def get_batch_progress():
+    """
+    Get current batch processing progress.
+    
+    Returns:
+        Current progress status, documents processed, ETA
+    """
+    try:
+        progress_file = "data/batch-progress.json"
+        
+        if not os.path.exists(progress_file):
+            return {
+                "status": "not_started",
+                "message": "Batch processing has not been started yet"
+            }
+        
+        with open(progress_file, 'r') as f:
+            progress = json.load(f)
+        
+        return progress
+        
+    except Exception as e:
+        print(f"❌ Failed to get batch progress: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to get progress: {str(e)}"}
+        )
+
+
+@app.get("/api/graph-quality-report")
+async def get_graph_quality_report():
+    """
+    Get the knowledge graph quality report.
+    
+    Returns:
+        Quality metrics, distribution stats, health status
+    """
+    try:
+        report_file = "data/graph-quality-report.json"
+        
+        if not os.path.exists(report_file):
+            return {
+                "message": "Quality report not yet generated. Run batch processing first."
+            }
+        
+        with open(report_file, 'r') as f:
+            report = json.load(f)
+        
+        return report
+        
+    except Exception as e:
+        print(f"❌ Failed to get quality report: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to get quality report: {str(e)}"}
+        )
+
+
 # === Serve Frontend ===
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse

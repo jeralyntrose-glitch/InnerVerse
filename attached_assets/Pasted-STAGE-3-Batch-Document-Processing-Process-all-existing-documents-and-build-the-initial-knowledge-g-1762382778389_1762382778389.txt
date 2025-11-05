@@ -1,0 +1,206 @@
+STAGE 3: Batch Document Processing
+
+Process all existing documents and build the initial knowledge graph.
+
+REQUIREMENTS:
+
+1. CREATE BATCH PROCESSOR
+   File: /src/scripts/build_initial_graph.py
+   
+   Main function: async process_all_documents()
+   
+   Logic:
+   
+   import asyncio
+   from src.services.concept_extractor import extract_concepts
+   from src.services.knowledge_graph_manager import KnowledgeGraphManager
+   from pinecone import Pinecone
+   import json
+   from datetime import datetime
+   
+   async def process_all_documents():
+       # 1. Get all document IDs from Pinecone
+       pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+       index = pc.Index(os.getenv("PINECONE_INDEX_NAME"))
+       
+       # Fetch all vectors (documents) from Pinecone
+       all_docs = []
+       # Use Pinecone query or list operations to get all document IDs
+       # Store as list of {id: "doc_id", metadata: {...}}
+       
+       # 2. Load existing graph
+       manager = KnowledgeGraphManager()
+       graph = await manager.load_graph()
+       
+       # 3. Filter out already processed docs
+       processed_ids = graph.get("metadata", {}).get("processed_documents", [])
+       to_process = [doc for doc in all_docs if doc["id"] not in processed_ids]
+       
+       print(f"📊 Total documents in Pinecone: {len(all_docs)}")
+       print(f"✅ Already processed: {len(processed_ids)}")
+       print(f"⏳ To process: {len(to_process)}")
+       
+       if len(to_process) == 0:
+           print("🎉 All documents already processed!")
+           return graph["metadata"]
+       
+       # 4. Process each document
+       for i, doc in enumerate(to_process):
+           doc_id = doc["id"]
+           doc_text = doc["metadata"].get("text", "")
+           doc_title = doc["metadata"].get("title", doc_id)
+           
+           print(f"\n[{i+1}/{len(to_process)}] Processing: {doc_title}")
+           
+           try:
+               # Extract concepts via Claude API
+               extracted = await extract_concepts(doc_text, doc_id)
+               
+               if not extracted:
+                   print(f"⚠️  Failed to extract from {doc_id}")
+                   continue
+               
+               # Add concepts to graph
+               for concept in extracted["concepts"]:
+                   await manager.add_node({
+                       **concept,
+                       "source_documents": [doc_id]
+                   })
+               
+               # Add relationships to graph
+               for rel in extracted["relationships"]:
+                   # Find node IDs for source and target
+                   source_node = await manager.find_node_by_label(rel["from"])
+                   target_node = await manager.find_node_by_label(rel["to"])
+                   
+                   if source_node and target_node:
+                       await manager.add_edge({
+                           "source": source_node["id"],
+                           "target": target_node["id"],
+                           "relationship_type": rel["type"],
+                           "evidence_samples": [rel["evidence"]],
+                           "source_documents": [doc_id]
+                       })
+               
+               # Mark as processed
+               if "processed_documents" not in graph["metadata"]:
+                   graph["metadata"]["processed_documents"] = []
+               graph["metadata"]["processed_documents"].append(doc_id)
+               
+               # Save progress every 10 documents
+               if (i + 1) % 10 == 0:
+                   await manager.save_graph(graph)
+                   print(f"💾 Progress saved: {i+1} documents processed")
+               
+               # Rate limit: wait 2 seconds between API calls
+               await asyncio.sleep(2)
+               
+           except Exception as error:
+               print(f"❌ Error processing {doc_id}: {error}")
+               # Log to failed extractions file
+               await log_failed_extraction(doc_id, str(error))
+               # Continue with next document
+       
+       # Final save
+       await manager.save_graph(graph)
+       
+       print("\n" + "="*50)
+       print("🎉 BATCH PROCESSING COMPLETE!")
+       print("="*50)
+       print(f"📈 Total concepts: {len(graph['nodes'])}")
+       print(f"🔗 Total relationships: {len(graph['edges'])}")
+       print(f"📚 Documents processed: {len(graph['metadata']['processed_documents'])}")
+       
+       return graph["metadata"]
+
+2. PROGRESS TRACKING
+   
+   Create file: /data/batch-progress.json
+   
+   Update during processing:
+   {
+     "status": "running|complete|failed",
+     "total_documents": 340,
+     "processed": 127,
+     "current_document": "Season 32: INFJ...",
+     "started_at": "2025-11-05T...",
+     "estimated_completion": "2025-11-05T...",
+     "errors": 3,
+     "last_updated": "2025-11-05T..."
+   }
+   
+   Create endpoint: GET /api/batch-progress
+   Returns current progress from file
+
+3. EXECUTION METHOD
+   
+   Create CLI script that can be run manually:
+   
+   File: /run_batch_processing.py
+   
+   import asyncio
+   from src.scripts.build_initial_graph import process_all_documents
+   
+   if __name__ == "__main__":
+       print("🚀 Starting batch processing...")
+       print("⚠️  This will process all unprocessed documents")
+       print("💰 Estimated cost: $8-10")
+       
+       confirm = input("\nContinue? (yes/no): ")
+       if confirm.lower() != "yes":
+           print("❌ Aborted")
+           exit()
+       
+       asyncio.run(process_all_documents())
+
+4. ERROR RECOVERY
+   
+   If script crashes mid-process:
+   - Graph auto-saves every 10 docs
+   - Next run checks processed_documents list
+   - Skips already processed docs
+   - Resumes from where it left off
+   
+   Create function: log_failed_extraction(doc_id, error)
+   Appends to: /data/failed-extractions.json
+
+5. VALIDATION CHECKS
+   
+   After batch complete:
+   - Check node count reasonable (expect 50-150 concepts)
+   - Check relationship count (expect 2-5 per concept)
+   - Verify no orphaned edges
+   - Check for duplicate concepts (fuzzy match)
+   - Generate report: /data/graph-quality-report.json
+   
+   Create function: generate_quality_report()
+
+6. COST TRACKING INTEGRATION
+   
+   Sum all extraction costs from /data/extraction-costs.json
+   Display total at end of batch processing
+   Create summary endpoint: GET /api/batch-costs/summary
+
+7. HELPER FUNCTIONS NEEDED
+   
+   - get_all_pinecone_documents(): Fetch all doc IDs + metadata
+   - log_failed_extraction(doc_id, error): Append to failures file
+   - update_batch_progress(status, current, total): Update progress file
+   - generate_quality_report(): Analyze graph quality
+   - estimate_remaining_time(processed, total, start_time): Calculate ETA
+
+8. DO NOT:
+   - Process documents that are already in processed_documents list
+   - Run visualization yet (that's Stage 4)
+   - Integrate with upload flow yet (that's Stage 4)
+
+VERIFICATION STEPS:
+- Script runs without crashing
+- Progress saves every 10 documents
+- Can resume after interruption (test by killing mid-run)
+- Graph file valid JSON
+- Concepts make sense (spot check 20)
+- Relationships logical
+- Cost tracking accurate
+- No duplicate processing
+- All 340 documents marked as processed
