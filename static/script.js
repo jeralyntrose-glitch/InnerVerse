@@ -1443,6 +1443,104 @@ if (tagLibraryToggle && tagLibraryContent) {
   });
 }
 
+// === Batch Re-Tagging Collapsible Toggle ===
+const batchRetagToggle = document.getElementById('batch-retag-toggle');
+const batchRetagContent = document.getElementById('batch-retag-content');
+
+// Start collapsed by default
+if (batchRetagToggle && batchRetagContent) {
+  batchRetagToggle.classList.add('collapsed');
+  batchRetagContent.classList.add('collapsed');
+  
+  batchRetagToggle.addEventListener('click', () => {
+    batchRetagToggle.classList.toggle('collapsed');
+    batchRetagContent.classList.toggle('collapsed');
+  });
+}
+
+// === Batch Re-Tagging Functionality ===
+const batchRetagBtn = document.getElementById('batch-retag-btn');
+const batchRetagProgress = document.getElementById('batch-retag-progress');
+
+if (batchRetagBtn) {
+  batchRetagBtn.addEventListener('click', async () => {
+    // Show confirmation dialog
+    const confirmed = confirm(
+      '🚀 Batch Re-Tag All Documents?\n\n' +
+      'This will update ALL documents in Pinecone with the new structured metadata system (GPT-4o-mini).\n\n' +
+      '✅ Safe Operation: Only metadata is updated\n' +
+      '⏱️ Processing Time: ~2-5 minutes depending on number of documents\n\n' +
+      'Continue?'
+    );
+    
+    if (!confirmed) return;
+    
+    // Disable button and show progress
+    batchRetagBtn.disabled = true;
+    batchRetagBtn.textContent = '⏳ Processing...';
+    batchRetagProgress.classList.remove('hidden');
+    
+    try {
+      console.log('🚀 Starting batch re-tagging...');
+      
+      const response = await fetch('/api/batch-retag', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Batch re-tagging failed');
+      }
+      
+      console.log('✅ Batch re-tagging complete:', result);
+      
+      // Update progress display
+      document.getElementById('batch-total').textContent = result.total_documents || 0;
+      document.getElementById('batch-processed').textContent = result.documents_processed || 0;
+      document.getElementById('batch-vectors').textContent = result.total_vectors_updated || 0;
+      
+      // Show success message
+      const resultDiv = document.getElementById('batch-retag-result');
+      resultDiv.innerHTML = `
+        <div style="color: #10A37F; font-weight: bold; margin-top: 15px;">
+          ✅ ${result.message}
+        </div>
+        ${result.documents_failed > 0 ? `
+          <div style="color: #FFA500; margin-top: 10px;">
+            ⚠️ ${result.documents_failed} documents failed to process
+          </div>
+        ` : ''}
+      `;
+      
+      // Re-enable button
+      batchRetagBtn.disabled = false;
+      batchRetagBtn.textContent = '✅ Complete! Run Again?';
+      
+      // Reload tag library to show new metadata
+      setTimeout(() => {
+        loadTagLibrary();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ Batch re-tagging error:', error);
+      
+      const resultDiv = document.getElementById('batch-retag-result');
+      resultDiv.innerHTML = `
+        <div style="color: #FF4444; font-weight: bold; margin-top: 15px;">
+          ❌ Error: ${error.message}
+        </div>
+      `;
+      
+      batchRetagBtn.disabled = false;
+      batchRetagBtn.textContent = '🔄 Retry Batch Re-Tagging';
+    }
+  });
+}
+
 // === Tag Library Functions ===
 function saveDocumentTags(documentId, filename, tags) {
   const taggedDocs = JSON.parse(localStorage.getItem('innerverse_tagged_docs') || '{}');
