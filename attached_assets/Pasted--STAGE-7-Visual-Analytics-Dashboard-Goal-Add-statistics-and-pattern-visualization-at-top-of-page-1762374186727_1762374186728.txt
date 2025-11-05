@@ -1,0 +1,160 @@
+🎯 STAGE 7: Visual Analytics Dashboard
+Goal: Add statistics and pattern visualization at top of page.
+Instructions for Replit Agent:
+STAGE 7: Content Atlas - Analytics Dashboard
+
+Add visual statistics showing content distribution patterns.
+
+REQUIREMENTS:
+1. Create new component: /src/components/ContentAnalytics.jsx
+
+2. Create new API endpoint: GET /api/content-atlas/analytics
+   Returns:
+   {
+     total_documents: 340,
+     by_content_type: {
+       lecture: 250,
+       qa: 60,
+       response: 30
+     },
+     by_difficulty: {
+       beginner: 50,
+       intermediate: 180,
+       advanced: 110
+     },
+     by_quadra: {
+       NT: 90,
+       NF: 95,
+       ST: 75,
+       SF: 80
+     },
+     top_types: [
+       { type: 'ENFP', count: 45 },
+       { type: 'INFJ', count: 42 },
+       ...top 10
+     ],
+     top_functions: [
+       { function: 'Ne', count: 85 },
+       { function: 'Fi', count: 80 },
+       ...top 10
+     ],
+     top_topics: [
+       { topic: 'Shadow', count: 65 },
+       { topic: 'Cognitive Functions', count: 132 },
+       ...top 15
+     ]
+   }
+
+3. Analytics component layout:
+   <div class="analytics-dashboard">
+     <div class="stat-cards-grid">
+       <StatCard
+         icon="📊"
+         label="Total Documents"
+         value={total_documents}
+       />
+       <StatCard
+         icon="🎓"
+         label="Lectures"
+         value={by_content_type.lecture}
+       />
+       <StatCard
+         icon="💬"
+         label="Q&A Sessions"
+         value={by_content_type.qa}
+       />
+       <StatCard
+         icon="📝"
+         label="Responses"
+         value={by_content_type.response}
+       />
+     </div>
+
+     <div class="charts-grid">
+       <ChartCard title="Difficulty Distribution">
+         <BarChart data={by_difficulty} />
+       </ChartCard>
+
+       <ChartCard title="Quadra Coverage">
+         <PieChart data={by_quadra} />
+       </ChartCard>
+
+       <ChartCard title="Top 10 Types Discussed">
+         <HorizontalBarChart data={top_types} />
+       </ChartCard>
+
+       <ChartCard title="Most Covered Functions">
+         <HorizontalBarChart data={top_functions} />
+       </ChartCard>
+
+       <ChartCard title="Popular Topics">
+         <TagCloudChart data={top_topics} />
+       </ChartCard>
+     </div>
+   </div>
+
+4. Chart library:
+   Use recharts (already in dependencies) or Chart.js
+   
+   Simple implementations:
+   - BarChart: vertical bars with labels
+   - PieChart: donut chart with quadra colors
+   - HorizontalBarChart: sorted by count
+   - TagCloud: sized by frequency
+
+5. Make it interactive (optional enhancement):
+   - Click a bar/segment → applies that filter
+   - Click tag in cloud → applies that filter
+   - Hover shows exact counts
+
+6. Collapsible section:
+   - "Show Analytics" / "Hide Analytics" toggle button
+   - Collapsed by default (user expands if interested)
+   - State persists in sessionStorage
+
+7. Responsive:
+   - Grid adapts to screen size
+   - Charts stack on mobile
+   - Readable on all devices
+
+8. Performance:
+   - Fetch analytics only once on page load
+   - Cache results
+   - Don't recalculate on every filter change
+   - Lazy load charts (only render when visible)
+
+9. Styling:
+   - Match existing theme
+   - Cards have subtle shadows
+   - Charts use brand colors (purple gradients)
+   - Clean, minimal design
+
+10. DO NOT:
+    - Break existing functionality
+    - Make analytics mandatory to view
+    - Slow down page load significantly
+
+VERIFICATION STEPS:
+- Analytics load on page mount
+- Numbers are accurate (match Pinecone totals)
+- Charts render correctly
+- Interactive filters work (if implemented)
+- Collapse/expand works
+- Mobile view functional
+- No performance degradation
+What Could Go Wrong:
+
+Analytics endpoint slow (aggregating 3k docs)
+Charts don't render on mobile
+Color scheme clashes
+Too much data causes layout issues
+Click handlers interfere with existing filters
+
+Success Criteria:
+✅ Analytics display accurate counts
+✅ Charts render properly
+✅ Collapse/expand works
+✅ Performance acceptable (<2s load)
+✅ Mobile responsive
+✅ No layout breaking
+STOP HERE. Verify analytics before Stage 8.
