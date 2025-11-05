@@ -40,18 +40,48 @@
     </div>
 
     <div class="content-atlas-container">
-      <!-- Search and Controls -->
-      <div class="atlas-controls">
-        <input 
-          type="text" 
-          id="search-input" 
-          class="atlas-search" 
-          placeholder="Search by title, topic, or MBTI type..."
-        />
-      </div>
+      <!-- Mobile Filter Toggle -->
+      <button id="mobile-filter-toggle" class="mobile-filter-toggle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="18" x2="20" y2="18"></line>
+        </svg>
+        <span>Filters</span>
+        <span id="filter-count-badge" class="filter-count-badge hidden">0</span>
+      </button>
 
-      <!-- Documents Grid -->
-      <div id="documents-grid" class="documents-grid">
+      <!-- Filter Sidebar -->
+      <aside id="filter-sidebar" class="filter-sidebar">
+        <div class="filter-sidebar-header">
+          <h3>Filters</h3>
+          <button id="clear-all-filters" class="clear-all-btn" style="display: none;">Clear All</button>
+          <button id="close-sidebar" class="close-sidebar-btn">×</button>
+        </div>
+
+        <div class="filter-sections" id="filter-sections">
+          <!-- Filter sections will be dynamically generated -->
+          <div class="loading-state">
+            <div class="loading-spinner-small"></div>
+            <p style="margin-top: 10px; font-size: 14px; color: var(--text-secondary);">Loading filters...</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <div class="atlas-main-content">
+        <!-- Search and Controls -->
+        <div class="atlas-controls">
+          <input 
+            type="text" 
+            id="search-input" 
+            class="atlas-search" 
+            placeholder="Search by title, topic, or MBTI type..."
+          />
+        </div>
+
+        <!-- Documents Grid -->
+        <div id="documents-grid" class="documents-grid">
         <!-- Loading state -->
         <div class="loading-state">
           <div class="loading-spinner"></div>
@@ -59,14 +89,15 @@
         </div>
       </div>
 
-      <!-- Pagination -->
-      <div id="pagination-controls" class="pagination-controls" style="display: none;">
-        <button id="prev-btn" class="pagination-btn">← Previous</button>
-        <span id="pagination-info" class="pagination-info"></span>
-        <button id="next-btn" class="pagination-btn">Next →</button>
-      </div>
-    </div>
-  </div>
+        <!-- Pagination -->
+        <div id="pagination-controls" class="pagination-controls" style="display: none;">
+          <button id="prev-btn" class="pagination-btn">← Previous</button>
+          <span id="pagination-info" class="pagination-info"></span>
+          <button id="next-btn" class="pagination-btn">Next →</button>
+        </div>
+      </div> <!-- Close atlas-main-content -->
+    </div> <!-- Close content-atlas-container -->
+  </div> <!-- Close page-wrapper -->
 
   <!-- Content Atlas Application -->
   <script src="/static/content-atlas-app.js?v=1"></script>
