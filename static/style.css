@@ -2365,6 +2365,280 @@ label,
   max-width: 1400px;
   margin: 40px auto 0;
   width: 100%;
+  display: flex;
+  gap: 24px;
+  position: relative;
+}
+
+/* Mobile Filter Toggle Button */
+.mobile-filter-toggle {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #9b6dff 0%, #10A37F 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.mobile-filter-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.filter-count-badge {
+  background: rgba(255, 255, 255, 0.9);
+  color: #9b6dff;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filter-count-badge.hidden {
+  display: none;
+}
+
+/* Filter Sidebar */
+.filter-sidebar {
+  width: 280px;
+  max-width: 280px;
+  flex-shrink: 0;
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
+  height: fit-content;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  position: sticky;
+  top: 100px;
+}
+
+.filter-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filter-sidebar-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.clear-all-btn {
+  padding: 6px 12px;
+  background: #ff4757;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-all-btn:hover {
+  background: #ff3838;
+  transform: scale(1.05);
+}
+
+.close-sidebar-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Filter Sections */
+.filter-section {
+  margin-bottom: 20px;
+}
+
+.filter-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.filter-section-header:hover {
+  color: #10A37F;
+}
+
+.filter-toggle {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.filter-section-content {
+  padding-top: 8px;
+  overflow: hidden;
+  max-height: 400px;
+  transition: max-height 0.3s ease;
+}
+
+.filter-section-content.collapsed {
+  max-height: 0;
+  padding-top: 0;
+}
+
+/* Filter Controls (Select All / Clear) */
+.filter-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filter-control-btn {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-control-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: #10A37F;
+}
+
+/* Filter Checkboxes */
+.filter-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.2s ease;
+}
+
+.filter-checkbox-label:hover {
+  color: #10A37F;
+}
+
+.filter-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #10A37F;
+}
+
+/* Main Content Area */
+.atlas-main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Loading State for Filters */
+.filter-sections .loading-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading-spinner-small {
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--border-color);
+  border-top-color: #10A37F;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .content-atlas-container {
+    flex-direction: column;
+  }
+  
+  .mobile-filter-toggle {
+    display: flex;
+  }
+  
+  .filter-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 80%;
+    max-width: 320px;
+    height: 100vh;
+    max-height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    border-radius: 0;
+  }
+  
+  .filter-sidebar.active {
+    left: 0;
+  }
+  
+  .close-sidebar-btn {
+    display: flex;
+  }
+  
+  .filter-sidebar::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  .filter-sidebar.active::before {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  .atlas-main-content {
+    width: 100%;
+  }
 }
 
 /* Document Grid */
