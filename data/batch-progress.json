@@ -1,0 +1,11 @@
+{
+  "status": "running",
+  "total_documents": 340,
+  "processed": 45,
+  "current_document": "7da7b48b-e6ac-41b8-a420-1c9c76d73301",
+  "errors": 0,
+  "last_updated": "2025-11-05T23:14:58.321720",
+  "started_at": "2025-11-05T23:05:09.174049",
+  "estimated_completion": "2025-11-06T00:19:20.512141",
+  "eta_readable": "2025-11-06 00:19:20"
+}
