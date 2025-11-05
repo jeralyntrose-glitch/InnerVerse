@@ -5234,6 +5234,81 @@ async def create_edge(edge_data: dict):
         )
 
 
+# === Concept Extraction API Endpoints ===
+
+from src.services.concept_extractor import extract_concepts, get_extraction_cost_summary
+
+@app.get("/api/extraction-costs/summary")
+async def get_extraction_costs():
+    """
+    Get summary of concept extraction costs and statistics.
+    
+    Returns:
+        JSON with total costs, success rate, token usage
+    """
+    try:
+        summary = await get_extraction_cost_summary()
+        return summary
+        
+    except Exception as e:
+        print(f"❌ Failed to get extraction cost summary: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to get cost summary: {str(e)}"}
+        )
+
+
+@app.post("/api/extract-concepts")
+async def extract_document_concepts(request: dict):
+    """
+    Extract concepts and relationships from a document using Claude API.
+    
+    Request body:
+        {
+            "document_text": "Full document text...",
+            "document_id": "doc_123"
+        }
+        
+    Returns:
+        Extraction result with concepts, relationships, and metadata
+    """
+    try:
+        document_text = request.get("document_text")
+        document_id = request.get("document_id")
+        
+        if not document_text or not document_id:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Missing required fields: document_text, document_id"}
+            )
+        
+        print(f"🔍 Starting concept extraction for: {document_id}")
+        
+        # Extract concepts
+        result = await extract_concepts(document_text, document_id)
+        
+        if result is None:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Concept extraction failed - check logs for details"}
+            )
+        
+        return {
+            "success": True,
+            "document_id": document_id,
+            "extraction": result
+        }
+        
+    except Exception as e:
+        print(f"❌ Extraction endpoint error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Extraction failed: {str(e)}"}
+        )
+
+
 # === Serve Frontend ===
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
