@@ -1,0 +1,197 @@
+STAGE 2: Concept Extraction via Claude API
+
+Build service that analyzes document content and extracts knowledge graph data.
+
+REQUIREMENTS:
+
+1. CREATE EXTRACTION SERVICE
+   File: /src/services/concept_extractor.py
+   
+   Main function: async extract_concepts(document_text: str, document_id: str)
+   
+   Returns:
+   {
+     "concepts": [
+       {
+         "label": "Shadow Integration",
+         "type": "process",
+         "category": "foundational",
+         "definition": "Brief 1-2 sentence definition"
+       }
+     ],
+     "relationships": [
+       {
+         "from": "Shadow Integration",
+         "to": "Inferior Function",
+         "type": "requires_understanding",
+         "evidence": "Quote from text supporting this relationship"
+       }
+     ]
+   }
+
+2. CLAUDE API PROMPT
+   The prompt sent to Claude API must be precise:
+   
+   """
+   You are analyzing a transcript of a CS Joseph lecture on MBTI/Jungian psychology.
+   
+   Extract:
+   1. KEY CONCEPTS - Important ideas, theories, processes discussed
+   2. RELATIONSHIPS - How concepts connect (prerequisite, leads to, contrasts with, etc.)
+   
+   Return ONLY valid JSON in this format:
+   {
+     "concepts": [
+       {
+         "label": "Concept Name",
+         "type": "theory|process|function|framework|principle",
+         "category": "foundational|intermediate|advanced",
+         "definition": "Brief definition (1-2 sentences)"
+       }
+     ],
+     "relationships": [
+       {
+         "from": "Concept A",
+         "to": "Concept B",
+         "type": "requires_understanding|leads_to|contrasts_with|builds_on|enables|manifests_as|part_of|related_to",
+         "evidence": "Brief quote or paraphrase showing this connection"
+       }
+     ]
+   }
+   
+   Guidelines:
+   - Extract 5-15 key concepts per document (most important ones)
+   - Extract 3-10 relationships (only clear, explicit connections)
+   - Use consistent terminology (e.g. always "Shadow Integration" not sometimes "Shadow Work")
+   - Focus on conceptual relationships, not just co-occurrence
+   - Mark foundational concepts (core pillars of teaching)
+   
+   Document text:
+   {document_text}
+   """
+
+3. API CALL IMPLEMENTATION
+   
+   - Use Anthropic SDK (already installed for existing system)
+   - Model: claude-sonnet-4-5-20250929
+   - Max tokens: 4096
+   - Temperature: 0.3 (lower = more consistent)
+   
+   Example implementation:
+   
+   import anthropic
+   import json
+   from typing import Optional, Dict
+   
+   async def extract_concepts(document_text: str, document_id: str) -> Optional[Dict]:
+       try:
+           client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+           
+           # Build prompt
+           prompt = f"""[INSERT PROMPT FROM #2 ABOVE]"""
+           
+           response = client.messages.create(
+               model="claude-sonnet-4-5-20250929",
+               max_tokens=4096,
+               temperature=0.3,
+               messages=[{
+                   "role": "user",
+                   "content": prompt
+               }]
+           )
+           
+           # Parse JSON from response
+           extracted = json.loads(response.content[0].text)
+           
+           # Validate structure
+           if "concepts" not in extracted or "relationships" not in extracted:
+               raise ValueError("Invalid extraction format")
+           
+           # Add metadata
+           extracted["document_id"] = document_id
+           extracted["extracted_at"] = datetime.utcnow().isoformat()
+           extracted["input_tokens"] = response.usage.input_tokens
+           extracted["output_tokens"] = response.usage.output_tokens
+           
+           return extracted
+           
+       except Exception as error:
+           print(f"Extraction failed for {document_id}:", error)
+           await log_failed_extraction(document_id, str(error))
+           return None
+
+4. TEXT PREPROCESSING
+   Before sending to Claude:
+   
+   - Truncate if > 100,000 characters (Claude context limit)
+   - If truncated, prioritize:
+     * First 30% (intro/definitions)
+     * Last 20% (conclusions/summaries)
+     * Middle 50% sample
+   - Remove excessive whitespace
+   - Keep original terminology intact
+   
+   Create function: preprocess_document_text(text: str, max_chars: int = 100000) -> str
+
+5. RESPONSE VALIDATION
+   
+   After Claude returns JSON:
+   
+   - Verify JSON parseable
+   - Check required fields present
+   - Standardize concept labels (trim, lowercase for ID generation)
+   - Validate relationship types against allowed list
+   - If invalid: log error, return None, skip this document
+   
+   Create function: validate_extraction(data: Dict) -> bool
+
+6. COST TRACKING
+   
+   Create file: /data/extraction-costs.json
+   
+   Track per extraction:
+   {
+     "document_id": "doc_123",
+     "timestamp": "2025-11-05T...",
+     "input_tokens": 15000,
+     "output_tokens": 800,
+     "cost": 0.023,
+     "success": true
+   }
+   
+   Append to file after each extraction.
+   Create endpoint: GET /api/extraction-costs/summary
+
+7. RATE LIMITING
+   
+   - Anthropic API: 50 requests/minute
+   - Implement queue system if batch processing
+   - Add 1-2 second delay between calls
+   - Retry logic: 3 attempts with exponential backoff
+
+8. TESTING
+   
+   Test with 2-3 sample documents:
+   - One short (5k chars)
+   - One medium (50k chars)
+   - One long (100k+ chars)
+   
+   Verify:
+   - Valid JSON returned
+   - Concepts make sense
+   - Relationships accurate
+   - No hallucinations
+   - Consistent terminology
+
+9. DO NOT:
+   - Process all 340 docs yet (that's Stage 3)
+   - Integrate with upload flow yet
+   - Create visualization
+
+VERIFICATION STEPS:
+- Manual test extraction on 3 documents
+- Review extracted concepts - accurate?
+- Review relationships - valid connections?
+- Check cost tracking works
+- No API errors
+- JSON always valid
