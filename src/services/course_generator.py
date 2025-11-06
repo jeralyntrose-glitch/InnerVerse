@@ -117,7 +117,17 @@ class CourseGenerator:
             raise Exception(f"Failed to generate curriculum: {str(e)}")
         
         # Step 5: Parse response
-        curriculum = self._parse_claude_response(response.content[0].text)
+        # Extract text from response content blocks
+        response_text = ""
+        for block in response.content:
+            if hasattr(block, 'text'):
+                response_text = block.text
+                break
+        
+        if not response_text:
+            raise Exception("No text content in Claude response")
+        
+        curriculum = self._parse_claude_response(response_text)
         
         # Step 6: Validate and enhance curriculum
         curriculum = self._validate_curriculum(curriculum, concepts)

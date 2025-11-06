@@ -42,6 +42,7 @@ from src.services.concept_extractor import extract_concepts
 from src.services.knowledge_graph_manager import KnowledgeGraphManager
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX")
@@ -50,6 +51,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # === Startup Logging ===
 print("🚀 Starting InnerVerse...")
 print(f"✅ OPENAI_API_KEY: {'SET' if OPENAI_API_KEY else 'MISSING'}")
+print(f"✅ ANTHROPIC_API_KEY: {'SET' if ANTHROPIC_API_KEY else 'MISSING'}")
 print(f"✅ PINECONE_API_KEY: {'SET' if PINECONE_API_KEY else 'MISSING'}")
 print(f"✅ PINECONE_INDEX: {'SET' if PINECONE_INDEX else 'MISSING'}")
 print(f"✅ DATABASE_URL: {'SET' if DATABASE_URL else 'MISSING'}")
@@ -5866,6 +5868,42 @@ async def list_courses(category: str = None, status: str = "active"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/courses/generation-stats")
+async def get_generation_stats():
+    """
+    Get AI generation statistics for current session.
+    
+    Returns:
+        {
+            "success": true,
+            "data": {
+                "generation_cost": 0.15,
+                "assignment_cost": 0.08,
+                "total_cost": 0.23
+            }
+        }
+    """
+    try:
+        generator = get_course_generator()
+        assigner = get_content_assigner()
+        
+        gen_cost = generator.get_total_cost()
+        assign_cost = assigner.get_total_cost()
+        
+        return {
+            "success": True,
+            "data": {
+                "generation_cost": round(gen_cost, 4),
+                "assignment_cost": round(assign_cost, 4),
+                "total_cost": round(gen_cost + assign_cost, 4)
+            }
+        }
+        
+    except Exception as e:
+        print(f"❌ Failed to get generation stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/courses/{course_id}")
 async def get_course(course_id: str):
     """Get a specific course by ID"""
@@ -6231,42 +6269,6 @@ async def assign_content(request: Request):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Content assignment failed: {str(e)}")
-
-
-@app.get("/api/courses/generation-stats")
-async def get_generation_stats():
-    """
-    Get AI generation statistics for current session.
-    
-    Returns:
-        {
-            "success": true,
-            "data": {
-                "generation_cost": 0.15,
-                "assignment_cost": 0.08,
-                "total_cost": 0.23
-            }
-        }
-    """
-    try:
-        generator = get_course_generator()
-        assigner = get_content_assigner()
-        
-        gen_cost = generator.get_total_cost()
-        assign_cost = assigner.get_total_cost()
-        
-        return {
-            "success": True,
-            "data": {
-                "generation_cost": round(gen_cost, 4),
-                "assignment_cost": round(assign_cost, 4),
-                "total_cost": round(gen_cost + assign_cost, 4)
-            }
-        }
-        
-    except Exception as e:
-        print(f"❌ Failed to get generation stats: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Mount static files (CSS, JS)
