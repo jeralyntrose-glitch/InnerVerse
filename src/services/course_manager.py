@@ -202,6 +202,12 @@ class CourseManager:
         if not updates:
             return self.get_course(course_id)
         
+        # Serialize JSONB fields
+        jsonb_fields = {'source_ids', 'tags'}
+        for field in jsonb_fields:
+            if field in updates and updates[field] is not None:
+                updates[field] = json.dumps(updates[field])
+        
         set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])
         values = list(updates.values()) + [course_id]
         
@@ -369,6 +375,15 @@ class CourseManager:
         if not updates:
             return self.get_lesson(lesson_id)
         
+        # Serialize JSONB fields
+        jsonb_fields = {
+            'concept_ids', 'prerequisite_lesson_ids', 
+            'video_references', 'document_references'
+        }
+        for field in jsonb_fields:
+            if field in updates and updates[field] is not None:
+                updates[field] = json.dumps(updates[field])
+        
         set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])
         values = list(updates.values()) + [lesson_id]
         
@@ -498,6 +513,15 @@ class CourseManager:
         
         # Auto-update last_accessed
         updates['last_accessed'] = datetime.utcnow()
+        
+        # Serialize JSONB fields
+        jsonb_fields = {
+            'completed_lesson_ids', 'lesson_completion_dates', 
+            'notes', 'flagged_for_review', 'ai_validation_status'
+        }
+        for field in jsonb_fields:
+            if field in updates and updates[field] is not None:
+                updates[field] = json.dumps(updates[field])
         
         set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])
         values = list(updates.values()) + [user_id, course_id]

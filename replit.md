@@ -35,6 +35,35 @@ Preferred communication style: Simple, everyday language with a decent amount of
 - **Retry Logic**: Automatic retry with exponential backoff for Claude API overload errors (2s, then 4s, max 3 attempts). User-friendly error messages after exhausting retries.
 - **Migration System**: Background task-based API for live embedding upgrades.
 
+## Learning Paths System
+- **Overview**: Structured learning tracks for MBTI education, enabling curated courses with lessons, progress tracking, and prerequisites.
+- **Database Schema**: 
+  - `courses`: Learning tracks with metadata (title, category, description, hours, tags, source info)
+  - `lessons`: Individual learning units with concept_ids, difficulty levels, video/document references
+  - `user_progress`: Tracks completion status, active lessons, last accessed dates per user/course
+  - `course_prerequisites`: Defines course dependency chains
+- **Business Logic** (`src/services/course_manager.py`): 
+  - Full CRUD operations for courses and lessons
+  - Progress tracking with automatic order_index management
+  - Support for auto-generated courses from chat/graph/atlas sources
+  - JSONB fields for flexible metadata (tags, video_references, document_references, learning_objectives)
+- **API Endpoints** (in `main.py`):
+  - `POST /api/courses` - Create new course
+  - `GET /api/courses` - List all courses (filter by category/status)
+  - `GET /api/courses/{id}` - Get course details
+  - `PUT /api/courses/{id}` - Update course
+  - `DELETE /api/courses/{id}` - Archive course
+  - `POST /api/courses/{id}/lessons` - Add lesson to course
+  - `GET /api/courses/{id}/lessons` - List course lessons
+  - `GET /api/lessons/{id}` - Get lesson details
+  - `PUT /api/lessons/{id}` - Update lesson
+  - `DELETE /api/lessons/{id}` - Delete lesson
+  - `GET /api/courses/{id}/progress` - Get user progress
+  - `POST /api/courses/{id}/progress` - Update progress
+  - `POST /api/courses/{id}/lessons/{lesson_id}/complete` - Mark lesson complete
+- **Integration Points**: Designed to connect with Knowledge Graph (concept_ids), Content Atlas (navigation), and Chat (auto-generation)
+- **Future Frontend**: Planned UI for browsing courses, tracking progress, and guided learning experience
+
 ## Document Processing Pipeline
 - **PDF Parsing**: PyPDF2 for text extraction.
 - **Text Chunking**: LangChain's `RecursiveCharacterTextSplitter` with optimized parameters.
