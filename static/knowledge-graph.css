@@ -334,8 +334,18 @@
     min-width: 180px;
 }
 
+.legend-header {
+    display: none;
+}
+
 .legend h4 {
     margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #F8FAFC;
+}
+
+.legend-header h4 {
+    margin: 0;
     font-size: 14px;
     color: #F8FAFC;
 }
@@ -426,9 +436,45 @@
         max-height: 60vh;
     }
     
+    /* Make legend static on mobile to prevent overlap */
     .legend {
-        left: 10px;
-        bottom: 10px;
+        position: static !important;
+        width: 100% !important;
+        margin-bottom: 20px;
+        padding: 15px;
+        left: auto;
+        bottom: auto;
+    }
+    
+    /* Adjust graph container for mobile */
+    .kg-graph-container {
+        height: 60vh !important;
+        min-height: 400px;
+        margin-top: 20px;
+    }
+    
+    /* Show and style collapsible legend header on mobile */
+    .legend-header {
+        cursor: pointer;
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        user-select: none;
+        padding: 5px 0;
+        margin-bottom: 10px;
+    }
+    
+    .legend-header .toggle {
+        font-size: 18px;
+        transition: transform 0.2s;
+    }
+    
+    .legend.collapsed .legend-content {
+        display: none;
+    }
+    
+    .legend.collapsed .legend-header .toggle {
+        transform: rotate(-90deg);
     }
     
     .instructions {

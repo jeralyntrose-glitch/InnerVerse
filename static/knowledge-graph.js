@@ -437,3 +437,36 @@ class SpriteText extends THREE.Sprite {
         this.material.dispose();
     }
 }
+
+// Mobile: Make legend collapsible on small screens
+function initMobileLegend() {
+    if (window.innerWidth <= 768) {
+        const legendEl = document.getElementById('legend');
+        const legendHeader = legendEl.querySelector('.legend-header');
+        
+        if (legendHeader && legendEl) {
+            // Start collapsed on mobile to save space
+            legendEl.classList.add('collapsed');
+            
+            legendHeader.addEventListener('click', () => {
+                legendEl.classList.toggle('collapsed');
+            });
+            
+            console.log('📱 Mobile legend collapsibility enabled');
+        }
+    }
+}
+
+// Initialize mobile features after page loads
+document.addEventListener('DOMContentLoaded', () => {
+    initMobileLegend();
+});
+
+// Re-initialize on window resize
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        initMobileLegend();
+    }, 250);
+});
