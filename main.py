@@ -5864,11 +5864,20 @@ async def get_course_stats(user_id: str = "jeralyn"):
 
 @app.get("/api/courses")
 async def list_courses(category: str = None, status: str = "active"):
-    """List all courses, optionally filtered by category"""
+    """List all courses, grouped by category"""
     try:
         manager = get_course_manager()
         courses = manager.list_courses(category=category, status=status)
-        return {"success": True, "courses": courses}
+        
+        # Group courses by category for frontend tree visualization
+        grouped = {}
+        for course in courses:
+            cat = course.get('category', 'uncategorized')
+            if cat not in grouped:
+                grouped[cat] = []
+            grouped[cat].append(course)
+        
+        return {"success": True, "data": grouped}
     except Exception as e:
         print(f"❌ Error listing courses: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
