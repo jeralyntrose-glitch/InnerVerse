@@ -250,9 +250,9 @@ function renderCourseCard(course) {
 }
 
 function calculateProgress(course) {
-    if (!course.progress || !course.progress.completed_lesson_ids) return 0;
+    if (!course.completed_lesson_ids || course.completed_lesson_ids.length === 0) return 0;
     
-    const completed = course.progress.completed_lesson_ids.length;
+    const completed = course.completed_lesson_ids.length;
     const total = course.lesson_count || 1;
     
     return Math.round((completed / total) * 100);
@@ -272,14 +272,21 @@ async function openCourseModal(course) {
     state.selectedCourse = course;
     
     try {
-        const response = await fetch(`${CONFIG.api.courses}/${course.id}`);
-        const result = await response.json();
+        // Fetch course details and lessons in parallel
+        const [courseResponse, lessonsResponse] = await Promise.all([
+            fetch(`${CONFIG.api.courses}/${course.id}`),
+            fetch(`${CONFIG.api.courses}/${course.id}/lessons`)
+        ]);
         
-        if (!result.success) {
+        const courseResult = await courseResponse.json();
+        const lessonsResult = await lessonsResponse.json();
+        
+        if (!courseResult.success) {
             throw new Error('Failed to load course details');
         }
         
-        const fullCourse = result.data;
+        const fullCourse = courseResult.course;  // Fixed: use result.course not result.data
+        const lessons = lessonsResult.success ? lessonsResult.lessons : [];
         
         document.getElementById('modal-course-title').textContent = fullCourse.title;
         document.getElementById('modal-category').textContent = fullCourse.category.replace('_', ' ');
@@ -290,10 +297,10 @@ async function openCourseModal(course) {
         document.getElementById('modal-hours').textContent = `${fullCourse.estimated_hours || 0} hours`;
         document.getElementById('modal-description').textContent = fullCourse.description || 'No description';
         
-        renderLessonsList(fullCourse.lessons || [], fullCourse.progress);
+        renderLessonsList(lessons, fullCourse);
         
         const continueBtn = document.getElementById('continue-learning-btn');
-        if (fullCourse.progress && fullCourse.progress.current_lesson_id) {
+        if (fullCourse.current_lesson_id) {
             continueBtn.style.display = 'block';
         } else {
             continueBtn.style.display = 'none';
@@ -308,7 +315,7 @@ async function openCourseModal(course) {
     }
 }
 
-function renderLessonsList(lessons, progress) {
+function renderLessonsList(lessons, course) {
     const container = document.getElementById('lessons-list');
     
     if (lessons.length === 0) {
@@ -316,8 +323,8 @@ function renderLessonsList(lessons, progress) {
         return;
     }
     
-    const completedIds = progress?.completed_lesson_ids || [];
-    const currentId = progress?.current_lesson_id;
+    const completedIds = course?.completed_lesson_ids || [];
+    const currentId = course?.current_lesson_id;
     
     container.innerHTML = lessons.map((lesson, index) => {
         let status = 'not-started';
