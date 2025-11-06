@@ -1,0 +1,8 @@
+[
+  {
+    "timestamp": "2025-11-06T02:42:05.675562",
+    "document_id": "ba031679-2e3c-4a4b-889e-a609f0f16c8e",
+    "filename": "How To Social Engineer Using Type _ Social Enginee.pdf",
+    "error": "KnowledgeGraphManager.add_node() got an unexpected keyword argument 'label'"
+  }
+]

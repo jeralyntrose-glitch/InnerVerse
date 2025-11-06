@@ -1,0 +1,102 @@
+FIX: Knowledge Graph Upload Integration Bug
+
+PROBLEM:
+Upload flow is calling add_node() with wrong parameters, causing:
+"KnowledgeGraphManager.add_node() got an unexpected keyword argument 'label'"
+
+SOLUTION:
+
+1. CHECK ACTUAL add_node() SIGNATURE
+   Open: /src/services/knowledge_graph_manager.py
+   
+   Find the add_node() method and check its actual signature.
+   It might be one of these:
+   
+   Option A: async def add_node(self, node_data: dict)
+   Option B: async def add_node(self, label: str, type: str, ...)
+   Option C: async def add_node(self, **kwargs)
+
+2. FIX THE UPLOAD INTEGRATION
+   Open the upload handler file (where we added knowledge graph integration)
+   
+   Find this section:
+```python
+   for concept in extracted.get('concepts', []):
+       await manager.add_node({
+           'label': concept['label'],
+           'type': concept['type'],
+           'category': concept['category'],
+           'definition': concept.get('definition', ''),
+           'source_documents': [document_id]
+       })
+```
+   
+   Update it to match the ACTUAL add_node() signature.
+   
+   If signature is: add_node(self, node_data: dict)
+   Then call should be:
+```python
+   node_data = {
+       'label': concept['label'],
+       'type': concept['type'],
+       'category': concept['category'],
+       'definition': concept.get('definition', ''),
+       'source_documents': [document_id]
+   }
+   await manager.add_node(node_data)
+```
+
+3. ALSO FIX add_edge() CALL
+   Find this section:
+```python
+   await manager.add_edge({
+       'source': source_node['id'],
+       ...
+   })
+```
+   
+   Check add_edge() signature and fix the same way.
+
+4. ADD BETTER ERROR HANDLING
+   Wrap the knowledge graph update in try/except and log the actual error:
+```python
+   try:
+       # Knowledge graph update code
+       ...
+   except Exception as e:
+       import traceback
+       error_msg = f"Knowledge graph update failed: {str(e)}\n{traceback.format_exc()}"
+       print(f"❌ {error_msg}")
+       
+       # Log to file for debugging
+       with open('/data/kg-update-errors.json', 'a') as f:
+           import json
+           json.dump({
+               'document_id': document_id,
+               'error': str(e),
+               'traceback': traceback.format_exc(),
+               'timestamp': datetime.now().isoformat()
+           }, f)
+           f.write('\n')
+```
+
+5. FIX THE UI ERROR MESSAGE
+   The UI shows "auto-tagging failed" but auto-tagging actually SUCCEEDED.
+   
+   Find where this error is returned and ensure:
+   - Upload returns success if Pinecone storage succeeds
+   - Knowledge graph failure is logged but doesn't trigger UI error
+   - UI message should say "Upload successful" not "auto-tagging failed"
+
+6. TEST AFTER FIX
+   - Upload a new document
+   - Check logs for "✅ Knowledge graph updated"
+   - Verify no "add_node() got unexpected keyword argument" error
+   - Check /api/knowledge-graph/stats - concept count should increase
+   - UI should show upload success
+
+VERIFICATION:
+- No more "unexpected keyword argument" errors
+- Knowledge graph stats increase after upload
+- UI shows success message
+- Logs show "✅ Knowledge graph updated: +X concepts"

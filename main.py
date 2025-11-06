@@ -35,6 +35,7 @@ import requests
 from http.cookiejar import MozillaCookieJar
 import threading
 import asyncio
+import traceback
 
 # Knowledge Graph imports
 from src.services.concept_extractor import extract_concepts
@@ -662,13 +663,14 @@ async def upload_pdf(file: UploadFile = File(...)):
                     
                     # Add concepts to graph
                     for concept in extracted.get('concepts', []):
-                        node = manager.add_node(
-                            label=concept['label'],
-                            node_type=concept['type'],
-                            category=concept['category'],
-                            definition=concept.get('definition', ''),
-                            source_document=doc_id
-                        )
+                        node_data = {
+                            'label': concept['label'],
+                            'type': concept['type'],
+                            'category': concept['category'],
+                            'definition': concept.get('definition', ''),
+                            'source_documents': [doc_id]
+                        }
+                        node = await manager.add_node(node_data)
                         if node:
                             concepts_added += 1
                     
@@ -679,13 +681,14 @@ async def upload_pdf(file: UploadFile = File(...)):
                         target_node = manager.find_node_by_label(rel['to'])
                         
                         if source_node and target_node:
-                            edge = manager.add_edge(
-                                source_id=source_node['id'],
-                                target_id=target_node['id'],
-                                relationship_type=rel['type'],
-                                evidence=rel.get('evidence', ''),
-                                source_document=doc_id
-                            )
+                            edge_data = {
+                                'source': source_node['id'],
+                                'target': target_node['id'],
+                                'relationship_type': rel['type'],
+                                'evidence_samples': [rel.get('evidence', '')],
+                                'source_documents': [doc_id]
+                            }
+                            edge = await manager.add_edge(edge_data)
                             if edge:
                                 relationships_added += 1
                     
@@ -705,7 +708,10 @@ async def upload_pdf(file: UploadFile = File(...)):
                 
         except Exception as kg_error:
             # Log but don't fail the upload
-            print(f"❌ Knowledge graph update failed: {str(kg_error)}")
+            error_traceback = traceback.format_exc()
+            error_msg = f"Knowledge graph update failed: {str(kg_error)}\n{error_traceback}"
+            print(f"❌ {error_msg}")
+            
             # Log to file for debugging
             try:
                 error_log_path = "data/kg-update-errors.json"
@@ -715,7 +721,8 @@ async def upload_pdf(file: UploadFile = File(...)):
                     "timestamp": datetime.now().isoformat(),
                     "document_id": doc_id,
                     "filename": file.filename,
-                    "error": str(kg_error)
+                    "error": str(kg_error),
+                    "traceback": error_traceback
                 }
                 
                 # Append to error log
