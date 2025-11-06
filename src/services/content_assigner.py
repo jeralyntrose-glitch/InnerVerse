@@ -63,11 +63,8 @@ class ContentAssigner:
         
         logger.info(f"Assigning content for document {document_id} with {len(extracted_concept_ids)} concepts")
         
-        # Get all existing courses
-        all_courses = self.course_manager.get_all_courses(include_archived=False)
-        existing_courses = []
-        for category_courses in all_courses.values():
-            existing_courses.extend(category_courses)
+        # Get all existing courses WITH lessons for overlap calculation
+        existing_courses = self.course_manager.get_all_courses_with_lessons(include_archived=False)
         
         if not existing_courses:
             return self._create_new_track_recommendation(

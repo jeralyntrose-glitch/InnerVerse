@@ -1,0 +1,254 @@
+🧪 PHASE 2 COMPREHENSIVE TEST SUITE
+PREP: Get Real Concept IDs from Your Knowledge Graph
+First, we need actual concept IDs from your system:
+bash# Get some concept IDs to use in tests
+curl http://localhost:5000/api/knowledge-graph/concepts | head -20
+Save 3-5 concept IDs - we'll use them in the tests below. Replace <concept-id-1>, <concept-id-2>, etc. with real IDs.
+
+TEST 1: GENERATE COURSE (Baseline)
+Purpose: Verify AI can generate a complete course
+bashcurl -X POST http://localhost:5000/api/courses/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_goal": "Master ENFP cognitive functions and shadow integration",
+    "max_lessons": 8,
+    "target_category": "your_type"
+  }'
+Expected Response:
+json{
+  "success": true,
+  "message": "Generated course '...' with 8 lessons",
+  "course_id": "uuid-here",
+  "data": {
+    "id": "uuid",
+    "title": "ENFP Mastery: ...",
+    "category": "your_type",
+    "lessons": [ /* 8 lessons with valid concept_ids */ ]
+  },
+  "cost": 0.04  // approximate
+}
+✅ VERIFY:
+
+ success: true
+ course_id returned
+ Exactly 8 lessons created
+ Each lesson has concept_ids array (not empty!)
+ Cost is $0.03-0.08
+ Lessons have sequential order_index (1, 2, 3, ...)
+
+Save the course_id from response - you'll need it for next tests!
+
+TEST 2: HIGH CONFIDENCE ASSIGNMENT (90%+ overlap)
+Purpose: When content matches existing course well, auto-add silently
+Setup: Use concept IDs from the course you just created in Test 1
+bash# First, get concept_ids from the course you created
+curl http://localhost:5000/api/courses/<COURSE_ID_FROM_TEST_1>
+
+# Pick 4-5 concept_ids from the lessons, then:
+
+curl -X POST http://localhost:5000/api/courses/assign-content \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document_id": "test-high-confidence-doc",
+    "extracted_concept_ids": [
+      "<concept-id-1>",
+      "<concept-id-2>",
+      "<concept-id-3>",
+      "<concept-id-4>"
+    ],
+    "document_metadata": {
+      "title": "Advanced ENFP Ne Applications",
+      "duration_minutes": 45
+    },
+    "auto_create_lesson": true
+  }'
+Expected Response:
+json{
+  "success": true,
+  "message": "Content assigned to '...' (high confidence) - Lesson created: Advanced ENFP Ne Applications",
+  "assignment": {
+    "action": "add_to_existing",
+    "course_id": "uuid",
+    "course_title": "ENFP Mastery: ...",
+    "confidence": 0.95,  // 90%+ is high confidence
+    "confidence_tier": "high",
+    "reasoning": "High confidence match (95% concept overlap). Auto-added.",
+    "suggested_lesson": { /* lesson data */ }
+  },
+  "lesson_id": "lesson-uuid"  // Created because auto_create_lesson=true
+}
+✅ VERIFY:
+
+ confidence >= 0.90
+ confidence_tier: "high"
+ action: "add_to_existing"
+ lesson_id is present (lesson was created)
+ cost: 0.0 (high confidence = no Claude API call!)
+ Reasoning says "Auto-added"
+
+Then verify lesson was actually created:
+bashcurl http://localhost:5000/api/courses/<COURSE_ID>/lessons
+# Should now show 9 lessons (8 original + 1 new)
+
+TEST 3: MEDIUM CONFIDENCE ASSIGNMENT (70-89% overlap)
+Purpose: Partial match - auto-add but show AI reasoning
+Setup: Use 2-3 concept IDs from Test 1 course + 1-2 random IDs
+bashcurl -X POST http://localhost:5000/api/courses/assign-content \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document_id": "test-medium-confidence-doc",
+    "extracted_concept_ids": [
+      "<concept-from-test1-course>",
+      "<concept-from-test1-course>",
+      "<random-different-concept>"
+    ],
+    "document_metadata": {
+      "title": "ENFP and Relationships",
+      "duration_minutes": 30
+    },
+    "auto_create_lesson": false
+  }'
+Expected Response:
+json{
+  "success": true,
+  "message": "Content assigned to '...' (medium confidence)",
+  "assignment": {
+    "action": "add_to_existing",
+    "course_id": "uuid",
+    "confidence": 0.75,  // 70-89% range
+    "confidence_tier": "medium",
+    "reasoning": "Contains Ne, Fi concepts (2 of 3 match). Good fit for ENFP track, though introduces relationship dynamics.",  // AI-generated reasoning
+    "suggested_lesson": { /* lesson data */ }
+  },
+  "lesson_id": null  // Not created (auto_create_lesson=false)
+}
+✅ VERIFY:
+
+ 0.70 <= confidence < 0.90
+ confidence_tier: "medium"
+ action: "add_to_existing"
+ reasoning is detailed (AI-generated, explains the match)
+ cost > 0.0 (medium confidence = Claude API call for reasoning)
+ lesson_id: null (we didn't auto-create)
+
+
+TEST 4: LOW CONFIDENCE ASSIGNMENT (<70% overlap)
+Purpose: Poor match - recommend creating new track
+Setup: Use concept IDs that don't exist in any course
+bashcurl -X POST http://localhost:5000/api/courses/assign-content \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document_id": "test-low-confidence-doc",
+    "extracted_concept_ids": [
+      "<completely-different-concept-1>",
+      "<completely-different-concept-2>",
+      "<completely-different-concept-3>"
+    ],
+    "document_metadata": {
+      "title": "Introduction to Socionics Quadras",
+      "duration_minutes": 60
+    },
+    "auto_create_lesson": false
+  }'
+Expected Response:
+json{
+  "success": true,
+  "message": "Recommend creating new track: 'Learning Path: Introduction to Socionics Quadras'",
+  "assignment": {
+    "action": "create_new",
+    "course_id": null,
+    "course_title": "Learning Path: Introduction to Socionics Quadras",
+    "confidence": 0.0,
+    "confidence_tier": "low",
+    "reasoning": "Low confidence match with existing tracks. Creating new track recommended. Best existing match was 'ENFP Mastery' at 15% overlap.",
+    "suggested_course": {
+      "title": "Learning Path: Introduction to Socionics Quadras",
+      "category": "foundations",
+      "description": "New learning track based on Introduction to Socionics Quadras"
+    },
+    "suggested_lesson": { /* lesson data */ }
+  },
+  "lesson_id": null
+}
+✅ VERIFY:
+
+ confidence < 0.70
+ confidence_tier: "low"
+ action: "create_new"
+ course_id: null (no existing course to add to)
+ suggested_course is provided (recommendation for new track)
+ cost: 0.0 (low confidence = no AI call, just calculation)
+ lesson_id: null
+
+
+TEST 5: GENERATION STATS (Cost Tracking)
+Purpose: Verify cost tracking across all operations
+bashcurl http://localhost:5000/api/courses/generation-stats
+Expected Response:
+json{
+  "success": true,
+  "data": {
+    "generation_cost": 0.04,      // From Test 1
+    "assignment_cost": 0.01,      // From Test 3 (medium confidence)
+    "total_cost": 0.05
+  }
+}
+✅ VERIFY:
+
+ generation_cost > 0 (from Test 1 course generation)
+ assignment_cost > 0 (from Test 3 medium confidence reasoning)
+ total_cost = generation_cost + assignment_cost
+ Costs are reasonable ($0.01-0.10 total for all tests)
+
+
+TEST 6: EDGE CASE - Empty Knowledge Graph Search
+Purpose: What happens when no concepts found?
+bashcurl -X POST http://localhost:5000/api/courses/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_goal": "Learn about ancient Sumerian pottery techniques",
+    "max_lessons": 5
+  }'
+Expected Response:
+json{
+  "success": false,
+  "error": "No relevant concepts found in knowledge graph for this goal"
+}
+✅ VERIFY:
+
+ success: false
+ Error message is clear
+ No course created in database
+ No crash/500 error
+
+
+📊 FULL TEST CHECKLIST
+After running all 6 tests:
+
+ Test 1: Course generated with 8 lessons ✅
+ Test 2: High confidence auto-added lesson (90%+, no API cost) ✅
+ Test 3: Medium confidence showed reasoning (70-89%, small API cost) ✅
+ Test 4: Low confidence recommended new track (<70%, no API cost) ✅
+ Test 5: Stats showed cumulative costs ✅
+ Test 6: Handled invalid goal gracefully ✅
+
+
+🐛 IF ANY TEST FAILS
+Report back with:
+
+Which test number failed
+The actual response you got
+Any error messages
+
+I'll debug and fix it before Phase 3.
+
+✅ IF ALL TESTS PASS
+You'll have verified:
+
+✅ AI course generation works end-to-end
+✅ 3-tier confidence system works correctly
+✅ High confidence = silent auto-add (efficient)
+✅ Medium confidence = AI reasoning (helpful)
+✅ Low confidence = new track recommendation (prevents bad matches)
+✅ Cost tracking accurate
+✅ Error handling solid
