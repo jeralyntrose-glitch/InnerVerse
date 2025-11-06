@@ -14,7 +14,7 @@ const CONFIG = {
     },
     canvas: {
         nodeWidth: 280,
-        nodeHeight: 180,
+        nodeHeight: 210,
         horizontalSpacing: 100,
         verticalSpacing: 150,
         minZoom: 0.3,
