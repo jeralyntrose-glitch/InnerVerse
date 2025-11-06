@@ -41,6 +41,9 @@ import traceback
 from src.services.concept_extractor import extract_concepts
 from src.services.knowledge_graph_manager import KnowledgeGraphManager
 
+# Learning Paths UI Router
+from src.routes.learning_paths_routes import router as learning_paths_ui_router
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -429,6 +432,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register Learning Paths UI Router
+app.include_router(learning_paths_ui_router)
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui():
