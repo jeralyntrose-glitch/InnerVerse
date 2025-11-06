@@ -50,14 +50,14 @@ class CourseManager:
         self,
         title: str,
         category: str,
-        description: str = None,
+        description: Optional[str] = None,
         estimated_hours: float = 0,
         auto_generated: bool = True,
-        generation_prompt: str = None,
+        generation_prompt: Optional[str] = None,
         source_type: str = 'manual',
-        source_ids: List[str] = None,
-        tags: List[str] = None,
-        notes: str = None
+        source_ids: Optional[List[str]] = None,
+        tags: Optional[List[str]] = None,
+        notes: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create a new course (learning track).
@@ -249,15 +249,15 @@ class CourseManager:
         course_id: str,
         title: str,
         concept_ids: List[str],
-        description: str = None,
-        order_index: int = None,
-        prerequisite_lesson_ids: List[str] = None,
+        description: Optional[str] = None,
+        order_index: Optional[int] = None,
+        prerequisite_lesson_ids: Optional[List[str]] = None,
         estimated_minutes: int = 30,
         difficulty: str = 'foundational',
-        video_references: List[Dict] = None,
-        document_references: List[str] = None,
-        learning_objectives: str = None,
-        key_takeaways: str = None
+        video_references: Optional[List[Dict]] = None,
+        document_references: Optional[List[str]] = None,
+        learning_objectives: Optional[str] = None,
+        key_takeaways: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create a new lesson within a course.
