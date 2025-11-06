@@ -5777,6 +5777,255 @@ async def openai_chat_completions(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =============================================================================
+# LEARNING PATHS API - Course & Lesson Management
+# =============================================================================
+
+from src.services.course_manager import CourseManager
+
+def get_course_manager():
+    """Get CourseManager instance"""
+    if not DATABASE_URL:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    return CourseManager(DATABASE_URL)
+
+
+@app.post("/api/courses")
+async def create_course(request: Request):
+    """Create a new learning path course"""
+    try:
+        data = await request.json()
+        manager = get_course_manager()
+        
+        course = manager.create_course(
+            title=data.get("title"),
+            category=data.get("category"),
+            description=data.get("description"),
+            estimated_hours=data.get("estimated_hours", 0),
+            auto_generated=data.get("auto_generated", True),
+            generation_prompt=data.get("generation_prompt"),
+            source_type=data.get("source_type", "manual"),
+            source_ids=data.get("source_ids", []),
+            tags=data.get("tags", []),
+            notes=data.get("notes")
+        )
+        
+        return {"success": True, "course": course}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"❌ Error creating course: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/courses")
+async def list_courses(category: str = None, status: str = "active"):
+    """List all courses, optionally filtered by category"""
+    try:
+        manager = get_course_manager()
+        courses = manager.list_courses(category=category, status=status)
+        return {"success": True, "courses": courses}
+    except Exception as e:
+        print(f"❌ Error listing courses: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/courses/{course_id}")
+async def get_course(course_id: str):
+    """Get a specific course by ID"""
+    try:
+        manager = get_course_manager()
+        course = manager.get_course(course_id)
+        
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        return {"success": True, "course": course}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting course: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/courses/{course_id}")
+async def update_course(course_id: str, request: Request):
+    """Update a course"""
+    try:
+        data = await request.json()
+        manager = get_course_manager()
+        
+        course = manager.update_course(course_id, **data)
+        
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        return {"success": True, "course": course}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error updating course: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/courses/{course_id}")
+async def delete_course(course_id: str):
+    """Delete (archive) a course"""
+    try:
+        manager = get_course_manager()
+        success = manager.delete_course(course_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        return {"success": True, "message": "Course archived successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error deleting course: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/courses/{course_id}/lessons")
+async def create_lesson(course_id: str, request: Request):
+    """Create a new lesson in a course"""
+    try:
+        data = await request.json()
+        manager = get_course_manager()
+        
+        lesson = manager.create_lesson(
+            course_id=course_id,
+            title=data.get("title"),
+            concept_ids=data.get("concept_ids", []),
+            description=data.get("description"),
+            order_index=data.get("order_index"),
+            prerequisite_lesson_ids=data.get("prerequisite_lesson_ids"),
+            estimated_minutes=data.get("estimated_minutes", 30),
+            difficulty=data.get("difficulty", "foundational"),
+            video_references=data.get("video_references"),
+            document_references=data.get("document_references"),
+            learning_objectives=data.get("learning_objectives"),
+            key_takeaways=data.get("key_takeaways")
+        )
+        
+        return {"success": True, "lesson": lesson}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"❌ Error creating lesson: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/courses/{course_id}/lessons")
+async def list_lessons(course_id: str):
+    """List all lessons for a course"""
+    try:
+        manager = get_course_manager()
+        lessons = manager.list_lessons(course_id)
+        return {"success": True, "lessons": lessons}
+    except Exception as e:
+        print(f"❌ Error listing lessons: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/lessons/{lesson_id}")
+async def get_lesson(lesson_id: str):
+    """Get a specific lesson by ID"""
+    try:
+        manager = get_course_manager()
+        lesson = manager.get_lesson(lesson_id)
+        
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+        
+        return {"success": True, "lesson": lesson}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting lesson: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/lessons/{lesson_id}")
+async def update_lesson(lesson_id: str, request: Request):
+    """Update a lesson"""
+    try:
+        data = await request.json()
+        manager = get_course_manager()
+        
+        lesson = manager.update_lesson(lesson_id, **data)
+        
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+        
+        return {"success": True, "lesson": lesson}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error updating lesson: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/lessons/{lesson_id}")
+async def delete_lesson(lesson_id: str):
+    """Delete a lesson"""
+    try:
+        manager = get_course_manager()
+        success = manager.delete_lesson(lesson_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+        
+        return {"success": True, "message": "Lesson deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error deleting lesson: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/courses/{course_id}/progress")
+async def get_progress(course_id: str, user_id: str = "jeralyn"):
+    """Get user progress for a course"""
+    try:
+        manager = get_course_manager()
+        progress = manager.get_or_create_progress(course_id, user_id)
+        return {"success": True, "progress": progress}
+    except Exception as e:
+        print(f"❌ Error getting progress: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/courses/{course_id}/progress")
+async def update_progress(course_id: str, request: Request):
+    """Update user progress for a course"""
+    try:
+        data = await request.json()
+        user_id = data.get("user_id", "jeralyn")
+        
+        manager = get_course_manager()
+        progress = manager.update_progress(course_id, user_id, **data)
+        
+        return {"success": True, "progress": progress}
+    except Exception as e:
+        print(f"❌ Error updating progress: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/courses/{course_id}/lessons/{lesson_id}/complete")
+async def mark_lesson_complete(course_id: str, lesson_id: str):
+    """Mark a lesson as completed"""
+    try:
+        manager = get_course_manager()
+        progress = manager.mark_lesson_complete(course_id, lesson_id)
+        return {"success": True, "progress": progress}
+    except Exception as e:
+        print(f"❌ Error marking lesson complete: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/node_modules", StaticFiles(directory="node_modules"), name="node_modules")
