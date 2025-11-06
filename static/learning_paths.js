@@ -222,7 +222,7 @@ function renderCourseCard(course) {
     
     return `
         <div class="course-card-header">
-            <span class="course-status">${CONFIG.statusIcons[status]}</span>
+            <span class="status-icon ${status.replace('_', '-')}">${CONFIG.statusIcons[status]}</span>
             <span class="category-badge category-${course.category}">
                 ${course.category.replace('_', ' ')}
             </span>
@@ -259,11 +259,10 @@ function calculateProgress(course) {
 }
 
 function determineStatus(course, progress) {
-    if (!course.progress) return 'not_started';
-    
+    // Check progress based on course properties (not course.progress)
     if (progress === 100) return 'completed';
-    if (course.progress.current_lesson_id) return 'in_progress';
-    if (progress > 0) return 'paused';
+    if (course.current_lesson_id) return 'in_progress';
+    if (progress > 0 && progress < 100) return 'paused';
     
     return 'not_started';
 }
