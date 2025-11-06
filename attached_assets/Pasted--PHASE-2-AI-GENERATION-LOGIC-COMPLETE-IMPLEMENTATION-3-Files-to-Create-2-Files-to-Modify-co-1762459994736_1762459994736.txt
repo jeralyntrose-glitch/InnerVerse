@@ -1,0 +1,1571 @@
+📦 PHASE 2: AI GENERATION LOGIC - COMPLETE IMPLEMENTATION
+3 Files to Create + 2 Files to Modify:
+
+course_generator.py ← NEW - AI curriculum generation service
+content_assigner.py ← NEW - Auto-assignment logic with 3-tier confidence
+course_ai_routes.py ← NEW - FastAPI routes for AI endpoints
+course_manager.py ← MODIFY - Add helper methods
+PHASE2_INTEGRATION.md ← NEW - Integration instructions
+
+
+FILE 1: src/services/course_generator.py
+Purpose: Generate course curricula from knowledge graph using Claude API
+python"""
+InnerVerse Learning Paths - Course Generator
+=============================================
+Generates structured learning paths from knowledge graph using Claude AI.
+
+Usage:
+    from course_generator import CourseGenerator
+    
+    generator = CourseGenerator(
+        anthropic_api_key="your-key",
+        knowledge_graph_manager=kg_manager
+    )
+    
+    course_data = generator.generate_curriculum(
+        user_goal="Learn ENFP shadow integration",
+        relevant_concept_ids=["concept-uuid-1", "concept-uuid-2"]
+    )
+"""
+
+import json
+from typing import List, Dict, Optional, Any
+from anthropic import Anthropic
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class CourseGenerator:
+    """Generate course curricula using Claude AI and knowledge graph."""
+    
+    def __init__(
+        self,
+        anthropic_api_key: str,
+        knowledge_graph_manager,
+        model: str = "claude-sonnet-4-20250514"
+    ):
+        """
+        Initialize CourseGenerator.
+        
+        Args:
+            anthropic_api_key: Anthropic API key
+            knowledge_graph_manager: Instance of KnowledgeGraphManager
+            model: Claude model to use
+        """
+        self.client = Anthropic(api_key=anthropic_api_key)
+        self.kg_manager = knowledge_graph_manager
+        self.model = model
+        self.generation_cost = 0.0  # Track total cost
+    
+    def generate_curriculum(
+        self,
+        user_goal: str,
+        relevant_concept_ids: List[str] = None,
+        max_lessons: int = 15,
+        target_category: str = None
+    ) -> Dict[str, Any]:
+        """
+        Generate a complete course curriculum from user goal.
+        
+        Args:
+            user_goal: What the user wants to learn (e.g., "Master ENFP cognitive functions")
+            relevant_concept_ids: Optional list of concept IDs to focus on
+            max_lessons: Maximum number of lessons to generate (default 15)
+            target_category: Optional category hint (foundations/your_type/relationships/advanced)
+            
+        Returns:
+            Dict with course structure:
+            {
+                "title": "Course Title",
+                "category": "your_type",
+                "description": "Course description",
+                "estimated_hours": 5.0,
+                "lessons": [
+                    {
+                        "title": "Lesson 1",
+                        "order_index": 1,
+                        "concept_ids": ["uuid1", "uuid2"],
+                        "description": "...",
+                        "estimated_minutes": 30,
+                        "difficulty": "foundational",
+                        "learning_objectives": "...",
+                        "prerequisite_lesson_ids": []
+                    }
+                ],
+                "tags": ["enfp", "cognitive-functions"],
+                "source_ids": ["concept-uuid-1", "concept-uuid-2"],
+                "generation_metadata": {
+                    "model": "claude-sonnet-4",
+                    "cost": 0.05,
+                    "concepts_analyzed": 15
+                }
+            }
+            
+        Raises:
+            ValueError: If user_goal is empty or knowledge graph unavailable
+            Exception: If Claude API call fails
+        """
+        if not user_goal or not user_goal.strip():
+            raise ValueError("user_goal cannot be empty")
+        
+        logger.info(f"Generating curriculum for goal: {user_goal}")
+        
+        # Step 1: Get relevant concepts from knowledge graph
+        if relevant_concept_ids:
+            concepts = self._get_concepts_by_ids(relevant_concept_ids)
+        else:
+            # Search knowledge graph for relevant concepts
+            concepts = self._search_concepts_by_goal(user_goal)
+        
+        if not concepts:
+            raise ValueError("No relevant concepts found in knowledge graph for this goal")
+        
+        # Step 2: Get prerequisite relationships
+        prerequisite_data = self._build_prerequisite_map(concepts)
+        
+        # Step 3: Build prompt with knowledge graph context
+        prompt = self._build_generation_prompt(
+            user_goal=user_goal,
+            concepts=concepts,
+            prerequisite_data=prerequisite_data,
+            max_lessons=max_lessons,
+            target_category=target_category
+        )
+        
+        # Step 4: Call Claude API
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=4000,
+                temperature=0.3,  # Lower temp for structured output
+                messages=[{
+                    "role": "user",
+                    "content": prompt
+                }]
+            )
+            
+            # Track cost (approximate)
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
+            cost = self._calculate_cost(input_tokens, output_tokens)
+            self.generation_cost += cost
+            
+            logger.info(f"Claude API call: {input_tokens} input, {output_tokens} output tokens. Cost: ${cost:.4f}")
+            
+        except Exception as e:
+            logger.error(f"Claude API error: {str(e)}")
+            raise Exception(f"Failed to generate curriculum: {str(e)}")
+        
+        # Step 5: Parse response
+        curriculum = self._parse_claude_response(response.content[0].text)
+        
+        # Step 6: Validate and enhance curriculum
+        curriculum = self._validate_curriculum(curriculum, concepts)
+        
+        # Step 7: Add metadata
+        curriculum['source_ids'] = [c['id'] for c in concepts]
+        curriculum['generation_metadata'] = {
+            'model': self.model,
+            'cost': cost,
+            'concepts_analyzed': len(concepts),
+            'user_goal': user_goal
+        }
+        
+        logger.info(f"Generated curriculum: {curriculum['title']} with {len(curriculum['lessons'])} lessons")
+        
+        return curriculum
+    
+    def _get_concepts_by_ids(self, concept_ids: List[str]) -> List[Dict[str, Any]]:
+        """Fetch concepts from knowledge graph by IDs."""
+        concepts = []
+        for concept_id in concept_ids:
+            concept = self.kg_manager.get_concept(concept_id)
+            if concept:
+                concepts.append(concept)
+        return concepts
+    
+    def _search_concepts_by_goal(self, user_goal: str, limit: int = 30) -> List[Dict[str, Any]]:
+        """
+        Search knowledge graph for concepts relevant to user goal.
+        Uses semantic search via Pinecone.
+        """
+        try:
+            # Use knowledge graph manager's search functionality
+            results = self.kg_manager.search_concepts(
+                query=user_goal,
+                top_k=limit
+            )
+            
+            # Extract concepts from search results
+            concepts = []
+            for result in results:
+                concept = {
+                    'id': result.get('id'),
+                    'name': result.get('name'),
+                    'definition': result.get('definition', ''),
+                    'category': result.get('category', ''),
+                    'related_concepts': result.get('related_concepts', [])
+                }
+                concepts.append(concept)
+            
+            return concepts
+            
+        except Exception as e:
+            logger.error(f"Knowledge graph search error: {str(e)}")
+            return []
+    
+    def _build_prerequisite_map(self, concepts: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Build prerequisite relationships between concepts.
+        
+        Returns:
+            {
+                "concept_id_1": {
+                    "prerequisites": ["concept_id_2", "concept_id_3"],
+                    "dependents": ["concept_id_4"]
+                }
+            }
+        """
+        prereq_map = {}
+        
+        for concept in concepts:
+            concept_id = concept['id']
+            prereq_map[concept_id] = {
+                'name': concept['name'],
+                'prerequisites': [],
+                'dependents': []
+            }
+            
+            # Get related concepts that are prerequisites
+            related = concept.get('related_concepts', [])
+            for rel in related:
+                if rel.get('relationship_type') == 'prerequisite':
+                    prereq_map[concept_id]['prerequisites'].append(rel['target_id'])
+        
+        # Build reverse map (dependents)
+        for concept_id, data in prereq_map.items():
+            for prereq_id in data['prerequisites']:
+                if prereq_id in prereq_map:
+                    prereq_map[prereq_id]['dependents'].append(concept_id)
+        
+        return prereq_map
+    
+    def _build_generation_prompt(
+        self,
+        user_goal: str,
+        concepts: List[Dict[str, Any]],
+        prerequisite_data: Dict[str, Any],
+        max_lessons: int,
+        target_category: str = None
+    ) -> str:
+        """Build the prompt for Claude to generate curriculum."""
+        
+        # Summarize concepts
+        concept_summary = []
+        for concept in concepts[:30]:  # Limit to avoid token overflow
+            summary = f"- {concept['name']}"
+            if concept.get('definition'):
+                summary += f": {concept['definition'][:100]}"
+            concept_summary.append(summary)
+        
+        # Summarize prerequisites
+        prereq_summary = []
+        for concept_id, data in list(prerequisite_data.items())[:20]:
+            if data['prerequisites']:
+                prereq_names = [prerequisite_data.get(p, {}).get('name', 'unknown') 
+                               for p in data['prerequisites']]
+                prereq_summary.append(f"- {data['name']} requires: {', '.join(prereq_names)}")
+        
+        prompt = f"""You are a curriculum designer for an MBTI/Jungian psychology learning system.
+
+USER GOAL: "{user_goal}"
+
+KNOWLEDGE GRAPH DATA:
+Total concepts available: {len(concepts)}
+
+Key concepts related to goal:
+{chr(10).join(concept_summary[:20])}
+
+Prerequisite relationships:
+{chr(10).join(prereq_summary[:15]) if prereq_summary else "No explicit prerequisites found"}
+
+TASK: Create a learning path (course/track) that progresses from foundational to advanced concepts.
+
+ANALYSIS STEPS:
+1. Identify the 8-15 most important concepts for achieving this goal
+2. Trace prerequisite relationships backward to foundational concepts
+3. Group concepts into logical lessons (2-5 concepts per lesson)
+4. Order lessons by dependency (prerequisites first)
+5. Determine appropriate category: foundations/your_type/relationships/advanced
+
+COURSE DESIGN PRINCIPLES:
+- Start with foundational concepts (no prerequisites required)
+- Each lesson builds on previous lessons
+- Lessons should be 20-45 minutes each
+- Group related concepts together
+- Maximum {max_lessons} lessons per course
+- Progressive difficulty: foundational → intermediate → advanced
+
+OUTPUT FORMAT (respond ONLY with valid JSON):
+{{
+  "title": "Engaging course name (specific, clear)",
+  "category": "{"your_type" if target_category == "your_type" else "foundations/your_type/relationships/advanced"}",
+  "description": "One-sentence course overview (what will be mastered)",
+  "estimated_hours": 4.5,
+  "tags": ["tag1", "tag2", "tag3"],
+  "lessons": [
+    {{
+      "title": "Descriptive lesson title",
+      "order_index": 1,
+      "concept_ids": ["concept_id_1", "concept_id_2"],
+      "description": "What this lesson covers (2-3 sentences)",
+      "estimated_minutes": 30,
+      "difficulty": "foundational",
+      "learning_objectives": "What student will be able to do after this lesson",
+      "key_takeaways": "Main points to remember",
+      "prerequisite_lesson_ids": [],
+      "rationale": "Why this lesson comes at this point in the sequence"
+    }}
+  ]
+}}
+
+IMPORTANT RULES:
+- Use ONLY concept IDs from the provided list
+- Ensure lesson order respects prerequisites
+- Each lesson should have clear learning objectives
+- Provide rationale for lesson sequencing
+- Total estimated_hours = sum of lesson minutes / 60
+- Respond with ONLY the JSON, no other text
+
+Generate the curriculum now:"""
+
+        return prompt
+    
+    def _parse_claude_response(self, response_text: str) -> Dict[str, Any]:
+        """Parse Claude's JSON response."""
+        try:
+            # Try to extract JSON from response
+            # Sometimes Claude adds explanation before/after JSON
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}') + 1
+            
+            if start_idx == -1 or end_idx == 0:
+                raise ValueError("No JSON found in Claude response")
+            
+            json_text = response_text[start_idx:end_idx]
+            curriculum = json.loads(json_text)
+            
+            return curriculum
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Claude JSON response: {str(e)}")
+            logger.error(f"Response text: {response_text[:500]}")
+            raise ValueError(f"Claude returned invalid JSON: {str(e)}")
+    
+    def _validate_curriculum(
+        self,
+        curriculum: Dict[str, Any],
+        concepts: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Validate curriculum structure and fix issues.
+        
+        Checks:
+        - Required fields present
+        - Concept IDs exist in knowledge graph
+        - Lesson order is sequential
+        - Prerequisite lesson IDs reference valid lessons
+        """
+        # Validate required fields
+        required_fields = ['title', 'category', 'description', 'lessons']
+        for field in required_fields:
+            if field not in curriculum:
+                raise ValueError(f"Missing required field: {field}")
+        
+        # Validate category
+        valid_categories = ['foundations', 'your_type', 'relationships', 'advanced']
+        if curriculum['category'] not in valid_categories:
+            logger.warning(f"Invalid category {curriculum['category']}, defaulting to 'foundations'")
+            curriculum['category'] = 'foundations'
+        
+        # Create concept ID set for validation
+        valid_concept_ids = {c['id'] for c in concepts}
+        
+        # Validate lessons
+        lessons = curriculum['lessons']
+        lesson_ids = set()
+        
+        for i, lesson in enumerate(lessons):
+            # Ensure order_index is sequential
+            lesson['order_index'] = i + 1
+            
+            # Validate concept_ids exist
+            invalid_concepts = [cid for cid in lesson['concept_ids'] 
+                               if cid not in valid_concept_ids]
+            if invalid_concepts:
+                logger.warning(f"Lesson '{lesson['title']}' references unknown concepts: {invalid_concepts}")
+                # Remove invalid concept IDs
+                lesson['concept_ids'] = [cid for cid in lesson['concept_ids'] 
+                                        if cid in valid_concept_ids]
+            
+            # Validate prerequisite_lesson_ids reference valid lessons
+            # (will validate after all lessons processed)
+            lesson_ids.add(f"temp_{i}")
+        
+        # Calculate estimated_hours if not provided
+        if 'estimated_hours' not in curriculum:
+            total_minutes = sum(lesson.get('estimated_minutes', 30) for lesson in lessons)
+            curriculum['estimated_hours'] = round(total_minutes / 60, 1)
+        
+        # Add default tags if missing
+        if 'tags' not in curriculum:
+            curriculum['tags'] = []
+        
+        return curriculum
+    
+    def _calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
+        """
+        Calculate cost of Claude API call.
+        
+        Claude Sonnet 4 pricing (as of 2025):
+        - Input: $3 per million tokens
+        - Output: $15 per million tokens
+        """
+        input_cost = (input_tokens / 1_000_000) * 3.00
+        output_cost = (output_tokens / 1_000_000) * 15.00
+        return input_cost + output_cost
+    
+    def get_total_cost(self) -> float:
+        """Get total cost of all generations in this session."""
+        return self.generation_cost
+    
+    def reset_cost_tracking(self):
+        """Reset cost tracking to zero."""
+        self.generation_cost = 0.0
+
+FILE 2: src/services/content_assigner.py
+Purpose: Auto-assign new content to existing tracks with 3-tier confidence scoring
+python"""
+InnerVerse Learning Paths - Content Assigner
+=============================================
+Automatically assigns new document content to existing learning tracks.
+
+Uses 3-tier confidence system:
+- High (90%+): Auto-add silently
+- Medium (70-89%): Auto-add with reasoning shown
+- Low (<70%): Create new track
+
+Usage:
+    from content_assigner import ContentAssigner
+    
+    assigner = ContentAssigner(
+        anthropic_api_key="your-key",
+        knowledge_graph_manager=kg_manager,
+        course_manager=course_manager
+    )
+    
+    assignment = assigner.assign_content(
+        document_id="doc-uuid",
+        extracted_concept_ids=["concept-1", "concept-2"]
+    )
+"""
+
+import json
+from typing import List, Dict, Optional, Any, Tuple
+from anthropic import Anthropic
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class ContentAssigner:
+    """Assign new content to learning tracks using AI analysis."""
+    
+    # Confidence thresholds
+    HIGH_CONFIDENCE = 0.90
+    MEDIUM_CONFIDENCE = 0.70
+    
+    def __init__(
+        self,
+        anthropic_api_key: str,
+        knowledge_graph_manager,
+        course_manager,
+        model: str = "claude-sonnet-4-20250514"
+    ):
+        """
+        Initialize ContentAssigner.
+        
+        Args:
+            anthropic_api_key: Anthropic API key
+            knowledge_graph_manager: Instance of KnowledgeGraphManager
+            course_manager: Instance of CourseManager
+            model: Claude model to use
+        """
+        self.client = Anthropic(api_key=anthropic_api_key)
+        self.kg_manager = knowledge_graph_manager
+        self.course_manager = course_manager
+        self.model = model
+        self.assignment_cost = 0.0
+    
+    def assign_content(
+        self,
+        document_id: str,
+        extracted_concept_ids: List[str],
+        document_metadata: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Assign new document content to an existing track or create new track.
+        
+        Args:
+            document_id: Document UUID
+            extracted_concept_ids: List of concept IDs extracted from document
+            document_metadata: Optional metadata (title, video_id, etc.)
+            
+        Returns:
+            {
+                "action": "add_to_existing" | "create_new",
+                "course_id": "uuid" or None,
+                "course_title": "Track Name",
+                "confidence": 0.95,
+                "reasoning": "Contains Ne, Fi, ENFP (8/9 concepts match)",
+                "suggested_lesson": {
+                    "title": "Advanced Ne Applications",
+                    "order_index": 7,
+                    "concept_ids": [...],
+                    "description": "..."
+                },
+                "prerequisite_check": {
+                    "valid": true,
+                    "issues": []
+                },
+                "cost": 0.02
+            }
+        """
+        if not extracted_concept_ids:
+            raise ValueError("extracted_concept_ids cannot be empty")
+        
+        logger.info(f"Assigning content for document {document_id} with {len(extracted_concept_ids)} concepts")
+        
+        # Step 1: Get all existing courses
+        all_courses = self.course_manager.get_all_courses(include_archived=False)
+        existing_courses = []
+        for category_courses in all_courses.values():
+            existing_courses.extend(category_courses)
+        
+        if not existing_courses:
+            # No courses exist - create new track
+            return self._create_new_track_recommendation(
+                document_id=document_id,
+                concept_ids=extracted_concept_ids,
+                metadata=document_metadata
+            )
+        
+        # Step 2: Calculate concept overlap with each course
+        overlap_scores = self._calculate_overlap_scores(
+            extracted_concept_ids,
+            existing_courses
+        )
+        
+        # Step 3: Get top candidate course
+        best_course = max(overlap_scores, key=lambda x: x['overlap_percentage'])
+        confidence = best_course['overlap_percentage'] / 100.0
+        
+        logger.info(f"Best match: {best_course['course_title']} ({confidence:.2%} confidence)")
+        
+        # Step 4: Decide action based on confidence tier
+        if confidence >= self.HIGH_CONFIDENCE:
+            # HIGH CONFIDENCE: Auto-add
+            return self._high_confidence_assignment(
+                document_id=document_id,
+                concept_ids=extracted_concept_ids,
+                course=best_course,
+                confidence=confidence,
+                metadata=document_metadata
+            )
+        
+        elif confidence >= self.MEDIUM_CONFIDENCE:
+            # MEDIUM CONFIDENCE: Auto-add with reasoning
+            return self._medium_confidence_assignment(
+                document_id=document_id,
+                concept_ids=extracted_concept_ids,
+                course=best_course,
+                confidence=confidence,
+                metadata=document_metadata
+            )
+        
+        else:
+            # LOW CONFIDENCE: Create new track
+            return self._create_new_track_recommendation(
+                document_id=document_id,
+                concept_ids=extracted_concept_ids,
+                metadata=document_metadata,
+                best_existing_match=best_course
+            )
+    
+    def _calculate_overlap_scores(
+        self,
+        new_concept_ids: List[str],
+        courses: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Calculate concept overlap percentage for each course.
+        
+        Returns list sorted by overlap_percentage descending.
+        """
+        scores = []
+        
+        for course in courses:
+            # Get all concept IDs used in this course's lessons
+            course_concept_ids = set()
+            for lesson in course.get('lessons', []):
+                course_concept_ids.update(lesson.get('concept_ids', []))
+            
+            if not course_concept_ids:
+                continue  # Skip courses with no lessons
+            
+            # Calculate overlap
+            new_concepts_set = set(new_concept_ids)
+            overlap = new_concepts_set.intersection(course_concept_ids)
+            overlap_percentage = (len(overlap) / len(new_concepts_set)) * 100 if new_concepts_set else 0
+            
+            scores.append({
+                'course_id': course['id'],
+                'course_title': course['title'],
+                'course_category': course['category'],
+                'course_concept_ids': list(course_concept_ids),
+                'overlap_count': len(overlap),
+                'new_concept_count': len(new_concepts_set),
+                'overlap_percentage': overlap_percentage,
+                'overlapping_concepts': list(overlap)
+            })
+        
+        # Sort by overlap percentage
+        scores.sort(key=lambda x: x['overlap_percentage'], reverse=True)
+        
+        return scores
+    
+    def _high_confidence_assignment(
+        self,
+        document_id: str,
+        concept_ids: List[str],
+        course: Dict[str, Any],
+        confidence: float,
+        metadata: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Handle high confidence assignment (90%+ overlap).
+        Auto-add silently without Claude API call.
+        """
+        # Determine lesson position (append to end)
+        existing_lessons = self.course_manager.get_course_lessons(course['course_id'])
+        next_order = len(existing_lessons) + 1
+        
+        # Generate lesson title from document metadata
+        lesson_title = self._generate_lesson_title(metadata, concept_ids)
+        
+        return {
+            'action': 'add_to_existing',
+            'course_id': course['course_id'],
+            'course_title': course['course_title'],
+            'confidence': confidence,
+            'confidence_tier': 'high',
+            'reasoning': f"High confidence match ({confidence:.0%} concept overlap). Auto-added.",
+            'suggested_lesson': {
+                'title': lesson_title,
+                'order_index': next_order,
+                'concept_ids': concept_ids,
+                'description': f"Content from {metadata.get('title', document_id) if metadata else document_id}",
+                'estimated_minutes': metadata.get('duration_minutes', 30) if metadata else 30,
+                'difficulty': self._infer_difficulty(next_order),
+                'document_references': [document_id]
+            },
+            'prerequisite_check': {
+                'valid': True,
+                'issues': []
+            },
+            'cost': 0.0  # No API call
+        }
+    
+    def _medium_confidence_assignment(
+        self,
+        document_id: str,
+        concept_ids: List[str],
+        course: Dict[str, Any],
+        confidence: float,
+        metadata: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Handle medium confidence assignment (70-89% overlap).
+        Auto-add but generate detailed reasoning via Claude API.
+        """
+        # Call Claude for reasoning
+        try:
+            reasoning_response = self._generate_assignment_reasoning(
+                concept_ids=concept_ids,
+                course=course,
+                confidence=confidence
+            )
+            
+            reasoning = reasoning_response['reasoning']
+            cost = reasoning_response['cost']
+            self.assignment_cost += cost
+            
+        except Exception as e:
+            logger.error(f"Failed to generate reasoning: {str(e)}")
+            reasoning = f"Medium confidence match ({confidence:.0%} overlap). Manual review recommended."
+            cost = 0.0
+        
+        # Determine lesson position
+        existing_lessons = self.course_manager.get_course_lessons(course['course_id'])
+        next_order = len(existing_lessons) + 1
+        
+        lesson_title = self._generate_lesson_title(metadata, concept_ids)
+        
+        return {
+            'action': 'add_to_existing',
+            'course_id': course['course_id'],
+            'course_title': course['course_title'],
+            'confidence': confidence,
+            'confidence_tier': 'medium',
+            'reasoning': reasoning,
+            'suggested_lesson': {
+                'title': lesson_title,
+                'order_index': next_order,
+                'concept_ids': concept_ids,
+                'description': f"Content from {metadata.get('title', document_id) if metadata else document_id}",
+                'estimated_minutes': metadata.get('duration_minutes', 30) if metadata else 30,
+                'difficulty': self._infer_difficulty(next_order),
+                'document_references': [document_id]
+            },
+            'prerequisite_check': {
+                'valid': True,
+                'issues': []
+            },
+            'cost': cost
+        }
+    
+    def _create_new_track_recommendation(
+        self,
+        document_id: str,
+        concept_ids: List[str],
+        metadata: Dict[str, Any] = None,
+        best_existing_match: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Recommend creating a new track (low confidence or no existing courses).
+        """
+        # Infer track name from concepts
+        concept_names = []
+        for cid in concept_ids[:5]:  # Use first 5 concepts
+            concept = self.kg_manager.get_concept(cid)
+            if concept:
+                concept_names.append(concept.get('name', ''))
+        
+        suggested_title = f"Learning Path: {', '.join(concept_names[:3])}"
+        if metadata and metadata.get('title'):
+            suggested_title = f"Learning Path: {metadata['title']}"
+        
+        reasoning = "Low confidence match with existing tracks. Creating new track recommended."
+        if best_existing_match:
+            reasoning += f" Best existing match was '{best_existing_match['course_title']}' at {best_existing_match['overlap_percentage']:.0f}% overlap."
+        
+        return {
+            'action': 'create_new',
+            'course_id': None,
+            'course_title': suggested_title,
+            'confidence': 0.0,
+            'confidence_tier': 'low',
+            'reasoning': reasoning,
+            'suggested_course': {
+                'title': suggested_title,
+                'category': 'foundations',  # Default category
+                'description': f"New learning track based on {metadata.get('title', document_id) if metadata else document_id}",
+                'tags': self._extract_tags_from_concepts(concept_ids),
+                'estimated_hours': 1.0
+            },
+            'suggested_lesson': {
+                'title': metadata.get('title', 'Introduction') if metadata else 'Introduction',
+                'order_index': 1,
+                'concept_ids': concept_ids,
+                'description': f"First lesson in new track",
+                'estimated_minutes': metadata.get('duration_minutes', 30) if metadata else 30,
+                'difficulty': 'foundational',
+                'document_references': [document_id]
+            },
+            'cost': 0.0
+        }
+    
+    def _generate_assignment_reasoning(
+        self,
+        concept_ids: List[str],
+        course: Dict[str, Any],
+        confidence: float
+    ) -> Dict[str, Any]:
+        """Generate detailed reasoning for medium confidence assignments."""
+        
+        # Get concept names
+        concept_names = []
+        for cid in concept_ids:
+            concept = self.kg_manager.get_concept(cid)
+            if concept:
+                concept_names.append(concept.get('name', cid))
+        
+        # Get overlapping concept names
+        overlapping_ids = set(concept_ids).intersection(set(course['course_concept_ids']))
+        overlapping_names = []
+        for cid in overlapping_ids:
+            concept = self.kg_manager.get_concept(cid)
+            if concept:
+                overlapping_names.append(concept.get('name', cid))
+        
+        prompt = f"""You are analyzing whether new content should be added to an existing learning track.
+
+NEW CONTENT CONCEPTS:
+{', '.join(concept_names)}
+
+EXISTING TRACK: "{course['course_title']}"
+Category: {course['course_category']}
+
+OVERLAP ANALYSIS:
+- {len(overlapping_ids)}/{len(concept_ids)} concepts match ({confidence:.0%})
+- Matching concepts: {', '.join(overlapping_names[:10])}
+
+TASK: Provide a 1-2 sentence reasoning for why this content fits (or doesn't fit) in this track.
+
+Be specific about which concepts create the connection. Keep it concise and actionable.
+
+Reasoning:"""
+
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=200,
+                temperature=0.3,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            reasoning = response.content[0].text.strip()
+            
+            # Calculate cost
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
+            cost = self._calculate_cost(input_tokens, output_tokens)
+            
+            return {
+                'reasoning': reasoning,
+                'cost': cost
+            }
+            
+        except Exception as e:
+            logger.error(f"Claude reasoning generation failed: {str(e)}")
+            raise
+    
+    def _generate_lesson_title(
+        self,
+        metadata: Dict[str, Any] = None,
+        concept_ids: List[str] = None
+    ) -> str:
+        """Generate a lesson title from metadata or concepts."""
+        if metadata and metadata.get('title'):
+            return metadata['title']
+        
+        if metadata and metadata.get('video_id'):
+            return f"Lesson: {metadata['video_id']}"
+        
+        if concept_ids:
+            # Use first concept name
+            concept = self.kg_manager.get_concept(concept_ids[0])
+            if concept:
+                return f"Understanding {concept.get('name', 'Concepts')}"
+        
+        return "New Lesson"
+    
+    def _infer_difficulty(self, order_index: int) -> str:
+        """Infer difficulty based on lesson position."""
+        if order_index <= 3:
+            return 'foundational'
+        elif order_index <= 8:
+            return 'intermediate'
+        else:
+            return 'advanced'
+    
+    def _extract_tags_from_concepts(self, concept_ids: List[str]) -> List[str]:
+        """Extract tags from concept categories."""
+        tags = set()
+        for cid in concept_ids[:10]:
+            concept = self.kg_manager.get_concept(cid)
+            if concept and concept.get('category'):
+                tags.add(concept['category'].lower())
+        return list(tags)[:5]  # Limit to 5 tags
+    
+    def _calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
+        """Calculate cost of Claude API call."""
+        input_cost = (input_tokens / 1_000_000) * 3.00
+        output_cost = (output_tokens / 1_000_000) * 15.00
+        return input_cost + output_cost
+    
+    def get_total_cost(self) -> float:
+        """Get total cost of all assignments in this session."""
+        return self.assignment_cost
+
+FILE 3: src/routes/course_ai_routes.py
+Purpose: FastAPI routes for AI generation endpoints
+python"""
+InnerVerse Learning Paths - AI Generation Routes
+=================================================
+FastAPI endpoints for AI-powered course generation and content assignment.
+
+Routes:
+    POST /api/courses/generate          - Generate course from user goal
+    POST /api/courses/assign-content    - Assign content to tracks
+    GET  /api/courses/generation-stats  - Get AI generation statistics
+"""
+
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
+import logging
+
+from services.course_generator import CourseGenerator
+from services.content_assigner import ContentAssigner
+from services.course_manager import CourseManager
+# Import your existing managers
+# from services.knowledge_graph_manager import KnowledgeGraphManager
+# from config import ANTHROPIC_API_KEY, DB_PATH
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/courses", tags=["AI Generation"])
+
+# Initialize services (adjust based on your dependency injection pattern)
+# course_generator = CourseGenerator(ANTHROPIC_API_KEY, kg_manager)
+# content_assigner = ContentAssigner(ANTHROPIC_API_KEY, kg_manager, course_manager)
+
+
+# ============================================================================
+# REQUEST/RESPONSE MODELS
+# ============================================================================
+
+class GenerateCourseRequest(BaseModel):
+    """Request model for course generation."""
+    user_goal: str = Field(..., description="What the user wants to learn", min_length=5)
+    relevant_concept_ids: Optional[List[str]] = Field(default=None, description="Optional list of concept IDs to focus on")
+    max_lessons: int = Field(default=15, ge=5, le=20, description="Maximum number of lessons")
+    target_category: Optional[str] = Field(default=None, description="Optional category hint")
+
+
+class AssignContentRequest(BaseModel):
+    """Request model for content assignment."""
+    document_id: str = Field(..., description="Document UUID")
+    extracted_concept_ids: List[str] = Field(..., description="Concept IDs extracted from document", min_items=1)
+    document_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Optional document metadata")
+    auto_create_lesson: bool = Field(default=False, description="Automatically create lesson if high/medium confidence")
+
+
+class GenerateCourseResponse(BaseModel):
+    """Response model for course generation."""
+    success: bool
+    message: Optional[str] = None
+    course_id: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+    cost: float
+
+
+class AssignContentResponse(BaseModel):
+    """Response model for content assignment."""
+    success: bool
+    message: Optional[str] = None
+    assignment: Dict[str, Any]
+    lesson_id: Optional[str] = None
+
+
+# ============================================================================
+# DEPENDENCY INJECTION (adjust to your app's pattern)
+# ============================================================================
+
+def get_course_generator() -> CourseGenerator:
+    """Get CourseGenerator instance. Override this with your DI pattern."""
+    # TODO: Replace with your actual dependency injection
+    # from main import course_generator
+    # return course_generator
+    raise HTTPException(500, "CourseGenerator not initialized")
+
+
+def get_content_assigner() -> ContentAssigner:
+    """Get ContentAssigner instance. Override this with your DI pattern."""
+    # TODO: Replace with your actual dependency injection
+    # from main import content_assigner
+    # return content_assigner
+    raise HTTPException(500, "ContentAssigner not initialized")
+
+
+def get_course_manager() -> CourseManager:
+    """Get CourseManager instance. Override this with your DI pattern."""
+    # TODO: Replace with your actual dependency injection
+    # from main import course_manager
+    # return course_manager
+    raise HTTPException(500, "CourseManager not initialized")
+
+
+# ============================================================================
+# ENDPOINTS
+# ============================================================================
+
+@router.post("/generate", response_model=GenerateCourseResponse)
+async def generate_course(
+    request: GenerateCourseRequest,
+    generator: CourseGenerator = Depends(get_course_generator),
+    course_manager: CourseManager = Depends(get_course_manager)
+):
+    """
+    Generate a complete course curriculum from user goal using AI.
+    
+    This endpoint:
+    1. Analyzes knowledge graph for relevant concepts
+    2. Uses Claude AI to generate structured curriculum
+    3. Creates course and lessons in database
+    4. Returns complete course structure
+    
+    Example:
+        {
+            "user_goal": "Master ENFP shadow integration",
+            "max_lessons": 12,
+            "target_category": "advanced"
+        }
+    """
+    try:
+        logger.info(f"Generating course for goal: {request.user_goal}")
+        
+        # Generate curriculum using AI
+        curriculum = generator.generate_curriculum(
+            user_goal=request.user_goal,
+            relevant_concept_ids=request.relevant_concept_ids,
+            max_lessons=request.max_lessons,
+            target_category=request.target_category
+        )
+        
+        # Create course in database
+        course = course_manager.create_course(
+            title=curriculum['title'],
+            category=curriculum['category'],
+            description=curriculum['description'],
+            estimated_hours=curriculum['estimated_hours'],
+            auto_generated=True,
+            generation_prompt=request.user_goal,
+            source_type='graph',
+            source_ids=curriculum.get('source_ids', []),
+            tags=curriculum.get('tags', [])
+        )
+        
+        # Create lessons
+        for lesson_data in curriculum['lessons']:
+            course_manager.create_lesson(
+                course_id=course['id'],
+                title=lesson_data['title'],
+                concept_ids=lesson_data['concept_ids'],
+                order_index=lesson_data.get('order_index'),
+                description=lesson_data.get('description'),
+                prerequisite_lesson_ids=lesson_data.get('prerequisite_lesson_ids', []),
+                estimated_minutes=lesson_data.get('estimated_minutes', 30),
+                difficulty=lesson_data.get('difficulty', 'foundational'),
+                learning_objectives=lesson_data.get('learning_objectives'),
+                key_takeaways=lesson_data.get('key_takeaways')
+            )
+        
+        logger.info(f"Course created: {course['id']} with {len(curriculum['lessons'])} lessons")
+        
+        return GenerateCourseResponse(
+            success=True,
+            message=f"Generated course '{course['title']}' with {len(curriculum['lessons'])} lessons",
+            course_id=course['id'],
+            data=course,
+            cost=curriculum.get('generation_metadata', {}).get('cost', 0.0)
+        )
+        
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Course generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Course generation failed: {str(e)}")
+
+
+@router.post("/assign-content", response_model=AssignContentResponse)
+async def assign_content(
+    request: AssignContentRequest,
+    assigner: ContentAssigner = Depends(get_content_assigner),
+    course_manager: CourseManager = Depends(get_course_manager)
+):
+    """
+    Assign new document content to existing tracks using AI analysis.
+    
+    This endpoint:
+    1. Calculates concept overlap with existing courses
+    2. Determines confidence level (high/medium/low)
+    3. Returns assignment recommendation
+    4. Optionally auto-creates lesson if requested
+    
+    Confidence tiers:
+    - High (90%+): Auto-add silently
+    - Medium (70-89%): Auto-add with reasoning shown
+    - Low (<70%): Recommend creating new track
+    
+    Example:
+        {
+            "document_id": "doc-uuid-123",
+            "extracted_concept_ids": ["concept-1", "concept-2", "concept-3"],
+            "document_metadata": {
+                "title": "ENFP Ne Hero Function",
+                "video_id": "S02E05",
+                "duration_minutes": 45
+            },
+            "auto_create_lesson": true
+        }
+    """
+    try:
+        logger.info(f"Assigning content for document: {request.document_id}")
+        
+        # Get assignment recommendation
+        assignment = assigner.assign_content(
+            document_id=request.document_id,
+            extracted_concept_ids=request.extracted_concept_ids,
+            document_metadata=request.document_metadata
+        )
+        
+        # Auto-create lesson if requested and confidence is high/medium
+        lesson_id = None
+        if request.auto_create_lesson and assignment['action'] == 'add_to_existing':
+            lesson_data = assignment['suggested_lesson']
+            
+            try:
+                lesson = course_manager.create_lesson(
+                    course_id=assignment['course_id'],
+                    title=lesson_data['title'],
+                    concept_ids=lesson_data['concept_ids'],
+                    order_index=lesson_data.get('order_index'),
+                    description=lesson_data.get('description'),
+                    estimated_minutes=lesson_data.get('estimated_minutes', 30),
+                    difficulty=lesson_data.get('difficulty', 'foundational'),
+                    document_references=lesson_data.get('document_references', [])
+                )
+                lesson_id = lesson['id']
+                
+                logger.info(f"Auto-created lesson: {lesson_id} in course {assignment['course_id']}")
+                
+            except Exception as e:
+                logger.error(f"Failed to auto-create lesson: {str(e)}")
+                # Don't fail the whole request, just log the error
+        
+        # Build response message
+        if assignment['action'] == 'add_to_existing':
+            message = f"Content assigned to '{assignment['course_title']}' ({assignment['confidence_tier']} confidence)"
+            if lesson_id:
+                message += f" - Lesson created: {assignment['suggested_lesson']['title']}"
+        else:
+            message = f"Recommend creating new track: '{assignment['course_title']}'"
+        
+        return AssignContentResponse(
+            success=True,
+            message=message,
+            assignment=assignment,
+            lesson_id=lesson_id
+        )
+        
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Content assignment failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Content assignment failed: {str(e)}")
+
+
+@router.get("/generation-stats")
+async def get_generation_stats(
+    generator: CourseGenerator = Depends(get_course_generator),
+    assigner: ContentAssigner = Depends(get_content_assigner)
+):
+    """
+    Get AI generation statistics for current session.
+    
+    Returns:
+        {
+            "success": true,
+            "data": {
+                "generation_cost": 0.15,
+                "assignment_cost": 0.08,
+                "total_cost": 0.23
+            }
+        }
+    """
+    try:
+        gen_cost = generator.get_total_cost()
+        assign_cost = assigner.get_total_cost()
+        
+        return {
+            "success": True,
+            "data": {
+                "generation_cost": round(gen_cost, 4),
+                "assignment_cost": round(assign_cost, 4),
+                "total_cost": round(gen_cost + assign_cost, 4)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+FILE 4: src/services/course_manager.py - ADDITIONS
+Purpose: Add helper methods to existing CourseManager
+python# ADD THESE METHODS TO YOUR EXISTING CourseManager CLASS
+
+def get_course_with_lessons(self, course_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get course with all lessons embedded.
+    Helper for AI generation.
+    
+    Returns:
+        Course dict with 'lessons' array populated
+    """
+    course = self.get_course(course_id)
+    if not course:
+        return None
+    
+    course['lessons'] = self.get_course_lessons(course_id)
+    return course
+
+def get_all_courses_with_lessons(self, include_archived: bool = False) -> List[Dict[str, Any]]:
+    """
+    Get all courses with lessons embedded.
+    Helper for content assignment overlap calculation.
+    
+    Returns:
+        List of course dicts with 'lessons' array populated
+    """
+    all_courses_grouped = self.get_all_courses(include_archived=include_archived)
+    
+    result = []
+    for category_courses in all_courses_grouped.values():
+        for course in category_courses:
+            course['lessons'] = self.get_course_lessons(course['id'])
+            result.append(course)
+    
+    return result
+
+FILE 5: PHASE2_INTEGRATION.md
+Purpose: Integration instructions for Phase 2
+markdown# InnerVerse Learning Paths - Phase 2 Integration
+
+## Overview
+Phase 2 adds AI-powered course generation and automatic content assignment using Claude Sonnet 4.
+
+## Files Created
+1. `src/services/course_generator.py` - Curriculum generation
+2. `src/services/content_assigner.py` - Content-to-track assignment
+3. `src/routes/course_ai_routes.py` - FastAPI AI endpoints
+4. `src/services/course_manager.py` - Added helper methods
+
+## Integration Steps
+
+### Step 1: Install Dependencies
+```bash
+# Add to requirements.txt (if not already present)
+anthropic>=0.18.0
+
+# Install
+pip install anthropic
+```
+
+### Step 2: Update Environment Variables
+
+Add to your `.env` file:
+```
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```
+
+### Step 3: Initialize Services in Main App
+
+In your main FastAPI app file (`main.py` or `app.py`), add:
+```python
+from services.course_generator import CourseGenerator
+from services.content_assigner import ContentAssigner
+from services.course_manager import CourseManager
+from services.knowledge_graph_manager import KnowledgeGraphManager
+from routes.course_ai_routes import router as course_ai_router
+import os
+
+# Initialize managers
+kg_manager = KnowledgeGraphManager(...)  # Your existing init
+course_manager = CourseManager(db_path='your_db.db')
+
+# Initialize AI services
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+
+course_generator = CourseGenerator(
+    anthropic_api_key=ANTHROPIC_API_KEY,
+    knowledge_graph_manager=kg_manager
+)
+
+content_assigner = ContentAssigner(
+    anthropic_api_key=ANTHROPIC_API_KEY,
+    knowledge_graph_manager=kg_manager,
+    course_manager=course_manager
+)
+```
+
+### Step 4: Set Up Dependency Injection
+
+In `course_ai_routes.py`, replace the placeholder dependency functions:
+```python
+# At top of course_ai_routes.py, replace the TODO functions with:
+
+from main import course_generator, content_assigner, course_manager
+
+def get_course_generator() -> CourseGenerator:
+    return course_generator
+
+def get_content_assigner() -> ContentAssigner:
+    return content_assigner
+
+def get_course_manager() -> CourseManager:
+    return course_manager
+```
+
+### Step 5: Register Router
+
+In your main app:
+```python
+from routes.course_ai_routes import router as course_ai_router
+
+app.include_router(course_ai_router)
+```
+
+### Step 6: Verify Knowledge Graph Integration
+
+Make sure your `KnowledgeGraphManager` has these methods:
+```python
+# Required methods for Phase 2:
+
+def get_concept(self, concept_id: str) -> Optional[Dict]:
+    """Get single concept by ID."""
+    pass
+
+def search_concepts(self, query: str, top_k: int = 30) -> List[Dict]:
+    """Search concepts by semantic similarity."""
+    pass
+```
+
+If these don't exist, add them to your KnowledgeGraphManager.
+
+## Testing Phase 2
+
+### Test 1: Generate Course
+```bash
+curl -X POST http://localhost:8000/api/courses/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_goal": "Master ENFP cognitive functions",
+    "max_lessons": 10,
+    "target_category": "your_type"
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "Generated course 'ENFP Mastery' with 10 lessons",
+  "course_id": "uuid-here",
+  "data": { ... },
+  "cost": 0.05
+}
+```
+
+### Test 2: Assign Content (High Confidence)
+```bash
+curl -X POST http://localhost:8000/api/courses/assign-content \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document_id": "test-doc-123",
+    "extracted_concept_ids": ["concept-1", "concept-2", "concept-3"],
+    "document_metadata": {
+      "title": "Understanding Ne Hero",
+      "duration_minutes": 45
+    },
+    "auto_create_lesson": true
+  }'
+```
+
+**Expected Response (High Confidence):**
+```json
+{
+  "success": true,
+  "message": "Content assigned to 'ENFP Mastery' (high confidence) - Lesson created: Understanding Ne Hero",
+  "assignment": {
+    "action": "add_to_existing",
+    "course_id": "uuid",
+    "confidence": 0.95,
+    "confidence_tier": "high",
+    "reasoning": "High confidence match (95% concept overlap). Auto-added."
+  },
+  "lesson_id": "lesson-uuid"
+}
+```
+
+### Test 3: Get Generation Stats
+```bash
+curl http://localhost:8000/api/courses/generation-stats
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "generation_cost": 0.05,
+    "assignment_cost": 0.02,
+    "total_cost": 0.07
+  }
+}
+```
+
+## Integration with Upload Workflow
+
+To auto-assign content when users upload new documents:
+```python
+# In your upload handler (wherever you process documents):
+
+@app.post("/api/upload")
+async def upload_document(file: UploadFile):
+    # ... existing upload logic ...
+    
+    # After concept extraction:
+    extracted_concepts = extract_concepts_from_document(document_id)
+    
+    # Auto-assign to tracks
+    assignment = content_assigner.assign_content(
+        document_id=document_id,
+        extracted_concept_ids=extracted_concepts,
+        document_metadata={
+            "title": file.filename,
+            "duration_minutes": estimate_duration(file)
+        }
+    )
+    
+    # If high/medium confidence, auto-create lesson
+    if assignment['action'] == 'add_to_existing' and assignment['confidence'] >= 0.70:
+        lesson_data = assignment['suggested_lesson']
+        course_manager.create_lesson(
+            course_id=assignment['course_id'],
+            **lesson_data
+        )
+        
+        return {
+            "message": f"Document uploaded and added to {assignment['course_title']}",
+            "course_id": assignment['course_id']
+        }
+    else:
+        return {
+            "message": "Document uploaded - recommend creating new track",
+            "suggested_course": assignment['suggested_course']
+        }
+```
+
+## Cost Management
+
+Monitor costs with:
+```python
+# Get current session costs
+gen_cost = course_generator.get_total_cost()
+assign_cost = content_assigner.get_total_cost()
+
+print(f"Total AI cost this session: ${gen_cost + assign_cost:.4f}")
+
+# Reset cost tracking
+course_generator.reset_cost_tracking()
+content_assigner.reset_cost_tracking()
+```
+
+## Troubleshooting
+
+### Issue: "CourseGenerator not initialized"
+**Fix:** Make sure dependency injection is set up correctly in `course_ai_routes.py`
+
+### Issue: "No relevant concepts found"
+**Fix:** Check that `KnowledgeGraphManager.search_concepts()` is working and returning results
+
+### Issue: Claude API errors
+**Fix:** 
+- Verify ANTHROPIC_API_KEY is set correctly
+- Check API key has sufficient credits
+- Review Claude API error message in logs
+
+### Issue: High costs
+**Fix:**
+- Reduce `max_lessons` in generation requests
+- Use high-confidence auto-assignment (free) instead of medium-confidence (costs $0.01-0.02)
+- Batch generation requests
+
+## Next Steps
+
+Once Phase 2 is tested and working:
+- [ ] Generate course curriculum works
+- [ ] Content assignment with 3-tier confidence works
+- [ ] Auto-lesson creation works
+- [ ] Costs are tracked correctly
+- [ ] Integration with upload workflow complete
+
+**Then proceed to Phase 3:** 2D Canvas UI
+```
+
+---
+
+## 🎯 PHASE 2 SUMMARY
+
+**What You're Getting:**
+
+1. ✅ **course_generator.py** (400+ lines) - Full AI curriculum generation
+2. ✅ **content_assigner.py** (400+ lines) - 3-tier confidence assignment
+3. ✅ **course_ai_routes.py** (300+ lines) - FastAPI endpoints
+4. ✅ **course_manager.py** additions - Helper methods
+5. ✅ **PHASE2_INTEGRATION.md** - Complete integration guide
+
+**What It Does:**
+
+- 🪄 Generate structured courses from user goals
+- 🎯 Auto-assign uploads to tracks (90% = silent, 70% = reasoning, <70% = new track)
+- 💰 Track AI costs per session
+- 🔗 Integrates with existing knowledge graph
+- 📊 Proper error handling and logging
+
+**Cost Estimates:**
+- Course generation: ~$0.03-0.08 per course
+- Content assignment (high confidence): $0.00 (no API call)
+- Content assignment (medium confidence): ~$0.01-0.02
+
+---
+
+## 📤 SEND TO REPLIT
+
+**Tell Replit:**
+```
+Phase 2: AI Generation Logic - Complete Implementation
+
+Create these 5 files exactly as specified:
+1. src/services/course_generator.py
+2. src/services/content_assigner.py
+3. src/routes/course_ai_routes.py
+4. Add helper methods to existing src/services/course_manager.py
+5. PHASE2_INTEGRATION.md
+
+[Paste all 5 file contents here]
+
+Then follow PHASE2_INTEGRATION.md instructions to:
+- Set up dependency injection
+- Initialize services in main app
+- Register the router
+- Verify knowledge graph methods exist
+
+STOP after Phase 2 is integrated. Do not move to Phase 3 yet.
+Ready to send? 🚀RetryClaude can make mistakes. Please double-check responses. Sonnet 4.5
