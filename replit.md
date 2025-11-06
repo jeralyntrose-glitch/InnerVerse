@@ -11,6 +11,17 @@ Preferred communication style: Simple, everyday language with a decent amount of
 ## Frontend Architecture
 - **UI/UX (Sleek Compact Design)**: Apple-inspired minimalist interface with a professional productivity tool aesthetic, featuring lighter ChatGPT-style typography (Inter font), a thin header, teal accent colors, and compact spacing.
 - **Branding**: "InnerVerse" title uses a thin Outfit font with increased letter-spacing, accompanied by a simplified teal brain logo.
+- **Learning Paths Canvas (`/learning-paths`)**: 2D interactive course visualization (Phase 3 - COMPLETE):
+    - **D3.js Tree Layout**: Hierarchical course display with zoom/pan controls (0.3x-2x range)
+    - **Course Cards**: Category-colored cards (blue/purple/pink/orange) with progress bars, stats, and status icons
+    - **AI Generation UI**: Modal form for creating courses with Claude Sonnet 4
+    - **Search & Filter**: Real-time course filtering by title/description/tags
+    - **Responsive Design**: Mobile-optimized with touch gestures
+    - **Empty State**: Professional onboarding with "Generate Course with AI" CTA
+    - **Legend & Controls**: Bottom-left status legend, bottom-right zoom buttons
+    - **Modals**: Course details with lesson list, AI generation form with cost estimate
+    - **Toast Notifications**: Success/error feedback system
+    - **Keyboard Shortcuts**: Space (reset), +/- (zoom), Escape (close), Enter (search)
 - **Chat Interface (`/chat` and `/claude`)**: A professional, Claude.ai/ChatGPT-inspired interface with:
     - **Sidebar**: Collapsible project folders, conversation management (load, rename, delete), and mobile optimization.
     - **Search Functionality**: Comprehensive backend search for conversation titles and message content with debounce, real-time filtering, and XSS protection.
