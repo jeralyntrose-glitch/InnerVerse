@@ -12,6 +12,81 @@ from src.services.knowledge_graph_manager import KnowledgeGraphManager
 from src.utils.graph_utils import fuzzy_match_label
 
 
+# Protected terms - never merge if concepts contain different values
+COGNITIVE_FUNCTIONS = ['Si', 'Se', 'Ni', 'Ne', 'Ti', 'Te', 'Fi', 'Fe']
+
+FUNCTION_POSITIONS = ['Hero', 'Parent', 'Child', 'Inferior', 
+                      'Nemesis', 'Critic', 'Trickster', 'Demon']
+
+MBTI_TYPES = ['ENFP', 'INFP', 'ENTP', 'INTP', 'ENFJ', 'INFJ', 
+              'ENTJ', 'INTJ', 'ESFP', 'ISFP', 'ESTP', 'ISTP',
+              'ESFJ', 'ISFJ', 'ESTJ', 'ISTJ']
+
+QUADRAS = ['Alpha', 'Beta', 'Gamma', 'Delta']
+
+TEMPLES = ['Heart', 'Mind', 'Body', 'Soul']
+
+
+def can_merge(label1: str, label2: str) -> bool:
+    """
+    Check if two concepts are safe to merge.
+    Prevents merging concepts with different protected terms.
+    
+    Args:
+        label1: First concept label
+        label2: Second concept label
+        
+    Returns:
+        True if safe to merge, False otherwise
+        
+    Examples:
+        can_merge("Si Inferior", "Ne Inferior") -> False (different functions)
+        can_merge("Hero Function", "Inferior Function") -> False (different positions)
+        can_merge("Shadow Integration", "Shadow Work") -> True (no conflicts)
+    """
+    # Extract cognitive functions from both labels
+    funcs1 = [f for f in COGNITIVE_FUNCTIONS if f in label1]
+    funcs2 = [f for f in COGNITIVE_FUNCTIONS if f in label2]
+    
+    # If both have functions, they must match
+    if funcs1 and funcs2 and funcs1 != funcs2:
+        return False
+    
+    # Extract function positions
+    pos1 = [p for p in FUNCTION_POSITIONS if p in label1]
+    pos2 = [p for p in FUNCTION_POSITIONS if p in label2]
+    
+    # If both have positions, they must match
+    if pos1 and pos2 and pos1 != pos2:
+        return False
+    
+    # Extract MBTI types
+    types1 = [t for t in MBTI_TYPES if t in label1]
+    types2 = [t for t in MBTI_TYPES if t in label2]
+    
+    # If both have types, they must match
+    if types1 and types2 and types1 != types2:
+        return False
+    
+    # Extract quadras
+    quad1 = [q for q in QUADRAS if q in label1]
+    quad2 = [q for q in QUADRAS if q in label2]
+    
+    # If both have quadras, they must match
+    if quad1 and quad2 and quad1 != quad2:
+        return False
+    
+    # Extract temples
+    temp1 = [t for t in TEMPLES if t in label1]
+    temp2 = [t for t in TEMPLES if t in label2]
+    
+    # If both have temples, they must match
+    if temp1 and temp2 and temp1 != temp2:
+        return False
+    
+    return True
+
+
 def preview_merges(similarity_threshold: float = 0.85) -> Dict:
     """
     Preview what would be merged without actually merging.
@@ -47,6 +122,10 @@ def preview_merges(similarity_threshold: float = 0.85) -> Dict:
         similar = [node]
         for j, other_node in enumerate(nodes):
             if i != j and other_node['id'] not in processed:
+                # Check if safe to merge (protected terms)
+                if not can_merge(node['label'], other_node['label']):
+                    continue
+                
                 similarity = fuzzy_match_label(node['label'], other_node['label'])
                 if similarity >= similarity_threshold:
                     similar.append(other_node)
@@ -143,6 +222,10 @@ def merge_similar_concepts(similarity_threshold: float = 0.85, create_backup: bo
         similar = [node]
         for j, other_node in enumerate(graph['nodes']):
             if i != j and other_node['id'] not in processed:
+                # Check if safe to merge (protected terms)
+                if not can_merge(node['label'], other_node['label']):
+                    continue
+                
                 similarity = fuzzy_match_label(node['label'], other_node['label'])
                 if similarity >= similarity_threshold:
                     similar.append(other_node)

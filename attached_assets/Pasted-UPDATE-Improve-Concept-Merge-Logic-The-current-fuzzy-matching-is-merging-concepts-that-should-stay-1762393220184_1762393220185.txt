@@ -1,0 +1,114 @@
+UPDATE: Improve Concept Merge Logic
+
+The current fuzzy matching is merging concepts that should stay separate. We need smarter merge rules.
+
+PROBLEM:
+Current merge script merges:
+- "Hero Function" + "Inferior Function" (WRONG - different positions)
+- "Si Inferior" + "Ne Inferior" (WRONG - different cognitive functions)
+- "Si Trickster" + "Ne Trickster" + "Fi Trickster" (WRONG - different functions)
+
+SOLUTION:
+Update /src/scripts/merge_concepts.py with these rules:
+
+1. PROTECTED TERMS (Never merge if concepts contain different values):
+
+   COGNITIVE_FUNCTIONS = ['Si', 'Se', 'Ni', 'Ne', 'Ti', 'Te', 'Fi', 'Fe']
+   
+   FUNCTION_POSITIONS = ['Hero', 'Parent', 'Child', 'Inferior', 
+                         'Nemesis', 'Critic', 'Trickster', 'Demon']
+   
+   MBTI_TYPES = ['ENFP', 'INFP', 'ENTP', 'INTP', 'ENFJ', 'INFJ', 
+                 'ENTJ', 'INTJ', 'ESFP', 'ISFP', 'ESTP', 'ISTP',
+                 'ESFJ', 'ISFJ', 'ESTJ', 'ISTJ']
+   
+   QUADRAS = ['Alpha', 'Beta', 'Gamma', 'Delta']
+   
+   TEMPLES = ['Heart', 'Mind', 'Body', 'Soul']
+
+2. ADD PROTECTION FUNCTION:
+
+   def can_merge(label1: str, label2: str) -> bool:
+       """Check if two concepts are safe to merge"""
+       
+       # Extract cognitive functions from both labels
+       funcs1 = [f for f in COGNITIVE_FUNCTIONS if f in label1]
+       funcs2 = [f for f in COGNITIVE_FUNCTIONS if f in label2]
+       
+       # If both have functions, they must match
+       if funcs1 and funcs2 and funcs1 != funcs2:
+           return False
+       
+       # Extract function positions
+       pos1 = [p for p in FUNCTION_POSITIONS if p in label1]
+       pos2 = [p for p in FUNCTION_POSITIONS if p in label2]
+       
+       # If both have positions, they must match
+       if pos1 and pos2 and pos1 != pos2:
+           return False
+       
+       # Extract MBTI types
+       types1 = [t for t in MBTI_TYPES if t in label1]
+       types2 = [t for t in MBTI_TYPES if t in label2]
+       
+       # If both have types, they must match
+       if types1 and types2 and types1 != types2:
+           return False
+       
+       # Extract quadras
+       quad1 = [q for q in QUADRAS if q in label1]
+       quad2 = [q for q in QUADRAS if q in label2]
+       
+       # If both have quadras, they must match
+       if quad1 and quad2 and quad1 != quad2:
+           return False
+       
+       # Extract temples
+       temp1 = [t for t in TEMPLES if t in label1]
+       temp2 = [t for t in TEMPLES if t in label2]
+       
+       # If both have temples, they must match
+       if temp1 and temp2 and temp1 != temp2:
+           return False
+       
+       return True
+
+3. UPDATE MERGE LOGIC:
+
+   In the merge_similar_concepts function, add the protection check:
+   
+   for j, other_node in enumerate(graph['nodes']):
+       if i != j and other_node['id'] not in processed:
+           # NEW: Check if safe to merge
+           if not can_merge(node['label'], other_node['label']):
+               continue
+           
+           similarity = fuzzy_match_label(node['label'], other_node['label'])
+           if similarity >= similarity_threshold:
+               similar.append(other_node)
+               processed.add(other_node['id'])
+
+4. TEST CASES TO VERIFY:
+
+   Should NOT merge:
+   - "Si Inferior" + "Ne Inferior" (different functions)
+   - "Hero Function" + "Inferior Function" (different positions)
+   - "ENFP Ego" + "INTJ Ego" (different types)
+   - "Alpha Quadra" + "Beta Quadra" (different quadras)
+   
+   Should MERGE:
+   - "Shadow Integration" + "Shadow Work" (same concept, no protected terms)
+   - "Cognitive Development" + "Cognitive Growth" (same concept)
+   - "Type Development" + "Personality Development" (similar enough)
+
+5. UPDATE run_merge.py:
+
+   After implementing the fix, re-run the preview with 0.85 threshold to verify
+   the protected terms are working correctly.
+
+VERIFICATION:
+- Run preview again
+- Check that "Si Inferior" and "Ne Inferior" stay separate
+- Check that "Hero Function" and "Inferior Function" stay separate
+- Check that "Shadow Integration" and "Shadow Work" DO merge
+- Target: 1628 → 300-500 concepts at 0.85 threshold
