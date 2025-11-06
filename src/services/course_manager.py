@@ -661,3 +661,91 @@ class CourseManager:
                 }
         finally:
             conn.close()
+    
+    # ========================================================================
+    # AI GENERATION HELPER METHODS
+    # ========================================================================
+    
+    def get_all_courses(self, include_archived: bool = False) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Get all courses grouped by category.
+        Helper for AI content assignment.
+        
+        Args:
+            include_archived: Whether to include archived courses
+            
+        Returns:
+            Dict of {category: [course, course, ...]}
+        """
+        conn = self._get_connection()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                if include_archived:
+                    cur.execute("""
+                        SELECT * FROM courses
+                        ORDER BY category, created_at DESC
+                    """)
+                else:
+                    cur.execute("""
+                        SELECT * FROM courses
+                        WHERE status = 'active'
+                        ORDER BY category, created_at DESC
+                    """)
+                
+                courses = [dict(row) for row in cur.fetchall()]
+                
+                # Group by category
+                grouped = {
+                    'foundations': [],
+                    'your_type': [],
+                    'relationships': [],
+                    'advanced': []
+                }
+                
+                for course in courses:
+                    category = course.get('category', 'foundations')
+                    if category in grouped:
+                        grouped[category].append(course)
+                
+                return grouped
+        finally:
+            conn.close()
+    
+    def get_course_with_lessons(self, course_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get course with all lessons embedded.
+        Helper for AI generation.
+        
+        Args:
+            course_id: Course UUID
+            
+        Returns:
+            Course dict with 'lessons' array populated, or None if not found
+        """
+        course = self.get_course(course_id)
+        if not course:
+            return None
+        
+        course['lessons'] = self.list_lessons(course_id)
+        return course
+    
+    def get_all_courses_with_lessons(self, include_archived: bool = False) -> List[Dict[str, Any]]:
+        """
+        Get all courses with lessons embedded.
+        Helper for content assignment overlap calculation.
+        
+        Args:
+            include_archived: Whether to include archived courses
+            
+        Returns:
+            List of course dicts with 'lessons' array populated
+        """
+        all_courses_grouped = self.get_all_courses(include_archived=include_archived)
+        
+        result = []
+        for category_courses in all_courses_grouped.values():
+            for course in category_courses:
+                course['lessons'] = self.list_lessons(course['id'])
+                result.append(course)
+        
+        return result
