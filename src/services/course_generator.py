@@ -214,12 +214,12 @@ class CourseGenerator:
     ) -> str:
         """Build the prompt for Claude to generate curriculum."""
         
-        # Summarize concepts
+        # Summarize concepts with IDs
         concept_summary = []
         for concept in concepts[:30]:
-            summary = f"- {concept['name']}"
+            summary = f"- ID: {concept['id']} | Name: {concept['name']}"
             if concept.get('definition'):
-                summary += f": {concept['definition'][:100]}"
+                summary += f" | {concept['definition'][:80]}"
             concept_summary.append(summary)
         
         # Summarize prerequisites
