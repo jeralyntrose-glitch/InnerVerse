@@ -5576,6 +5576,10 @@ def serve_migration_dashboard():
 def serve_content_atlas():
     return FileResponse("content-atlas.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+@app.get("/knowledge-graph", include_in_schema=False)
+def serve_knowledge_graph():
+    return FileResponse("knowledge-graph.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
 @app.get("/chat", include_in_schema=False)
 def serve_chat_ui():
     return FileResponse("chat.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})

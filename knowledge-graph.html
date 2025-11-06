@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Graph | InnerVerse</title>
+    <link rel="stylesheet" href="/static/knowledge-graph.css">
+    <script src="https://unpkg.com/3d-force-graph@1.73.3/dist/3d-force-graph.min.js"></script>
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+</head>
+<body>
+    <div class="knowledge-graph-page">
+        <!-- Header -->
+        <header class="kg-header">
+            <div class="kg-title">
+                <h1>🌐 Knowledge Graph</h1>
+                <p>Explore the connections in CS Joseph's teachings</p>
+            </div>
+            
+            <div class="kg-stats">
+                <div class="stat">
+                    <span class="stat-value" id="concept-count">0</span>
+                    <span class="stat-label">Concepts</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="connection-count">0</span>
+                    <span class="stat-label">Connections</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="document-count">0</span>
+                    <span class="stat-label">Documents</span>
+                </div>
+            </div>
+            
+            <a href="/" class="back-btn">← Back to Chat</a>
+        </header>
+
+        <!-- Controls -->
+        <div class="kg-controls">
+            <div class="control-group">
+                <label>Minimum Frequency</label>
+                <div class="slider-container">
+                    <input
+                        type="range"
+                        id="frequency-slider"
+                        min="1"
+                        max="20"
+                        value="3"
+                    />
+                    <span class="threshold-value" id="threshold-display">≥ 3</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Category</label>
+                <select id="category-filter">
+                    <option value="all">All Categories</option>
+                    <option value="foundational">Foundational</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Search</label>
+                <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Search concepts..."
+                />
+            </div>
+            
+            <button class="reset-btn" id="reset-filters-btn">Reset Filters</button>
+            
+            <button class="center-btn" id="center-graph-btn">🎯 Center Graph</button>
+        </div>
+
+        <!-- Graph Container -->
+        <div class="kg-graph-container" id="graph-container">
+            <div class="loading" id="loading-indicator">
+                <div class="spinner"></div>
+                <p>Loading knowledge graph...</p>
+            </div>
+        </div>
+
+        <!-- Node Details Panel -->
+        <div class="node-details-panel" id="node-details-panel" style="display: none;">
+            <button class="close-btn" id="close-panel-btn">×</button>
+            
+            <h3 id="node-label">Concept Name</h3>
+            
+            <div class="node-meta" id="node-meta">
+                <span class="badge">Type</span>
+                <span class="badge">Category</span>
+                <span class="badge">Frequency: 0</span>
+            </div>
+            
+            <p class="node-definition" id="node-definition">Definition...</p>
+            
+            <div class="node-connections">
+                <h4 id="connections-header">Connected Concepts (0)</h4>
+                <ul id="connections-list"></ul>
+            </div>
+            
+            <div class="node-sources">
+                <h4 id="sources-header">Appears in 0 documents</h4>
+                <button id="view-sources-btn" class="view-sources-btn">View Source Documents</button>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+            <h4>Categories</h4>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #7C3AED;"></span>
+                <span>Foundational</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #A78BFA;"></span>
+                <span>Intermediate</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #EC4899;"></span>
+                <span>Advanced</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #6B7280;"></span>
+                <span>Uncategorized</span>
+            </div>
+        </div>
+
+        <!-- Instructions (dismissible) -->
+        <div class="instructions" id="instructions">
+            <button class="dismiss-btn" id="dismiss-instructions">×</button>
+            <h4>💡 How to Use</h4>
+            <ul>
+                <li><strong>Click</strong> on any node to see details</li>
+                <li><strong>Drag</strong> to rotate the graph</li>
+                <li><strong>Scroll</strong> to zoom in/out</li>
+                <li><strong>Adjust frequency</strong> to filter noise</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="/static/knowledge-graph.js"></script>
+</body>
+</html>
