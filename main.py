@@ -661,7 +661,10 @@ async def upload_pdf(file: UploadFile = File(...)):
                     concepts_added = 0
                     relationships_added = 0
                     
+                    print(f"📊 Extracted {len(extracted.get('concepts', []))} concepts, {len(extracted.get('relationships', []))} relationships")
+                    
                     # Add concepts to graph
+                    print(f"📝 Adding concepts to graph...")
                     for concept in extracted.get('concepts', []):
                         node_data = {
                             'label': concept['label'],
@@ -675,10 +678,11 @@ async def upload_pdf(file: UploadFile = File(...)):
                             concepts_added += 1
                     
                     # Add relationships to graph
+                    print(f"🔗 Adding relationships to graph...")
                     for rel in extracted.get('relationships', []):
-                        # Find source and target nodes
-                        source_node = manager.find_node_by_label(rel['from'])
-                        target_node = manager.find_node_by_label(rel['to'])
+                        # Find source and target nodes (MUST use await for async functions)
+                        source_node = await manager.find_node_by_label(rel['from'])
+                        target_node = await manager.find_node_by_label(rel['to'])
                         
                         if source_node and target_node:
                             edge_data = {
@@ -691,6 +695,8 @@ async def upload_pdf(file: UploadFile = File(...)):
                             edge = await manager.add_edge(edge_data)
                             if edge:
                                 relationships_added += 1
+                        else:
+                            print(f"⚠️ Skipping relationship: {rel['from']} -> {rel['to']} (node not found)")
                     
                     # Mark document as processed
                     if 'processed_documents' not in graph['metadata']:
