@@ -8,7 +8,7 @@ from typing import List
 from src.services.knowledge_graph_manager import KnowledgeGraphManager
 
 
-async def merge_specific_concepts(labels_to_merge: List[str], canonical_label: str) -> bool:
+def merge_specific_concepts(labels_to_merge: List[str], canonical_label: str) -> bool:
     """
     Manually merge a list of concept labels into one canonical label.
     
@@ -35,7 +35,7 @@ async def merge_specific_concepts(labels_to_merge: List[str], canonical_label: s
         return False
     
     manager = KnowledgeGraphManager()
-    graph = await manager.load_graph()
+    graph = manager.load_graph()
     
     # Find all nodes to merge
     nodes_to_merge = []
@@ -136,7 +136,7 @@ async def merge_specific_concepts(labels_to_merge: List[str], canonical_label: s
     graph['metadata']['total_relationships'] = len(graph['edges'])
     
     # Save
-    await manager.save_graph(graph)
+    manager.save_graph(graph)
     
     print("=" * 80)
     print("✅ MERGE COMPLETE!")
@@ -151,7 +151,7 @@ async def merge_specific_concepts(labels_to_merge: List[str], canonical_label: s
     return True
 
 
-async def list_similar_concepts(label: str, threshold: float = 0.7) -> List[str]:
+def list_similar_concepts(label: str, threshold: float = 0.7) -> List[str]:
     """
     Find concepts similar to a given label.
     Helpful for identifying manual merge candidates.
@@ -166,7 +166,7 @@ async def list_similar_concepts(label: str, threshold: float = 0.7) -> List[str]
     from src.utils.graph_utils import fuzzy_match_label
     
     manager = KnowledgeGraphManager()
-    graph = await manager.load_graph()
+    graph = manager.load_graph()
     
     similar = []
     for node in graph['nodes']:

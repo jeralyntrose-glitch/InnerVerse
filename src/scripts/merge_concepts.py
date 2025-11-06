@@ -12,7 +12,7 @@ from src.services.knowledge_graph_manager import KnowledgeGraphManager
 from src.utils.graph_utils import fuzzy_match_label
 
 
-async def preview_merges(similarity_threshold: float = 0.85) -> Dict:
+def preview_merges(similarity_threshold: float = 0.85) -> Dict:
     """
     Preview what would be merged without actually merging.
     
@@ -29,7 +29,7 @@ async def preview_merges(similarity_threshold: float = 0.85) -> Dict:
     print()
     
     manager = KnowledgeGraphManager()
-    graph = await manager.load_graph()
+    graph = manager.load_graph()
     
     nodes = graph['nodes']
     print(f"📊 Current concepts: {len(nodes)}")
@@ -93,7 +93,7 @@ async def preview_merges(similarity_threshold: float = 0.85) -> Dict:
     }
 
 
-async def merge_similar_concepts(similarity_threshold: float = 0.85, create_backup: bool = True) -> Dict:
+def merge_similar_concepts(similarity_threshold: float = 0.85, create_backup: bool = True) -> Dict:
     """
     Merge similar concepts in the knowledge graph.
     
@@ -110,7 +110,7 @@ async def merge_similar_concepts(similarity_threshold: float = 0.85, create_back
     print()
     
     manager = KnowledgeGraphManager()
-    graph = await manager.load_graph()
+    graph = manager.load_graph()
     
     # Backup before merge
     if create_backup:
@@ -267,7 +267,7 @@ async def merge_similar_concepts(similarity_threshold: float = 0.85, create_back
     graph['metadata']['merge_threshold'] = similarity_threshold
     
     # 7. Save cleaned graph
-    await manager.save_graph(graph)
+    manager.save_graph(graph)
     
     # 8. Generate merge report
     merge_report = {
@@ -301,7 +301,7 @@ async def merge_similar_concepts(similarity_threshold: float = 0.85, create_back
     return graph['metadata']
 
 
-async def test_threshold(threshold: float) -> Dict:
+def test_threshold(threshold: float) -> Dict:
     """
     Test a similarity threshold without saving.
     Shows how many merges would occur at this threshold.
@@ -312,4 +312,4 @@ async def test_threshold(threshold: float) -> Dict:
     Returns:
         Statistics dictionary
     """
-    return await preview_merges(threshold)
+    return preview_merges(threshold)

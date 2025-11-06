@@ -7,7 +7,7 @@ import sys
 from src.scripts.merge_concepts import merge_similar_concepts, preview_merges, test_threshold
 
 
-async def main():
+def main():
     """Run merge with preview and confirmation"""
     print("=" * 80)
     print("🔧 KNOWLEDGE GRAPH CONCEPT MERGER")
@@ -17,7 +17,7 @@ async def main():
     # Show current state
     from src.services.knowledge_graph_manager import KnowledgeGraphManager
     manager = KnowledgeGraphManager()
-    graph = await manager.load_graph()
+    graph = manager.load_graph()
     
     print(f"📊 Current state:")
     print(f"   Concepts: {len(graph['nodes'])}")
@@ -29,7 +29,7 @@ async def main():
     print()
     
     for threshold in [0.90, 0.85, 0.80]:
-        stats = await test_threshold(threshold)
+        stats = test_threshold(threshold)
         print(f"Threshold {threshold}: {stats['final_concepts']} concepts "
               f"({stats['reduction_percentage']:.1f}% reduction)")
     
@@ -60,7 +60,7 @@ async def main():
     # Preview merges
     print("📋 Previewing merges...")
     print()
-    await preview_merges(threshold)
+    preview_merges(threshold)
     print()
     
     # Confirm
@@ -68,7 +68,7 @@ async def main():
     
     if confirm == "yes":
         print()
-        await merge_similar_concepts(threshold, create_backup=True)
+        merge_similar_concepts(threshold, create_backup=True)
         print()
         print("✅ Merge complete!")
         print()
@@ -89,7 +89,7 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        main()
     except KeyboardInterrupt:
         print("\n\n⚠️  Merge cancelled by user")
         sys.exit(0)

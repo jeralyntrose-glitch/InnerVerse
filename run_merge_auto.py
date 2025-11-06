@@ -8,7 +8,7 @@ import sys
 from src.scripts.merge_concepts import merge_similar_concepts, preview_merges
 
 
-async def main():
+def main():
     """Run merge automatically with default settings"""
     threshold = 0.85  # Default threshold
     
@@ -21,13 +21,13 @@ async def main():
     # Preview first
     print("📋 Preview:")
     print()
-    await preview_merges(threshold)
+    preview_merges(threshold)
     print()
     
     # Run merge
     print("🚀 Starting merge...")
     print()
-    await merge_similar_concepts(threshold, create_backup=True)
+    merge_similar_concepts(threshold, create_backup=True)
     print()
     print("✅ Merge complete!")
     print()
@@ -39,7 +39,7 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        main()
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
