@@ -1,31 +1,32 @@
 {
-  "generated_at": "2025-11-05T22:57:20.236616",
+  "generated_at": "2025-11-06T00:47:30.790661",
   "summary": {
-    "total_concepts": 30,
-    "total_relationships": 29,
-    "documents_processed": 5,
-    "avg_relationships_per_concept": 0.97
+    "total_concepts": 1628,
+    "total_relationships": 1938,
+    "documents_processed": 374,
+    "avg_relationships_per_concept": 1.19
   },
   "quality_metrics": {
     "orphaned_edges": 0,
-    "nodes_with_no_edges": 0,
+    "nodes_with_no_edges": 57,
     "orphaned_edge_percentage": 0.0,
-    "isolated_node_percentage": 0.0
+    "isolated_node_percentage": 3.5
   },
   "category_distribution": {
-    "advanced": 3,
-    "foundational": 11,
-    "intermediate": 16
+    "advanced": 222,
+    "foundational": 474,
+    "intermediate": 932
   },
   "type_distribution": {
-    "concept": 8,
-    "function": 9,
-    "process": 7,
-    "framework": 4,
-    "principle": 2
+    "concept": 590,
+    "function": 113,
+    "process": 426,
+    "framework": 228,
+    "principle": 217,
+    "theory": 54
   },
   "relationship_type_distribution": {
-    "unknown": 29
+    "unknown": 1938
   },
   "health_status": "healthy"
 }

@@ -1,0 +1,227 @@
+KNOWLEDGE GRAPH CLEANUP: Concept Merge Script
+
+Build a script to consolidate similar concepts in the knowledge graph.
+
+CONTEXT:
+- Current graph has 1,628 concepts (too many for visualization)
+- Many are duplicates with slight variations (e.g. "Shadow Integration" vs "Shadow Work" vs "Shadow Development")
+- Goal: Merge similar concepts to reduce to ~200-300 core concepts
+- Keep all relationships and evidence
+
+REQUIREMENTS:
+
+1. CREATE MERGE SCRIPT
+   File: /src/scripts/merge_concepts.py
+   
+   Main function: async merge_similar_concepts(similarity_threshold=0.85)
+   
+   Logic:
+   
+   from src.services.knowledge_graph_manager import KnowledgeGraphManager
+   from src.utils.graph_utils import fuzzy_match_label
+   
+   async def merge_similar_concepts(similarity_threshold=0.85):
+       manager = KnowledgeGraphManager()
+       graph = await manager.load_graph()
+       
+       print(f"📊 Starting with {len(graph['nodes'])} concepts")
+       
+       # 1. Group similar concepts
+       merged_groups = []
+       processed = set()
+       
+       for i, node in enumerate(graph['nodes']):
+           if node['id'] in processed:
+               continue
+           
+           # Find all similar nodes
+           similar = [node]
+           for j, other_node in enumerate(graph['nodes']):
+               if i != j and other_node['id'] not in processed:
+                   similarity = fuzzy_match_label(node['label'], other_node['label'])
+                   if similarity >= similarity_threshold:
+                       similar.append(other_node)
+                       processed.add(other_node['id'])
+           
+           if len(similar) > 1:
+               merged_groups.append(similar)
+               print(f"🔗 Merging {len(similar)} concepts: {[n['label'] for n in similar]}")
+           
+           processed.add(node['id'])
+       
+       # 2. Merge each group
+       for group in merged_groups:
+           # Use most frequent label as canonical
+           canonical = max(group, key=lambda n: n.get('frequency', 1))
+           
+           # Combine source documents
+           all_docs = set()
+           for node in group:
+               all_docs.update(node.get('source_documents', []))
+           
+           # Sum frequencies
+           total_frequency = sum(n.get('frequency', 1) for n in group)
+           
+           # Keep longest/best definition
+           best_definition = max(group, key=lambda n: len(n.get('definition', '')))['definition']
+           
+           # Update canonical node
+           canonical['source_documents'] = list(all_docs)
+           canonical['frequency'] = total_frequency
+           canonical['definition'] = best_definition
+           canonical['merged_from'] = [n['label'] for n in group if n['id'] != canonical['id']]
+           
+           # Remove other nodes from graph
+           for node in group:
+               if node['id'] != canonical['id']:
+                   graph['nodes'] = [n for n in graph['nodes'] if n['id'] != node['id']]
+           
+           # Update all edges that reference merged nodes
+           for edge in graph['edges']:
+               for node in group:
+                   if node['id'] != canonical['id']:
+                       if edge['source'] == node['id']:
+                           edge['source'] = canonical['id']
+                       if edge['target'] == node['id']:
+                           edge['target'] = canonical['id']
+       
+       # 3. Remove duplicate edges (same source+target+type)
+       unique_edges = []
+       seen = set()
+       
+       for edge in graph['edges']:
+           key = (edge['source'], edge['target'], edge['relationship_type'])
+           if key not in seen:
+               unique_edges.append(edge)
+               seen.add(key)
+           else:
+               # Merge evidence into existing edge
+               existing = next(e for e in unique_edges if 
+                             e['source'] == edge['source'] and 
+                             e['target'] == edge['target'] and
+                             e['relationship_type'] == edge['relationship_type'])
+               existing['strength'] = existing.get('strength', 1) + edge.get('strength', 1)
+               existing['evidence_samples'].extend(edge.get('evidence_samples', []))
+       
+       graph['edges'] = unique_edges
+       
+       # 4. Remove self-referencing edges
+       graph['edges'] = [e for e in graph['edges'] if e['source'] != e['target']]
+       
+       # 5. Update metadata
+       graph['metadata']['total_concepts'] = len(graph['nodes'])
+       graph['metadata']['total_relationships'] = len(graph['edges'])
+       
+       # 6. Save cleaned graph
+       await manager.save_graph(graph)
+       
+       print("\n" + "="*80)
+       print("✅ MERGE COMPLETE!")
+       print("="*80)
+       print(f"📉 Concepts: {1628} → {len(graph['nodes'])}")
+       print(f"🔗 Relationships: {1938} → {len(graph['edges'])}")
+       print(f"📊 Reduction: {1628 - len(graph['nodes'])} concepts merged")
+       print("="*80)
+       
+       return graph['metadata']
+
+2. CREATE MANUAL MERGE HELPERS
+   File: /src/scripts/manual_merge.py
+   
+   Functions for manually merging specific concepts:
+   
+   async def merge_specific_concepts(labels_to_merge: list, canonical_label: str):
+       """Manually merge a list of concept labels into one canonical label"""
+       # Find nodes by label
+       # Merge using same logic as above
+       # Useful for edge cases fuzzy matching misses
+
+3. CREATE MERGE PREVIEW
+   
+   Before running merge, show preview:
+   
+   async def preview_merges(similarity_threshold=0.85):
+       """Show what would be merged without actually merging"""
+       # Run grouping logic
+       # Print groups
+       # Show before/after counts
+       # Ask for confirmation
+
+4. SIMILARITY TUNING
+   
+   Test different thresholds:
+   - 0.90 = Very conservative (only merge very similar)
+   - 0.85 = Balanced (recommended starting point)
+   - 0.80 = Aggressive (merge more concepts)
+   
+   Create function to test without saving:
+   async def test_threshold(threshold):
+       # Show how many merges at this threshold
+       # Show sample merge groups
+
+5. CREATE CLI RUNNER
+   File: /run_merge.py
+   
+   import asyncio
+   from src.scripts.merge_concepts import merge_similar_concepts, preview_merges
+   
+   if __name__ == "__main__":
+       print("🔧 KNOWLEDGE GRAPH CONCEPT MERGER")
+       print("="*80)
+       
+       # Preview first
+       print("\n📋 Previewing merges at 0.85 threshold...")
+       asyncio.run(preview_merges(0.85))
+       
+       confirm = input("\nProceed with merge? (yes/no): ")
+       if confirm.lower() == "yes":
+           asyncio.run(merge_similar_concepts(0.85))
+       else:
+           print("❌ Merge cancelled")
+
+6. BACKUP BEFORE MERGE
+   
+   Automatically create backup:
+   - Copy /data/knowledge-graph.json to /data/knowledge-graph-backup.json
+   - Include timestamp
+   - Can restore if merge goes wrong
+
+7. QUALITY CHECKS AFTER MERGE
+   
+   - No orphaned edges (edges with non-existent nodes)
+   - No self-referencing edges
+   - All merged concepts tracked in metadata
+   - Frequency counts make sense
+   - Sample spot checks of merged concepts
+
+8. GENERATE MERGE REPORT
+   File: /data/merge-report.json
+   
+   Track:
+   {
+     "timestamp": "2025-11-05T...",
+     "before": {
+       "concepts": 1628,
+       "relationships": 1938
+     },
+     "after": {
+       "concepts": 250,
+       "relationships": 1450
+     },
+     "merged_groups": [
+       {
+         "canonical": "Shadow Integration",
+         "merged": ["Shadow Work", "Shadow Development"],
+         "combined_frequency": 45
+       }
+     ]
+   }
+
+VERIFICATION STEPS:
+- Script runs without errors
+- Preview shows reasonable merge groups
+- Backup created before merge
+- Final concept count: 200-400 (from 1,628)
+- Spot check 10 merged concepts - make sense?
+- No broken edges
+- Graph still valid JSON

@@ -23,5 +23,25 @@
     "document_id": "5513fc67-3cf6-486e-9c92-75d9320824f4",
     "timestamp": "2025-11-05T22:52:58.311283",
     "error": "Extraction returned None"
+  },
+  {
+    "document_id": "32f3faca-3a39-493f-9fd0-cfd80ca6063c",
+    "timestamp": "2025-11-05T23:30:33.920869",
+    "error": "Extraction returned None"
+  },
+  {
+    "document_id": "49422f63-abf7-43b2-80ce-b8f5ea41e771",
+    "timestamp": "2025-11-05T23:54:00.920198",
+    "error": "Extraction returned None"
+  },
+  {
+    "document_id": "a35588db-a2c5-4d90-8873-20e146e0d26b",
+    "timestamp": "2025-11-06T00:24:13.687535",
+    "error": "Extraction returned None"
+  },
+  {
+    "document_id": "f7d2a832-7f1b-4b63-b22a-2e21bd6e1c6b",
+    "timestamp": "2025-11-06T00:24:47.638078",
+    "error": "Extraction returned None"
   }
 ]
