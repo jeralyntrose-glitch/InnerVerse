@@ -32,6 +32,12 @@ const CONFIG = {
         in_progress: '●',
         completed: '✅',
         paused: '⏸'
+    },
+    categoryToDifficulty: {
+        foundations: 'FOUNDATIONS',
+        your_type: 'INTERMEDIATE',
+        relationships: 'INTERMEDIATE',
+        advanced: 'ADVANCED'
     }
 };
 
@@ -224,7 +230,7 @@ function renderCourseCard(course) {
         <div class="course-card-header">
             <span class="status-icon ${status.replace('_', '-')}">${CONFIG.statusIcons[status]}</span>
             <span class="category-badge category-${course.category}">
-                ${course.category.replace('_', ' ')}
+                ${CONFIG.categoryToDifficulty[course.category] || course.category.toUpperCase()}
             </span>
         </div>
         <div class="course-title">${course.title}</div>
