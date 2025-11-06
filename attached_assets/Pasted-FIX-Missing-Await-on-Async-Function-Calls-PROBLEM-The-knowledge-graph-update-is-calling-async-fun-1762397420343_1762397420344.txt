@@ -1,0 +1,132 @@
+FIX: Missing Await on Async Function Calls
+
+PROBLEM:
+The knowledge graph update is calling async functions without await, causing:
+"TypeError: 'coroutine' object is not subscriptable"
+"RuntimeWarning: coroutine 'KnowledgeGraphManager.find_node_by_label' was never awaited"
+
+SOLUTION:
+
+1. LOCATE THE UPLOAD INTEGRATION CODE
+   Find where we added knowledge graph updates (likely in upload handler)
+
+2. FIX THE RELATIONSHIP CREATION SECTION
+   
+   Find this code:
+```python
+   for rel in extracted.get('relationships', []):
+       # Find source and target nodes
+       source_node = manager.find_node_by_label(rel['from'])  # ❌ MISSING AWAIT
+       target_node = manager.find_node_by_label(rel['to'])    # ❌ MISSING AWAIT
+       
+       if source_node and target_node:
+           await manager.add_edge({...})
+```
+   
+   Change to:
+```python
+   for rel in extracted.get('relationships', []):
+       # Find source and target nodes
+       source_node = await manager.find_node_by_label(rel['from'])  # ✅ ADDED AWAIT
+       target_node = await manager.find_node_by_label(rel['to'])    # ✅ ADDED AWAIT
+       
+       if source_node and target_node:
+           await manager.add_edge({
+               'source': source_node['id'],
+               'target': target_node['id'],
+               'relationship_type': rel['type'],
+               'evidence_samples': [rel.get('evidence', '')],
+               'source_documents': [document_id]
+           })
+```
+
+3. VERIFY ALL ASYNC CALLS HAVE AWAIT
+   
+   Check that EVERY call to an async method has await:
+   
+   ✅ `await manager.add_node(node_data)`
+   ✅ `await manager.find_node_by_label(label)`
+   ✅ `await manager.add_edge(edge_data)`
+   ✅ `await manager.load_graph()`
+   ✅ `await manager.save_graph(graph)`
+
+4. ENSURE CODE IS IN ASYNC CONTEXT
+   
+   This code must be inside an async function. Verify the upload handler is:
+```python
+   async def upload_handler(...):  # ✅ async def
+       ...
+       # Knowledge graph code here
+```
+   
+   NOT:
+```python
+   def upload_handler(...):  # ❌ Missing async
+```
+
+5. ADD BETTER ERROR LOGGING
+   
+   Update the try/except to show which step failed:
+```python
+   try:
+       print(f"🔍 Extracting concepts for: {document_title}")
+       extracted = await extract_concepts(document_text, document_id)
+       
+       if not extracted:
+           print(f"⚠️ Extraction returned None for {document_id}")
+           return
+       
+       print(f"✅ Extracted {len(extracted['concepts'])} concepts, {len(extracted['relationships'])} relationships")
+       
+       manager = KnowledgeGraphManager()
+       
+       # Add concepts
+       print(f"📝 Adding concepts to graph...")
+       for concept in extracted.get('concepts', []):
+           node_data = {
+               'label': concept['label'],
+               'type': concept['type'],
+               'category': concept['category'],
+               'definition': concept.get('definition', ''),
+               'source_documents': [document_id]
+           }
+           await manager.add_node(node_data)
+       
+       # Add relationships
+       print(f"🔗 Adding relationships to graph...")
+       for rel in extracted.get('relationships', []):
+           source_node = await manager.find_node_by_label(rel['from'])
+           target_node = await manager.find_node_by_label(rel['to'])
+           
+           if source_node and target_node:
+               edge_data = {
+                   'source': source_node['id'],
+                   'target': target_node['id'],
+                   'relationship_type': rel['type'],
+                   'evidence_samples': [rel.get('evidence', '')],
+                   'source_documents': [document_id]
+               }
+               await manager.add_edge(edge_data)
+           else:
+               print(f"⚠️ Skipping relationship: {rel['from']} -> {rel['to']} (node not found)")
+       
+       print(f"✅ Knowledge graph updated: +{len(extracted['concepts'])} concepts, +{len(extracted['relationships'])} relationships")
+       
+   except Exception as e:
+       import traceback
+       print(f"❌ Knowledge graph update failed: {str(e)}")
+       print(traceback.format_exc())
+```
+
+6. TEST CHECKLIST
+   - All async function calls have await
+   - Code is inside async function
+   - Upload handler is defined as async def
+   - No more "coroutine object is not subscriptable" errors
+   - No more "was never awaited" warnings
+
+VERIFICATION:
+- Upload a document
+- Check logs - should see step-by-step progress
+- No TypeError or RuntimeWarning
+- Graph stats should increase

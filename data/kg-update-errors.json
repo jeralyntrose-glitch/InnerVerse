@@ -4,5 +4,12 @@
     "document_id": "ba031679-2e3c-4a4b-889e-a609f0f16c8e",
     "filename": "How To Social Engineer Using Type _ Social Enginee.pdf",
     "error": "KnowledgeGraphManager.add_node() got an unexpected keyword argument 'label'"
+  },
+  {
+    "timestamp": "2025-11-06T02:48:52.735281",
+    "document_id": "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4",
+    "filename": "How To Social Engineer Using Type _ Social Enginee.pdf",
+    "error": "'coroutine' object is not subscriptable",
+    "traceback": "Traceback (most recent call last):\n  File \"/home/runner/workspace/main.py\", line 685, in upload_pdf\n    'source': source_node['id'],\n              ~~~~~~~~~~~^^^^^^\nTypeError: 'coroutine' object is not subscriptable\n"
   }
 ]

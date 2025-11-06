@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2025-11-06T00:47:30.506223",
+  "last_updated": "2025-11-06T02:48:52.602016",
   "nodes": [
     {
       "id": "shadow_integration",
@@ -37,7 +37,7 @@
       "properties": {
         "description": "The eight cognitive functions in MBTI theory"
       },
-      "frequency": 28,
+      "frequency": 29,
       "sources": [
         "test_doc_002",
         "a09189e5-7958-438a-a3ba-53a12589cf1f",
@@ -63,11 +63,12 @@
         "9fc0f657-a487-4e52-b81f-633e1bb9594b",
         "9208d9ea-8f05-45ed-86dc-8d7ce8ac5b96",
         "dd431fab-9103-4704-bc69-eca544a805bc",
-        "aa1d4cf7-bb5b-43be-be99-8564a1cd4eb2"
+        "aa1d4cf7-bb5b-43be-be99-8564a1cd4eb2",
+        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4"
       ],
       "created_at": "2025-11-05T21:56:34.775739",
-      "last_updated": "2025-11-06T00:38:07.954323",
-      "definition": "Core psychological functions that operate according to specific interpretations, with new cutting-edge understanding being developed.",
+      "last_updated": "2025-11-06T02:48:51.889178",
+      "definition": "The core psychological processes in MBTI theory that determine how individuals perceive and process information, forming the basis for type identification.",
       "category": "foundational"
     },
     {
@@ -4987,17 +4988,18 @@
       "id": "social_engineering",
       "label": "Social Engineering",
       "type": "concept",
-      "category": "intermediate",
-      "definition": "The ability to manipulate people through intellectual skills and assumed academic forms, enabled by Te-Ni combination.",
+      "category": "foundational",
+      "definition": "The process by which you exude influence over other human beings to cause them to do what you want or to give you a better experience, applicable for both altruistic and selfish means.",
       "properties": {},
-      "frequency": 3,
+      "frequency": 4,
       "sources": [
         "7da7b48b-e6ac-41b8-a420-1c9c76d73301",
         "41b83644-261d-43c6-91cb-8054ac48ee93",
-        "73f259f8-7e8e-4d80-830c-739ae9ec27f1"
+        "73f259f8-7e8e-4d80-830c-739ae9ec27f1",
+        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4"
       ],
       "created_at": "2025-11-05T23:24:47.648769",
-      "last_updated": "2025-11-06T00:08:57.145295"
+      "last_updated": "2025-11-06T02:48:50.878409"
     },
     {
       "id": "typing_accuracy_challenges",
@@ -10087,16 +10089,17 @@
       "id": "manipulation_vulnerability",
       "label": "Manipulation Vulnerability",
       "type": "concept",
-      "category": "intermediate",
-      "definition": "Susceptibility to exploitation based on cognitive function positioning, particularly affecting those with certain function combinations.",
+      "category": "foundational",
+      "definition": "The understanding that all social interaction involves manipulation and that manipulation itself is neither inherently good nor evil, but depends on application and intent.",
       "properties": {},
-      "frequency": 2,
+      "frequency": 3,
       "sources": [
         "2df00481-6eb3-4ed0-85f9-a74f5373ffc3",
-        "461ead41-c7c3-4d62-8986-44532624ae6b"
+        "461ead41-c7c3-4d62-8986-44532624ae6b",
+        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4"
       ],
       "created_at": "2025-11-05T23:43:26.629826",
-      "last_updated": "2025-11-05T23:53:42.318873"
+      "last_updated": "2025-11-06T02:48:51.663806"
     },
     {
       "id": "traditional_vs_non_traditional_balance",
@@ -10543,14 +10546,15 @@
       "label": "Personal Sovereignty",
       "type": "principle",
       "category": "intermediate",
-      "definition": "The prioritization of individual autonomy and self-determination, particularly valued by pragmatic individuals.",
+      "definition": "Maintaining personal standards, setting boundaries, and protecting oneself from external influences in social interactions.",
       "properties": {},
-      "frequency": 1,
+      "frequency": 2,
       "sources": [
-        "9ddc927f-d9f2-48e1-baca-7d11e4006422"
+        "9ddc927f-d9f2-48e1-baca-7d11e4006422",
+        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4"
       ],
       "created_at": "2025-11-05T23:45:02.945585",
-      "last_updated": "2025-11-05T23:45:02.945593"
+      "last_updated": "2025-11-06T02:48:52.121176"
     },
     {
       "id": "group_cohesion",
@@ -23669,6 +23673,62 @@
       ],
       "created_at": "2025-11-06T00:47:27.000553",
       "last_updated": "2025-11-06T00:47:27.000564"
+    },
+    {
+      "id": "type_knowledge",
+      "label": "Type Knowledge",
+      "type": "framework",
+      "category": "foundational",
+      "definition": "Deep understanding of MBTI types that allows instant recognition of someone's cognitive functions, what makes them happy, afraid, worried, and their critical and responsible areas.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4"
+      ],
+      "created_at": "2025-11-06T02:48:51.183848",
+      "last_updated": "2025-11-06T02:48:51.183860"
+    },
+    {
+      "id": "telepathy_on_paper",
+      "label": "Telepathy on Paper",
+      "type": "concept",
+      "category": "intermediate",
+      "definition": "The metaphorical description of how advanced type knowledge functions like mind-reading, allowing prediction of behavior and responses.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4"
+      ],
+      "created_at": "2025-11-06T02:48:51.449204",
+      "last_updated": "2025-11-06T02:48:51.449216"
+    },
+    {
+      "id": "pressure_points",
+      "label": "Pressure Points",
+      "type": "concept",
+      "category": "advanced",
+      "definition": "Specific psychological vulnerabilities or motivators in individuals that can be identified through type knowledge and leveraged in social engineering.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4"
+      ],
+      "created_at": "2025-11-06T02:48:52.359511",
+      "last_updated": "2025-11-06T02:48:52.359520"
+    },
+    {
+      "id": "classical_social_engineering",
+      "label": "Classical Social Engineering",
+      "type": "framework",
+      "category": "intermediate",
+      "definition": "Traditional social engineering methods as outlined by experts like Kevin Mitnick and Robert Greene, focusing on deception and influence techniques.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4"
+      ],
+      "created_at": "2025-11-06T02:48:52.601997",
+      "last_updated": "2025-11-06T02:48:52.602008"
     }
   ],
   "edges": [
@@ -55165,7 +55225,7 @@
   ],
   "metadata": {
     "total_documents_processed": 0,
-    "total_concepts": 1628,
+    "total_concepts": 1632,
     "total_relationships": 1938,
     "processed_documents": [
       "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed",
