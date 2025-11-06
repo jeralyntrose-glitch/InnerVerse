@@ -82,6 +82,15 @@ class ContentAssigner:
             existing_courses
         )
         
+        # If no courses have concept-tagged lessons, recommend new track
+        if not overlap_scores:
+            logger.info("No existing courses with concept-tagged lessons found")
+            return self._create_new_track_recommendation(
+                document_id=document_id,
+                concept_ids=extracted_concept_ids,
+                metadata=document_metadata
+            )
+        
         # Get top candidate
         best_course = max(overlap_scores, key=lambda x: x['overlap_percentage'])
         confidence = best_course['overlap_percentage'] / 100.0

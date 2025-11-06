@@ -36,20 +36,26 @@ Preferred communication style: Simple, everyday language with a decent amount of
 - **Migration System**: Background task-based API for live embedding upgrades.
 
 ## Learning Paths System
-- **Overview**: Structured learning tracks for MBTI education, enabling curated courses with lessons, progress tracking, and prerequisites.
+- **Overview**: Structured learning tracks for MBTI education with AI-powered course generation and smart content assignment.
 - **Database Schema**: 
   - `courses`: Learning tracks with metadata (title, category, description, hours, tags, source info)
   - `lessons`: Individual learning units with concept_ids, difficulty levels, video/document references
   - `user_progress`: Tracks completion status, active lessons, last accessed dates per user/course
   - `course_prerequisites`: Defines course dependency chains
+- **AI Generation** (`src/services/course_generator.py`, `src/services/content_assigner.py`):
+  - **CourseGenerator**: Uses Claude Sonnet 4 to generate structured curricula from user goals and Knowledge Graph concepts (~$0.03-0.08 per course)
+  - **ContentAssigner**: 3-tier confidence system (90%+ silent auto-add, 70-89% auto-add with reasoning, <70% recommend new track)
+  - Cost tracking for all AI operations
+  - Automatic prerequisite mapping and lesson sequencing
 - **Business Logic** (`src/services/course_manager.py`): 
   - Full CRUD operations for courses and lessons
   - Progress tracking with automatic order_index management
-  - Support for auto-generated courses from chat/graph/atlas sources
+  - Helper methods for AI integration (get_all_courses, get_course_with_lessons, get_all_courses_with_lessons)
   - JSONB fields for flexible metadata (tags, video_references, document_references, learning_objectives)
 - **API Endpoints** (in `main.py`):
   - `POST /api/courses` - Create new course
   - `GET /api/courses` - List all courses (filter by category/status)
+  - `GET /api/courses/stats` - System-wide statistics
   - `GET /api/courses/{id}` - Get course details
   - `PUT /api/courses/{id}` - Update course
   - `DELETE /api/courses/{id}` - Archive course
@@ -61,8 +67,14 @@ Preferred communication style: Simple, everyday language with a decent amount of
   - `GET /api/courses/{id}/progress` - Get user progress
   - `POST /api/courses/{id}/progress` - Update progress
   - `POST /api/courses/{id}/lessons/{lesson_id}/complete` - Mark lesson complete
-- **Integration Points**: Designed to connect with Knowledge Graph (concept_ids), Content Atlas (navigation), and Chat (auto-generation)
-- **Future Frontend**: Planned UI for browsing courses, tracking progress, and guided learning experience
+  - **`POST /api/courses/generate`** - AI-powered course generation from user goals
+  - **`POST /api/courses/assign-content`** - Smart content-to-track assignment with 3-tier confidence
+  - **`GET /api/courses/generation-stats`** - AI cost tracking and statistics
+- **Knowledge Graph Integration** (`src/services/knowledge_graph_manager.py`):
+  - `get_concept(concept_id)` - Fetch single concept with relationships
+  - `search_concepts(query, top_k)` - Semantic concept search for AI generation
+- **Integration Points**: Fully integrated with Knowledge Graph (concept_ids), Content Atlas (navigation), and Chat (auto-generation)
+- **Documentation**: See `PHASE2_INTEGRATION.md` for complete API docs and usage examples
 
 ## Document Processing Pipeline
 - **PDF Parsing**: PyPDF2 for text extraction.
