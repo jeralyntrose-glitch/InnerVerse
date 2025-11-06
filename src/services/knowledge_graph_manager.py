@@ -478,3 +478,129 @@ class KnowledgeGraphManager:
             "total_nodes": len(graph["nodes"]),
             "total_edges": len(graph["edges"])
         }
+    
+    def get_concept(self, concept_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a single concept (node) by ID.
+        Required for AI generation.
+        
+        Args:
+            concept_id: Concept/node ID
+            
+        Returns:
+            Dict with concept data including:
+            - id: Concept ID
+            - name: Concept label/name
+            - definition: Concept definition (if available)
+            - category: Concept category/type
+            - related_concepts: List of related concept edges
+            
+            Returns None if not found
+        """
+        graph = self.load_graph()
+        
+        # Find the node
+        node = None
+        for n in graph["nodes"]:
+            if n["id"] == concept_id:
+                node = n
+                break
+        
+        if not node:
+            return None
+        
+        # Find related edges
+        related_edges = []
+        for edge in graph["edges"]:
+            if edge["source"] == concept_id:
+                related_edges.append({
+                    'target_id': edge["target"],
+                    'relationship_type': edge.get("type", "related"),
+                    'label': edge.get("label", "")
+                })
+            elif edge["target"] == concept_id:
+                related_edges.append({
+                    'target_id': edge["source"],
+                    'relationship_type': edge.get("type", "related"),
+                    'label': edge.get("label", ""),
+                    'reverse': True
+                })
+        
+        return {
+            'id': node["id"],
+            'name': node.get("label", ""),
+            'definition': node.get("definition", ""),
+            'category': node.get("type", ""),
+            'metadata': node.get("metadata", {}),
+            'related_concepts': related_edges
+        }
+    
+    def search_concepts(self, query: str, top_k: int = 30) -> List[Dict[str, Any]]:
+        """
+        Search concepts by semantic similarity.
+        Required for AI generation.
+        
+        Uses simple text-based matching on labels and definitions.
+        For production, this could be enhanced with Pinecone vector search.
+        
+        Args:
+            query: Search query
+            top_k: Maximum number of results to return
+            
+        Returns:
+            List of concept dicts sorted by relevance
+        """
+        graph = self.load_graph()
+        query_lower = query.lower()
+        
+        # Score each node based on text similarity
+        scored_nodes = []
+        for node in graph["nodes"]:
+            score = 0.0
+            label = node.get("label", "").lower()
+            definition = node.get("definition", "").lower()
+            
+            # Exact label match gets highest score
+            if query_lower == label:
+                score = 10.0
+            # Label contains query
+            elif query_lower in label:
+                score = 5.0
+            # Query contains label
+            elif label in query_lower:
+                score = 4.0
+            # Definition contains query
+            elif query_lower in definition:
+                score = 3.0
+            # Partial match using SequenceMatcher
+            else:
+                label_similarity = SequenceMatcher(None, query_lower, label).ratio()
+                def_similarity = SequenceMatcher(None, query_lower, definition).ratio()
+                score = max(label_similarity, def_similarity) * 2.0
+            
+            if score > 0.1:
+                # Find related edges for this node
+                related_edges = []
+                for edge in graph["edges"]:
+                    if edge["source"] == node["id"]:
+                        related_edges.append({
+                            'target_id': edge["target"],
+                            'relationship_type': edge.get("type", "related"),
+                            'label': edge.get("label", "")
+                        })
+                
+                scored_nodes.append({
+                    'id': node["id"],
+                    'name': node.get("label", ""),
+                    'definition': node.get("definition", ""),
+                    'category': node.get("type", ""),
+                    'metadata': node.get("metadata", {}),
+                    'related_concepts': related_edges,
+                    'relevance_score': score
+                })
+        
+        # Sort by score descending
+        scored_nodes.sort(key=lambda x: x['relevance_score'], reverse=True)
+        
+        # Return top_k results
+        return scored_nodes[:top_k]
