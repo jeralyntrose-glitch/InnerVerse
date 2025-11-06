@@ -258,7 +258,11 @@ COURSE DESIGN PRINCIPLES:
 - Lessons should be 20-45 minutes each
 - Group related concepts together
 - Maximum {max_lessons} lessons per course
-- Progressive difficulty: foundational → intermediate → advanced
+- ALL lessons must match the course category difficulty level:
+  * foundations course → ALL lessons "foundational"
+  * your_type course → ALL lessons "intermediate"
+  * relationships course → ALL lessons "intermediate"
+  * advanced course → ALL lessons "advanced"
 
 OUTPUT FORMAT (respond ONLY with valid JSON):
 {{
