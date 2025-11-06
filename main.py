@@ -5819,6 +5819,18 @@ async def create_course(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/courses/stats")
+async def get_course_stats(user_id: str = "jeralyn"):
+    """Get system-wide Learning Paths statistics"""
+    try:
+        manager = get_course_manager()
+        stats = manager.get_stats(user_id=user_id)
+        return {"success": True, "stats": stats}
+    except Exception as e:
+        print(f"❌ Error getting stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/courses")
 async def list_courses(category: str = None, status: str = "active"):
     """List all courses, optionally filtered by category"""

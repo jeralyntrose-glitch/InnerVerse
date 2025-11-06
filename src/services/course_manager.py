@@ -583,3 +583,81 @@ class CourseManager:
             completed_lesson_ids=completed_ids,
             lesson_completion_dates=completion_dates
         )
+    
+    # ========================================================================
+    # STATS & ANALYTICS
+    # ========================================================================
+    
+    def get_stats(self, user_id: str = 'jeralyn') -> Dict[str, Any]:
+        """
+        Get system-wide statistics for Learning Paths.
+        
+        Args:
+            user_id: User identifier for personalized stats
+            
+        Returns:
+            Dict with comprehensive statistics
+        """
+        conn = self._get_connection()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # Course counts by category
+                cur.execute("""
+                    SELECT 
+                        category,
+                        COUNT(*) as count,
+                        SUM(lesson_count) as total_lessons,
+                        SUM(estimated_hours) as total_hours
+                    FROM courses
+                    WHERE status = 'active'
+                    GROUP BY category
+                """)
+                categories = [dict(row) for row in cur.fetchall()]
+                
+                # Overall totals
+                cur.execute("""
+                    SELECT 
+                        COUNT(*) as total_courses,
+                        SUM(lesson_count) as total_lessons,
+                        SUM(estimated_hours) as total_hours
+                    FROM courses
+                    WHERE status = 'active'
+                """)
+                totals = dict(cur.fetchone())
+                
+                # User progress stats
+                cur.execute("""
+                    SELECT 
+                        COUNT(DISTINCT course_id) as courses_started,
+                        COUNT(DISTINCT course_id) FILTER (WHERE completed_at IS NOT NULL) as courses_completed,
+                        SUM(total_time_minutes) as total_time_minutes,
+                        COUNT(DISTINCT current_lesson_id) as active_lessons
+                    FROM user_progress
+                    WHERE user_id = %s
+                """, (user_id,))
+                user_stats = dict(cur.fetchone())
+                
+                # Recent activity
+                cur.execute("""
+                    SELECT 
+                        c.id,
+                        c.title,
+                        c.category,
+                        up.last_accessed,
+                        up.current_lesson_id
+                    FROM user_progress up
+                    JOIN courses c ON up.course_id = c.id
+                    WHERE up.user_id = %s AND up.last_accessed IS NOT NULL
+                    ORDER BY up.last_accessed DESC
+                    LIMIT 5
+                """, (user_id,))
+                recent_activity = [dict(row) for row in cur.fetchall()]
+                
+                return {
+                    'by_category': categories,
+                    'totals': totals,
+                    'user_progress': user_stats,
+                    'recent_activity': recent_activity
+                }
+        finally:
+            conn.close()
