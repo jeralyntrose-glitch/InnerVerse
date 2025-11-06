@@ -134,45 +134,75 @@ function updateFilteredGraph() {
 function initGraph3D() {
     const container = document.getElementById('graph-container');
     
-    graph3D = ForceGraph3D()
-        (container)
-        .graphData(graphData)
-        .nodeLabel('label')
-        .nodeColor('color')
-        .nodeVal('val')
-        .linkLabel('label')
-        .linkColor('color')
-        .linkWidth(link => link.strength * 0.5)
-        .linkDirectionalParticles(2)
-        .linkDirectionalParticleWidth(1.5)
-        .backgroundColor('#0F172A')
-        .width(container.offsetWidth)
-        .height(container.offsetHeight)
-        .onNodeClick(handleNodeClick)
-        .onNodeHover(handleNodeHover)
-        .onNodeDragEnd(node => {
-            node.fx = node.x;
-            node.fy = node.y;
-            node.fz = node.z;
+    console.log('🌐 Initializing Knowledge Graph...');
+    console.log('Container:', container);
+    console.log('Container size:', container.offsetWidth, 'x', container.offsetHeight);
+    console.log('Graph data:', graphData.nodes.length, 'nodes,', graphData.edges.length, 'edges');
+    
+    try {
+        graph3D = ForceGraph3D()
+            (container)
+            .graphData(graphData)
+            .nodeLabel('label')
+            .nodeColor('color')
+            .nodeVal('val')
+            .linkLabel('label')
+            .linkColor('color')
+            .linkWidth(link => link.strength * 0.5)
+            .linkDirectionalParticles(2)
+            .linkDirectionalParticleWidth(1.5)
+            .backgroundColor('#0F172A')
+            .width(container.offsetWidth)
+            .height(container.offsetHeight)
+            .onNodeClick(handleNodeClick)
+            .onNodeHover(handleNodeHover)
+            .onNodeDragEnd(node => {
+                node.fx = node.x;
+                node.fy = node.y;
+                node.fz = node.z;
+            });
+        
+        // Add node labels
+        graph3D.nodeThreeObject(node => {
+            const sprite = new SpriteText(node.label);
+            sprite.material.depthWrite = false;
+            sprite.color = node.color;
+            sprite.textHeight = 4;
+            return sprite;
         });
-    
-    // Add node labels
-    graph3D.nodeThreeObject(node => {
-        const sprite = new SpriteText(node.label);
-        sprite.material.depthWrite = false;
-        sprite.color = node.color;
-        sprite.textHeight = 4;
-        return sprite;
-    });
-    
-    // Handle window resize
-    window.addEventListener('resize', () => {
-        if (graph3D) {
-            graph3D
-                .width(container.offsetWidth)
-                .height(container.offsetHeight);
-        }
-    });
+        
+        console.log('✅ Knowledge Graph initialized successfully!');
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (graph3D) {
+                graph3D
+                    .width(container.offsetWidth)
+                    .height(container.offsetHeight);
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Failed to initialize 3D graph:', error);
+        
+        // Show fallback message for browsers without WebGL
+        container.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #F8FAFC; text-align: center; padding: 40px;">
+                <div style="font-size: 60px; margin-bottom: 20px;">🌐</div>
+                <h2 style="color: #7C3AED; margin-bottom: 10px;">WebGL Not Available</h2>
+                <p style="color: #94A3B8; max-width: 500px; margin-bottom: 20px;">
+                    Your browser or environment doesn't support WebGL, which is required for the 3D visualization.
+                </p>
+                <p style="color: #CBD5E1; max-width: 500px;">
+                    <strong>Graph Data Loaded:</strong><br>
+                    ${graphData.nodes.length} concepts, ${graphData.edges.length} connections
+                </p>
+                <p style="color: #94A3B8; font-size: 14px; margin-top: 20px;">
+                    Try using Chrome, Firefox, or Safari on a device with GPU support.
+                </p>
+            </div>
+        `;
+    }
 }
 
 // Handle node click
