@@ -39,9 +39,13 @@ function getRelationshipColor(type) {
 
 // Load graph data from API
 async function loadGraphData() {
+    console.log('🔄 Starting graph data load...');
+    
     try {
+        console.log('📡 Fetching from /api/knowledge-graph...');
         const response = await fetch('/api/knowledge-graph');
         const data = await response.json();
+        console.log('✅ Data received:', data.nodes.length, 'nodes,', data.edges.length, 'edges');
         
         // Transform to 3D force graph format
         fullGraphData = {
@@ -67,25 +71,29 @@ async function loadGraphData() {
         };
         
         graphStats = data.metadata || {};
+        console.log('📊 Graph stats:', graphStats);
         
         // Update stats display
         document.getElementById('document-count').textContent = graphStats.total_documents_processed || 0;
         
         // Apply initial filters
+        console.log('🔍 Applying filters...');
         updateFilteredGraph();
         
         // Hide loading indicator
         document.getElementById('loading-indicator').style.display = 'none';
         
         // Initialize 3D graph
+        console.log('🎨 Initializing 3D graph...');
         initGraph3D();
         
     } catch (error) {
-        console.error('Failed to load graph:', error);
+        console.error('❌ Failed to load graph:', error);
         document.getElementById('loading-indicator').innerHTML = `
             <div style="color: #EF4444;">
                 <p>❌ Failed to load knowledge graph</p>
                 <p style="font-size: 14px; color: #94A3B8;">${error.message}</p>
+                <p style="font-size: 12px; color: #94A3B8; margin-top: 10px;">Check console for details</p>
             </div>
         `;
     }
@@ -297,10 +305,9 @@ function viewSourceDocs() {
     window.location.href = `/content-atlas?documents=${docIds}`;
 }
 
-// Event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Load graph data
-    loadGraphData();
+// Set up event listeners (called from init function)
+function setupEventListeners() {
+    console.log('⚡ Setting up event listeners...');
     
     // Frequency slider
     const frequencySlider = document.getElementById('frequency-slider');
@@ -370,7 +377,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('kg-instructions-dismissed') === 'true') {
         document.getElementById('instructions').style.display = 'none';
     }
-});
+    
+    console.log('✅ Event listeners setup complete');
+}
 
 // SpriteText class for 3D labels (simplified version)
 class SpriteText extends THREE.Sprite {
@@ -457,12 +466,66 @@ function initMobileLegend() {
     }
 }
 
-// Initialize mobile features after page loads
-document.addEventListener('DOMContentLoaded', () => {
-    initMobileLegend();
-});
+// Check if libraries are loaded
+function checkLibraries() {
+    console.log('🔍 Checking libraries...');
+    console.log('ForceGraph3D available?', typeof ForceGraph3D !== 'undefined');
+    console.log('THREE available?', typeof THREE !== 'undefined');
+    
+    if (typeof ForceGraph3D === 'undefined') {
+        console.error('❌ ForceGraph3D library not loaded!');
+        document.getElementById('loading-indicator').innerHTML = `
+            <div style="color: #EF4444; padding: 20px; text-align: center;">
+                <p style="font-size: 18px; margin-bottom: 10px;">❌ 3D Graph Library Failed to Load</p>
+                <p style="font-size: 14px; color: #94A3B8;">The 3D visualization library couldn't load from the CDN.</p>
+                <p style="font-size: 14px; color: #94A3B8; margin-top: 10px;">This might be due to network issues or ad blockers.</p>
+                <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #7C3AED; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                    Retry
+                </button>
+            </div>
+        `;
+        return false;
+    }
+    
+    if (typeof THREE === 'undefined') {
+        console.error('❌ THREE.js library not loaded!');
+        return false;
+    }
+    
+    console.log('✅ All libraries loaded');
+    return true;
+}
 
-// Re-initialize on window resize
+// Initialize everything
+function init() {
+    console.log('🚀 Knowledge Graph page initializing...');
+    
+    // Check libraries first
+    if (!checkLibraries()) {
+        console.error('❌ Libraries not available, cannot initialize graph');
+        return;
+    }
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Initialize mobile features
+    initMobileLegend();
+    
+    // Load graph data
+    console.log('📊 Loading graph data...');
+    loadGraphData();
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    // DOM already loaded
+    init();
+}
+
+// Re-initialize mobile features on window resize
 let resizeTimer;
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
