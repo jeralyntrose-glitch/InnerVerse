@@ -5782,12 +5782,35 @@ async def openai_chat_completions(request: Request):
 # =============================================================================
 
 from src.services.course_manager import CourseManager
+from src.services.course_generator import CourseGenerator
+from src.services.content_assigner import ContentAssigner
 
 def get_course_manager():
     """Get CourseManager instance"""
     if not DATABASE_URL:
         raise HTTPException(status_code=500, detail="Database not configured")
     return CourseManager(DATABASE_URL)
+
+def get_course_generator():
+    """Get CourseGenerator instance"""
+    if not ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
+    return CourseGenerator(
+        anthropic_api_key=ANTHROPIC_API_KEY,
+        knowledge_graph_manager=kg_manager
+    )
+
+def get_content_assigner():
+    """Get ContentAssigner instance"""
+    if not ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
+    if not DATABASE_URL:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    return ContentAssigner(
+        anthropic_api_key=ANTHROPIC_API_KEY,
+        knowledge_graph_manager=kg_manager,
+        course_manager=CourseManager(DATABASE_URL)
+    )
 
 
 @app.post("/api/courses")
@@ -6035,6 +6058,214 @@ async def mark_lesson_complete(course_id: str, lesson_id: str):
         return {"success": True, "progress": progress}
     except Exception as e:
         print(f"❌ Error marking lesson complete: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# AI GENERATION API - Course Generation & Content Assignment
+# =============================================================================
+
+@app.post("/api/courses/generate")
+async def generate_course(request: Request):
+    """
+    Generate a complete course curriculum from user goal using AI.
+    
+    Request body:
+        {
+            "user_goal": "Master ENFP shadow integration",
+            "relevant_concept_ids": ["concept-1", "concept-2"],  # optional
+            "max_lessons": 12,  # optional, default 15
+            "target_category": "advanced"  # optional
+        }
+    """
+    try:
+        data = await request.json()
+        user_goal = data.get("user_goal")
+        
+        if not user_goal or not user_goal.strip():
+            raise HTTPException(status_code=400, detail="user_goal is required")
+        
+        generator = get_course_generator()
+        manager = get_course_manager()
+        
+        # Generate curriculum using AI
+        curriculum = generator.generate_curriculum(
+            user_goal=user_goal,
+            relevant_concept_ids=data.get("relevant_concept_ids"),
+            max_lessons=data.get("max_lessons", 15),
+            target_category=data.get("target_category")
+        )
+        
+        # Create course in database
+        course = manager.create_course(
+            title=curriculum['title'],
+            category=curriculum['category'],
+            description=curriculum['description'],
+            estimated_hours=curriculum['estimated_hours'],
+            auto_generated=True,
+            generation_prompt=user_goal,
+            source_type='graph',
+            source_ids=curriculum.get('source_ids', []),
+            tags=curriculum.get('tags', [])
+        )
+        
+        # Create lessons
+        lesson_ids = []
+        for lesson_data in curriculum['lessons']:
+            lesson = manager.create_lesson(
+                course_id=course['id'],
+                title=lesson_data['title'],
+                concept_ids=lesson_data['concept_ids'],
+                order_index=lesson_data.get('order_index'),
+                description=lesson_data.get('description'),
+                prerequisite_lesson_ids=lesson_data.get('prerequisite_lesson_ids', []),
+                estimated_minutes=lesson_data.get('estimated_minutes', 30),
+                difficulty=lesson_data.get('difficulty', 'foundational'),
+                learning_objectives=lesson_data.get('learning_objectives'),
+                key_takeaways=lesson_data.get('key_takeaways')
+            )
+            lesson_ids.append(lesson['id'])
+        
+        return {
+            "success": True,
+            "message": f"Generated course '{course['title']}' with {len(lesson_ids)} lessons",
+            "course_id": course['id'],
+            "course": course,
+            "lesson_ids": lesson_ids,
+            "cost": curriculum.get('generation_metadata', {}).get('cost', 0.0)
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"❌ Course generation failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Course generation failed: {str(e)}")
+
+
+@app.post("/api/courses/assign-content")
+async def assign_content(request: Request):
+    """
+    Assign new document content to existing tracks using AI analysis.
+    
+    Request body:
+        {
+            "document_id": "doc-uuid-123",
+            "extracted_concept_ids": ["concept-1", "concept-2", "concept-3"],
+            "document_metadata": {
+                "title": "ENFP Ne Hero Function",
+                "video_id": "S02E05",
+                "duration_minutes": 45
+            },
+            "auto_create_lesson": true
+        }
+    
+    Confidence tiers:
+    - High (90%+): Auto-add silently
+    - Medium (70-89%): Auto-add with reasoning shown
+    - Low (<70%): Recommend creating new track
+    """
+    try:
+        data = await request.json()
+        document_id = data.get("document_id")
+        extracted_concept_ids = data.get("extracted_concept_ids")
+        
+        if not document_id:
+            raise HTTPException(status_code=400, detail="document_id is required")
+        if not extracted_concept_ids:
+            raise HTTPException(status_code=400, detail="extracted_concept_ids is required")
+        
+        assigner = get_content_assigner()
+        manager = get_course_manager()
+        
+        # Get assignment recommendation
+        assignment = assigner.assign_content(
+            document_id=document_id,
+            extracted_concept_ids=extracted_concept_ids,
+            document_metadata=data.get("document_metadata")
+        )
+        
+        # Auto-create lesson if requested and confidence is high/medium
+        lesson_id = None
+        auto_create = data.get("auto_create_lesson", False)
+        
+        if auto_create and assignment['action'] == 'add_to_existing':
+            lesson_data = assignment['suggested_lesson']
+            
+            try:
+                lesson = manager.create_lesson(
+                    course_id=assignment['course_id'],
+                    title=lesson_data['title'],
+                    concept_ids=lesson_data['concept_ids'],
+                    order_index=lesson_data.get('order_index'),
+                    description=lesson_data.get('description'),
+                    estimated_minutes=lesson_data.get('estimated_minutes', 30),
+                    difficulty=lesson_data.get('difficulty', 'foundational'),
+                    document_references=lesson_data.get('document_references', [])
+                )
+                lesson_id = lesson['id']
+                
+            except Exception as e:
+                print(f"⚠️ Failed to auto-create lesson: {str(e)}")
+        
+        # Build response message
+        if assignment['action'] == 'add_to_existing':
+            message = f"Content assigned to '{assignment['course_title']}' ({assignment['confidence_tier']} confidence)"
+            if lesson_id:
+                message += f" - Lesson created: {assignment['suggested_lesson']['title']}"
+        else:
+            message = f"Recommend creating new track: '{assignment['course_title']}'"
+        
+        return {
+            "success": True,
+            "message": message,
+            "assignment": assignment,
+            "lesson_id": lesson_id
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"❌ Content assignment failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Content assignment failed: {str(e)}")
+
+
+@app.get("/api/courses/generation-stats")
+async def get_generation_stats():
+    """
+    Get AI generation statistics for current session.
+    
+    Returns:
+        {
+            "success": true,
+            "data": {
+                "generation_cost": 0.15,
+                "assignment_cost": 0.08,
+                "total_cost": 0.23
+            }
+        }
+    """
+    try:
+        generator = get_course_generator()
+        assigner = get_content_assigner()
+        
+        gen_cost = generator.get_total_cost()
+        assign_cost = assigner.get_total_cost()
+        
+        return {
+            "success": True,
+            "data": {
+                "generation_cost": round(gen_cost, 4),
+                "assignment_cost": round(assign_cost, 4),
+                "total_cost": round(gen_cost + assign_cost, 4)
+            }
+        }
+        
+    except Exception as e:
+        print(f"❌ Failed to get generation stats: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
