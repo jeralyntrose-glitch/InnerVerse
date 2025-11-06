@@ -36,6 +36,10 @@ from http.cookiejar import MozillaCookieJar
 import threading
 import asyncio
 
+# Knowledge Graph imports
+from src.services.concept_extractor import extract_concepts
+from src.services.knowledge_graph_manager import KnowledgeGraphManager
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
@@ -633,6 +637,100 @@ async def upload_pdf(file: UploadFile = File(...)):
             total_elapsed = (datetime.now() - embed_start).total_seconds()
             print(f"✅ Successfully uploaded {len(vectors_to_upsert)} chunks")
             print(f"⏱️ Total time: {total_elapsed:.1f}s (upload: {upsert_elapsed:.1f}s)")
+
+        # Knowledge Graph Integration: Extract concepts after successful upload
+        # This runs synchronously but doesn't block the response
+        try:
+            print(f"🔍 Extracting concepts for: {file.filename}")
+            kg_start = datetime.now()
+            
+            # Check if document was already processed to avoid duplicates
+            manager = KnowledgeGraphManager()
+            graph = manager.load_graph()
+            processed_docs = graph.get('metadata', {}).get('processed_documents', [])
+            
+            if doc_id not in processed_docs:
+                # Extract concepts from document text
+                extracted = await extract_concepts(
+                    document_text=text,
+                    document_id=doc_id
+                )
+                
+                if extracted and extracted.get('concepts'):
+                    concepts_added = 0
+                    relationships_added = 0
+                    
+                    # Add concepts to graph
+                    for concept in extracted.get('concepts', []):
+                        node = manager.add_node(
+                            label=concept['label'],
+                            node_type=concept['type'],
+                            category=concept['category'],
+                            definition=concept.get('definition', ''),
+                            source_document=doc_id
+                        )
+                        if node:
+                            concepts_added += 1
+                    
+                    # Add relationships to graph
+                    for rel in extracted.get('relationships', []):
+                        # Find source and target nodes
+                        source_node = manager.find_node_by_label(rel['from'])
+                        target_node = manager.find_node_by_label(rel['to'])
+                        
+                        if source_node and target_node:
+                            edge = manager.add_edge(
+                                source_id=source_node['id'],
+                                target_id=target_node['id'],
+                                relationship_type=rel['type'],
+                                evidence=rel.get('evidence', ''),
+                                source_document=doc_id
+                            )
+                            if edge:
+                                relationships_added += 1
+                    
+                    # Mark document as processed
+                    if 'processed_documents' not in graph['metadata']:
+                        graph['metadata']['processed_documents'] = []
+                    graph['metadata']['processed_documents'].append(doc_id)
+                    manager.save_graph(graph)
+                    
+                    kg_elapsed = (datetime.now() - kg_start).total_seconds()
+                    print(f"✅ Knowledge graph updated: +{concepts_added} concepts, +{relationships_added} relationships")
+                    print(f"⏱️ Concept extraction time: {kg_elapsed:.1f}s")
+                else:
+                    print(f"⚠️ Concept extraction returned no results for {doc_id}")
+            else:
+                print(f"ℹ️ Document {doc_id} already processed - skipping concept extraction")
+                
+        except Exception as kg_error:
+            # Log but don't fail the upload
+            print(f"❌ Knowledge graph update failed: {str(kg_error)}")
+            # Log to file for debugging
+            try:
+                error_log_path = "data/kg-update-errors.json"
+                os.makedirs(os.path.dirname(error_log_path), exist_ok=True)
+                
+                error_entry = {
+                    "timestamp": datetime.now().isoformat(),
+                    "document_id": doc_id,
+                    "filename": file.filename,
+                    "error": str(kg_error)
+                }
+                
+                # Append to error log
+                errors = []
+                if os.path.exists(error_log_path):
+                    with open(error_log_path, 'r') as f:
+                        errors = json.load(f)
+                errors.append(error_entry)
+                
+                with open(error_log_path, 'w') as f:
+                    json.dump(errors, f, indent=2)
+                    
+                print(f"📝 Error logged to {error_log_path}")
+            except Exception as log_error:
+                print(f"⚠️ Could not log KG error: {str(log_error)}")
 
         return {
             "message": "PDF uploaded and indexed with structured metadata",

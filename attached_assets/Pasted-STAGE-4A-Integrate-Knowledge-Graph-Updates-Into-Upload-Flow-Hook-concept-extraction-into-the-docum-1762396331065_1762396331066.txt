@@ -1,0 +1,143 @@
+STAGE 4A: Integrate Knowledge Graph Updates Into Upload Flow
+
+Hook concept extraction into the document upload process so every new upload automatically updates the knowledge graph.
+
+CRITICAL REQUIREMENTS:
+
+1. LOCATE UPLOAD HANDLER
+   Find the existing upload endpoint (likely /api/upload or in main.py)
+   
+   Current flow probably looks like:
+   - User uploads PDF
+   - Extract text
+   - Generate metadata (10 fields - already working)
+   - Chunk text
+   - Embed chunks with OpenAI
+   - Store in Pinecone
+   - Return success
+
+2. ADD KNOWLEDGE GRAPH EXTRACTION STEP
+   
+   After Pinecone storage succeeds, add:
+   
+   from src.services.concept_extractor import extract_concepts
+   from src.services.knowledge_graph_manager import KnowledgeGraphManager
+   
+   # IMPORTANT: This runs AFTER upload completes
+   # Use try/except to ensure extraction failure doesn't break upload
+   
+   try:
+       # Extract concepts from document
+       extracted = await extract_concepts(
+           document_text=full_text,
+           document_id=document_id
+       )
+       
+       if extracted:
+           manager = KnowledgeGraphManager()
+           
+           # Add concepts to graph
+           for concept in extracted.get('concepts', []):
+               await manager.add_node({
+                   'label': concept['label'],
+                   'type': concept['type'],
+                   'category': concept['category'],
+                   'definition': concept.get('definition', ''),
+                   'source_documents': [document_id]
+               })
+           
+           # Add relationships to graph
+           for rel in extracted.get('relationships', []):
+               # Find source and target nodes
+               source_node = await manager.find_node_by_label(rel['from'])
+               target_node = await manager.find_node_by_label(rel['to'])
+               
+               if source_node and target_node:
+                   await manager.add_edge({
+                       'source': source_node['id'],
+                       'target': target_node['id'],
+                       'relationship_type': rel['type'],
+                       'evidence_samples': [rel.get('evidence', '')],
+                       'source_documents': [document_id]
+                   })
+           
+           print(f"✅ Knowledge graph updated: +{len(extracted['concepts'])} concepts")
+       else:
+           print(f"⚠️ Concept extraction failed for {document_id}")
+           
+   except Exception as e:
+       # Log but don't fail the upload
+       print(f"❌ Knowledge graph update failed: {e}")
+       # Consider logging to /data/kg-update-errors.json for debugging
+
+3. ASYNC PROCESSING CONSIDERATION
+   
+   The extraction takes 3-5 seconds. Two approaches:
+   
+   OPTION A (Recommended): Synchronous but non-blocking
+   - Run extraction after upload completes
+   - User sees "Upload successful" immediately
+   - Graph updates in background
+   - Total upload time: +3-5 seconds (acceptable)
+   
+   OPTION B: True async with background task
+   - Return upload success immediately  
+   - Queue extraction as background job
+   - Requires task queue (more complex)
+   - Only needed if upload feels too slow
+   
+   START WITH OPTION A - it's simpler and 3-5 seconds is fine
+
+4. ERROR HANDLING CHECKLIST
+   
+   ✅ Extraction fails → Log error, continue (upload still succeeds)
+   ✅ Node already exists → Update frequency, add source doc
+   ✅ Edge already exists → Increase strength, add evidence
+   ✅ Claude API timeout → Log, continue
+   ✅ Graph file locked → Retry with exponential backoff
+   ✅ Invalid extraction JSON → Log, skip this document
+
+5. GRAPH FILE LOCKING
+   
+   Multiple uploads could happen simultaneously. Ensure thread-safety:
+   
+   - KnowledgeGraphManager should use file locking (already implemented in Stage 1)
+   - If lock fails, retry up to 3 times with 1-second delays
+   - If still fails, log error and continue
+
+6. TESTING CHECKLIST
+   
+   After integration, test:
+   - Upload single document → Check graph for new concepts
+   - Upload document with existing concepts → Check frequency incremented
+   - Upload 2 documents simultaneously → No corruption
+   - Upload fails extraction → Upload still succeeds
+   - Check /data/knowledge-graph.json after upload → New concepts present
+
+7. LOGGING
+   
+   Add clear logging for debugging:
+   - "🔍 Extracting concepts for: {document_title}"
+   - "✅ Added {X} new concepts, {Y} new relationships"
+   - "⚠️ Extraction took {X} seconds (may need optimization)"
+   - "❌ Extraction failed: {error_message}"
+
+8. COST TRACKING
+   
+   Each upload now costs ~$0.015-0.03 for concept extraction
+   - Continue using existing cost tracking from Stage 2
+   - Add cumulative cost endpoint if desired
+
+9. DO NOT:
+   - Block the upload response waiting for extraction
+   - Fail the upload if extraction fails
+   - Process the same document twice (check processed_documents metadata)
+   - Modify existing working upload flow beyond adding this step
+
+VERIFICATION STEPS:
+- Upload a new test document
+- Check terminal logs for "✅ Knowledge graph updated"
+- Query GET /api/knowledge-graph/stats - count should increase
+- Check /data/knowledge-graph.json - new document ID in processed_documents
+- Upload same document again - should not duplicate concepts
+- Verify existing upload functionality still works perfectly
