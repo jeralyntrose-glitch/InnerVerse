@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Paths - InnerVerse</title>
+    <link rel="stylesheet" href="/static/learning_paths.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <header class="learning-paths-header">
+        <div class="header-left">
+            <h1>📚 Learning Paths</h1>
+            <span class="subtitle">Your MBTI Learning Journey</span>
+        </div>
+        <div class="header-right">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    placeholder="Search courses or concepts..."
+                    aria-label="Search"
+                >
+                <button id="search-btn" aria-label="Search">🔍</button>
+            </div>
+            <button id="view-mode-toggle" class="btn-secondary">
+                <span id="view-mode-icon">📊</span> Grid View
+            </button>
+            <button id="reset-view-btn" class="btn-secondary">
+                🎯 Reset View
+            </button>
+        </div>
+    </header>
+
+    <div id="canvas-container">
+        <div id="loading-state" class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading your learning paths...</p>
+        </div>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <div class="empty-content">
+                <span class="empty-icon">🎓</span>
+                <h2>No Learning Paths Yet</h2>
+                <p>Create your first learning path using AI or manual creation</p>
+                <button id="create-first-course-btn" class="btn-primary">
+                    ✨ Generate Course with AI
+                </button>
+            </div>
+        </div>
+
+        <svg id="learning-canvas"></svg>
+
+        <div id="zoom-controls" class="zoom-controls">
+            <button id="zoom-in" class="zoom-btn" aria-label="Zoom in">+</button>
+            <button id="zoom-out" class="zoom-btn" aria-label="Zoom out">−</button>
+            <button id="fit-view" class="zoom-btn" aria-label="Fit to view">⊡</button>
+        </div>
+
+        <div id="legend" class="legend">
+            <div class="legend-title">Progress Status</div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <span class="status-icon not-started">●</span>
+                    <span>Not Started</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status-icon in-progress">●</span>
+                    <span>In Progress</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status-icon completed">●</span>
+                    <span>Completed</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status-icon paused">⏸</span>
+                    <span>Paused</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lesson-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-course-title">Course Title</h2>
+                <button id="close-modal" class="close-btn" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="course-meta">
+                    <span id="modal-category" class="category-badge"></span>
+                    <span id="modal-progress" class="progress-text"></span>
+                    <span id="modal-hours" class="hours-text"></span>
+                </div>
+                <div id="modal-description" class="course-description"></div>
+                
+                <div class="lessons-section">
+                    <h3>Lessons</h3>
+                    <div id="lessons-list" class="lessons-list">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="view-course-btn" class="btn-primary">
+                        📖 View Course Details
+                    </button>
+                    <button id="continue-learning-btn" class="btn-secondary" style="display: none;">
+                        ▶️ Continue Learning
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="generate-modal" class="modal" style="display: none;">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>✨ Generate Course with AI</h2>
+                <button id="close-generate-modal" class="close-btn" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="generate-form">
+                    <div class="form-group">
+                        <label for="user-goal">What do you want to learn?</label>
+                        <textarea 
+                            id="user-goal" 
+                            name="user_goal"
+                            placeholder="E.g., Master ENFP shadow integration, Learn about type interactions, Understand cognitive function development..."
+                            rows="3"
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="max-lessons">Number of Lessons</label>
+                            <input 
+                                type="number" 
+                                id="max-lessons"
+                                name="max_lessons"
+                                min="5" 
+                                max="20" 
+                                value="10"
+                                required
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target-category">Category</label>
+                            <select id="target-category" name="target_category">
+                                <option value="">Auto-detect</option>
+                                <option value="foundations">Foundations</option>
+                                <option value="your_type">Your Type</option>
+                                <option value="relationships">Relationships</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="cost-estimate">
+                        <small>💰 Estimated cost: $0.03 - $0.08</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="cancel-generate-btn" class="btn-secondary">
+                            Cancel
+                        </button>
+                        <button type="submit" id="submit-generate-btn" class="btn-primary">
+                            <span class="btn-text">Generate Course</span>
+                            <span class="btn-loading" style="display: none;">
+                                <span class="spinner-small"></span> Generating...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <div id="generation-result" style="display: none;">
+                    <div class="success-message">
+                        <span class="success-icon">✅</span>
+                        <div>
+                            <strong id="generated-course-title"></strong>
+                            <p id="generated-course-info"></p>
+                        </div>
+                    </div>
+                    <button id="view-generated-course-btn" class="btn-primary full-width">
+                        View Course
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/static/learning_paths.js"></script>
+</body>
+</html>

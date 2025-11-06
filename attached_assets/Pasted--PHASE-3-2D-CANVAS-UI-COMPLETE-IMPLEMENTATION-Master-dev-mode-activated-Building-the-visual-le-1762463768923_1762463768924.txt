@@ -1,0 +1,1799 @@
+🎨 PHASE 3: 2D CANVAS UI - COMPLETE IMPLEMENTATION
+Master dev mode activated. Building the visual learning paths interface...
+
+FILE 1: static/learning_paths.html
+Purpose: Main canvas page with tree visualization
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Paths - InnerVerse</title>
+    <link rel="stylesheet" href="/static/learning_paths.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="learning-paths-header">
+        <div class="header-left">
+            <h1>📚 Learning Paths</h1>
+            <span class="subtitle">Your MBTI Learning Journey</span>
+        </div>
+        <div class="header-right">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    placeholder="Search courses or concepts..."
+                    aria-label="Search"
+                >
+                <button id="search-btn" aria-label="Search">🔍</button>
+            </div>
+            <button id="view-mode-toggle" class="btn-secondary">
+                <span id="view-mode-icon">📊</span> Grid View
+            </button>
+            <button id="reset-view-btn" class="btn-secondary">
+                🎯 Reset View
+            </button>
+        </div>
+    </header>
+
+    <!-- Canvas Container -->
+    <div id="canvas-container">
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading your learning paths...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <div class="empty-content">
+                <span class="empty-icon">🎓</span>
+                <h2>No Learning Paths Yet</h2>
+                <p>Create your first learning path using AI or manual creation</p>
+                <button id="create-first-course-btn" class="btn-primary">
+                    ✨ Generate Course with AI
+                </button>
+            </div>
+        </div>
+
+        <!-- SVG Canvas -->
+        <svg id="learning-canvas"></svg>
+
+        <!-- Zoom Controls -->
+        <div id="zoom-controls" class="zoom-controls">
+            <button id="zoom-in" class="zoom-btn" aria-label="Zoom in">+</button>
+            <button id="zoom-out" class="zoom-btn" aria-label="Zoom out">−</button>
+            <button id="fit-view" class="zoom-btn" aria-label="Fit to view">⊡</button>
+        </div>
+
+        <!-- Legend -->
+        <div id="legend" class="legend">
+            <div class="legend-title">Progress Status</div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <span class="status-icon not-started">●</span>
+                    <span>Not Started</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status-icon in-progress">●</span>
+                    <span>In Progress</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status-icon completed">●</span>
+                    <span>Completed</span>
+                </div>
+                <div class="legend-item">
+                    <span class="status-icon paused">⏸</span>
+                    <span>Paused</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lesson List Modal -->
+    <div id="lesson-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-course-title">Course Title</h2>
+                <button id="close-modal" class="close-btn" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="course-meta">
+                    <span id="modal-category" class="category-badge"></span>
+                    <span id="modal-progress" class="progress-text"></span>
+                    <span id="modal-hours" class="hours-text"></span>
+                </div>
+                <div id="modal-description" class="course-description"></div>
+                
+                <div class="lessons-section">
+                    <h3>Lessons</h3>
+                    <div id="lessons-list" class="lessons-list">
+                        <!-- Lessons populated by JS -->
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="view-course-btn" class="btn-primary">
+                        📖 View Course Details
+                    </button>
+                    <button id="continue-learning-btn" class="btn-secondary" style="display: none;">
+                        ▶️ Continue Learning
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Generation Modal -->
+    <div id="generate-modal" class="modal" style="display: none;">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>✨ Generate Course with AI</h2>
+                <button id="close-generate-modal" class="close-btn" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="generate-form">
+                    <div class="form-group">
+                        <label for="user-goal">What do you want to learn?</label>
+                        <textarea 
+                            id="user-goal" 
+                            name="user_goal"
+                            placeholder="E.g., Master ENFP shadow integration, Learn about type interactions, Understand cognitive function development..."
+                            rows="3"
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="max-lessons">Number of Lessons</label>
+                            <input 
+                                type="number" 
+                                id="max-lessons"
+                                name="max_lessons"
+                                min="5" 
+                                max="20" 
+                                value="10"
+                                required
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target-category">Category</label>
+                            <select id="target-category" name="target_category">
+                                <option value="">Auto-detect</option>
+                                <option value="foundations">Foundations</option>
+                                <option value="your_type">Your Type</option>
+                                <option value="relationships">Relationships</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="cost-estimate">
+                        <small>💰 Estimated cost: $0.03 - $0.08</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="cancel-generate-btn" class="btn-secondary">
+                            Cancel
+                        </button>
+                        <button type="submit" id="submit-generate-btn" class="btn-primary">
+                            <span class="btn-text">Generate Course</span>
+                            <span class="btn-loading" style="display: none;">
+                                <span class="spinner-small"></span> Generating...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <div id="generation-result" style="display: none;">
+                    <div class="success-message">
+                        <span class="success-icon">✅</span>
+                        <div>
+                            <strong id="generated-course-title"></strong>
+                            <p id="generated-course-info"></p>
+                        </div>
+                    </div>
+                    <button id="view-generated-course-btn" class="btn-primary full-width">
+                        View Course
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- JavaScript -->
+    <script src="/static/learning_paths.js"></script>
+</body>
+</html>
+
+FILE 2: static/learning_paths.css
+Purpose: Complete styling for canvas and components
+css/* ============================================================================
+   LEARNING PATHS - STYLES
+   ============================================================================ */
+
+:root {
+    /* Colors */
+    --primary-color: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary-color: #8b5cf6;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --info-color: #3b82f6;
+    
+    /* Status Colors */
+    --status-not-started: #94a3b8;
+    --status-in-progress: #f59e0b;
+    --status-completed: #10b981;
+    --status-paused: #6366f1;
+    
+    /* Category Colors */
+    --category-foundations: #3b82f6;
+    --category-your-type: #8b5cf6;
+    --category-relationships: #ec4899;
+    --category-advanced: #f59e0b;
+    
+    /* Neutrals */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --text-tertiary: #94a3b8;
+    --border-color: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    
+    /* Typography */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    --font-size-sm: 12px;
+    --font-size-base: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 20px;
+    --font-size-2xl: 24px;
+    
+    /* Borders */
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+}
+
+/* ============================================================================
+   BASE STYLES
+   ============================================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* ============================================================================
+   HEADER
+   ============================================================================ */
+
+.learning-paths-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+    z-index: 100;
+}
+
+.header-left h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.header-right {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+/* Search */
+.search-container {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+#search-input {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-base);
+    width: 250px;
+    transition: border-color 0.2s;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+#search-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#search-btn:hover {
+    background: var(--primary-dark);
+}
+
+/* Buttons */
+.btn-primary, .btn-secondary {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background: var(--border-color);
+}
+
+.btn-primary:disabled, .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.full-width {
+    width: 100%;
+    justify-content: center;
+}
+
+/* ============================================================================
+   CANVAS CONTAINER
+   ============================================================================ */
+
+#canvas-container {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 72px);
+    background: var(--bg-secondary);
+    overflow: hidden;
+}
+
+#learning-canvas {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+#learning-canvas:active {
+    cursor: grabbing;
+}
+
+/* ============================================================================
+   LOADING & EMPTY STATES
+   ============================================================================ */
+
+.loading-state, .empty-state {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto var(--spacing-md);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner-small {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+.empty-content {
+    background: var(--bg-primary);
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 400px;
+}
+
+.empty-icon {
+    font-size: 64px;
+    display: block;
+    margin-bottom: var(--spacing-md);
+}
+
+.empty-content h2 {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.empty-content p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+}
+
+/* ============================================================================
+   ZOOM CONTROLS
+   ============================================================================ */
+
+.zoom-controls {
+    position: absolute;
+    bottom: var(--spacing-lg);
+    right: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    background: var(--bg-primary);
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+}
+
+.zoom-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-xl);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zoom-btn:hover {
+    background: var(--border-color);
+    transform: scale(1.05);
+}
+
+/* ============================================================================
+   LEGEND
+   ============================================================================ */
+
+.legend {
+    position: absolute;
+    bottom: var(--spacing-lg);
+    left: var(--spacing-lg);
+    background: var(--bg-primary);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    min-width: 180px;
+}
+
+.legend-title {
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+}
+
+.status-icon {
+    font-size: var(--font-size-lg);
+}
+
+.status-icon.not-started { color: var(--status-not-started); }
+.status-icon.in-progress { color: var(--status-in-progress); }
+.status-icon.completed { color: var(--status-completed); }
+.status-icon.paused { color: var(--status-paused); }
+
+/* ============================================================================
+   COURSE CARDS (SVG FOREIGN OBJECT)
+   ============================================================================ */
+
+.course-card {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--spacing-md);
+    width: 280px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.course-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary-color);
+}
+
+.course-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-sm);
+}
+
+.course-status {
+    font-size: var(--font-size-xl);
+}
+
+.category-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.category-foundations { 
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--category-foundations);
+}
+.category-your-type { 
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--category-your-type);
+}
+.category-relationships { 
+    background: rgba(236, 72, 153, 0.1);
+    color: var(--category-relationships);
+}
+.category-advanced { 
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--category-advanced);
+}
+
+.course-title {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.course-description {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.course-stats {
+    display: flex;
+    justify-content: space-between;
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-label {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: var(--spacing-sm);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    transition: width 0.3s ease;
+}
+
+/* Connection Lines */
+.connection-line {
+    stroke: var(--border-color);
+    stroke-width: 2;
+    fill: none;
+}
+
+.connection-arrow {
+    fill: var(--border-color);
+}
+
+/* ============================================================================
+   MODALS
+   ============================================================================ */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 700px;
+    width: 90%;
+    max-height: 85vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { 
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-small {
+    max-width: 500px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.close-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+    font-size: var(--font-size-xl);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    background: var(--border-color);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.course-meta {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.progress-text, .hours-text {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+}
+
+/* Lessons List */
+.lessons-section {
+    margin-top: var(--spacing-lg);
+}
+
+.lessons-section h3 {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.lessons-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.lesson-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.lesson-item:hover {
+    background: var(--bg-tertiary);
+    transform: translateX(4px);
+}
+
+.lesson-number {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: var(--font-size-sm);
+}
+
+.lesson-info {
+    flex: 1;
+}
+
+.lesson-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.lesson-meta {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.lesson-status {
+    flex-shrink: 0;
+    font-size: var(--font-size-xl);
+}
+
+/* Lesson States */
+.lesson-item.not-started .lesson-number {
+    background: var(--status-not-started);
+}
+
+.lesson-item.in-progress .lesson-number {
+    background: var(--status-in-progress);
+}
+
+.lesson-item.completed .lesson-number {
+    background: var(--status-completed);
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+/* ============================================================================
+   FORMS
+   ============================================================================ */
+
+.form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+.cost-estimate {
+    text-align: center;
+    padding: var(--spacing-sm);
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-md);
+}
+
+.cost-estimate small {
+    color: var(--text-secondary);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+}
+
+.success-message {
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-md);
+}
+
+.success-icon {
+    font-size: var(--font-size-2xl);
+}
+
+.success-message strong {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    color: var(--text-primary);
+}
+
+.success-message p {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* ============================================================================
+   TOAST NOTIFICATIONS
+   ============================================================================ */
+
+.toast-container {
+    position: fixed;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.toast {
+    background: var(--bg-primary);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    min-width: 300px;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast-success { border-left: 4px solid var(--success-color); }
+.toast-error { border-left: 4px solid var(--danger-color); }
+.toast-info { border-left: 4px solid var(--info-color); }
+.toast-warning { border-left: 4px solid var(--warning-color); }
+
+.toast-icon {
+    font-size: var(--font-size-xl);
+}
+
+.toast-message {
+    flex: 1;
+}
+
+.toast-message strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-primary);
+}
+
+.toast-message p {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .learning-paths-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: flex-start;
+    }
+    
+    .header-right {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    #search-input {
+        width: 100%;
+    }
+    
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .course-card {
+        width: 240px;
+    }
+    
+    .legend, .zoom-controls {
+        bottom: var(--spacing-sm);
+    }
+}
+
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
+
+.hidden {
+    display: none !important;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.mt-sm { margin-top: var(--spacing-sm); }
+.mt-md { margin-top: var(--spacing-md); }
+.mt-lg { margin-top: var(--spacing-lg); }
+
+FILE 3: static/learning_paths.js
+Purpose: D3.js canvas logic and API integration
+javascript/**
+ * InnerVerse Learning Paths - Canvas Logic
+ * =========================================
+ * Handles 2D tree visualization, zoom/pan, API integration
+ */
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const CONFIG = {
+    api: {
+        baseUrl: '/api',
+        courses: '/api/courses',
+        generate: '/api/courses/generate',
+        assignContent: '/api/courses/assign-content',
+        stats: '/api/courses/stats'
+    },
+    canvas: {
+        nodeWidth: 280,
+        nodeHeight: 180,
+        horizontalSpacing: 100,
+        verticalSpacing: 150,
+        minZoom: 0.3,
+        maxZoom: 2,
+        transitionDuration: 750
+    },
+    colors: {
+        foundations: '#3b82f6',
+        your_type: '#8b5cf6',
+        relationships: '#ec4899',
+        advanced: '#f59e0b'
+    },
+    statusIcons: {
+        not_started: '●',
+        in_progress: '●',
+        completed: '✅',
+        paused: '⏸'
+    }
+};
+
+// ============================================================================
+// STATE MANAGEMENT
+// ============================================================================
+
+const state = {
+    courses: [],
+    coursesGrouped: {},
+    activeModal: null,
+    selectedCourse: null,
+    searchQuery: '',
+    viewMode: 'tree' // 'tree' or 'grid'
+};
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🎨 Initializing Learning Paths...');
+    
+    // Initialize canvas
+    initializeCanvas();
+    
+    // Load courses
+    await loadCourses();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    console.log('✅ Learning Paths initialized');
+});
+
+// ============================================================================
+// CANVAS INITIALIZATION
+// ============================================================================
+
+let svg, g, zoom, simulation;
+
+function initializeCanvas() {
+    const container = d3.select('#canvas-container');
+    svg = d3.select('#learning-canvas');
+    
+    // Create main group for zoom/pan
+    g = svg.append('g');
+    
+    // Setup zoom behavior
+    zoom = d3.zoom()
+        .scaleExtent([CONFIG.canvas.minZoom, CONFIG.canvas.maxZoom])
+        .on('zoom', (event) => {
+            g.attr('transform', event.transform);
+        });
+    
+    svg.call(zoom);
+    
+    // Setup force simulation (for tree layout)
+    simulation = d3.forceSimulation()
+        .force('charge', d3.forceManyBody().strength(-500))
+        .force('center', d3.forceCenter())
+        .force('collision', d3.forceCollide().radius(150));
+}
+
+// ============================================================================
+// DATA LOADING
+// ============================================================================
+
+async function loadCourses() {
+    showLoading(true);
+    
+    try {
+        const response = await fetch(CONFIG.api.courses);
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to load courses');
+        }
+        
+        // Flatten grouped courses
+        state.coursesGrouped = result.data;
+        state.courses = [];
+        
+        for (const category in result.data) {
+            state.courses.push(...result.data[category]);
+        }
+        
+        console.log(`📚 Loaded ${state.courses.length} courses`);
+        
+        if (state.courses.length === 0) {
+            showEmptyState();
+        } else {
+            renderCanvas();
+        }
+        
+    } catch (error) {
+        console.error('Error loading courses:', error);
+        showToast('Error loading courses', error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// ============================================================================
+// CANVAS RENDERING
+// ============================================================================
+
+function renderCanvas() {
+    // Clear existing
+    g.selectAll('*').remove();
+    
+    if (state.courses.length === 0) {
+        return;
+    }
+    
+    // Build tree hierarchy
+    const treeData = buildTreeHierarchy(state.courses);
+    
+    // Create tree layout
+    const treeLayout = d3.tree()
+        .nodeSize([
+            CONFIG.canvas.nodeWidth + CONFIG.canvas.horizontalSpacing,
+            CONFIG.canvas.nodeHeight + CONFIG.canvas.verticalSpacing
+        ]);
+    
+    const root = d3.hierarchy(treeData);
+    treeLayout(root);
+    
+    // Draw connections first (so they appear behind nodes)
+    drawConnections(root.links());
+    
+    // Draw nodes
+    drawNodes(root.descendants());
+    
+    // Fit view
+    setTimeout(() => fitToView(), 100);
+}
+
+function buildTreeHierarchy(courses) {
+    /**
+     * Build tree structure from courses
+     * Priority: foundations → your_type/relationships → advanced
+     */
+    
+    const grouped = state.coursesGrouped;
+    
+    // Root node (invisible)
+    const root = {
+        id: 'root',
+        name: 'Learning Paths',
+        children: []
+    };
+    
+    // Add foundations as direct children
+    if (grouped.foundations && grouped.foundations.length > 0) {
+        grouped.foundations.forEach(course => {
+            root.children.push({
+                id: course.id,
+                name: course.title,
+                category: course.category,
+                data: course
+            });
+        });
+    }
+    
+    // Add other categories
+    const otherCategories = ['your_type', 'relationships', 'advanced'];
+    otherCategories.forEach(category => {
+        if (grouped[category] && grouped[category].length > 0) {
+            grouped[category].forEach(course => {
+                // If course has prerequisites, don't add at root level
+                // Otherwise, add as root child
+                root.children.push({
+                    id: course.id,
+                    name: course.title,
+                    category: course.category,
+                    data: course
+                });
+            });
+        }
+    });
+    
+    // If only root, add placeholder
+    if (root.children.length === 0) {
+        root.children.push({
+            id: 'placeholder',
+            name: 'No courses yet',
+            category: 'foundations',
+            data: null
+        });
+    }
+    
+    return root;
+}
+
+function drawConnections(links) {
+    const link = g.selectAll('.connection-line')
+        .data(links)
+        .enter()
+        .append('path')
+        .attr('class', 'connection-line')
+        .attr('d', d3.linkVertical()
+            .x(d => d.x)
+            .y(d => d.y)
+        );
+}
+
+function drawNodes(nodes) {
+    const node = g.selectAll('.node')
+        .data(nodes.filter(d => d.data.id !== 'root'), d => d.data.id)
+        .enter()
+        .append('g')
+        .attr('class', 'node')
+        .attr('transform', d => `translate(${d.x - CONFIG.canvas.nodeWidth / 2}, ${d.y})`)
+        .on('click', (event, d) => {
+            if (d.data.data) {
+                openCourseModal(d.data.data);
+            }
+        });
+    
+    // Add foreignObject for HTML content
+    const fo = node.append('foreignObject')
+        .attr('width', CONFIG.canvas.nodeWidth)
+        .attr('height', CONFIG.canvas.nodeHeight);
+    
+    // Add card HTML
+    fo.append('xhtml:div')
+        .attr('class', 'course-card')
+        .html(d => renderCourseCard(d.data.data));
+}
+
+function renderCourseCard(course) {
+    if (!course) return '<div class="course-card">Loading...</div>';
+    
+    const progress = calculateProgress(course);
+    const status = determineStatus(course, progress);
+    
+    return `
+        <div class="course-card-header">
+            <span class="course-status">${CONFIG.statusIcons[status]}</span>
+            <span class="category-badge category-${course.category}">
+                ${course.category.replace('_', ' ')}
+            </span>
+        </div>
+        <div class="course-title">${course.title}</div>
+        <div class="course-description">${course.description || 'No description'}</div>
+        <div class="course-stats">
+            <div class="stat">
+                <span class="stat-label">Lessons</span>
+                <span class="stat-value">${course.lesson_count || 0}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Progress</span>
+                <span class="stat-value">${progress}%</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Hours</span>
+                <span class="stat-value">${course.estimated_hours || 0}h</span>
+            </div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: ${progress}%"></div>
+        </div>
+    `;
+}
+
+function calculateProgress(course) {
+    if (!course.progress || !course.progress.completed_lesson_ids) return 0;
+    
+    const completed = course.progress.completed_lesson_ids.length;
+    const total = course.lesson_count || 1;
+    
+    return Math.round((completed / total) * 100);
+}
+
+function determineStatus(course, progress) {
+    if (!course.progress) return 'not_started';
+    
+    if (progress === 100) return 'completed';
+    if (course.progress.current_lesson_id) return 'in_progress';
+    if (progress > 0) return 'paused';
+    
+    return 'not_started';
+}
+
+// ============================================================================
+// MODAL MANAGEMENT
+// ============================================================================
+
+async function openCourseModal(course) {
+    state.selectedCourse = course;
+    
+    // Fetch full course details with lessons
+    try {
+        const response = await fetch(`${CONFIG.api.courses}/${course.id}`);
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error('Failed to load course details');
+        }
+        
+        const fullCourse = result.data;
+        
+        // Populate modal
+        document.getElementById('modal-course-title').textContent = fullCourse.title;
+        document.getElementById('modal-category').textContent = fullCourse.category.replace('_', ' ');
+        document.getElementById('modal-category').className = `category-badge category-${fullCourse.category}`;
+        
+        const progress = calculateProgress(fullCourse);
+        document.getElementById('modal-progress').textContent = `${progress}% Complete`;
+        document.getElementById('modal-hours').textContent = `${fullCourse.estimated_hours || 0} hours`;
+        document.getElementById('modal-description').textContent = fullCourse.description || 'No description';
+        
+        // Render lessons
+        renderLessonsList(fullCourse.lessons || [], fullCourse.progress);
+        
+        // Show continue button if in progress
+        const continueBtn = document.getElementById('continue-learning-btn');
+        if (fullCourse.progress && fullCourse.progress.current_lesson_id) {
+            continueBtn.style.display = 'block';
+        } else {
+            continueBtn.style.display = 'none';
+        }
+        
+        // Show modal
+        document.getElementById('lesson-modal').style.display = 'flex';
+        state.activeModal = 'lesson';
+        
+    } catch (error) {
+        console.error('Error loading course details:', error);
+        showToast('Error', error.message, 'error');
+    }
+}
+
+function renderLessonsList(lessons, progress) {
+    const container = document.getElementById('lessons-list');
+    
+    if (lessons.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">No lessons yet</p>';
+        return;
+    }
+    
+    const completedIds = progress?.completed_lesson_ids || [];
+    const currentId = progress?.current_lesson_id;
+    
+    container.innerHTML = lessons.map((lesson, index) => {
+        let status = 'not-started';
+        let statusIcon = '●';
+        
+        if (completedIds.includes(lesson.id)) {
+            status = 'completed';
+            statusIcon = '✅';
+        } else if (lesson.id === currentId) {
+            status = 'in-progress';
+            statusIcon = '▶️';
+        }
+        
+        return `
+            <div class="lesson-item ${status}" data-lesson-id="${lesson.id}">
+                <div class="lesson-number">${index + 1}</div>
+                <div class="lesson-info">
+                    <div class="lesson-title">${lesson.title}</div>
+                    <div class="lesson-meta">
+                        ${lesson.estimated_minutes || 30} min · ${lesson.difficulty || 'foundational'}
+                    </div>
+                </div>
+                <div class="lesson-status">${statusIcon}</div>
+            </div>
+        `;
+    }).join('');
+    
+    // Add click handlers
+    container.querySelectorAll('.lesson-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const lessonId = item.dataset.lessonId;
+            viewLesson(state.selectedCourse.id, lessonId);
+        });
+    });
+}
+
+function closeModal() {
+    if (state.activeModal === 'lesson') {
+        document.getElementById('lesson-modal').style.display = 'none';
+    } else if (state.activeModal === 'generate') {
+        document.getElementById('generate-modal').style.display = 'none';
+    }
+    state.activeModal = null;
+    state.selectedCourse = null;
+}
+
+function viewLesson(courseId, lessonId) {
+    // Navigate to lesson page (Phase 4)
+    window.location.href = `/learning-paths/${courseId}/${lessonId}`;
+}
+
+// ============================================================================
+// COURSE GENERATION
+// ============================================================================
+
+function openGenerateModal() {
+    document.getElementById('generate-modal').style.display = 'flex';
+    document.getElementById('generation-result').style.display = 'none';
+    document.getElementById('generate-form').reset();
+    state.activeModal = 'generate';
+}
+
+async function handleGenerateSubmit(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const data = {
+        user_goal: formData.get('user_goal'),
+        max_lessons: parseInt(formData.get('max_lessons')),
+        target_category: formData.get('target_category') || null
+    };
+    
+    // Show loading
+    const submitBtn = document.getElementById('submit-generate-btn');
+    submitBtn.disabled = true;
+    document.querySelector('.btn-text').style.display = 'none';
+    document.querySelector('.btn-loading').style.display = 'flex';
+    
+    try {
+        const response = await fetch(CONFIG.api.generate, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Generation failed');
+        }
+        
+        // Show success
+        document.getElementById('generate-form').style.display = 'none';
+        document.getElementById('generation-result').style.display = 'block';
+        document.getElementById('generated-course-title').textContent = result.data.title;
+        document.getElementById('generated-course-info').textContent = 
+            `${result.data.lesson_count} lessons · ${result.data.estimated_hours}h · Cost: $${result.cost.toFixed(4)}`;
+        
+        // Store generated course ID
+        state.generatedCourseId = result.course_id;
+        
+        showToast('Success!', `Generated "${result.data.title}"`, 'success');
+        
+        // Reload courses after 1 second
+        setTimeout(() => {
+            loadCourses();
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Generation error:', error);
+        showToast('Generation Failed', error.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        document.querySelector('.btn-text').style.display = 'block';
+        document.querySelector('.btn-loading').style.display = 'none';
+    }
+}
+
+// ============================================================================
+// VIEW CONTROLS
+// ============================================================================
+
+function fitToView() {
+    const bounds = g.node().getBBox();
+    const parent = svg.node().getBoundingClientRect();
+    
+    const fullWidth = bounds.width;
+    const fullHeight = bounds.height;
+    const width = parent.width;
+    const height = parent.height;
+    
+    const midX = bounds.x + fullWidth / 2;
+    const midY = bounds.y + fullHeight / 2;
+    
+    const scale = 0.8 / Math.max(fullWidth / width, fullHeight / height);
+    const translate = [width / 2 - scale * midX, height / 2 - scale * midY];
+    
+    svg.transition()
+        .duration(CONFIG.canvas.transitionDuration)
+        .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+}
+
+function zoomIn() {
+    svg.transition()
+        .duration(300)
+        .call(zoom.scaleBy, 1.3);
+}
+
+function zoomOut() {
+    svg.transition()
+        .duration(300)
+        .call(zoom.scaleBy, 0.7);
+}
+
+function resetView() {
+    svg.transition()
+        .duration(CONFIG.canvas.transitionDuration)
+        .call(zoom.transform, d3.zoomIdentity);
+}
+
+// ============================================================================
+// SEARCH
+// ============================================================================
+
+function handleSearch() {
+    const query = document.getElementById('search-input').value.toLowerCase();
+    state.searchQuery = query;
+    
+    if (!query) {
+        // Reset all visibility
+        g.selectAll('.node').style('opacity', 1);
+        return;
+    }
+    
+    // Filter nodes
+    g.selectAll('.node').each(function(d) {
+        const course = d.data.data;
+        if (!course) return;
+        
+        const matches = 
+            course.title.toLowerCase().includes(query) ||
+            (course.description && course.description.toLowerCase().includes(query)) ||
+            (course.tags && course.tags.some(tag => tag.toLowerCase().includes(query)));
+        
+        d3.select(this).style('opacity', matches ? 1 : 0.2);
+    });
+}
+
+// ============================================================================
+// UI HELPERS
+// ============================================================================
+
+function showLoading(show) {
+    document.getElementById('loading-state').style.display = show ? 'flex' : 'none';
+}
+
+function showEmptyState() {
+    document.getElementById('empty-state').style.display = 'flex';
+    document.getElementById('learning-canvas').style.display = 'none';
+}
+
+function showToast(title, message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    const icon = {
+        success: '✅',
+        error: '❌',
+        info: 'ℹ️',
+        warning: '⚠️'
+    }[type];
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <div class="toast-message">
+            <strong>${title}</strong>
+            <p>${message}</p>
+        </div>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideInRight 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+// ============================================================================
+// EVENT LISTENERS
+// ============================================================================
+
+function setupEventListeners() {
+    // Modal close buttons
+    document.getElementById('close-modal').addEventListener('click', closeModal);
+    document.getElementById('close-generate-modal').addEventListener('click', closeModal);
+    
+    // Click outside modal to close
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+    });
+    
+    // Generate course
+    document.getElementById('create-first-course-btn').addEventListener('click', openGenerateModal);
+    document.getElementById('generate-form').addEventListener('submit', handleGenerateSubmit);
+    document.getElementById('cancel-generate-btn').addEventListener('click', closeModal);
+    
+    // View generated course
+    document.getElementById('view-generated-course-btn').addEventListener('click', () => {
+        closeModal();
+        if (state.generatedCourseId) {
+            const course = state.courses.find(c => c.id === state.generatedCourseId);
+            if (course) openCourseModal(course);
+        }
+    });
+    
+    // Course actions
+    document.getElementById('view-course-btn').addEventListener('click', () => {
+        if (state.selectedCourse) {
+            window.location.href = `/learning-paths/${state.selectedCourse.id}`;
+        }
+    });
+    
+    document.getElementById('continue-learning-btn').addEventListener('click', () => {
+        if (state.selectedCourse && state.selectedCourse.progress) {
+            const lessonId = state.selectedCourse.progress.current_lesson_id;
+            if (lessonId) {
+                viewLesson(state.selectedCourse.id, lessonId);
+            }
+        }
+    });
+    
+    // Zoom controls
+    document.getElementById('zoom-in').addEventListener('click', zoomIn);
+    document.getElementById('zoom-out').addEventListener('click', zoomOut);
+    document.getElementById('fit-view').addEventListener('click', fitToView);
+    document.getElementById('reset-view-btn').addEventListener('click', resetView);
+    
+    // Search
+    document.getElementById('search-btn').addEventListener('click', handleSearch);
+    document.getElementById('search-input').addEventListener('input', handleSearch);
+    document.getElementById('search-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSearch();
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (state.activeModal) {
+            if (e.key === 'Escape') closeModal();
+            return;
+        }
+        
+        if (e.key === ' ') {
+            e.preventDefault();
+            resetView();
+        } else if (e.key === '+' || e.key === '=') {
+            e.preventDefault();
+            zoomIn();
+        } else if (e.key === '-') {
+            e.preventDefault();
+            zoomOut();
+        }
+    });
+}
+
+// ============================================================================
+// EXPORTS (for debugging)
+// ============================================================================
+
+window.LearningPaths = {
+    state,
+    loadCourses,
+    renderCanvas,
+    openGenerateModal,
+    fitToView
+};
+
