@@ -412,9 +412,10 @@ async function handleGenerateSubmit(event) {
         
         showToast('Success!', `Generated "${result.data.title}"`, 'success');
         
-        setTimeout(() => {
-            loadCourses();
-        }, 1000);
+        setTimeout(async () => {
+            await loadCourses();
+            closeModal();  // Auto-close modal after refresh
+        }, 1500);  // Give it 1.5 seconds
         
     } catch (error) {
         console.error('Generation error:', error);
