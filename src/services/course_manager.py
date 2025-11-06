@@ -562,9 +562,15 @@ class CourseManager:
         """
         progress = self.get_or_create_progress(course_id, user_id)
         
-        # Parse JSON fields
-        completed_ids = json.loads(progress.get('completed_lesson_ids', '[]'))
-        completion_dates = json.loads(progress.get('lesson_completion_dates', '{}'))
+        # Get JSONB fields (already parsed by RealDictCursor)
+        completed_ids = progress.get('completed_lesson_ids', [])
+        completion_dates = progress.get('lesson_completion_dates', {})
+        
+        # Ensure they're the right type (in case of None)
+        if not isinstance(completed_ids, list):
+            completed_ids = []
+        if not isinstance(completion_dates, dict):
+            completion_dates = {}
         
         # Add lesson to completed list if not already there
         if lesson_id not in completed_ids:
@@ -574,6 +580,6 @@ class CourseManager:
         return self.update_progress(
             course_id,
             user_id,
-            completed_lesson_ids=json.dumps(completed_ids),
-            lesson_completion_dates=json.dumps(completion_dates)
+            completed_lesson_ids=completed_ids,
+            lesson_completion_dates=completion_dates
         )

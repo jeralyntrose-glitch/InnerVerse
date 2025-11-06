@@ -6003,7 +6003,7 @@ async def update_progress(course_id: str, request: Request):
     """Update user progress for a course"""
     try:
         data = await request.json()
-        user_id = data.get("user_id", "jeralyn")
+        user_id = data.pop("user_id", "jeralyn")
         
         manager = get_course_manager()
         progress = manager.update_progress(course_id, user_id, **data)
