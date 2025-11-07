@@ -379,10 +379,21 @@ function addChatMessage(text, sender) {
     
     const avatar = sender === 'ai' ? '🤖' : '👤';
     
+    // Render markdown for AI messages, plain text for user messages
+    let content;
+    if (sender === 'ai') {
+        // Render markdown and sanitize with DOMPurify
+        const rawHtml = marked.parse(text);
+        content = DOMPurify.sanitize(rawHtml);
+    } else {
+        // Escape HTML for user messages
+        content = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    
     messageDiv.innerHTML = `
         <div class="message-avatar">${avatar}</div>
         <div class="message-content">
-            ${text}
+            ${content}
         </div>
     `;
     
