@@ -416,13 +416,13 @@ async function handleGenerateSubmit(event) {
         
         document.getElementById('generate-form').style.display = 'none';
         document.getElementById('generation-result').style.display = 'block';
-        document.getElementById('generated-course-title').textContent = result.data.title;
+        document.getElementById('generated-course-title').textContent = result.course.title;
         document.getElementById('generated-course-info').textContent = 
-            `${result.data.lesson_count} lessons · ${result.data.estimated_hours}h · Cost: $${result.cost.toFixed(4)}`;
+            `${result.course.lesson_count} lessons · ${result.course.estimated_hours}h · Cost: $${result.cost.toFixed(4)}`;
         
         state.generatedCourseId = result.course_id;
         
-        showToast('Success!', `Generated "${result.data.title}"`, 'success');
+        showToast('Success!', `Generated "${result.course.title}"`, 'success');
         
         setTimeout(async () => {
             await loadCourses();
