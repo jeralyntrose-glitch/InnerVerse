@@ -552,6 +552,7 @@ function setupEventListeners() {
     document.getElementById('close-generate-modal').addEventListener('click', closeModal);
     
     document.getElementById('create-first-course-btn').addEventListener('click', openGenerateModal);
+    document.getElementById('generate-course-btn').addEventListener('click', openGenerateModal);
     document.getElementById('view-mode-toggle').addEventListener('click', () => {
         showToast('Info', 'Grid view coming in Phase 4!', 'info');
     });

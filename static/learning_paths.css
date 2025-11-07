@@ -400,7 +400,9 @@ body {
 .course-stats {
     display: flex;
     justify-content: space-between;
-    padding-top: var(--spacing-sm);
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin-top: auto;
     border-top: 1px solid var(--border-color);
     font-size: var(--font-size-sm);
 }
@@ -408,7 +410,10 @@ body {
 .stat {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 2px;
+    flex: 1;
+    text-align: center;
 }
 
 .stat-label {
