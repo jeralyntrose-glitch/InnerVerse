@@ -38,6 +38,8 @@ const state = {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🎓 Initializing lesson page...');
     
+    showLoading();
+    
     try {
         const pathParts = window.location.pathname.split('/');
         state.courseId = pathParts[2];
@@ -52,6 +54,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupEventListeners();
         
         console.log('✅ Lesson page initialized');
+    } catch (error) {
+        console.error('❌ Error loading lesson:', error);
+        showError(error.message);
     } finally {
         hideLoading();
     }
@@ -62,8 +67,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================================================
 
 async function loadLessonData() {
-    showLoading();
-    
     const courseResponse = await fetch(`${CONFIG.api.courses}/${state.courseId}`);
     const courseResult = await courseResponse.json();
     

@@ -464,11 +464,14 @@ When comparing types:
 FORMATTING BEST PRACTICES:
 
 ✅ DO:
-- Use headers (## or **bold**) for sections
+- Use headers (## or **bold**) for sections with emojis 🎯
 - Use bullet points for lists
 - Use numbered lists for sequential steps
 - Break into short sections
-- Use emoji sparingly for visual hierarchy
+- Use emojis throughout for engagement (5-8 per response) 😊:
+  - Headers: 🎭 🧠 💡 🔮 ⚡ 🌟 💫 ✨ 📚 🎓
+  - Concepts: 📊 🔑 💭 🌈 🎨 🔧 🚀 💪 ❤️ 🎉
+  - Actions: ✅ ❌ ⚠️ 📝 👉 🔄 💬 🎯
 - Put key terms in **bold**
 - Use line breaks generously
 - Answer the question directly first
@@ -476,7 +479,7 @@ FORMATTING BEST PRACTICES:
 ❌ DON'T:
 - Write walls of text (>4 sentences without break)
 - Bury answers in long paragraphs
-- Over-use emoji (1-2 per section max)
+- Over-use emojis (keep it medium, not excessive)
 - Make responses overly long
 - Use confusing or inconsistent formatting
 

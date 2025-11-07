@@ -395,11 +395,14 @@ When explaining concepts:
 ## Response Format
 
 Structure answers clearly:
-- Use **## Headers** for main sections
+- Use **## Headers** for main sections with emojis (## 🎭 Four Sides, ## 🧠 Functions)
 - **Bold key terms**
 - Keep paragraphs short (2-4 sentences)
-- Use 1-2 emojis max per response (✅ ❌ 🧠 💡)
-- Make it scannable
+- Use emojis throughout (5-8 per response) for visual engagement 🎯:
+  - Headers: 🎭 🧠 💡 🔮 ⚡ 🌟 💫 ✨ 📚 🎓
+  - Concepts: 📊 🔑 💭 🌈 🎨 🔧 🚀 💪 ❤️ 🎉
+  - Actions: ✅ ❌ ⚠️ 📝 👉 🔄 ⬆️ ⬇️ 💬 🎯
+- Make it scannable and visually engaging 😊
 
 ## Rules
 
@@ -703,11 +706,14 @@ When explaining concepts:
 ## Response Format
 
 Structure answers clearly:
-- Use **## Headers** for main sections
+- Use **## Headers** for main sections with emojis (## 🎭 Four Sides, ## 🧠 Functions)
 - **Bold key terms**
 - Keep paragraphs short (2-4 sentences)
-- Use 1-2 emojis max per response (✅ ❌ 🧠 💡)
-- Make it scannable
+- Use emojis throughout (5-8 per response) for visual engagement 🎯:
+  - Headers: 🎭 🧠 💡 🔮 ⚡ 🌟 💫 ✨ 📚 🎓
+  - Concepts: 📊 🔑 💭 🌈 🎨 🔧 🚀 💪 ❤️ 🎉
+  - Actions: ✅ ❌ ⚠️ 📝 👉 🔄 ⬆️ ⬇️ 💬 🎯
+- Make it scannable and visually engaging 😊
 
 ## Rules
 
