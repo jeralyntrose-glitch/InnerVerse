@@ -445,6 +445,7 @@ async function handleGenerateSubmit(event) {
         
         setTimeout(async () => {
             await loadCourses();
+            renderCanvas();  // Re-render tree with new courses
             closeModal();  // Auto-close modal after refresh
         }, 1500);  // Give it 1.5 seconds
         
