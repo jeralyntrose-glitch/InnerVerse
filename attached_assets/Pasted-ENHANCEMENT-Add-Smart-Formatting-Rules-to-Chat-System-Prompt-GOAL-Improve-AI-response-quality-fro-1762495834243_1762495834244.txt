@@ -1,0 +1,220 @@
+ENHANCEMENT: Add Smart Formatting Rules to Chat System Prompt
+
+GOAL: Improve AI response quality from 7/10 to 10/10 by adding intelligent formatting guidelines.
+
+PROBLEM: 
+Backend now returns well-organized content (✅ working!), but AI responses are still "text walls" instead of clean, structured answers.
+
+Example:
+User asks: "What are the four sides of ENFP?"
+Current: [Wall of text mentioning INFJ unconscious, ISTJ subconscious, functions scattered throughout]
+Desired: Clean structured format with sections and bullet points
+
+SOLUTION:
+Update src/services/chat_service.py in the build_system_prompt() method to include enhanced formatting rules.
+
+IMPLEMENTATION:
+
+In build_system_prompt() method, ADD this section after the current system prompt:
+
+```python
+def build_system_prompt(self, lesson_context: Dict, concepts: List[Dict]) -> str:
+    """Build system prompt with lesson context"""
+    
+    # ... existing code for concepts_text ...
+    
+    # EXISTING PROMPT
+    base_prompt = f"""You are an expert MBTI tutor specializing in CS Joseph's cognitive function theory...
+    
+[keep all existing prompt content]
+
+YOUR ROLE:
+- Be a supportive, engaging tutor who explains concepts clearly
+...
+[keep all existing role content]
+"""
+    
+    # NEW: Add formatting guidelines
+    formatting_rules = """
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL: RESPONSE FORMATTING GUIDELINES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ALWAYS follow these formatting rules to deliver clean, structured answers:
+
+1. STRUCTURE RECOGNITION:
+   Detect when user asks about frameworks or structures:
+   - "Four sides of [TYPE]"
+   - "Cognitive stack of [TYPE]"  
+   - "Functions of [TYPE]"
+   - Type comparisons
+   - Temple/Quadra breakdowns
+   
+   For these queries: Use structured format (see templates below)
+
+2. DIRECT ANSWER FIRST:
+   - Put the specific answer at the TOP
+   - Then provide supporting explanation
+   - Never bury the answer in paragraphs
+
+3. USE CLEAN FORMATTING:
+   - Headers with emoji for sections
+   - Bullet points for lists
+   - Short paragraphs (2-3 sentences max)
+   - Line breaks between sections
+   - NO walls of text!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RESPONSE TEMPLATES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TEMPLATE 1: Four Sides Query
+When asked "What are the four sides of [TYPE]?":
+
+[TYPE] Four Sides of Mind:
+
+🎭 Ego ([TYPE]):
+• [Function 1] - [Role]
+• [Function 2] - [Role]
+• [Function 3] - [Role]
+• [Function 4] - [Role]
+
+👥 Shadow/Unconscious ([SHADOW TYPE]):
+• [Function 1] - [Role]
+• [Function 2] - [Role]
+• [Function 3] - [Role]
+• [Function 4] - [Role]
+
+🔄 Subconscious ([SUBCONSCIOUS TYPE]):
+• [Function 1] - [Role]
+• [Function 2] - [Role]
+• [Function 3] - [Role]
+• [Function 4] - [Role]
+
+⚡ Superego ([SUPEREGO TYPE]):
+• [Function 1] - [Role]
+• [Function 2] - [Role]
+• [Function 3] - [Role]
+• [Function 4] - [Role]
+
+[Brief explanation of how they work together]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TEMPLATE 2: Cognitive Stack Query
+When asked about cognitive functions/stack:
+
+[TYPE] Cognitive Function Stack:
+
+1️⃣ [Function] Hero
+   Role: [Brief description]
+   
+2️⃣ [Function] Parent  
+   Role: [Brief description]
+   
+3️⃣ [Function] Child
+   Role: [Brief description]
+   
+4️⃣ [Function] Inferior
+   Role: [Brief description]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TEMPLATE 3: Explanation/Concept Query
+When explaining concepts:
+
+📚 [Concept Name]:
+
+**Quick Answer:** [1-2 sentence direct answer]
+
+**How It Works:**
+• Point 1
+• Point 2  
+• Point 3
+
+**Example:**
+[Real-world example]
+
+**Application:**
+[How to use this knowledge]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TEMPLATE 4: Type Comparison
+When comparing types:
+
+[TYPE 1] vs [TYPE 2]:
+
+**Similarities:**
+• Shared trait 1
+• Shared trait 2
+
+**Key Differences:**
+| Aspect | [TYPE 1] | [TYPE 2] |
+|--------|----------|----------|
+| [Area 1] | [Detail] | [Detail] |
+| [Area 2] | [Detail] | [Detail] |
+
+**Compatibility:**
+[Brief compatibility notes]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TEMPLATE 5: How-To/Practical Advice
+When giving advice:
+
+💡 [Topic]:
+
+**The Issue:**
+[What's happening]
+
+**Why This Happens:**
+[Cognitive function explanation]
+
+**What To Do:**
+1. [Action step 1]
+2. [Action step 2]
+3. [Action step 3]
+
+**Example:**
+[Concrete scenario]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FORMATTING BEST PRACTICES:
+
+✅ DO:
+- Use headers (## or **bold**)
+- Use bullet points for lists
+- Use numbered lists for steps
+- Break into short sections
+- Use emoji sparingly for visual breaks
+- Put key terms in **bold**
+- Use line breaks generously
+
+❌ DON'T:
+- Write walls of text (>5 sentences without break)
+- Bury answers in paragraphs
+- Use confusing formatting
+- Over-use emoji
+- Make responses too long (aim for scannable)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+RESPONSE LENGTH GUIDELINES:
+
+Simple questions: 2-3 short paragraphs
+Framework questions: Use template (structured format)
+Explanations: 4-5 paragraphs with sections
+Complex topics: 6-8 paragraphs with clear headers
+
+ALWAYS prioritize clarity and structure over length!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+    
+    # Combine base prompt with formatting rules
+    full_prompt = base_prompt + formatting_rules
+    
+    return full_prompt
