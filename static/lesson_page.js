@@ -126,6 +126,7 @@ function renderLessonContent() {
     document.getElementById('lesson-number').textContent = 
         `Lesson ${state.currentLessonIndex + 1} of ${state.allLessons.length}`;
     
+    updateLessonStatus();
     renderConcepts();
     updateNavigationButtons();
     updateProgressBar();
@@ -139,6 +140,20 @@ function renderLessonContent() {
         if (transcriptDoc) {
             showTranscript('Transcript available for this lesson.');
         }
+    }
+}
+
+function updateLessonStatus() {
+    const statusEl = document.getElementById('lesson-status');
+    const completedIds = state.course.completed_lesson_ids || [];
+    const isCompleted = completedIds.includes(state.lessonId);
+    
+    if (isCompleted) {
+        statusEl.textContent = '✓ Completed';
+        statusEl.style.color = '#10b981';
+    } else {
+        statusEl.textContent = '● Not Started';
+        statusEl.style.color = '#64748b';
     }
 }
 
@@ -246,8 +261,16 @@ async function markComplete() {
             throw new Error('Failed to mark complete');
         }
         
+        if (!state.course.completed_lesson_ids) {
+            state.course.completed_lesson_ids = [];
+        }
+        if (!state.course.completed_lesson_ids.includes(state.lessonId)) {
+            state.course.completed_lesson_ids.push(state.lessonId);
+        }
+        
         showToast('Lesson marked as complete!', 'success');
         
+        updateLessonStatus();
         updateProgressBar();
         
         if (state.currentLessonIndex < state.allLessons.length - 1) {
