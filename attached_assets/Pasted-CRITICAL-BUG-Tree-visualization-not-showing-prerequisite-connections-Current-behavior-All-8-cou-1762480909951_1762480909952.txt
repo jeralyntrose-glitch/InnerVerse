@@ -1,0 +1,75 @@
+CRITICAL BUG: Tree visualization not showing prerequisite connections
+
+Current behavior:
+- All 8 courses appear in a horizontal line
+- No vertical connections between courses
+- Ignoring prerequisite_course_id data
+
+Expected behavior:
+- Courses with no prerequisites at top (roots)
+- Courses with prerequisites below their parent
+- Lines connecting parent → child courses
+
+The bug is in static/learning_paths.js in buildTreeHierarchy() function around line 200-250.
+
+Current code treats all courses as root children:
+```javascript
+// WRONG - adds everything as root child
+root.children.push({
+    id: course.id,
+    name: course.title,
+    data: course
+});
+```
+
+Fix needed:
+```javascript
+function buildTreeHierarchy(courses) {
+    // Create map of courses by ID
+    const courseMap = {};
+    courses.forEach(course => {
+        courseMap[course.id] = {
+            id: course.id,
+            name: course.title,
+            category: course.category,
+            data: course,
+            children: []
+        };
+    });
+    
+    // Build parent-child relationships using prerequisite_course_id
+    const rootNodes = [];
+    courses.forEach(course => {
+        const node = courseMap[course.id];
+        
+        if (course.prerequisite_course_id) {
+            // Has prerequisite - add as child of parent
+            const parent = courseMap[course.prerequisite_course_id];
+            if (parent) {
+                parent.children.push(node);
+            } else {
+                // Parent not found - treat as root
+                rootNodes.push(node);
+            }
+        } else {
+            // No prerequisite - this is a root node
+            rootNodes.push(node);
+        }
+    });
+    
+    // Create root container
+    return {
+        id: 'root',
+        name: 'Learning Paths',
+        children: rootNodes
+    };
+}
+```
+
+This will create proper tree structure:
+- Foundations courses at top (no prerequisites)
+- Intermediate courses below their foundation
+- Advanced courses below their intermediate
+- Lines connecting prerequisite → dependent course
+
+URGENT: Without this fix, the entire tree visualization feature is broken!

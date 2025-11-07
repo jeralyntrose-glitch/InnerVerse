@@ -141,49 +141,55 @@ function renderCanvas() {
 }
 
 function buildTreeHierarchy(courses) {
-    const grouped = state.coursesGrouped;
+    // Create map of courses by ID
+    const courseMap = {};
+    courses.forEach(course => {
+        courseMap[course.id] = {
+            id: course.id,
+            name: course.title,
+            category: course.category,
+            data: course,
+            children: []
+        };
+    });
     
-    const root = {
-        id: 'root',
-        name: 'Learning Paths',
-        children: []
-    };
-    
-    if (grouped.foundations && grouped.foundations.length > 0) {
-        grouped.foundations.forEach(course => {
-            root.children.push({
-                id: course.id,
-                name: course.title,
-                category: course.category,
-                data: course
-            });
-        });
-    }
-    
-    const otherCategories = ['your_type', 'relationships', 'advanced'];
-    otherCategories.forEach(category => {
-        if (grouped[category] && grouped[category].length > 0) {
-            grouped[category].forEach(course => {
-                root.children.push({
-                    id: course.id,
-                    name: course.title,
-                    category: course.category,
-                    data: course
-                });
-            });
+    // Build parent-child relationships using prerequisite_course_id
+    const rootNodes = [];
+    courses.forEach(course => {
+        const node = courseMap[course.id];
+        
+        if (course.prerequisite_course_id) {
+            // Has prerequisite - add as child of parent
+            const parent = courseMap[course.prerequisite_course_id];
+            if (parent) {
+                parent.children.push(node);
+            } else {
+                // Parent not found - treat as root
+                rootNodes.push(node);
+            }
+        } else {
+            // No prerequisite - this is a root node
+            rootNodes.push(node);
         }
     });
     
-    if (root.children.length === 0) {
-        root.children.push({
+    // Handle empty state
+    if (rootNodes.length === 0 && courses.length === 0) {
+        rootNodes.push({
             id: 'placeholder',
             name: 'No courses yet',
             category: 'foundations',
-            data: null
+            data: null,
+            children: []
         });
     }
     
-    return root;
+    // Create root container
+    return {
+        id: 'root',
+        name: 'Learning Paths',
+        children: rootNodes
+    };
 }
 
 function drawConnections(links) {
