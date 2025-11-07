@@ -1,0 +1,135 @@
+"""
+Chat Routes - API endpoints for lesson chat
+"""
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
+from typing import Optional, List
+import sqlite3
+from ..services.chat_service import ChatService
+from ..services.pinecone_service import PineconeService
+
+router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+# Database dependency
+def get_db():
+    conn = sqlite3.connect('innerverse.db')
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+# Pydantic models
+class ChatRequest(BaseModel):
+    course_id: str
+    lesson_id: str
+    message: str
+
+class ChatResponse(BaseModel):
+    success: bool
+    message: str
+    thread_id: Optional[str] = None
+    tokens: Optional[dict] = None
+    cost: Optional[float] = None
+    error: Optional[str] = None
+
+class ChatHistoryResponse(BaseModel):
+    success: bool
+    messages: List[dict]
+    stats: Optional[dict] = None
+
+# Endpoints
+@router.post("/lesson", response_model=ChatResponse)
+async def chat_with_lesson(request: ChatRequest, db: sqlite3.Connection = Depends(get_db)):
+    """
+    Send message to AI tutor with lesson context
+    
+    Request body:
+    - course_id: Course UUID
+    - lesson_id: Lesson UUID
+    - message: User's message
+    
+    Returns:
+    - AI response with token usage and cost
+    """
+    try:
+        # Initialize services
+        pinecone_service = PineconeService()
+        chat_service = ChatService(db, pinecone_service)
+        
+        # Process chat
+        result = await chat_service.chat(
+            course_id=request.course_id,
+            lesson_id=request.lesson_id,
+            user_message=request.message
+        )
+        
+        return ChatResponse(**result)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/lesson/{lesson_id}/history", response_model=ChatHistoryResponse)
+async def get_lesson_chat_history(lesson_id: str, db: sqlite3.Connection = Depends(get_db)):
+    """
+    Get chat history for a lesson
+    
+    Args:
+        lesson_id: Lesson UUID
+        
+    Returns:
+        List of messages and thread statistics
+    """
+    try:
+        # Initialize services
+        pinecone_service = PineconeService()
+        chat_service = ChatService(db, pinecone_service)
+        
+        # Get thread
+        cursor = db.execute(
+            "SELECT id FROM chat_threads WHERE lesson_id = ?",
+            (lesson_id,)
+        )
+        row = cursor.fetchone()
+        
+        if not row:
+            return ChatHistoryResponse(
+                success=True,
+                messages=[],
+                stats={'message_count': 0}
+            )
+        
+        thread_id = row[0]
+        
+        # Get history and stats
+        messages = chat_service.get_chat_history(thread_id, limit=50)
+        stats = chat_service.get_thread_stats(thread_id)
+        
+        return ChatHistoryResponse(
+            success=True,
+            messages=messages,
+            stats=stats
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/lesson/{lesson_id}/history")
+async def clear_lesson_chat(lesson_id: str, db: sqlite3.Connection = Depends(get_db)):
+    """
+    Clear chat history for a lesson
+    
+    Args:
+        lesson_id: Lesson UUID
+        
+    Returns:
+        Success confirmation
+    """
+    try:
+        # Delete thread (cascade will delete messages)
+        db.execute("DELETE FROM chat_threads WHERE lesson_id = ?", (lesson_id,))
+        db.commit()
+        
+        return {'success': True, 'message': 'Chat history cleared'}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

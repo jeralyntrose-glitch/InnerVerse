@@ -307,17 +307,67 @@ async function sendChatMessage() {
     addChatMessage(message, 'user');
     input.value = '';
     
+    const typingId = addTypingIndicator();
+    
     try {
-        setTimeout(() => {
-            addChatMessage(
-                `AI chat integration coming in Phase 5! For now, I can only say: That's a great question about "${state.lesson.title}"!`,
-                'ai'
-            );
-        }, 500);
+        const response = await fetch('/api/chat/lesson', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                course_id: state.courseId,
+                lesson_id: state.lessonId,
+                message: message
+            })
+        });
+        
+        const result = await response.json();
+        
+        removeTypingIndicator(typingId);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Chat failed');
+        }
+        
+        addChatMessage(result.message, 'ai');
+        
+        if (result.tokens) {
+            console.log('💰 Token usage:', result.tokens);
+            console.log('💵 Cost: $' + result.cost);
+        }
         
     } catch (error) {
         console.error('Chat error:', error);
+        removeTypingIndicator(typingId);
         addChatMessage('Sorry, I encountered an error. Please try again.', 'ai');
+    }
+}
+
+function addTypingIndicator() {
+    const messagesContainer = document.getElementById('chat-messages');
+    const typingId = 'typing-' + Date.now();
+    
+    const typingDiv = document.createElement('div');
+    typingDiv.id = typingId;
+    typingDiv.className = 'chat-message ai-message';
+    typingDiv.innerHTML = `
+        <div class="message-avatar">🤖</div>
+        <div class="message-content">
+            <div class="typing-indicator">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    return typingId;
+}
+
+function removeTypingIndicator(typingId) {
+    const typingDiv = document.getElementById(typingId);
+    if (typingDiv) {
+        typingDiv.remove();
     }
 }
 

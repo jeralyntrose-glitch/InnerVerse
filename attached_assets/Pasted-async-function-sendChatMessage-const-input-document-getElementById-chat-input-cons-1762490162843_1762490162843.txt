@@ -1,0 +1,78 @@
+async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    // Add user message to chat
+    addChatMessage(message, 'user');
+    input.value = '';
+    
+    // Show typing indicator
+    const typingId = addTypingIndicator();
+    
+    try {
+        // Call chat API
+        const response = await fetch('/api/chat/lesson', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                course_id: state.courseId,
+                lesson_id: state.lessonId,
+                message: message
+            })
+        });
+        
+        const result = await response.json();
+        
+        // Remove typing indicator
+        removeTypingIndicator(typingId);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Chat failed');
+        }
+        
+        // Add AI response
+        addChatMessage(result.message, 'ai');
+        
+        // Log token usage (optional)
+        if (result.tokens) {
+            console.log('Token usage:', result.tokens);
+            console.log('Cost:', result.cost);
+        }
+        
+    } catch (error) {
+        console.error('Chat error:', error);
+        removeTypingIndicator(typingId);
+        addChatMessage('Sorry, I encountered an error. Please try again.', 'ai');
+    }
+}
+
+function addTypingIndicator() {
+    const messagesContainer = document.getElementById('chat-messages');
+    const typingId = 'typing-' + Date.now();
+    
+    const typingDiv = document.createElement('div');
+    typingDiv.id = typingId;
+    typingDiv.className = 'chat-message ai-message';
+    typingDiv.innerHTML = `
+        <div class="message-avatar">🤖</div>
+        <div class="message-content">
+            <div class="typing-indicator">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    return typingId;
+}
+
+function removeTypingIndicator(typingId) {
+    const typingDiv = document.getElementById(typingId);
+    if (typingDiv) {
+        typingDiv.remove();
+    }
+}

@@ -1,0 +1,69 @@
+✅ VERIFICATION CHECKLIST
+After implementation, verify:
+	1.	Database setup:
+	•	chat_threads table created
+	•	chat_messages table created
+	•	Indexes created
+	1.	API endpoints work:
+	•	POST /api/chat/lesson returns response
+	•	GET /api/chat/lesson/{id}/history returns messages
+	•	Errors handled gracefully
+	1.	Chat functionality:
+	•	User can send message
+	•	Typing indicator appears
+	•	AI responds with real content (not placeholder)
+	•	Response appears in chat
+	•	Messages save to database
+	1.	Context awareness:
+	•	AI knows current lesson
+	•	AI references lesson content
+	•	AI uses CS Joseph terminology
+	•	AI pulls relevant concepts from Pinecone
+	1.	Chat history:
+	•	Messages persist across page reloads
+	•	Each lesson has separate chat thread
+	•	Can view previous messages
+	1.	Cost tracking:
+	•	Token usage logged
+	•	Cost calculated correctly
+	•	Stats available per thread
+🧪 TESTING INSTRUCTIONS
+Test 1: Basic Chat
+	1.	Open any lesson page
+	2.	Type: “What is this lesson about?”
+	3.	Expected: AI explains the lesson topic with context
+Test 2: Concept Query
+	1.	Type: “Can you explain [concept from lesson]?”
+	2.	Expected: AI explains using CS Joseph’s framework
+Test 3: Personal Application
+	1.	Type: “How does this apply to ENFPs?”
+	2.	Expected: AI gives type-specific guidance
+Test 4: History Persistence
+	1.	Send 3 messages
+	2.	Refresh page
+	3.	Expected: All 3 messages still visible
+Test 5: Different Lessons
+	1.	Chat in Lesson 1
+	2.	Navigate to Lesson 2
+	3.	Chat in Lesson 2
+	4.	Go back to Lesson 1
+	5.	Expected: Each lesson has separate chat history
+📊 EXPECTED COSTS
+Per message exchange:
+	•	Input: ~1,500-3,000 tokens ($0.0045-$0.009)
+	•	Output: ~500-1,000 tokens ($0.0075-$0.015)
+	•	Total: ~$0.01-$0.02 per exchange
+Per lesson (20 messages):
+	•	Total: ~$0.20-$0.40
+Affordable for regular use! ✅
+🎯 SUCCESS CRITERIA
+Phase 5 is complete when:
+	•	✅ Real AI responses (not placeholders)
+	•	✅ Lesson context included in responses
+	•	✅ Chat history saves per lesson
+	•	✅ Messages persist across sessions
+	•	✅ Typing indicator works
+	•	✅ Error handling works
+	•	✅ Cost tracking functional
+	•	✅ Pinecone concepts integrated
+	•	✅ No console errors
