@@ -158,9 +158,11 @@ class CourseManager:
                         up.current_lesson_id,
                         up.completed_lesson_ids,
                         up.total_time_minutes,
-                        up.last_accessed
+                        up.last_accessed,
+                        cp.prerequisite_course_id
                     FROM courses c
                     LEFT JOIN user_progress up ON c.id = up.course_id AND up.user_id = %s
+                    LEFT JOIN course_prerequisites cp ON c.id = cp.course_id
                     WHERE c.status = %s
                 """
                 params = [user_id, status]
@@ -257,13 +259,15 @@ class CourseManager:
         Returns:
             True if successful
         """
+        prereq_id = self._generate_id()
+        
         if cursor:
             # Use provided cursor (part of larger transaction)
             cursor.execute("""
-                INSERT INTO course_prerequisites (course_id, prerequisite_course_id)
-                VALUES (%s, %s)
+                INSERT INTO course_prerequisites (id, course_id, prerequisite_course_id)
+                VALUES (%s, %s, %s)
                 ON CONFLICT DO NOTHING
-            """, (course_id, prerequisite_course_id))
+            """, (prereq_id, course_id, prerequisite_course_id))
             return True
         else:
             # Standalone transaction
@@ -271,10 +275,10 @@ class CourseManager:
             try:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO course_prerequisites (course_id, prerequisite_course_id)
-                        VALUES (%s, %s)
+                        INSERT INTO course_prerequisites (id, course_id, prerequisite_course_id)
+                        VALUES (%s, %s, %s)
                         ON CONFLICT DO NOTHING
-                    """, (course_id, prerequisite_course_id))
+                    """, (prereq_id, course_id, prerequisite_course_id))
                 conn.commit()
                 return True
             except Exception as e:
@@ -347,9 +351,9 @@ class CourseManager:
                                 id, course_id, title, concept_ids, description,
                                 order_index, prerequisite_lesson_ids, estimated_minutes,
                                 difficulty, learning_objectives, key_takeaways,
-                                status, created_at
+                                video_references, document_references, created_at
                             ) VALUES (
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', NOW()
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
                             )
                         """, (
                             lesson_id,
@@ -362,7 +366,9 @@ class CourseManager:
                             lesson_data.get('estimated_minutes', 30),
                             lesson_data.get('difficulty', 'foundational'),
                             lesson_data.get('learning_objectives'),
-                            lesson_data.get('key_takeaways')
+                            lesson_data.get('key_takeaways'),
+                            json.dumps(lesson_data.get('video_references', [])),
+                            json.dumps(lesson_data.get('document_references', []))
                         ))
                         
                         lesson_ids.append(lesson_id)
