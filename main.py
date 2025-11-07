@@ -41,6 +41,9 @@ import traceback
 from src.services.concept_extractor import extract_concepts
 from src.services.knowledge_graph_manager import KnowledgeGraphManager
 
+# Background Job Service
+from src.services.background_job_service import BackgroundJobService
+
 # Learning Paths UI Router
 from src.routes.learning_paths_routes import router as learning_paths_ui_router
 
@@ -3981,10 +3984,16 @@ async def send_message_streaming(conversation_id: int, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def process_message_background(conversation_id: int, user_message: str, assistant_message_id: int, image_data: str = None):
-    """Background task to process Claude response (with vision support)"""
+def process_message_background(conversation_id: int, user_message: str, assistant_message_id: int, image_data: str = None, job_id: int = None):
+    """Background task to process Claude response (with vision support and job tracking)"""
+    job_service = BackgroundJobService() if job_id else None
+    
     try:
-        print(f"🔄 [BACKGROUND] Processing message for conversation {conversation_id}")
+        print(f"🔄 [BACKGROUND] Processing message for conversation {conversation_id}, job_id={job_id}")
+        
+        # Update job status to processing
+        if job_service and job_id:
+            job_service.update_job_status(job_id, 'processing')
         
         # Get message history
         conn = get_db_connection()
@@ -4074,6 +4083,12 @@ def process_message_background(conversation_id: int, user_message: str, assistan
                 conn.commit()
                 cursor.close()
                 print(f"✅ [BACKGROUND] Message {assistant_message_id} marked as completed")
+                
+                # Mark job as completed
+                if job_service and job_id:
+                    job_service.complete_job(job_id, assistant_response)
+                    print(f"✅ [BACKGROUND] Job {job_id} marked as completed")
+                    
             except Exception as db_error:
                 print(f"❌ [BACKGROUND] Database error: {str(db_error)}")
                 import traceback
@@ -4102,6 +4117,11 @@ def process_message_background(conversation_id: int, user_message: str, assistan
                 pass
             finally:
                 conn.close()
+        
+        # Mark job as failed
+        if job_service and job_id:
+            job_service.complete_job(job_id, f"Error: {str(e)}", error_message=str(e))
+            print(f"❌ [BACKGROUND] Job {job_id} marked as failed")
 
 
 @app.post("/claude/conversations/{conversation_id}/message/background")
@@ -4154,21 +4174,35 @@ async def send_message_background(conversation_id: int, request: Request, backgr
         cursor.close()
         conn.close()
         
-        # Enqueue background task (pass image data if present)
+        # Create background job record
+        job_service = BackgroundJobService()
+        job_id = job_service.create_job(
+            job_type='main_chat',
+            conversation_id=conversation_id,
+            request_payload={
+                'message': user_message,
+                'image_data': image_data if image_data else None,
+                'assistant_message_id': assistant_msg['id']
+            }
+        )
+        
+        # Enqueue background task (pass image data and job_id)
         background_tasks.add_task(
             process_message_background,
             conversation_id,
             user_message,
             assistant_msg['id'],
-            image_data
+            image_data,
+            job_id
         )
         
-        print(f"✅ Background task enqueued for conversation {conversation_id}, message {assistant_msg['id']}")
+        print(f"✅ Background task enqueued for conversation {conversation_id}, message {assistant_msg['id']}, job {job_id}")
         
         return {
             "user_message": dict(user_msg),
             "assistant_message": dict(assistant_msg),
-            "status": "processing"
+            "status": "processing",
+            "job_id": job_id
         }
         
     except HTTPException:
