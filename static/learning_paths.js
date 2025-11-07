@@ -416,13 +416,32 @@ async function handleGenerateSubmit(event) {
         
         document.getElementById('generate-form').style.display = 'none';
         document.getElementById('generation-result').style.display = 'block';
-        document.getElementById('generated-course-title').textContent = result.course.title;
-        document.getElementById('generated-course-info').textContent = 
-            `${result.course.lesson_count} lessons · ${result.course.estimated_hours}h · Cost: $${result.cost.toFixed(4)}`;
+        
+        // Handle multi-course response
+        const totalCourses = result.total_courses || 1;
+        const totalLessons = result.total_lessons || result.course?.lesson_count || 0;
+        const pathType = result.path_type || 'simple';
+        
+        if (totalCourses > 1) {
+            // Multi-course learning path
+            const courseList = result.courses.map(c => c.title).join(', ');
+            document.getElementById('generated-course-title').textContent = 
+                `Learning Path: ${totalCourses} Courses (${pathType})`;
+            document.getElementById('generated-course-info').textContent = 
+                `${totalLessons} total lessons · ${totalCourses} courses · Cost: $${result.cost.toFixed(4)}`;
+        } else {
+            // Single course (backwards compatible)
+            document.getElementById('generated-course-title').textContent = result.course.title;
+            document.getElementById('generated-course-info').textContent = 
+                `${result.course.lesson_count} lessons · ${result.course.estimated_hours}h · Cost: $${result.cost.toFixed(4)}`;
+        }
         
         state.generatedCourseId = result.course_id;
         
-        showToast('Success!', `Generated "${result.course.title}"`, 'success');
+        const message = totalCourses > 1 
+            ? `Generated ${totalCourses}-course learning path!` 
+            : `Generated "${result.course.title}"`;
+        showToast('Success!', message, 'success');
         
         setTimeout(async () => {
             await loadCourses();

@@ -240,6 +240,182 @@ class CourseManager:
         """
         return self.update_course(course_id, status='deleted') is not None
     
+    def create_prerequisite(
+        self,
+        course_id: str,
+        prerequisite_course_id: str,
+        cursor=None
+    ) -> bool:
+        """
+        Create a prerequisite relationship between two courses.
+        
+        Args:
+            course_id: The course that has a prerequisite
+            prerequisite_course_id: The course that must be completed first
+            cursor: Optional cursor for transaction (if None, uses own transaction)
+            
+        Returns:
+            True if successful
+        """
+        if cursor:
+            # Use provided cursor (part of larger transaction)
+            cursor.execute("""
+                INSERT INTO course_prerequisites (course_id, prerequisite_course_id)
+                VALUES (%s, %s)
+                ON CONFLICT DO NOTHING
+            """, (course_id, prerequisite_course_id))
+            return True
+        else:
+            # Standalone transaction
+            conn = self._get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        INSERT INTO course_prerequisites (course_id, prerequisite_course_id)
+                        VALUES (%s, %s)
+                        ON CONFLICT DO NOTHING
+                    """, (course_id, prerequisite_course_id))
+                conn.commit()
+                return True
+            except Exception as e:
+                conn.rollback()
+                raise Exception(f"Failed to create course prerequisite: {str(e)}")
+            finally:
+                conn.close()
+    
+    def create_learning_path(
+        self,
+        courses_data: List[Dict[str, Any]],
+        user_goal: str
+    ) -> Dict[str, Any]:
+        """
+        ATOMICALLY create a complete learning path (multiple courses + lessons + prerequisites).
+        
+        CRITICAL: Uses a single database transaction. If ANY step fails, EVERYTHING rolls back.
+        
+        Args:
+            courses_data: List of course dicts, each with lessons array and prerequisite_course_index
+            user_goal: User's learning goal (for generation_prompt)
+            
+        Returns:
+            Dict with created_courses list and aggregated metadata
+        """
+        conn = self._get_connection()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                created_courses = []
+                course_id_map = {}  # Maps array index to actual course ID
+                
+                # Step 1: Create all courses and lessons in ONE transaction
+                for idx, course_data in enumerate(courses_data):
+                    # Generate course ID
+                    course_id = self._generate_id()
+                    course_id_map[idx] = course_id
+                    
+                    # Insert course
+                    cur.execute("""
+                        INSERT INTO courses (
+                            id, title, category, description, estimated_hours,
+                            auto_generated, generation_prompt, source_type, source_ids,
+                            tags, notes, status, lesson_count, total_concepts
+                        ) VALUES (
+                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', 0, 0
+                        )
+                    """, (
+                        course_id,
+                        course_data['title'],
+                        course_data['category'],
+                        course_data.get('description'),
+                        course_data.get('estimated_hours', 0),
+                        True,  # auto_generated
+                        user_goal,
+                        'graph',
+                        json.dumps(course_data.get('source_ids', [])),
+                        json.dumps(course_data.get('tags', [])),
+                        None  # notes
+                    ))
+                    
+                    # Insert lessons for this course
+                    lesson_ids = []
+                    lessons = course_data.get('lessons', [])
+                    
+                    for lesson_data in lessons:
+                        lesson_id = self._generate_id()
+                        
+                        cur.execute("""
+                            INSERT INTO lessons (
+                                id, course_id, title, concept_ids, description,
+                                order_index, prerequisite_lesson_ids, estimated_minutes,
+                                difficulty, learning_objectives, key_takeaways,
+                                status, created_at
+                            ) VALUES (
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', NOW()
+                            )
+                        """, (
+                            lesson_id,
+                            course_id,
+                            lesson_data['title'],
+                            json.dumps(lesson_data.get('concept_ids', [])),
+                            lesson_data.get('description'),
+                            lesson_data.get('order_index'),
+                            json.dumps(lesson_data.get('prerequisite_lesson_ids', [])),
+                            lesson_data.get('estimated_minutes', 30),
+                            lesson_data.get('difficulty', 'foundational'),
+                            lesson_data.get('learning_objectives'),
+                            lesson_data.get('key_takeaways')
+                        ))
+                        
+                        lesson_ids.append(lesson_id)
+                    
+                    # Update course lesson_count
+                    cur.execute("""
+                        UPDATE courses 
+                        SET lesson_count = %s 
+                        WHERE id = %s
+                    """, (len(lesson_ids), course_id))
+                    
+                    # Track created course
+                    created_courses.append({
+                        "id": course_id,
+                        "title": course_data['title'],
+                        "category": course_data['category'],
+                        "description": course_data.get('description'),
+                        "estimated_hours": course_data.get('estimated_hours', 0),
+                        "lesson_count": len(lesson_ids),
+                        "tags": course_data.get('tags', []),
+                        "prerequisite_course_index": course_data.get('prerequisite_course_index')
+                    })
+                
+                # Step 2: Create all prerequisites (still in same transaction)
+                for course_info in created_courses:
+                    prereq_index = course_info.get('prerequisite_course_index')
+                    if prereq_index is not None and prereq_index in course_id_map:
+                        prerequisite_course_id = course_id_map[prereq_index]
+                        self.create_prerequisite(
+                            course_info['id'],
+                            prerequisite_course_id,
+                            cursor=cur  # Pass cursor to use same transaction
+                        )
+                        course_info['prerequisite_course_id'] = prerequisite_course_id
+                    else:
+                        course_info['prerequisite_course_id'] = None
+                
+                # Commit entire transaction
+                conn.commit()
+                
+                return {
+                    "created_courses": created_courses,
+                    "total_courses": len(created_courses),
+                    "total_lessons": sum(c['lesson_count'] for c in created_courses)
+                }
+                
+        except Exception as e:
+            # Rollback EVERYTHING on any error
+            conn.rollback()
+            raise Exception(f"Failed to create learning path: {str(e)}")
+        finally:
+            conn.close()
+    
     # ========================================================================
     # LESSON CRUD OPERATIONS
     # ========================================================================

@@ -55,21 +55,29 @@ class CourseGenerator:
         target_category: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Generate a complete course curriculum from user goal.
+        Generate a complete learning path (1-4 courses) from user goal.
+        
+        IMPORTANT: This creates a LEARNING PATH (progression of courses),
+        not just a single course. For simple goals, returns 1 course.
+        For complex goals, returns 2-4 courses (foundations → intermediate → advanced).
         
         Args:
             user_goal: What the user wants to learn
             relevant_concept_ids: Optional list of concept IDs to focus on
-            max_lessons: Maximum number of lessons to generate
-            target_category: Optional category hint
+            max_lessons: Maximum number of lessons PER COURSE
+            target_category: Optional category hint (ignored for multi-course paths)
             
         Returns:
-            Dict with course structure including lessons
+            Dict with:
+                - courses: List of course dicts (each with lessons)
+                - total_courses: Number of courses in path
+                - path_summary: Description of the learning progression
+                - generation_metadata: Cost, tokens, etc.
         """
         if not user_goal or not user_goal.strip():
             raise ValueError("user_goal cannot be empty")
         
-        logger.info(f"Generating curriculum for goal: {user_goal}")
+        logger.info(f"Generating learning path for goal: {user_goal}")
         
         # Step 1: Get relevant concepts from knowledge graph
         if relevant_concept_ids:
@@ -127,23 +135,28 @@ class CourseGenerator:
         if not response_text:
             raise Exception("No text content in Claude response")
         
-        curriculum = self._parse_claude_response(response_text)
+        learning_path = self._parse_claude_response(response_text)
         
-        # Step 6: Validate and enhance curriculum
-        curriculum = self._validate_curriculum(curriculum, concepts)
+        # Step 6: Validate and enhance learning path
+        learning_path = self._validate_learning_path(learning_path, concepts)
         
         # Step 7: Add metadata
-        curriculum['source_ids'] = [c['id'] for c in concepts]
-        curriculum['generation_metadata'] = {
+        source_ids = [c['id'] for c in concepts]
+        learning_path['generation_metadata'] = {
             'model': self.model,
             'cost': cost,
             'concepts_analyzed': len(concepts),
             'user_goal': user_goal
         }
         
-        logger.info(f"Generated curriculum: {curriculum['title']} with {len(curriculum['lessons'])} lessons")
+        total_lessons = sum(len(course['lessons']) for course in learning_path['courses'])
+        logger.info(f"Generated learning path: {len(learning_path['courses'])} courses, {total_lessons} total lessons")
         
-        return curriculum
+        # Add source_ids to each course
+        for course in learning_path['courses']:
+            course['source_ids'] = source_ids
+        
+        return learning_path
     
     def _get_concepts_by_ids(self, concept_ids: List[str]) -> List[Dict[str, Any]]:
         """Fetch concepts from knowledge graph by IDs."""
@@ -243,59 +256,84 @@ Key concepts related to goal:
 Prerequisite relationships:
 {chr(10).join(prereq_summary[:15]) if prereq_summary else "No explicit prerequisites found"}
 
-TASK: Create a learning path (course/track) that progresses from foundational to advanced concepts.
+TASK: Create a LEARNING PATH (progression of 1-4 courses) from foundational to advanced mastery.
 
-ANALYSIS STEPS:
-1. Identify the 8-15 most important concepts for achieving this goal
-2. Trace prerequisite relationships backward to foundational concepts
-3. Group concepts into logical lessons (2-5 concepts per lesson)
-4. Order lessons by dependency (prerequisites first)
-5. Determine appropriate category: foundations/your_type/relationships/advanced
+CRITICAL: Analyze if this goal requires:
+- SIMPLE PATH (1 course): Single topic, one difficulty level (e.g., "Learn Ne function")
+- STANDARD PATH (2 courses): Foundations → Application (e.g., "Master Fi-Te axis")
+- COMPREHENSIVE PATH (3 courses): Foundations → Intermediate → Advanced (e.g., "Master ENFP cognitive functions and shadow integration")
+- MASTERY PATH (4 courses): Foundations → Your Type → Relationships → Advanced (e.g., "Complete MBTI mastery from basics to expert")
 
-COURSE DESIGN PRINCIPLES:
-- Start with foundational concepts (no prerequisites required)
-- Each lesson builds on previous lessons
-- Lessons should be 20-45 minutes each
-- Group related concepts together
-- Maximum {max_lessons} lessons per course
-- ALL lessons must match the course category difficulty level:
-  * foundations course → ALL lessons "foundational"
-  * your_type course → ALL lessons "intermediate"
-  * relationships course → ALL lessons "intermediate"
-  * advanced course → ALL lessons "advanced"
+LEARNING PATH DESIGN PRINCIPLES:
+1. ALWAYS start with a FOUNDATIONS course (unless goal is explicitly advanced-only)
+2. Each course must have a CLEAR difficulty category: foundations/your_type/relationships/advanced
+3. Courses must form a PREREQUISITE CHAIN (Course 2 requires Course 1, Course 3 requires Course 2, etc.)
+4. Distribute concepts by complexity across courses
+5. Each course: 5-12 lessons, 20-45 minutes per lesson
+6. ALL lessons within a course MUST match that course's difficulty level
+
+CATEGORY DIFFICULTY MAPPING:
+- foundations: "foundational" lessons only
+- your_type: "intermediate" lessons only
+- relationships: "intermediate" lessons only
+- advanced: "advanced" lessons only
 
 OUTPUT FORMAT (respond ONLY with valid JSON):
 {{
-  "title": "Engaging course name (specific, clear)",
-  "category": "{target_category if target_category else "foundations/your_type/relationships/advanced"}",
-  "description": "One-sentence course overview (what will be mastered)",
-  "estimated_hours": 4.5,
-  "tags": ["tag1", "tag2", "tag3"],
-  "lessons": [
+  "path_type": "comprehensive",
+  "path_summary": "Three-course progression from ENFP cognitive function basics to advanced shadow integration mastery",
+  "courses": [
     {{
-      "title": "Descriptive lesson title",
-      "order_index": 1,
-      "concept_ids": ["concept_id_1", "concept_id_2"],
-      "description": "What this lesson covers (2-3 sentences)",
-      "estimated_minutes": 30,
-      "difficulty": "foundational",
-      "learning_objectives": "What student will be able to do after this lesson",
-      "key_takeaways": "Main points to remember",
-      "prerequisite_lesson_ids": [],
-      "rationale": "Why this lesson comes at this point in the sequence"
+      "title": "ENFP Cognitive Functions: Foundations",
+      "category": "foundations",
+      "description": "Master the four-function cognitive stack of ENFP (Ne-Fi-Te-Si)",
+      "estimated_hours": 3.5,
+      "tags": ["ENFP", "cognitive functions", "Ne", "Fi"],
+      "prerequisite_course_index": null,
+      "lessons": [
+        {{
+          "title": "Introduction to Cognitive Functions",
+          "order_index": 1,
+          "concept_ids": ["concept_id_1", "concept_id_2"],
+          "description": "Overview of Jungian cognitive functions and the ENFP stack",
+          "estimated_minutes": 25,
+          "difficulty": "foundational",
+          "learning_objectives": "Identify and describe the ENFP's four cognitive functions",
+          "key_takeaways": "Ne (dominant), Fi (auxiliary), Te (tertiary), Si (inferior)",
+          "prerequisite_lesson_ids": []
+        }}
+      ]
+    }},
+    {{
+      "title": "ENFP Shadow Integration: Intermediate Practice",
+      "category": "your_type",
+      "description": "Develop awareness and integration of ENFP shadow functions (Ni-Fe-Ti-Se)",
+      "estimated_hours": 5.0,
+      "tags": ["ENFP", "shadow", "integration", "Ni-Fe-Ti-Se"],
+      "prerequisite_course_index": 0,
+      "lessons": [...]
+    }},
+    {{
+      "title": "ENFP Shadow Mastery: Advanced Integration",
+      "category": "advanced",
+      "description": "Advanced techniques for shadow integration and cognitive function balance",
+      "estimated_hours": 4.5,
+      "tags": ["ENFP", "shadow mastery", "advanced integration"],
+      "prerequisite_course_index": 1,
+      "lessons": [...]
     }}
   ]
 }}
 
-IMPORTANT RULES:
+CRITICAL RULES:
+- prerequisite_course_index: Use array index (0, 1, 2) or null for first course
 - Use ONLY concept IDs from the provided list
-- Ensure lesson order respects prerequisites
-- Each lesson should have clear learning objectives
-- Provide rationale for lesson sequencing
-- Total estimated_hours = sum of lesson minutes / 60
+- Total courses: 1-4 based on goal complexity
+- Each course: 5-12 lessons maximum
+- Lesson difficulty MUST match course category
 - Respond with ONLY the JSON, no other text
 
-Generate the curriculum now:"""
+Generate the learning path now:"""
 
         return prompt
     
@@ -319,53 +357,77 @@ Generate the curriculum now:"""
             logger.error(f"Response text: {response_text[:500]}")
             raise ValueError(f"Claude returned invalid JSON: {str(e)}")
     
-    def _validate_curriculum(
+    def _validate_learning_path(
         self,
-        curriculum: Dict[str, Any],
+        learning_path: Dict[str, Any],
         concepts: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Validate curriculum structure and fix issues."""
-        # Validate required fields
-        required_fields = ['title', 'category', 'description', 'lessons']
-        for field in required_fields:
-            if field not in curriculum:
-                raise ValueError(f"Missing required field: {field}")
+        """Validate learning path structure with multiple courses."""
+        # Validate top-level fields
+        if 'courses' not in learning_path or not learning_path['courses']:
+            raise ValueError("Learning path must contain at least one course")
         
-        # Validate category
-        valid_categories = ['foundations', 'your_type', 'relationships', 'advanced']
-        if curriculum['category'] not in valid_categories:
-            logger.warning(f"Invalid category {curriculum['category']}, defaulting to 'foundations'")
-            curriculum['category'] = 'foundations'
+        # Add defaults for path-level fields
+        if 'path_type' not in learning_path:
+            course_count = len(learning_path['courses'])
+            if course_count == 1:
+                learning_path['path_type'] = 'simple'
+            elif course_count == 2:
+                learning_path['path_type'] = 'standard'
+            elif course_count == 3:
+                learning_path['path_type'] = 'comprehensive'
+            else:
+                learning_path['path_type'] = 'mastery'
+        
+        if 'path_summary' not in learning_path:
+            learning_path['path_summary'] = f"Learning path with {len(learning_path['courses'])} courses"
         
         # Create concept ID set for validation
         valid_concept_ids = {c['id'] for c in concepts}
+        valid_categories = ['foundations', 'your_type', 'relationships', 'advanced']
         
-        # Validate lessons
-        lessons = curriculum['lessons']
-        
-        for i, lesson in enumerate(lessons):
-            # Ensure order_index is sequential
-            lesson['order_index'] = i + 1
+        # Validate each course
+        for course_idx, course in enumerate(learning_path['courses']):
+            # Validate required course fields
+            required_fields = ['title', 'category', 'description', 'lessons']
+            for field in required_fields:
+                if field not in course:
+                    raise ValueError(f"Course {course_idx} missing required field: {field}")
             
-            # Validate concept_ids exist
-            invalid_concepts = [cid for cid in lesson['concept_ids'] 
-                               if cid not in valid_concept_ids]
-            if invalid_concepts:
-                logger.warning(f"Lesson '{lesson['title']}' references unknown concepts: {invalid_concepts}")
-                # Remove invalid concept IDs
-                lesson['concept_ids'] = [cid for cid in lesson['concept_ids'] 
-                                        if cid in valid_concept_ids]
+            # Validate category
+            if course['category'] not in valid_categories:
+                logger.warning(f"Invalid category {course['category']} in course {course_idx}, defaulting to 'foundations'")
+                course['category'] = 'foundations'
+            
+            # Validate lessons
+            lessons = course['lessons']
+            
+            for i, lesson in enumerate(lessons):
+                # Ensure order_index is sequential
+                lesson['order_index'] = i + 1
+                
+                # Validate concept_ids exist
+                invalid_concepts = [cid for cid in lesson.get('concept_ids', []) 
+                                   if cid not in valid_concept_ids]
+                if invalid_concepts:
+                    logger.warning(f"Lesson '{lesson['title']}' references unknown concepts: {invalid_concepts}")
+                    # Remove invalid concept IDs
+                    lesson['concept_ids'] = [cid for cid in lesson.get('concept_ids', []) 
+                                            if cid in valid_concept_ids]
+            
+            # Calculate estimated_hours if not provided
+            if 'estimated_hours' not in course:
+                total_minutes = sum(lesson.get('estimated_minutes', 30) for lesson in lessons)
+                course['estimated_hours'] = round(total_minutes / 60, 1)
+            
+            # Add default tags if missing
+            if 'tags' not in course:
+                course['tags'] = []
+            
+            # Set lesson_count for easy access
+            course['lesson_count'] = len(lessons)
         
-        # Calculate estimated_hours if not provided
-        if 'estimated_hours' not in curriculum:
-            total_minutes = sum(lesson.get('estimated_minutes', 30) for lesson in lessons)
-            curriculum['estimated_hours'] = round(total_minutes / 60, 1)
-        
-        # Add default tags if missing
-        if 'tags' not in curriculum:
-            curriculum['tags'] = []
-        
-        return curriculum
+        return learning_path
     
     def _calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
         """Calculate cost of Claude API call."""

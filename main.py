@@ -6121,14 +6121,38 @@ async def mark_lesson_complete(course_id: str, lesson_id: str):
 @app.post("/api/courses/generate")
 async def generate_course(request: Request):
     """
-    Generate a complete course curriculum from user goal using AI.
+    Generate a complete LEARNING PATH (1-4 courses) from user goal using AI.
+    
+    IMPORTANT: This creates a learning progression, not just a single course.
+    For comprehensive goals, expect 2-4 courses with prerequisites.
     
     Request body:
         {
-            "user_goal": "Master ENFP shadow integration",
+            "user_goal": "Master ENFP cognitive functions and shadow integration",
             "relevant_concept_ids": ["concept-1", "concept-2"],  # optional
-            "max_lessons": 12,  # optional, default 15
-            "target_category": "advanced"  # optional
+            "max_lessons": 12,  # optional, default 15 per course
+            "target_category": "advanced"  # optional (ignored for multi-course paths)
+        }
+    
+    Response:
+        {
+            "success": true,
+            "message": "Generated learning path with 3 courses and 24 total lessons",
+            "path_type": "comprehensive",
+            "path_summary": "Three-course progression...",
+            "courses": [
+                {
+                    "id": "uuid-1",
+                    "title": "ENFP Foundations",
+                    "category": "foundations",
+                    "lesson_count": 8,
+                    "prerequisite_course_id": null
+                },
+                ...
+            ],
+            "total_courses": 3,
+            "total_lessons": 24,
+            "cost": 0.0523
         }
     """
     try:
@@ -6141,60 +6165,50 @@ async def generate_course(request: Request):
         generator = get_course_generator()
         manager = get_course_manager()
         
-        # Generate curriculum using AI
-        curriculum = generator.generate_curriculum(
+        # Generate learning path using AI (returns multiple courses)
+        learning_path = generator.generate_curriculum(
             user_goal=user_goal,
             relevant_concept_ids=data.get("relevant_concept_ids"),
-            max_lessons=data.get("max_lessons", 15),
+            max_lessons=data.get("max_lessons", 12),
             target_category=data.get("target_category")
         )
         
-        # Create course in database
-        course = manager.create_course(
-            title=curriculum['title'],
-            category=curriculum['category'],
-            description=curriculum['description'],
-            estimated_hours=curriculum['estimated_hours'],
-            auto_generated=True,
-            generation_prompt=user_goal,
-            source_type='graph',
-            source_ids=curriculum.get('source_ids', []),
-            tags=curriculum.get('tags', [])
+        # Extract courses array and metadata
+        courses_data = learning_path.get('courses', [])
+        path_type = learning_path.get('path_type', 'simple')
+        path_summary = learning_path.get('path_summary', '')
+        generation_cost = learning_path.get('generation_metadata', {}).get('cost', 0.0)
+        
+        # ATOMICALLY create all courses + lessons + prerequisites in ONE transaction
+        result = manager.create_learning_path(
+            courses_data=courses_data,
+            user_goal=user_goal
         )
         
-        # Create lessons
-        lesson_ids = []
-        for lesson_data in curriculum['lessons']:
-            lesson = manager.create_lesson(
-                course_id=course['id'],
-                title=lesson_data['title'],
-                concept_ids=lesson_data['concept_ids'],
-                order_index=lesson_data.get('order_index'),
-                description=lesson_data.get('description'),
-                prerequisite_lesson_ids=lesson_data.get('prerequisite_lesson_ids', []),
-                estimated_minutes=lesson_data.get('estimated_minutes', 30),
-                difficulty=lesson_data.get('difficulty', 'foundational'),
-                learning_objectives=lesson_data.get('learning_objectives'),
-                key_takeaways=lesson_data.get('key_takeaways')
-            )
-            lesson_ids.append(lesson['id'])
+        created_courses = result['created_courses']
+        total_lessons = result['total_lessons']
         
         return {
             "success": True,
-            "message": f"Generated course '{course['title']}' with {len(lesson_ids)} lessons",
-            "course_id": course['id'],
-            "course": course,
-            "lesson_ids": lesson_ids,
-            "cost": curriculum.get('generation_metadata', {}).get('cost', 0.0)
+            "message": f"Generated learning path with {len(created_courses)} courses and {total_lessons} total lessons",
+            "path_type": path_type,
+            "path_summary": path_summary,
+            "courses": created_courses,
+            "total_courses": len(created_courses),
+            "total_lessons": total_lessons,
+            "cost": generation_cost,
+            # Legacy fields for backwards compatibility (use first course)
+            "course_id": created_courses[0]['id'] if created_courses else None,
+            "course": created_courses[0] if created_courses else None
         }
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        print(f"❌ Course generation failed: {str(e)}")
+        print(f"❌ Learning path generation failed: {str(e)}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Course generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Learning path generation failed: {str(e)}")
 
 
 @app.post("/api/courses/assign-content")
