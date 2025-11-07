@@ -22,6 +22,15 @@ Preferred communication style: Simple, everyday language with a decent amount of
     - **Modals**: Course details with lesson list, AI generation form with cost estimate
     - **Toast Notifications**: Success/error feedback system
     - **Keyboard Shortcuts**: Space (reset), +/- (zoom), Escape (close), Enter (search)
+- **Lesson Page (`/learning-paths/{course_id}/{lesson_id}`)**: Split-screen learning interface (Phase 4 & 5 - COMPLETE):
+    - **Split-Screen Layout**: 60/40 split (content pane + AI chat pane)
+    - **Content Pane**: Lesson info, progress bar, concept cards, video player, transcript, notes with auto-save
+    - **AI Tutor Chat (Phase 5)**: Real-time Claude Sonnet 4 integration with lesson context awareness
+    - **Chat Features**: Typing indicator animation, conversation history persistence, token usage tracking ($0.01-$0.02 per exchange)
+    - **Context System**: AI knows current lesson, references CS Joseph terminology, pulls relevant concepts from Knowledge Graph
+    - **Progress Tracking**: Mark complete functionality with immediate UI updates (status badge + progress bar)
+    - **Navigation**: Breadcrumb trail, prev/next lesson buttons, back to course
+    - **Database**: PostgreSQL chat_threads and chat_messages tables for conversation persistence
 - **Chat Interface (`/chat` and `/claude`)**: A professional, Claude.ai/ChatGPT-inspired interface with:
     - **Sidebar**: Collapsible project folders, conversation management (load, rename, delete), and mobile optimization.
     - **Search Functionality**: Comprehensive backend search for conversation titles and message content with debounce, real-time filtering, and XSS protection.
@@ -105,6 +114,11 @@ Preferred communication style: Simple, everyday language with a decent amount of
 - **Core APIs**: For upload (PDF, audio, base64), querying, text-to-PDF conversion, and re-processing.
 - **Document Management**: CRUD operations for documents and chat commands.
 - **Claude Chat API**: Endpoints for managing project categories, conversations, and messages.
+- **Lesson Chat API** (`src/routes/chat_routes.py`):
+  - `POST /api/chat/lesson` - Send message to AI tutor with lesson context
+  - `GET /api/chat/lesson/{lesson_id}/history` - Retrieve conversation history and stats
+  - `DELETE /api/chat/lesson/{lesson_id}/history` - Clear chat history for lesson
+  - **Chat Service** (`src/services/chat_service.py`): Thread management, message persistence, Claude API integration, context building, token/cost tracking
 - **OpenAI-Compatible API**: `/v1/models` and `/v1/chat/completions` for LibreChat integration, wrapping Claude and Pinecone.
 - **System APIs**: Migration and usage monitoring.
 - **Static Files**: Serves frontend assets and Swagger UI.
