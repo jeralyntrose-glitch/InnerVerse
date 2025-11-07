@@ -8,6 +8,9 @@ from typing import List, Dict, Optional
 import psycopg2
 import psycopg2.extras
 import uuid as uuid_lib
+from pinecone import Pinecone
+import openai
+from src.services.pinecone_organizer import extract_all_metadata, organize_results_by_metadata, format_organized_context
 
 
 class ChatService:
@@ -29,6 +32,23 @@ class ChatService:
         
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = "claude-sonnet-4-20250514"
+        
+        # Initialize Pinecone client
+        pinecone_api_key = os.getenv('PINECONE_API_KEY')
+        pinecone_index = os.getenv('PINECONE_INDEX')
+        if pinecone_api_key and pinecone_index:
+            pc = Pinecone(api_key=pinecone_api_key)
+            self.pinecone_index = pc.Index(pinecone_index)
+        else:
+            self.pinecone_index = None
+            print("⚠️ Pinecone not configured - chat will work without vector search")
+        
+        # Initialize OpenAI client for embeddings
+        openai_key = os.getenv('OPENAI_API_KEY')
+        if openai_key:
+            openai.api_key = openai_key
+        else:
+            print("⚠️ OpenAI API key missing - can't create embeddings for Pinecone search")
         
     def _get_connection(self):
         """Get PostgreSQL database connection"""
@@ -213,13 +233,62 @@ class ChatService:
             print(f"Error querying concepts: {e}")
             return []
     
-    def build_system_prompt(self, lesson_context: Dict, concepts: List[Dict]) -> str:
+    def query_pinecone_organized(self, query: str, top_k: int = 10, organize_by: str = 'primary_category') -> str:
+        """
+        Query Pinecone and return organized results by metadata
+        
+        Args:
+            query: User's question
+            top_k: Number of results to retrieve
+            organize_by: Metadata field to group by
+            
+        Returns:
+            Formatted context string organized by metadata
+        """
+        if not self.pinecone_index:
+            return ""
+        
+        try:
+            # Create embedding
+            response = openai.embeddings.create(
+                input=query,
+                model="text-embedding-3-large"
+            )
+            query_vector = response.data[0].embedding
+            
+            # Query Pinecone with metadata
+            results = self.pinecone_index.query(
+                vector=query_vector,
+                top_k=top_k,
+                include_metadata=True
+            )
+            
+            if not results.matches:
+                return ""
+            
+            # Extract all metadata (including 10 enriched fields)
+            enriched_results = extract_all_metadata(results.matches)
+            
+            # Organize by metadata field
+            organized = organize_results_by_metadata(results.matches, organize_by=organize_by)
+            
+            # Format for AI consumption
+            formatted_context = format_organized_context(organized, max_chunks_per_group=2)
+            
+            return formatted_context
+            
+        except Exception as e:
+            print(f"Error querying Pinecone: {e}")
+            return ""
+    
+    def build_system_prompt(self, lesson_context: Dict, concepts: List[Dict], pinecone_context: str = "") -> str:
         """
         Build system prompt with lesson context
         
         Args:
             lesson_context: Lesson information
             concepts: Relevant concepts from knowledge base
+            pinecone_context: Organized context from Pinecone search
             
         Returns:
             System prompt string
@@ -230,6 +299,11 @@ class ChatService:
             for concept in concepts[:3]:  # Top 3 concepts
                 concepts_text += f"- {concept.get('name', 'Concept')}: {concept.get('definition', '')}\n"
         
+        # Add Pinecone context if available
+        knowledge_base_text = ""
+        if pinecone_context:
+            knowledge_base_text = f"\n\nRELEVANT CONTENT FROM CS JOSEPH'S TEACHINGS:\n{pinecone_context}\n"
+        
         prompt = f"""You are an expert MBTI tutor specializing in CS Joseph's cognitive function theory. You're helping a student learn about personality type through structured lessons.
 
 CURRENT LESSON CONTEXT:
@@ -238,7 +312,7 @@ CURRENT LESSON CONTEXT:
 - Description: {lesson_context.get('description', 'No description')}
 - Difficulty: {lesson_context.get('difficulty', 'foundational')}
 - Duration: {lesson_context.get('duration', 30)} minutes
-{concepts_text}
+{concepts_text}{knowledge_base_text}
 
 YOUR ROLE:
 - Be a supportive, engaging tutor who explains concepts clearly
@@ -293,11 +367,14 @@ The student is working through this lesson to understand these concepts better. 
             # Get lesson context
             lesson_context = self.get_lesson_context(lesson_id)
             
-            # Query relevant concepts
+            # Query relevant concepts from Knowledge Graph
             concepts = self.query_relevant_concepts(user_message)
             
-            # Build system prompt
-            system_prompt = self.build_system_prompt(lesson_context, concepts)
+            # Query Pinecone for organized content by category
+            pinecone_context = self.query_pinecone_organized(user_message, top_k=10, organize_by='primary_category')
+            
+            # Build system prompt with all context
+            system_prompt = self.build_system_prompt(lesson_context, concepts, pinecone_context)
             
             # Get chat history
             history = self.get_chat_history(thread_id, limit=10)

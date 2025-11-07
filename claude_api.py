@@ -6,6 +6,7 @@ from psycopg2.extras import RealDictCursor
 from pinecone import Pinecone
 import openai
 import time
+from src.services.pinecone_organizer import extract_all_metadata, organize_results_by_metadata, format_organized_context
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -159,17 +160,13 @@ def query_innerverse_local(question: str) -> str:
                 print(f"   Top match score: {matches[0].score:.4f}")
                 print(f"   Lowest match score: {matches[-1].score:.4f}")
             
-            for m in matches:
-                if "metadata" in m and "text" in m["metadata"]:
-                    text = m["metadata"]["text"]
-                    if text not in all_chunks:
-                        all_chunks[text] = {
-                            "text": text,
-                            "score": m.score,
-                            "filename": m["metadata"].get("filename", "Unknown"),
-                            "types_mentioned": m["metadata"].get("types_mentioned", ""),
-                            "season": m["metadata"].get("season", "")
-                        }
+            # Extract ALL metadata (including 10 enriched fields)
+            enriched_results = extract_all_metadata(matches)
+            
+            for result in enriched_results:
+                text = result['text']
+                if text and text not in all_chunks:
+                    all_chunks[text] = result
         
         if not all_chunks:
             print("❌ [CLAUDE DEBUG] No chunks found! Returning empty message.")
