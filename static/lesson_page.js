@@ -38,20 +38,23 @@ const state = {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🎓 Initializing lesson page...');
     
-    const pathParts = window.location.pathname.split('/');
-    state.courseId = pathParts[2];
-    state.lessonId = pathParts[3];
-    
-    if (!state.courseId || !state.lessonId) {
-        showError('Invalid lesson URL');
-        return;
+    try {
+        const pathParts = window.location.pathname.split('/');
+        state.courseId = pathParts[2];
+        state.lessonId = pathParts[3];
+        
+        if (!state.courseId || !state.lessonId) {
+            showError('Invalid lesson URL');
+            return;
+        }
+        
+        await loadLessonData();
+        setupEventListeners();
+        
+        console.log('✅ Lesson page initialized');
+    } finally {
+        hideLoading();
     }
-    
-    await loadLessonData();
-    setupEventListeners();
-    hideLoading();
-    
-    console.log('✅ Lesson page initialized');
 });
 
 // ============================================================================
@@ -59,41 +62,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================================================
 
 async function loadLessonData() {
-    try {
-        showLoading();
-        
-        const courseResponse = await fetch(`${CONFIG.api.courses}/${state.courseId}`);
-        const courseResult = await courseResponse.json();
-        
-        if (!courseResult.success) {
-            throw new Error('Failed to load course');
-        }
-        
-        state.course = courseResult.course;
-        
-        const lessonsResponse = await fetch(`${CONFIG.api.courses}/${state.courseId}/lessons`);
-        const lessonsResult = await lessonsResponse.json();
-        
-        if (!lessonsResult.success) {
-            throw new Error('Failed to load lessons');
-        }
-        
-        state.allLessons = lessonsResult.lessons;
-        state.lesson = state.allLessons.find(l => l.id === state.lessonId);
-        state.currentLessonIndex = state.allLessons.findIndex(l => l.id === state.lessonId);
-        
-        if (!state.lesson) {
-            throw new Error('Lesson not found');
-        }
-        
-        await loadConcepts();
-        renderLessonContent();
-        loadNotes();
-        
-    } catch (error) {
-        console.error('Error loading lesson:', error);
-        showError(error.message);
+    showLoading();
+    
+    const courseResponse = await fetch(`${CONFIG.api.courses}/${state.courseId}`);
+    const courseResult = await courseResponse.json();
+    
+    if (!courseResult.success) {
+        throw new Error('Failed to load course');
     }
+    
+    state.course = courseResult.course;
+    
+    const lessonsResponse = await fetch(`${CONFIG.api.courses}/${state.courseId}/lessons`);
+    const lessonsResult = await lessonsResponse.json();
+    
+    if (!lessonsResult.success) {
+        throw new Error('Failed to load lessons');
+    }
+    
+    state.allLessons = lessonsResult.lessons;
+    state.lesson = state.allLessons.find(l => l.id === state.lessonId);
+    state.currentLessonIndex = state.allLessons.findIndex(l => l.id === state.lessonId);
+    
+    if (!state.lesson) {
+        throw new Error('Lesson not found');
+    }
+    
+    await loadConcepts();
+    renderLessonContent();
+    loadNotes();
 }
 
 async function loadConcepts() {
