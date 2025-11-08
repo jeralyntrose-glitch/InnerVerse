@@ -1451,6 +1451,69 @@ async function sendMessage() {
     // Scroll again after typing indicator appears to ensure it's visible
     setTimeout(() => scrollToBottom(), 100);
 
+    // === BACKGROUND PROCESSING PATH (PWA) ===
+    if (ENABLE_BACKGROUND_PROCESSING && backgroundManager) {
+        try {
+            console.log('🔄 Using background processing endpoint');
+            
+            // Send to background endpoint
+            const response = await fetch(`/claude/conversations/${conversationId}/message/background`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(messagePayload)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to create background job');
+            }
+            
+            const { job_id } = await response.json();
+            console.log(`✅ Background job created: ${job_id}`);
+            
+            // Store the job and start polling
+            await backgroundManager.createJob(job_id, conversationId);
+            
+            // Poll for completion
+            backgroundManager.resumePolling(job_id, conversationId, (response) => {
+                hideTyping();
+                if (response) {
+                    // Strip [FOLLOW-UP: ...] brackets from display
+                    let displayResponse = response.replace(/\[FOLLOW-UP:\s*/g, '').replace(/\]/g, '');
+                    
+                    // Render with markdown + sanitization
+                    if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+                        const rawHTML = marked.parse(displayResponse);
+                        const cleanHTML = DOMPurify.sanitize(rawHTML, {
+                            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+                                          'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 'a', 'hr'],
+                            ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
+                        });
+                        addMessage('assistant', cleanHTML, null, true); // true = already HTML
+                    } else {
+                        addMessage('assistant', displayResponse);
+                    }
+                    
+                    scrollToBottom();
+                    
+                    // Reload sidebar to update conversation timestamp
+                    loadAllConversations();
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Background processing failed:', error);
+            showError('Failed to send message. Please try again.');
+            hideTyping();
+        } finally {
+            isStreaming = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+        }
+        
+        return; // Exit early - background processing handles the rest
+    }
+    
+    // === ORIGINAL STREAMING PATH (DEFAULT) ===
     let assistantContent = null;
     let fullResponse = '';
 
@@ -1623,6 +1686,56 @@ if (themeToggle) {
 // Check if sidebar should be closed on mobile by default
 if (window.innerWidth <= 768) {
     sidebar.classList.add('closed');
+}
+
+// Initialize background message processing (if enabled)
+let backgroundManager = null;
+if (ENABLE_BACKGROUND_PROCESSING) {
+    console.log('🚀 Initializing BackgroundMessageManager');
+    backgroundManager = new BackgroundMessageManager();
+    
+    // Resume detection: Check for pending jobs when app comes back to foreground
+    document.addEventListener('visibilitychange', async () => {
+        if (!document.hidden && backgroundManager) {
+            console.log('👀 App visible - checking for pending messages');
+            const pending = await backgroundManager.getPendingJobs();
+            if (pending.length > 0) {
+                console.log(`📬 Found ${pending.length} pending job(s) - resuming polling`);
+                for (const job of pending) {
+                    await backgroundManager.resumePolling(job.jobId, conversationId, (response) => {
+                        // Display the response in the chat
+                        hideTyping();
+                        if (response) {
+                            addMessage('assistant', response);
+                            scrollToBottom();
+                        }
+                    });
+                }
+            }
+        }
+    });
+    
+    // Also check on focus (for iOS)
+    window.addEventListener('focus', async () => {
+        if (backgroundManager) {
+            console.log('🔍 Window focused - checking for pending messages');
+            const pending = await backgroundManager.getPendingJobs();
+            if (pending.length > 0) {
+                console.log(`📬 Found ${pending.length} pending job(s) on focus - resuming polling`);
+                for (const job of pending) {
+                    await backgroundManager.resumePolling(job.jobId, conversationId, (response) => {
+                        hideTyping();
+                        if (response) {
+                            addMessage('assistant', response);
+                            scrollToBottom();
+                        }
+                    });
+                }
+            }
+        }
+    });
+    
+    console.log('✅ Background processing listeners registered');
 }
 
 // Load conversations on startup

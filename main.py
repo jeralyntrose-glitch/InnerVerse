@@ -5628,7 +5628,7 @@ def serve_knowledge_graph():
 
 @app.get("/chat", include_in_schema=False)
 def serve_chat_ui():
-    return FileResponse("chat.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/sw.js", include_in_schema=False)
 def serve_service_worker():
