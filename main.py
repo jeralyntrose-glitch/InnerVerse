@@ -6257,14 +6257,13 @@ async def get_lesson_concepts(lesson_id: str):
         conn.close()
         
         # Load knowledge graph to get concept details
-        kg_manager = get_knowledge_graph_manager()
+        graph = kg_manager.load_graph()
         
         concepts = []
         for assignment in assignments:
             concept_id = assignment['id']
             
             # Get concept details from knowledge graph
-            graph = kg_manager.load_graph()
             concept_node = None
             for node in graph['nodes']:
                 if node['id'] == concept_id:

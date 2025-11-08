@@ -180,21 +180,23 @@ def assign_confidence(score: float) -> str:
 
 
 def get_all_lessons():
-    """Get all lessons from database"""
+    """Get all lessons from database (only those without concepts)"""
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT 
-                    id, 
-                    title, 
-                    description,
-                    learning_objectives,
-                    key_takeaways,
-                    course_id,
-                    order_index
-                FROM lessons
-                ORDER BY course_id, order_index
+                    l.id, 
+                    l.title, 
+                    l.description,
+                    l.learning_objectives,
+                    l.key_takeaways,
+                    l.course_id,
+                    l.order_index
+                FROM lessons l
+                LEFT JOIN lesson_concepts lc ON l.id = lc.lesson_id
+                WHERE lc.lesson_id IS NULL
+                ORDER BY l.course_id, l.order_index
             """)
             lessons = cur.fetchall()
             return [dict(lesson) for lesson in lessons]
@@ -234,13 +236,6 @@ def assign_concepts_to_lesson(lesson: Dict) -> List[Tuple[str, str, float, float
     # Filter to concept-type chunks and calculate scores
     concept_scores = {}  # concept_id -> {score, similarity, metadata, prominence}
     lesson_metadata = lesson.get('metadata') or {}
-    
-    # DEBUG: Log first few results to see what we're getting
-    if len(results.matches) > 0:
-        print(f"  📋 DEBUG: Received {len(results.matches)} total matches from Pinecone")
-        first_match = results.matches[0]
-        print(f"      First match type: {first_match.metadata.get('type') if first_match.metadata else 'NO METADATA'}")
-        print(f"      First match keys: {list(first_match.metadata.keys()) if first_match.metadata else 'NO METADATA'}")
     
     for match in results.matches:
         metadata = match.metadata or {}
