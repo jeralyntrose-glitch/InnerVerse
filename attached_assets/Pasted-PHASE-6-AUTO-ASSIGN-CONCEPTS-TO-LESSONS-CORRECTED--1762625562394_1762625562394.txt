@@ -1,0 +1,61 @@
+PHASE 6: AUTO-ASSIGN CONCEPTS TO LESSONS (CORRECTED)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PREREQUISITE: EMBED CONCEPTS IN PINECONE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 0: Create one-time script to embed knowledge graph concepts
+
+File: scripts/embed_concepts_to_pinecone.py
+
+REQUIREMENTS:
+1. Load all concepts from knowledge graph JSON (concepts table in DB)
+2. For each concept:
+   - Create embedding of: concept name + description + any other relevant text
+   - Prepare metadata:
+     * type: 'concept'
+     * concept_id: [database ID]
+     * concept_name: [name]
+     * description: [description]
+     * Any other concept metadata from knowledge graph
+3. Batch upsert to Pinecone (use batches of 100)
+4. Print progress: "Embedded X/Y concepts"
+5. Print final: "✅ Embedded X concepts. Cost: ~$Y"
+
+Run this ONCE before the assignment script.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: DATABASE MIGRATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Same as before - lesson_concepts table]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: CREATE BATCH ASSIGNMENT SCRIPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: scripts/assign_concepts_to_lessons.py
+
+ALGORITHM (CORRECTED):
+1. For each lesson, create embedding of: title + description + first 500 chars of content
+2. Query Pinecone with that embedding (top_k=50)
+3. ✅ Filter results to chunks where metadata['type'] == 'concept'
+4. Extract concept_id from each match's metadata
+5. For each matched concept, calculate composite score:
+   - Vector similarity (from Pinecone): 70%
+   - Prominence: 30%
+     * Boost if concept name appears in lesson title/description
+6. Assign confidence based on final score:
+   - High: ≥0.70
+   - Medium: 0.55-0.69
+   - Low: 0.40-0.54
+   - Skip: <0.40
+7. Select top 3-10 concepts per lesson
+8. Save to lesson_concepts table with rank
+
+NOTE: 
+- Removed metadata_overlap scoring (concepts don't have the same metadata as document chunks)
+- Adjusted thresholds since we're only using similarity + prominence
+- Concepts are now searchable entities in Pinecone!
+
+[Rest of the steps remain the same - API endpoint, chat context, UI components]
