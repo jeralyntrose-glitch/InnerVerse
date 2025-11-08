@@ -468,4 +468,56 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 3000);
 }
 
+// ============================================================================
+// BACKGROUND PROCESSING INITIALIZATION (PWA)
+// ============================================================================
+
+let backgroundManager = null;
+if (ENABLE_BACKGROUND_PROCESSING) {
+    console.log('🚀 [Lesson] Initializing BackgroundMessageManager');
+    backgroundManager = new BackgroundMessageManager();
+    
+    // Resume detection: Check for pending jobs when app comes back to foreground
+    document.addEventListener('visibilitychange', async () => {
+        if (!document.hidden && backgroundManager) {
+            console.log('👀 [Lesson] App visible - checking for pending messages');
+            const pending = await backgroundManager.getPendingJobs();
+            if (pending.length > 0) {
+                console.log(`📬 [Lesson] Found ${pending.length} pending job(s) - resuming polling`);
+                for (const job of pending) {
+                    // Note: Lesson chat would need a background endpoint to fully support this
+                    // For now, this is a placeholder for when background lesson chat is implemented
+                    await backgroundManager.resumePolling(job.jobId, null, (response) => {
+                        removeTypingIndicator('typing-resume');
+                        if (response) {
+                            addChatMessage(response, 'ai');
+                        }
+                    });
+                }
+            }
+        }
+    });
+    
+    // Also check on focus (for iOS)
+    window.addEventListener('focus', async () => {
+        if (backgroundManager) {
+            console.log('🔍 [Lesson] Window focused - checking for pending messages');
+            const pending = await backgroundManager.getPendingJobs();
+            if (pending.length > 0) {
+                console.log(`📬 [Lesson] Found ${pending.length} pending job(s) on focus - resuming polling`);
+                for (const job of pending) {
+                    await backgroundManager.resumePolling(job.jobId, null, (response) => {
+                        removeTypingIndicator('typing-resume');
+                        if (response) {
+                            addChatMessage(response, 'ai');
+                        }
+                    });
+                }
+            }
+        }
+    });
+    
+    console.log('✅ [Lesson] Background processing listeners registered');
+}
+
 window.LessonPage = { state, loadLessonData, renderLessonContent };
