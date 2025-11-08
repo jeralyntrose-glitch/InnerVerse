@@ -6,7 +6,7 @@ console.log('🟢🟢🟢 SIDEBAR.JS IS LOADING! 🟢🟢🟢');
 // =============================================================================
 // FEATURE FLAG: PWA BACKGROUND PROCESSING
 // =============================================================================
-const ENABLE_BACKGROUND_PROCESSING = true; // ON - Testing background processing feature
+const ENABLE_BACKGROUND_PROCESSING = false; // OFF by default - safe rollback point
 console.log(`🚦 Background processing: ${ENABLE_BACKGROUND_PROCESSING ? 'ENABLED' : 'DISABLED (using synchronous chat)'}`);
 
 // State
