@@ -1515,6 +1515,7 @@ async function sendMessage() {
     
     // === ORIGINAL STREAMING PATH (DEFAULT) ===
     let assistantContent = null;
+    let assistantMessageDiv = null;
     let fullResponse = '';
 
     try {
@@ -1552,6 +1553,8 @@ async function sendMessage() {
                                 console.log('📥 First chunk received, creating assistant message');
                                 hideTyping();
                                 assistantContent = addMessage('assistant', '');
+                                // Get the parent message div so we can add follow-up question later
+                                assistantMessageDiv = assistantContent.parentElement;
                             }
                             
                             fullResponse += data.chunk;
@@ -1581,6 +1584,41 @@ async function sendMessage() {
                     }
                 }
             }
+        }
+        
+        // After streaming completes, extract and add follow-up question button
+        const followUpMatch = fullResponse.match(/\[FOLLOW-UP:\s*(.*?)\]/);
+        if (followUpMatch && assistantMessageDiv) {
+            const followUpQuestion = followUpMatch[1];
+            console.log('✨ Adding follow-up question button:', followUpQuestion);
+            
+            // Remove any existing follow-up container (safety check)
+            const existingFollowUp = assistantMessageDiv.querySelector('.follow-up-question-container');
+            if (existingFollowUp) {
+                existingFollowUp.remove();
+            }
+            
+            // Create follow-up question button
+            const followUpContainer = document.createElement('div');
+            followUpContainer.className = 'follow-up-question-container';
+            followUpContainer.style.cssText = 'margin-top: 12px; padding: 10px 14px; background: rgba(16, 163, 127, 0.08); border-radius: 8px; border-left: 3px solid #10A37F;';
+            
+            const questionButton = document.createElement('button');
+            questionButton.className = 'suggested-question';
+            questionButton.textContent = followUpQuestion;
+            questionButton.style.cssText = 'background: none; border: none; color: #10A37F; font-size: 14px; cursor: pointer; text-align: left; width: 100%; padding: 0; font-family: inherit;';
+            
+            questionButton.addEventListener('click', () => {
+                messageInput.value = followUpQuestion;
+                messageInput.focus();
+                messageInput.style.height = 'auto';
+                messageInput.style.height = messageInput.scrollHeight + 'px';
+            });
+            
+            followUpContainer.appendChild(questionButton);
+            assistantMessageDiv.appendChild(followUpContainer);
+            
+            console.log('✅ Follow-up question button added successfully');
         }
         
         // Reload sidebar to update conversation timestamp
