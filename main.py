@@ -1347,6 +1347,21 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
             content={"error": "OpenAI or Pinecone client not initialized"})
 
     try:
+        # === SMART QUERY REWRITING ===
+        # Detect special query patterns and auto-filter to relevant documents
+        question_lower = question.lower()
+        smart_filter_applied = False
+        
+        # Pattern 1: "Four Sides" queries
+        four_sides_patterns = ["four sides", "4 sides", "four side", "quadrants of mind", "sides of mind"]
+        if any(pattern in question_lower for pattern in four_sides_patterns):
+            # Auto-filter to Four Sides documents only
+            if not document_id or not document_id.strip():
+                # Only apply smart filter if user didn't specify a document
+                print(f"🧠 Smart filter detected: 'Four Sides' query → filtering to Four Sides documents")
+                smart_filter_applied = True
+                # We'll use filename filtering in the Pinecone query below
+        
         embed_response = openai_client.embeddings.create(
             input=question, model="text-embedding-3-large")
         question_vector = embed_response.data[0].embedding
@@ -1416,6 +1431,16 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
             matches = query_response.matches  # type: ignore
         except AttributeError:
             matches = query_response.get("matches", [])  # type: ignore
+        
+        # Apply smart filtering if "Four Sides" pattern detected
+        if smart_filter_applied:
+            original_count = len(matches)
+            matches = [
+                m for m in matches
+                if "metadata" in m and "filename" in m["metadata"] and 
+                "four sides" in m["metadata"]["filename"].lower()
+            ]
+            print(f"🧠 Smart filter applied: {original_count} matches → {len(matches)} Four Sides matches")
         
         contexts = []
         source_docs = set()
