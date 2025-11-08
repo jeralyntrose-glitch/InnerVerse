@@ -114,10 +114,18 @@ async function loadLessonData() {
     console.log('✅ Lesson content rendered');
     
     console.log('📡 Loading concepts asynchronously...');
-    loadConcepts().then(() => {
-        console.log('✅ Concepts loaded, re-rendering...');
-        renderConcepts(); // Re-render concepts section after they load
-    });
+    loadConcepts()
+        .then(() => {
+            console.log('✅ [MAIN] loadConcepts() promise resolved');
+            console.log('✅ [MAIN] state.concepts after load:', state.concepts);
+            console.log('✅ [MAIN] Re-rendering concepts...');
+            renderConcepts();
+            console.log('✅ [MAIN] Concepts re-rendered');
+        })
+        .catch((error) => {
+            console.error('🔴 [MAIN] loadConcepts() promise rejected:', error);
+            console.error('🔴 [MAIN] Error stack:', error.stack);
+        });
     console.log('✅ Concepts loading in background');
     
     console.log('📝 Loading notes...');
@@ -126,56 +134,80 @@ async function loadLessonData() {
 }
 
 async function loadConcepts() {
+    console.log('🔵 [CONCEPTS] ========== START loadConcepts() ==========');
     const conceptsUrl = `${CONFIG.api.lessons}/${state.lessonId}/concepts`;
-    console.log('🌐 Concepts URL:', conceptsUrl);
+    console.log('🔵 [CONCEPTS] URL:', conceptsUrl);
+    console.log('🔵 [CONCEPTS] Lesson ID:', state.lessonId);
+    console.log('🔵 [CONCEPTS] Current concepts array:', state.concepts);
     
-    // Use XMLHttpRequest as fallback to bypass potential fetch interceptors
-    return new Promise((resolve) => {
-        const xhr = new XMLHttpRequest();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        console.error('🔴 [CONCEPTS] TIMEOUT - Aborting fetch after 5 seconds');
+        controller.abort();
+    }, 5000);
+    
+    try {
+        console.log('🔵 [CONCEPTS] Starting fetch request with 5s timeout...');
+        const startTime = Date.now();
         
-        xhr.timeout = 3000; // 3 second timeout
-        xhr.ontimeout = () => {
-            console.error('❌ XHR timeout after 3s');
+        const response = await fetch(conceptsUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            },
+            cache: 'no-cache',
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        const fetchTime = Date.now() - startTime;
+        console.log(`🔵 [CONCEPTS] Fetch completed in ${fetchTime}ms`);
+        console.log('🔵 [CONCEPTS] Response status:', response.status);
+        console.log('🔵 [CONCEPTS] Response ok:', response.ok);
+        console.log('🔵 [CONCEPTS] Response headers:', [...response.headers.entries()]);
+        
+        if (!response.ok) {
+            console.error('🔴 [CONCEPTS] Bad response status:', response.status);
             state.concepts = [];
-            resolve();
-        };
+            return;
+        }
         
-        xhr.onerror = (error) => {
-            console.error('❌ XHR error:', error);
+        console.log('🔵 [CONCEPTS] Parsing JSON...');
+        const result = await response.json();
+        console.log('🔵 [CONCEPTS] JSON parsed successfully:', result);
+        console.log('🔵 [CONCEPTS] Result type:', typeof result);
+        console.log('🔵 [CONCEPTS] Result.success:', result.success);
+        console.log('🔵 [CONCEPTS] Result.concepts:', result.concepts);
+        console.log('🔵 [CONCEPTS] Result.concepts length:', result.concepts?.length);
+        
+        if (result.success && result.concepts) {
+            state.concepts = result.concepts;
+            console.log(`✅ [CONCEPTS] Successfully loaded ${state.concepts.length} concepts`);
+            console.log('✅ [CONCEPTS] State updated, concepts:', state.concepts);
+        } else {
+            console.warn('⚠️ [CONCEPTS] API returned success=false or no concepts');
             state.concepts = [];
-            resolve();
-        };
+        }
         
-        xhr.onload = () => {
-            console.log('✅ XHR complete, status:', xhr.status);
-            try {
-                if (xhr.status === 200) {
-                    const result = JSON.parse(xhr.responseText);
-                    console.log('✅ JSON parsed, success:', result.success);
-                    
-                    if (result.success) {
-                        state.concepts = result.concepts || [];
-                        console.log(`✅ Loaded ${state.concepts.length} assigned concepts`);
-                    } else {
-                        console.warn('❌ API returned success=false');
-                        state.concepts = [];
-                    }
-                } else {
-                    console.error('❌ Bad status:', xhr.status);
-                    state.concepts = [];
-                }
-            } catch (error) {
-                console.error('❌ Parse error:', error);
-                state.concepts = [];
-            }
-            resolve();
-        };
+    } catch (error) {
+        clearTimeout(timeoutId);
         
-        console.log('📡 Starting XHR request...');
-        xhr.open('GET', conceptsUrl);
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.send();
-    });
+        if (error.name === 'AbortError') {
+            console.error('🔴 [CONCEPTS] FETCH ABORTED due to timeout');
+        } else {
+            console.error('🔴 [CONCEPTS] EXCEPTION CAUGHT:', error);
+            console.error('🔴 [CONCEPTS] Error name:', error.name);
+            console.error('🔴 [CONCEPTS] Error message:', error.message);
+            console.error('🔴 [CONCEPTS] Error stack:', error.stack);
+        }
+        state.concepts = [];
+    } finally {
+        console.log('🔵 [CONCEPTS] ========== END loadConcepts() ==========');
+        console.log('🔵 [CONCEPTS] Final state.concepts:', state.concepts);
+        console.log('🔵 [CONCEPTS] Final state.concepts.length:', state.concepts.length);
+    }
 }
 
 // ============================================================================
@@ -574,6 +606,23 @@ function extractYouTubeId(url) {
 function openConceptDetail(conceptId) {
     showToast('Concept details coming in Phase 6!', 'info');
 }
+
+window.testConceptsFetch = async function() {
+    console.log('🧪 [TEST] Manual concepts fetch test started');
+    console.log('🧪 [TEST] Current lesson ID:', state.lessonId);
+    console.log('🧪 [TEST] Calling loadConcepts()...');
+    
+    await loadConcepts();
+    
+    console.log('🧪 [TEST] loadConcepts() completed');
+    console.log('🧪 [TEST] state.concepts:', state.concepts);
+    console.log('🧪 [TEST] Calling renderConcepts()...');
+    
+    renderConcepts();
+    
+    console.log('🧪 [TEST] Test complete! Check the concepts grid on the page.');
+    return state.concepts;
+};
 
 function showLoading() {
     document.getElementById('loading-overlay').style.display = 'flex';

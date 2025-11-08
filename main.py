@@ -11,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 from collections import deque
 from contextlib import asynccontextmanager
 from urllib.parse import quote
-from fastapi import FastAPI, UploadFile, File, Request, Header, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Request, Response, Header, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -6223,9 +6223,15 @@ async def delete_lesson(lesson_id: str):
 
 
 @app.get("/api/lessons/{lesson_id}/concepts")
-async def get_lesson_concepts(lesson_id: str):
+async def get_lesson_concepts(lesson_id: str, response: Response):
     """Get concepts assigned to a lesson, ordered by rank (Phase 6)"""
     try:
+        # Set explicit headers to prevent browser caching/hanging issues
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        response.headers["Content-Type"] = "application/json; charset=utf-8"
+        
         conn = get_db_connection()
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
