@@ -1,0 +1,142 @@
+TASK: Integrate Reference Data into Chat System
+
+FILES TO UPDATE: src/services/chat_service.py
+
+FILE LOCATION: The reference_data.json file should be at:
+  src/data/reference_data.json
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: Load reference data in __init__()
+Add to ChatService.__init__():
+  import json
+  
+  # Load reference data
+  reference_path = 'src/data/reference_data.json'
+  with open(reference_path, 'r') as f:
+      self.reference_data = json.load(f)
+
+STEP 2: Create new method get_reference_answer()
+Add method:
+  def get_reference_answer(self, query):
+      """Check if query asks for structured facts"""
+      query_lower = query.lower()
+      
+      # Detect type being asked about
+      types = ['infj', 'enfp', 'istj', 'estp', 'intj', 'entp', 
+               'isfj', 'esfp', 'infp', 'enfj', 'istp', 'esfj',
+               'intp', 'entj', 'isfp', 'estj']
+      
+      type_code = None
+      for t in types:
+          if t in query_lower:
+              type_code = t.upper()
+              break
+      
+      if not type_code:
+          return None
+      
+      # Check if asking about four sides
+      if 'four sides' in query_lower or 'four parts' in query_lower:
+          if type_code in self.reference_data.get('four_sides', {}):
+              return {
+                  'type': 'four_sides',
+                  'data': self.reference_data['four_sides'][type_code]
+              }
+      
+      # Check if asking about function stack
+      if 'function' in query_lower or 'stack' in query_lower or 'cognitive' in query_lower:
+          if type_code in self.reference_data.get('function_stacks', {}):
+              return {
+                  'type': 'function_stack',
+                  'data': self.reference_data['function_stacks'][type_code]
+              }
+      
+      # Check if asking about quadra
+      if 'quadra' in query_lower:
+          if type_code in self.reference_data.get('quadras', {}):
+              return {
+                  'type': 'quadra',
+                  'data': self.reference_data['quadras'][type_code]
+              }
+      
+      return None
+
+STEP 3: Update chat() method
+Find the chat() method and modify it:
+  
+  def chat(self, lesson_id, message, conversation_history):
+      # NEW: Check reference data first
+      reference_answer = self.get_reference_answer(message)
+      
+      # Existing: Search Pinecone
+      pinecone_context = self.query_pinecone_organized(message)
+      
+      # Existing: Build system prompt (now with reference data)
+      system_prompt = self.build_system_prompt(
+          lesson_context, 
+          concepts,
+          pinecone_context=pinecone_context,
+          reference_facts=reference_answer  # NEW parameter
+      )
+      
+      # ... rest of existing code
+
+STEP 4: Update build_system_prompt()
+Modify the method signature and add reference facts:
+
+  def build_system_prompt(self, lesson_context, concepts, 
+                         pinecone_context=None, reference_facts=None):
+      
+      # ... existing prompt building ...
+      
+      # NEW: Add reference facts at the top if available
+      if reference_facts:
+          facts_text = "\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+          facts_text += "VERIFIED REFERENCE DATA:\n"
+          facts_text += "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+          facts_text += f"Type: {reference_facts['type']}\n"
+          facts_text += f"Data: {reference_facts['data']}\n\n"
+          facts_text += "Use this exact data for your answer.\n"
+          facts_text += "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+          
+          # Add to beginning of prompt
+          full_prompt = base_prompt + facts_text + formatting_rules
+      else:
+          full_prompt = base_prompt + formatting_rules
+      
+      # ... rest of existing code
+      
+      return full_prompt
+
+STEP 5: Error Handling
+Add try/except around reference data loading:
+  
+  try:
+      with open('src/data/reference_data.json', 'r') as f:
+          self.reference_data = json.load(f)
+  except FileNotFoundError:
+      print("Warning: reference_data.json not found, using Pinecone only")
+      self.reference_data = {}
+
+STEP 6: Test
+Test these queries:
+  ✅ "What are INFJ's four sides?" → Should use reference data
+  ✅ "ENFP function stack?" → Should use reference data
+  ✅ "How does Ni work?" → Should use Pinecone normally
+  ✅ "Explain INFJ development" → Pinecone context + reference if relevant
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SUCCESS CRITERIA:
+✅ Reference data loads without errors
+✅ Queries about four sides/functions return exact data
+✅ Non-reference queries still work normally
+✅ System gracefully handles missing types or categories
+✅ No breaking changes to existing functionality
+
+IMPORTANT NOTES:
+- Reference data is checked FIRST (fast lookup)
+- Pinecone is still searched for additional context
+- Both can be used together for complete answers
+- If reference data missing, falls back to Pinecone only

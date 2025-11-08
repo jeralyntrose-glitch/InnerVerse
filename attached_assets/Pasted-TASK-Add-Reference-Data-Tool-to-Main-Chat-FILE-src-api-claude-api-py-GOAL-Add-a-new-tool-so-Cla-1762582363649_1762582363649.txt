@@ -1,0 +1,86 @@
+TASK: Add Reference Data Tool to Main Chat
+
+FILE: src/api/claude_api.py
+
+GOAL: Add a new tool so Claude can query reference data for exact MBTI facts
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: Load reference data in chat_with_claude()
+At the start of the function, add:
+  import json
+  
+  # Load reference data
+  try:
+      with open('src/data/reference_data.json', 'r') as f:
+          reference_data = json.load(f)
+  except:
+      reference_data = {}
+
+STEP 2: Add new tool definition
+In the tools list, add a new tool:
+
+  {
+      "name": "query_reference_data",
+      "description": "Get exact MBTI type structures like four sides mappings, cognitive function stacks, and quadra assignments. Use this for factual lookup questions about type structures.",
+      "input_schema": {
+          "type": "object",
+          "properties": {
+              "type_code": {
+                  "type": "string",
+                  "description": "The MBTI type code (e.g., INFJ, ENFP, ISTJ)"
+              },
+              "query_type": {
+                  "type": "string",
+                  "enum": ["four_sides", "function_stack", "quadra"],
+                  "description": "What kind of reference data to retrieve"
+              }
+          },
+          "required": ["type_code", "query_type"]
+      }
+  }
+
+STEP 3: Handle the new tool in the response loop
+In the tool handling section, add:
+
+  elif tool_use.name == "query_reference_data":
+      type_code = tool_input.get("type_code", "").upper()
+      query_type = tool_input.get("query_type")
+      
+      # Lookup in reference data
+      result = None
+      if query_type == "four_sides":
+          result = reference_data.get("four_sides", {}).get(type_code)
+      elif query_type == "function_stack":
+          result = reference_data.get("function_stacks", {}).get(type_code)
+      elif query_type == "quadra":
+          result = reference_data.get("quadras", {}).get(type_code)
+      
+      if result:
+          tool_result = {
+              "type": "tool_result",
+              "tool_use_id": tool_use.id,
+              "content": json.dumps(result, indent=2)
+          }
+      else:
+          tool_result = {
+              "type": "tool_result",
+              "tool_use_id": tool_use.id,
+              "content": f"No reference data found for {type_code} - {query_type}"
+          }
+
+STEP 4: Test
+Test queries like:
+  ✅ "What are INFJ's four sides?" → Should use query_reference_data tool
+  ✅ "ENFP function stack?" → Should use query_reference_data tool
+  ✅ "How does shadow work?" → Should use query_innerverse_backend tool
+  ✅ Complex queries → May use both tools
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SUCCESS CRITERIA:
+✅ New tool appears in tools list
+✅ Claude uses it when asking for type structures
+✅ Returns exact data from reference_data.json
+✅ Existing query_innerverse_backend still works
+✅ Claude can use both tools together for complete answers
