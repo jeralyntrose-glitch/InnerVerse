@@ -1382,37 +1382,40 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
         # Build final filter and query with timeout protection
         from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
         
+        # Increase top_k when smart filter is applied to ensure we get Four Sides matches
+        search_top_k = 30 if smart_filter_applied else 5
+        
         try:
             with ThreadPoolExecutor() as executor:
                 if len(filter_conditions) == 0:
                     # No filters - search all documents
-                    print(f"🔍 Searching across ALL documents")
+                    print(f"🔍 Searching across ALL documents (top_k={search_top_k})")
                     future = executor.submit(
                         pinecone_index.query,
                         vector=question_vector,
-                        top_k=5,
+                        top_k=search_top_k,
                         include_metadata=True
                     )
                     query_response = future.result(timeout=10.0)
                 elif len(filter_conditions) == 1:
                     # Single filter
                     filter_str = f"doc_id={document_id}" if document_id else f"tags={filter_tags}"
-                    print(f"🔍 Searching with filter: {filter_str}")
+                    print(f"🔍 Searching with filter: {filter_str} (top_k={search_top_k})")
                     future = executor.submit(
                         pinecone_index.query,
                         vector=question_vector,
-                        top_k=5,
+                        top_k=search_top_k,
                         include_metadata=True,
                         filter=filter_conditions[0]
                     )
                     query_response = future.result(timeout=10.0)
                 else:
                     # Multiple filters - use $and
-                    print(f"🔍 Searching with filters: doc_id={document_id}, tags={filter_tags}")
+                    print(f"🔍 Searching with filters: doc_id={document_id}, tags={filter_tags} (top_k={search_top_k})")
                     future = executor.submit(
                         pinecone_index.query,
                         vector=question_vector,
-                        top_k=5,
+                        top_k=search_top_k,
                         include_metadata=True,
                         filter={"$and": filter_conditions}
                     )
