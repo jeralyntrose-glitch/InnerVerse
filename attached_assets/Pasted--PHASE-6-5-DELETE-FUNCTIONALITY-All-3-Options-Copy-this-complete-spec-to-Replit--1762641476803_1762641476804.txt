@@ -1,0 +1,359 @@
+🎯 PHASE 6.5: DELETE FUNCTIONALITY (All 3 Options)
+Copy this complete spec to Replit:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 6.5: ADD DELETE FUNCTIONALITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add 3 types of delete functionality with safety confirmations:
+1. Delete individual lesson
+2. Delete entire course (+ all its lessons)
+3. Delete ALL content (nuclear reset)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKEND - Add to app.py (or main.py)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 1. DELETE INDIVIDUAL LESSON
+@app.delete('/api/lessons/<int:lesson_id>')
+def delete_lesson(lesson_id):
+    """Delete a single lesson and its concept assignments"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if lesson exists
+        cursor.execute("SELECT id, title FROM lessons WHERE id = ?", (lesson_id,))
+        lesson = cursor.fetchone()
+        if not lesson:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Lesson not found'}), 404
+        
+        lesson_title = lesson['title']
+        
+        # Delete lesson (CASCADE handles lesson_concepts automatically)
+        cursor.execute("DELETE FROM lessons WHERE id = ?", (lesson_id,))
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ Deleted lesson: {lesson_title}")
+        return jsonify({
+            'success': True, 
+            'message': f'Deleted lesson: {lesson_title}'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error deleting lesson {lesson_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# 2. DELETE ENTIRE COURSE
+@app.delete('/api/courses/<int:course_id>')
+def delete_course(course_id):
+    """Delete a course and all its lessons"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if course exists
+        cursor.execute("SELECT id, title FROM courses WHERE id = ?", (course_id,))
+        course = cursor.fetchone()
+        if not course:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Course not found'}), 404
+        
+        course_title = course['title']
+        
+        # Count lessons to be deleted
+        cursor.execute("SELECT COUNT(*) as count FROM lessons WHERE course_id = ?", (course_id,))
+        lesson_count = cursor.fetchone()['count']
+        
+        # Delete course (CASCADE handles lessons and lesson_concepts)
+        cursor.execute("DELETE FROM courses WHERE id = ?", (course_id,))
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ Deleted course '{course_title}' with {lesson_count} lessons")
+        return jsonify({
+            'success': True,
+            'message': f'Deleted course "{course_title}" and {lesson_count} lessons'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error deleting course {course_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# 3. DELETE ALL CONTENT (NUCLEAR OPTION)
+@app.delete('/api/admin/reset-all')
+def reset_all_content():
+    """Delete ALL courses, lessons, and assignments (admin only)"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Count everything first
+        cursor.execute("SELECT COUNT(*) as count FROM courses")
+        course_count = cursor.fetchone()['count']
+        
+        cursor.execute("SELECT COUNT(*) as count FROM lessons")
+        lesson_count = cursor.fetchone()['count']
+        
+        cursor.execute("SELECT COUNT(*) as count FROM lesson_concepts")
+        assignment_count = cursor.fetchone()['count']
+        
+        # Delete everything (in order due to foreign keys)
+        cursor.execute("DELETE FROM lesson_concepts")
+        cursor.execute("DELETE FROM lessons")
+        cursor.execute("DELETE FROM courses")
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"🗑️ NUCLEAR RESET: Deleted {course_count} courses, {lesson_count} lessons, {assignment_count} assignments")
+        return jsonify({
+            'success': True,
+            'message': f'Deleted {course_count} courses, {lesson_count} lessons, {assignment_count} assignments'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in nuclear reset: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FRONTEND - Option 1: Delete Lesson Button
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add to lesson page (src/pages/LessonPage.jsx or similar):
+
+Location: Add near the lesson title or in a settings menu
+
+const handleDeleteLesson = async () => {
+  // Two-step confirmation
+  const firstConfirm = window.confirm(
+    `⚠️ Delete this lesson?\n\n"${lessonTitle}"\n\nThis will also remove all concept assignments.`
+  );
+  
+  if (!firstConfirm) return;
+  
+  const secondConfirm = window.confirm(
+    '🚨 Are you SURE? This cannot be undone!'
+  );
+  
+  if (!secondConfirm) return;
+  
+  try {
+    const response = await fetch(`/api/lessons/${lessonId}`, {
+      method: 'DELETE'
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('✅ ' + data.message);
+      // Redirect back to course or home
+      window.location.href = '/';
+    } else {
+      alert('❌ Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('❌ Failed to delete: ' + error.message);
+  }
+};
+
+// Button component
+<button
+  onClick={handleDeleteLesson}
+  className="px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded border border-red-300"
+  title="Delete this lesson"
+>
+  🗑️ Delete Lesson
+</button>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FRONTEND - Option 2: Delete Course Button
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add to course view/card (wherever courses are displayed):
+
+const handleDeleteCourse = async (courseId, courseTitle) => {
+  // Two-step confirmation
+  const firstConfirm = window.confirm(
+    `⚠️ Delete entire course?\n\n"${courseTitle}"\n\nThis will delete ALL lessons in this course!`
+  );
+  
+  if (!firstConfirm) return;
+  
+  const secondConfirm = window.confirm(
+    '🚨 Are you ABSOLUTELY SURE?\n\nAll lessons and progress will be PERMANENTLY deleted!'
+  );
+  
+  if (!secondConfirm) return;
+  
+  try {
+    const response = await fetch(`/api/courses/${courseId}`, {
+      method: 'DELETE'
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('✅ ' + data.message);
+      // Refresh the page or remove from list
+      window.location.reload();
+    } else {
+      alert('❌ Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('❌ Failed to delete: ' + error.message);
+  }
+};
+
+// Button component (add to course card/list)
+<button
+  onClick={() => handleDeleteCourse(course.id, course.title)}
+  className="px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded border border-red-300"
+  title="Delete entire course"
+>
+  🗑️ Delete Course
+</button>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FRONTEND - Option 3: Nuclear Reset Button
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add to settings page or admin area:
+
+const handleNuclearReset = async () => {
+  // THREE-step confirmation (it's that serious!)
+  const firstConfirm = window.confirm(
+    '🚨 NUCLEAR RESET 🚨\n\nThis will delete:\n- ALL courses\n- ALL lessons\n- ALL concept assignments\n\nAre you sure?'
+  );
+  
+  if (!firstConfirm) return;
+  
+  const secondConfirm = window.confirm(
+    '⚠️ FINAL WARNING ⚠️\n\nEverything will be PERMANENTLY deleted.\n\nYou will have to regenerate all content.\n\nContinue?'
+  );
+  
+  if (!secondConfirm) return;
+  
+  // Type confirmation
+  const typeConfirm = window.prompt(
+    'Type "DELETE EVERYTHING" to confirm (case-sensitive):'
+  );
+  
+  if (typeConfirm !== 'DELETE EVERYTHING') {
+    alert('Confirmation text did not match. Reset cancelled.');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/admin/reset-all', {
+      method: 'DELETE'
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('🗑️ ' + data.message + '\n\nRedirecting to home...');
+      window.location.href = '/';
+    } else {
+      alert('❌ Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('❌ Failed to reset: ' + error.message);
+  }
+};
+
+// Button component (in settings/admin area)
+<div className="border-2 border-red-600 rounded-lg p-4 bg-red-50">
+  <h3 className="text-lg font-bold text-red-900 mb-2">
+    ⚠️ Danger Zone
+  </h3>
+  <p className="text-sm text-red-700 mb-3">
+    Delete all courses, lessons, and assignments. This cannot be undone.
+  </p>
+  <button
+    onClick={handleNuclearReset}
+    className="px-4 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700"
+  >
+    🗑️ Reset All Content
+  </button>
+</div>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UI PLACEMENT RECOMMENDATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. DELETE LESSON:
+   Location: Top-right of lesson page, maybe in a "..." menu
+   Style: Small, subtle, red text/icon
+   
+2. DELETE COURSE:
+   Location: On course cards in tree view or course list
+   Style: Small button/icon on hover
+   
+3. NUCLEAR RESET:
+   Location: Settings page or admin panel
+   Style: Big warning box in "Danger Zone" section
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TESTING CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After implementation:
+
+DELETE LESSON:
+□ Button appears on lesson page
+□ Shows 2 confirmation dialogs
+□ Successfully deletes lesson
+□ Removes concept assignments
+□ Redirects after deletion
+□ Shows success message
+
+DELETE COURSE:
+□ Button appears on course view
+□ Shows 2 confirmation dialogs
+□ Successfully deletes course
+□ Deletes all lessons in course
+□ Updates UI after deletion
+□ Shows success message with count
+
+NUCLEAR RESET:
+□ Button appears in admin/settings
+□ Shows 3 confirmations (2 dialogs + typed text)
+□ Only proceeds if "DELETE EVERYTHING" typed exactly
+□ Successfully deletes all content
+□ Shows summary message
+□ Redirects to home
+
+SAFETY:
+□ All delete operations have multiple confirmations
+□ Cancel works at any step
+□ Error messages display properly
+□ Database constraints handle cascading deletes
+□ No orphaned records left behind
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUCCESS CRITERIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ All 3 delete endpoints working
+✅ Frontend buttons in appropriate locations
+✅ Multiple confirmation steps prevent accidents
+✅ Clear success/error messages
+✅ Proper cleanup (no orphaned data)
+✅ Smooth UX (redirects, updates, etc)
+
+ESTIMATED TIME: 1 hour
+
+This gives you full content management! 🗑️✨
+
+🎊 AFTER PHASE 6.5
+You'll have:
+
+✅ Complete content management
+✅ Ability to delete individual lessons
+✅ Ability to delete entire courses
+✅ Nuclear reset option for fresh starts
+✅ Safe with multiple confirmations
