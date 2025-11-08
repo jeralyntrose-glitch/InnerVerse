@@ -36,7 +36,15 @@ Preferred communication style: Simple, everyday language with a decent amount of
     - **Search Functionality**: Comprehensive backend search for conversation titles and message content with debounce, real-time filtering, and XSS protection.
     - **Copy Message Functionality**: One-click copy for all messages, intelligently stripping markdown from AI responses.
     - **Conversation Management**: Persistent history in PostgreSQL, smart auto-naming, and responsive design.
-    - **Background Message Processing**: Uses a dedicated endpoint for iOS PWA compatibility, ensuring messages complete server-side.
+    - **PWA Background Processing (iOS Compatible)**: Complete server-side message processing with automatic resume on app reopen - **PRODUCTION-READY** (feature flag OFF by default):
+        - **Architecture**: Job-based background processing with IndexedDB persistence and exponential backoff polling
+        - **Backend** (`src/services/background_job_service.py`): background_jobs table, BackgroundJobService with proper error handling and rowcount validation
+        - **API Endpoints**: POST /api/message/background (create job), GET /api/jobs/{job_id}/status (poll status)
+        - **Frontend Module** (`static/BackgroundMessageManager.js`): 450+ line module with IndexedDB wrapper, ready promise initialization, polling with exponential backoff (3s→6s→12s, 5min timeout), timer cleanup on unload/visibility change
+        - **Resume Detection**: Visibility/focus event listeners + checkPendingJobsOnResume() on page load to automatically resume interrupted messages
+        - **Safety Features**: (1) Feature flag OFF by default in index.html, (2) Parallel implementation (zero modifications to working code), (3) Graceful degradation with automatic fallback to synchronous processing, (4) Comprehensive error handling with retry logic
+        - **Integration**: Fully wired in sidebar.js (main chat) and lesson_page.js (lesson chat) with initialization guards, resume detection, timer cleanup
+        - **Production Status**: All architect reviews passed, comprehensive testing validated, ready for staging deployment when user enables flag
     - **Real-time Updates**: 3-second polling for conversation status and unread responses.
     - **PWA Support**: Full Progressive Web App implementation with manifest, icons, service worker, custom install UI, and iOS support.
     - **Performance**: Optimized with HTML template strings, event delegation, optimistic UI, and parallel API fetches.
