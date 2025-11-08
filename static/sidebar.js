@@ -1694,24 +1694,34 @@ if (ENABLE_BACKGROUND_PROCESSING) {
     console.log('🚀 Initializing BackgroundMessageManager');
     backgroundManager = new BackgroundMessageManager();
     
+    // Initialize and check for pending jobs on page load
+    (async () => {
+        await backgroundManager.ready;
+        console.log('✅ BackgroundMessageManager ready');
+        
+        // Check for pending jobs immediately on page load
+        await backgroundManager.checkPendingJobsOnResume(conversationId, null, (response) => {
+            hideTyping();
+            if (response) {
+                addMessage('assistant', response);
+                scrollToBottom();
+                loadAllConversations(); // Refresh sidebar
+            }
+        });
+    })();
+    
     // Resume detection: Check for pending jobs when app comes back to foreground
     document.addEventListener('visibilitychange', async () => {
         if (!document.hidden && backgroundManager) {
             console.log('👀 App visible - checking for pending messages');
-            const pending = await backgroundManager.getPendingJobs();
-            if (pending.length > 0) {
-                console.log(`📬 Found ${pending.length} pending job(s) - resuming polling`);
-                for (const job of pending) {
-                    await backgroundManager.resumePolling(job.jobId, conversationId, (response) => {
-                        // Display the response in the chat
-                        hideTyping();
-                        if (response) {
-                            addMessage('assistant', response);
-                            scrollToBottom();
-                        }
-                    });
+            await backgroundManager.checkPendingJobsOnResume(conversationId, null, (response) => {
+                hideTyping();
+                if (response) {
+                    addMessage('assistant', response);
+                    scrollToBottom();
+                    loadAllConversations(); // Refresh sidebar
                 }
-            }
+            });
         }
     });
     
@@ -1719,19 +1729,14 @@ if (ENABLE_BACKGROUND_PROCESSING) {
     window.addEventListener('focus', async () => {
         if (backgroundManager) {
             console.log('🔍 Window focused - checking for pending messages');
-            const pending = await backgroundManager.getPendingJobs();
-            if (pending.length > 0) {
-                console.log(`📬 Found ${pending.length} pending job(s) on focus - resuming polling`);
-                for (const job of pending) {
-                    await backgroundManager.resumePolling(job.jobId, conversationId, (response) => {
-                        hideTyping();
-                        if (response) {
-                            addMessage('assistant', response);
-                            scrollToBottom();
-                        }
-                    });
+            await backgroundManager.checkPendingJobsOnResume(conversationId, null, (response) => {
+                hideTyping();
+                if (response) {
+                    addMessage('assistant', response);
+                    scrollToBottom();
+                    loadAllConversations(); // Refresh sidebar
                 }
-            }
+            });
         }
     });
     

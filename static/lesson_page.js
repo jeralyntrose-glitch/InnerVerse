@@ -477,24 +477,29 @@ if (ENABLE_BACKGROUND_PROCESSING) {
     console.log('🚀 [Lesson] Initializing BackgroundMessageManager');
     backgroundManager = new BackgroundMessageManager();
     
+    // Initialize and check for pending jobs on page load
+    (async () => {
+        await backgroundManager.ready;
+        console.log('✅ [Lesson] BackgroundMessageManager ready');
+        
+        // Check for pending jobs immediately on page load
+        // Note: Lesson chat needs a background endpoint to fully support this
+        await backgroundManager.checkPendingJobsOnResume(null, state.lessonId, (response) => {
+            if (response) {
+                addChatMessage(response, 'ai');
+            }
+        });
+    })();
+    
     // Resume detection: Check for pending jobs when app comes back to foreground
     document.addEventListener('visibilitychange', async () => {
         if (!document.hidden && backgroundManager) {
             console.log('👀 [Lesson] App visible - checking for pending messages');
-            const pending = await backgroundManager.getPendingJobs();
-            if (pending.length > 0) {
-                console.log(`📬 [Lesson] Found ${pending.length} pending job(s) - resuming polling`);
-                for (const job of pending) {
-                    // Note: Lesson chat would need a background endpoint to fully support this
-                    // For now, this is a placeholder for when background lesson chat is implemented
-                    await backgroundManager.resumePolling(job.jobId, null, (response) => {
-                        removeTypingIndicator('typing-resume');
-                        if (response) {
-                            addChatMessage(response, 'ai');
-                        }
-                    });
+            await backgroundManager.checkPendingJobsOnResume(null, state.lessonId, (response) => {
+                if (response) {
+                    addChatMessage(response, 'ai');
                 }
-            }
+            });
         }
     });
     
@@ -502,18 +507,11 @@ if (ENABLE_BACKGROUND_PROCESSING) {
     window.addEventListener('focus', async () => {
         if (backgroundManager) {
             console.log('🔍 [Lesson] Window focused - checking for pending messages');
-            const pending = await backgroundManager.getPendingJobs();
-            if (pending.length > 0) {
-                console.log(`📬 [Lesson] Found ${pending.length} pending job(s) on focus - resuming polling`);
-                for (const job of pending) {
-                    await backgroundManager.resumePolling(job.jobId, null, (response) => {
-                        removeTypingIndicator('typing-resume');
-                        if (response) {
-                            addChatMessage(response, 'ai');
-                        }
-                    });
+            await backgroundManager.checkPendingJobsOnResume(null, state.lessonId, (response) => {
+                if (response) {
+                    addChatMessage(response, 'ai');
                 }
-            }
+            });
         }
     });
     

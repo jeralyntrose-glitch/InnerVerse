@@ -23,47 +23,84 @@ class BackgroundMessageManager {
         this.pollingIntervals = new Map(); // Track active polling timers
         this.maxPollTime = 5 * 60 * 1000; // 5 minutes
         
-        this.initDB();
+        // Ready promise to ensure DB is initialized before operations
+        this.ready = this.initDB();
+        
+        // Setup cleanup on page unload
+        this._setupCleanup();
+    }
+    
+    /**
+     * Setup cleanup handlers for page navigation/unload
+     */
+    _setupCleanup() {
+        const cleanup = () => {
+            console.log('🧹 Clearing all polling timers before page unload');
+            this.pollingIntervals.forEach((timer, jobId) => {
+                clearTimeout(timer);
+                console.log(`⏹️ Cleared timer for job ${jobId}`);
+            });
+            this.pollingIntervals.clear();
+        };
+        
+        // Clear timers on page unload
+        window.addEventListener('beforeunload', cleanup);
+        
+        // Also clear on visibility change (when switching tabs)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                cleanup();
+            }
+        });
     }
     
     /**
      * Initialize IndexedDB with graceful fallback
+     * Returns a promise that resolves when DB is ready
      */
     async initDB() {
-        try {
-            const request = indexedDB.open(this.dbName, 1);
-            
-            request.onerror = () => {
-                console.warn('⚠️ IndexedDB not available, using in-memory storage');
-                this.useIndexedDB = false;
-            };
-            
-            request.onsuccess = (event) => {
-                this.db = event.target.result;
-                console.log('✅ IndexedDB initialized successfully');
-            };
-            
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
+        return new Promise((resolve) => {
+            try {
+                const request = indexedDB.open(this.dbName, 1);
                 
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    const objectStore = db.createObjectStore(this.storeName, { keyPath: 'jobId' });
-                    objectStore.createIndex('conversationId', 'conversationId', { unique: false });
-                    objectStore.createIndex('lessonId', 'lessonId', { unique: false });
-                    objectStore.createIndex('status', 'status', { unique: false });
-                    console.log('📦 IndexedDB object store created');
-                }
-            };
-        } catch (error) {
-            console.warn('⚠️ IndexedDB initialization failed:', error);
-            this.useIndexedDB = false;
-        }
+                request.onerror = () => {
+                    console.warn('⚠️ IndexedDB not available, using in-memory storage');
+                    this.useIndexedDB = false;
+                    resolve();
+                };
+                
+                request.onsuccess = (event) => {
+                    this.db = event.target.result;
+                    console.log('✅ IndexedDB initialized successfully');
+                    resolve();
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    
+                    if (!db.objectStoreNames.contains(this.storeName)) {
+                        const objectStore = db.createObjectStore(this.storeName, { keyPath: 'jobId' });
+                        objectStore.createIndex('conversationId', 'conversationId', { unique: false });
+                        objectStore.createIndex('lessonId', 'lessonId', { unique: false });
+                        objectStore.createIndex('status', 'status', { unique: false });
+                        console.log('📦 IndexedDB object store created');
+                    }
+                };
+            } catch (error) {
+                console.warn('⚠️ IndexedDB initialization failed:', error);
+                this.useIndexedDB = false;
+                resolve();
+            }
+        });
     }
     
     /**
      * Save a pending job
      */
     async saveJob(jobData) {
+        // Ensure DB is initialized before saving
+        await this.ready;
+        
         const job = {
             jobId: jobData.jobId,
             conversationId: jobData.conversationId || null,
@@ -93,6 +130,9 @@ class BackgroundMessageManager {
      * Get a job by ID
      */
     async getJob(jobId) {
+        // Ensure DB is initialized before reading
+        await this.ready;
+        
         if (this.useIndexedDB && this.db) {
             try {
                 return await this._getFromIndexedDB(jobId);
@@ -109,6 +149,9 @@ class BackgroundMessageManager {
      * Get all pending jobs
      */
     async getPendingJobs(conversationId = null, lessonId = null) {
+        // Ensure DB is initialized before reading
+        await this.ready;
+        
         if (this.useIndexedDB && this.db) {
             try {
                 return await this._getAllPendingFromIndexedDB(conversationId, lessonId);
@@ -267,6 +310,9 @@ class BackgroundMessageManager {
      */
     async checkPendingJobsOnResume(conversationId = null, lessonId = null, onComplete, onError) {
         console.log('🔍 Checking for pending jobs on app resume...');
+        
+        // Ensure DB is initialized before checking
+        await this.ready;
         
         const pendingJobs = await this.getPendingJobs(conversationId, lessonId);
         
