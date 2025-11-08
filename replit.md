@@ -36,11 +36,12 @@ Preferred communication style: Simple, everyday language with a decent amount of
 ## Document Processing Pipeline
 - **PDF Parsing**: PyPDF2 for text extraction.
 - **Text Chunking**: LangChain's `RecursiveCharacterTextSplitter`.
-- **Intelligence Layer**: Automatic MBTI/Jungian taxonomy tagging using GPT-3.5, stored in Pinecone.
-- **Metadata Extraction**: Extracts season/episode, MBTI types, and cognitive functions.
+- **Intelligence Layer**: Automatic MBTI/Jungian taxonomy tagging using GPT-4o-mini with authoritative reference data validation. Upgraded 2025-11-08 with three-layer accuracy system: (1) Reference data injection into GPT prompt, (2) Post-processing validation against `reference_data.json`, (3) Auto-correction for case variations and common errors. Filters invalid types/functions and logs all corrections. Tags stored in Pinecone.
+- **Metadata Extraction**: Extracts season/episode, MBTI types, and cognitive functions with validation.
 - **Audio/Video Processing**: OpenAI Whisper API for transcription, ReportLab for PDF generation, and `yt-dlp` for YouTube downloads.
 - **Text to PDF**: Converts text to formatted PDFs with GPT-3.5 for grammar correction.
 - **Large File Support**: Efficient binary uploads and batch processing for Pinecone upserts.
+- **Reference Data Validator**: Module at `src/services/reference_validator.py` provides comprehensive validation for all MBTI metadata (types, functions, quadras, temperaments, interaction styles). Supports auto-correction, case-insensitive matching, and detailed logging. Performance: 1000 validations in ~1.3ms.
 
 ## Vector Storage and Search
 - **Vector Database**: Pinecone (`mbti-knowledge` production index).

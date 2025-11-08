@@ -44,6 +44,9 @@ from src.services.knowledge_graph_manager import KnowledgeGraphManager
 # Background Job Service
 from src.services.background_job_service import BackgroundJobService
 
+# Reference Data Validator
+from src.services.reference_validator import VALIDATOR
+
 # Learning Paths UI Router
 from src.routes.learning_paths_routes import router as learning_paths_ui_router
 
@@ -306,16 +309,31 @@ def load_innerverse_schema():
 async def auto_tag_document(text, filename, openai_client):
     """
     Analyze document content and extract structured MBTI/Jungian metadata using GPT-4o-mini.
-    Returns a structured metadata dictionary for CS Joseph's teaching system.
+    Uses authoritative reference data for validation and accuracy.
+    Returns a validated, structured metadata dictionary for CS Joseph's teaching system.
     """
     # Sample first 3000 chars for analysis (balance cost vs accuracy)
     sample_text = text[:3000] if len(text) > 3000 else text
     
-    # Build structured metadata extraction prompt
+    # Get reference data summary for prompt injection
+    reference_summary = {}
+    if VALIDATOR:
+        reference_summary = VALIDATOR.get_reference_summary()
+    
+    # Build enhanced prompt with reference data
     prompt = f"""You are an expert in CS Joseph's MBTI/Jungian Analytical Psychology system. Analyze this transcript and extract structured metadata.
 
 TRANSCRIPT TITLE: {filename}
 TRANSCRIPT TEXT (first 3000 chars): {sample_text}
+
+AUTHORITATIVE REFERENCE DATA - USE ONLY THESE VALUES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Valid MBTI Types (ONLY these 16): {', '.join(reference_summary.get('valid_types', []))}
+Valid Cognitive Functions (ONLY these 8): {', '.join(reference_summary.get('valid_function_codes', []))}
+Valid Quadras (ONLY these 4): {', '.join(reference_summary.get('valid_quadras', []))}
+Valid Temperaments: {', '.join(reference_summary.get('valid_temperaments', []))}
+Valid Interaction Styles: {', '.join(reference_summary.get('valid_interaction_styles', []))}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Extract the following metadata and return as valid JSON:
 
@@ -326,19 +344,29 @@ Extract the following metadata and return as valid JSON:
   "types_discussed": ["INTJ", "ENFP"],
   "functions_covered": ["Ni", "Te", "Fi", "Se"],
   "relationship_type": "golden_pair | pedagogue_pair | bronze_pair | dyad_pair | none",
-  "quadra": "alpha | beta | gamma | delta | multi | none",
+  "quadra": "Alpha | Beta | Gamma | Delta | none",
   "temple": "soul | heart | mind | body | multi | none",
   "topics": ["se_demon", "trust_issues", "octagram_variants"],
   "use_case": ["self_improvement", "relationship_help", "typing_others", "understanding_theory"]
 }}
 
-RULES:
+CRITICAL VALIDATION RULES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ ONLY use types from the valid list above (case-insensitive ok, will be normalized)
+✅ ONLY use function codes from the valid list (Ni, Ne, Ti, Te, Fi, Fe, Si, Se)
+✅ ONLY use quadras from the valid list (Alpha, Beta, Gamma, Delta)
+✅ DO NOT invent or hallucinate types (e.g., no INXX, XNFP, or invalid codes)
+✅ DO NOT use 16personalities suffixes (INFJ-A, ENFP-T will be auto-corrected)
+✅ Use "none" for fields that don't apply
+✅ Use empty arrays [] for list fields with no data
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ADDITIONAL RULES:
 - Return ONLY valid JSON, no extra text
-- Use "none" for fields that don't apply
-- Use empty arrays [] for list fields with no data
 - Be specific but concise
 - Max 5 topics
 - Infer content_type from filename patterns (Season X = main_season, CSJ Responds = csj_responds, etc.)
+- When uncertain about a type or function, use "none" or [] rather than guessing
 
 Your response (valid JSON only):"""
 
@@ -348,7 +376,7 @@ Your response (valid JSON only):"""
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an expert in CS Joseph's MBTI/Jungian system. Extract structured metadata from transcripts as valid JSON."},
+                {"role": "system", "content": "You are an expert in CS Joseph's MBTI/Jungian system. Extract structured metadata from transcripts as valid JSON. ONLY use values from the authoritative reference data provided."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,
@@ -375,20 +403,55 @@ Your response (valid JSON only):"""
                 response_text = response_text[4:]
             response_text = response_text.strip()
         
-        structured_metadata = json.loads(response_text)
+        raw_metadata = json.loads(response_text)
         
-        print(f"✅ Extracted structured metadata:")
-        print(f"   📁 Content Type: {structured_metadata.get('content_type', 'unknown')}")
-        print(f"   📊 Difficulty: {structured_metadata.get('difficulty', 'unknown')}")
-        print(f"   🎯 Category: {structured_metadata.get('primary_category', 'unknown')}")
-        print(f"   👥 Types: {structured_metadata.get('types_discussed', [])}")
-        print(f"   🧠 Functions: {structured_metadata.get('functions_covered', [])}")
-        print(f"   🔗 Topics: {structured_metadata.get('topics', [])[:3]}...")
-        
-        return structured_metadata
+        # VALIDATION LAYER: Validate extracted metadata against reference data
+        if VALIDATOR:
+            validated_metadata, validation_report = VALIDATOR.validate_structured_metadata(raw_metadata)
+            
+            # Log validation results
+            print(f"✅ Validated structured metadata:")
+            print(f"   📁 Content Type: {validated_metadata.get('content_type', 'unknown')}")
+            print(f"   📊 Difficulty: {validated_metadata.get('difficulty', 'unknown')}")
+            print(f"   🎯 Category: {validated_metadata.get('primary_category', 'unknown')}")
+            print(f"   👥 Types: {validated_metadata.get('types_discussed', [])} (validated)")
+            print(f"   🧠 Functions: {validated_metadata.get('functions_covered', [])} (validated)")
+            print(f"   🔗 Topics: {validated_metadata.get('topics', [])[:3]}...")
+            
+            # Log any validation issues
+            has_issues = False
+            for field, report in validation_report.items():
+                if isinstance(report, dict):
+                    for item, msg in report.items():
+                        if "❌" in msg:
+                            if not has_issues:
+                                print(f"   ⚠️ Validation corrections:")
+                                has_issues = True
+                            print(f"      - {field}/{item}: {msg}")
+                elif isinstance(report, str) and "❌" in report:
+                    if not has_issues:
+                        print(f"   ⚠️ Validation corrections:")
+                        has_issues = True
+                    print(f"      - {field}: {report}")
+            
+            return validated_metadata
+        else:
+            # Fallback if validator not available
+            print(f"⚠️ Validator not available - using unvalidated metadata")
+            print(f"✅ Extracted structured metadata:")
+            print(f"   📁 Content Type: {raw_metadata.get('content_type', 'unknown')}")
+            print(f"   📊 Difficulty: {raw_metadata.get('difficulty', 'unknown')}")
+            print(f"   🎯 Category: {raw_metadata.get('primary_category', 'unknown')}")
+            print(f"   👥 Types: {raw_metadata.get('types_discussed', [])}")
+            print(f"   🧠 Functions: {raw_metadata.get('functions_covered', [])}")
+            print(f"   🔗 Topics: {raw_metadata.get('topics', [])[:3]}...")
+            
+            return raw_metadata
         
     except Exception as e:
         print(f"⚠️ Auto-tagging failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
         # Return empty structured metadata on failure
         return {
             "content_type": "none",
