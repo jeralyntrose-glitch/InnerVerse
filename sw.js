@@ -1,7 +1,7 @@
 // Minimal Service Worker - Just for PWA Installation
 // No offline caching, no complex features
 
-const CACHE_NAME = 'innerverse-v5-smart-autoscroll';
+const CACHE_NAME = 'innerverse-v6-background-processing-20251108';
 
 // Install event - required for PWA
 self.addEventListener('install', (event) => {
