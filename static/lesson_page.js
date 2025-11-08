@@ -20,7 +20,7 @@ const CONFIG = {
 // =============================================================================
 // FEATURE FLAG: PWA BACKGROUND PROCESSING
 // =============================================================================
-const ENABLE_BACKGROUND_PROCESSING = true; // ON - Testing with new service worker v6
+const ENABLE_BACKGROUND_PROCESSING = false; // OFF - Stable, working version
 console.log(`🚦 [Lesson] Background processing: ${ENABLE_BACKGROUND_PROCESSING ? 'ENABLED' : 'DISABLED (using synchronous chat)'}`);
 
 // ============================================================================
