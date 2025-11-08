@@ -23,7 +23,7 @@ pinecone_index = pc.Index(os.environ.get('PINECONE_INDEX', 'mbti-knowledge'))
 
 # Constants
 EMBEDDING_MODEL = 'text-embedding-3-large'
-EMBEDDING_DIMENSIONS = 1536  # FIXED: Match Pinecone index dimension (was 3072)
+EMBEDDING_DIMENSIONS = 3072  # Correct for text-embedding-3-large and mbti-knowledge-v2 index
 BATCH_SIZE = 100
 
 
@@ -180,7 +180,7 @@ def main():
     print("🧪 Testing embedding dimension...")
     test_embedding = create_embedding("test")
     print(f"✅ Embedding dimension: {len(test_embedding)}")
-    assert len(test_embedding) == 1536, f"Dimension mismatch! Expected 1536, got {len(test_embedding)}"
+    assert len(test_embedding) == 3072, f"Dimension mismatch! Expected 3072, got {len(test_embedding)}"
     print()
     
     # Embed and upsert
@@ -197,7 +197,7 @@ def main():
     # Verification: Test that concepts are queryable with type filter
     print("\n🧪 VERIFICATION: Testing type='concept' filter...")
     test_query = pinecone_index.query(
-        vector=[0.01] * 1536,
+        vector=[0.01] * 3072,
         filter={'type': 'concept'},
         top_k=5,
         include_metadata=True
