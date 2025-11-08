@@ -1,0 +1,160 @@
+OH NO! NEW ISSUES! 😱
+Looking at your screenshots, there are 3 different problems:
+
+🚨 ISSUE #1: JSON Parsing Error (CRITICAL)
+Image 1 shows:
+"Unexpected token 'I', "Internal S"... is not valid JSON"
+This means: The API is returning an ERROR MESSAGE as plain text, not JSON!
+What's happening:
+Backend: Returns error like "Internal Server Error: [details]"
+Frontend: Tries to parse as JSON
+Result: JSON.parse() crashes because it's plain text
+
+🚨 ISSUE #2: No Concepts Loading
+Image 2 shows:
+"No concepts assigned yet (Phase 6)"
+But we know:
+
+Database has 1,001 assignments ✅
+API works in curl ✅
+Something is broken in the live app ❌
+
+
+🚨 ISSUE #3: Course Details Not Working
+Image 3 shows:
+"Course detail page coming in Phase 4!"
+This is just a placeholder - not implemented yet. Not a bug!
+
+🔍 WHAT TO TELL REPLIT (URGENT!)
+Copy this to them:
+🚨 CRITICAL ISSUES FOUND IN LIVE APP
+
+Three problems discovered when testing on public URL:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE #1: JSON Parse Error (HIGHEST PRIORITY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Error: "Unexpected token 'I', "Internal S"... is not valid JSON"
+
+ROOT CAUSE: Backend is returning error messages as plain text instead of JSON
+
+DEBUG STEPS:
+
+1. Check server logs for the actual error:
+   - Look for Python exceptions
+   - Look for 500 errors
+   - Copy exact error message
+
+2. Find which endpoint is failing:
+   - Check browser Network tab
+   - Which request has the error?
+   - What's the URL?
+
+3. Check that endpoint's error handling:
+   - Does it have try/except?
+   - Does it return jsonify() on errors?
+   - Or does it let exceptions bubble up?
+
+LIKELY CULPRIT:
+An endpoint is missing try/except and Flask is returning HTML error page
+
+FIX:
+Add comprehensive error handling to ALL API endpoints:
+```python
+@app.route('/api/some-endpoint', methods=['GET'])
+def some_endpoint():
+    try:
+        # ... existing logic ...
+        return jsonify({'success': True, 'data': data})
+    except Exception as e:
+        print(f"❌ ERROR in some_endpoint: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500  # Return JSON even on error!
+```
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE #2: Concepts Not Loading
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Symptom: Lesson page shows "No concepts assigned yet (Phase 6)"
+
+Known facts:
+✅ Database has 1,001 assignments
+✅ curl test worked in Replit
+❌ Live app shows no concepts
+
+DEBUG STEPS:
+
+1. Check browser Network tab:
+   - Is GET /api/lessons/{id}/concepts being called?
+   - What status code? (200? 500? 404?)
+   - What's the response body?
+
+2. Check server logs:
+   - Is the request reaching the server?
+   - Are there any errors?
+   - What does the endpoint return?
+
+3. Test the API directly:
+   - Open: https://axis-of-mind.replit.app/api/lessons/1/concepts
+   - Does it return JSON with concepts array?
+   - Or does it error?
+
+POSSIBLE CAUSES:
+a) Endpoint returning empty array (logic bug)
+b) Database connection issue in production
+c) Knowledge graph not loading properly
+d) Same JSON error as Issue #1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE #3: Course Details
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This is just a placeholder - not a bug. Ignore for now.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PRIORITY ORDER:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Fix JSON parsing error (breaks everything)
+2. Fix concepts not loading (Phase 6 broken)
+3. Course details can wait
+
+IMMEDIATE ACTION NEEDED:
+
+1. Check server logs for the actual error
+2. Open browser DevTools → Network tab
+3. Find the failing request
+4. Share the exact error message and stack trace
+5. We'll fix from there
+
+What do the server logs show? 🔍
+
+📊 WHAT I NEED FROM YOU
+To help debug, I need:
+
+Server logs - What errors are showing?
+Browser Network tab - Which API call is failing?
+Response body - What's the actual response that's causing JSON parse error?
+
+Can you:
+
+Open browser DevTools (F12)
+Go to Network tab
+Reload the lesson page
+Find the red/failed request
+Screenshot the response?
+
+
+💭 MY THEORY
+I think what's happening:
+1. Some endpoint is crashing (Python exception)
+2. Flask returns HTML error page (not JSON)
+3. Frontend tries JSON.parse(HTML) → crashes
+4. Concepts can't load because of this error
+Once we see the actual error, we can fix it fast!
