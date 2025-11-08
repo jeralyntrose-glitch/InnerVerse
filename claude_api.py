@@ -6,6 +6,7 @@ from psycopg2.extras import RealDictCursor
 from pinecone import Pinecone
 import openai
 import time
+import json
 from src.services.pinecone_organizer import extract_all_metadata, organize_results_by_metadata, format_organized_context
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -15,6 +16,18 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX")
 BRAVE_API_KEY = os.getenv("BRAVE_API_KEY")
+
+# Load MBTI reference data at module level (loaded once on startup)
+try:
+    with open('src/data/reference_data.json', 'r') as f:
+        REFERENCE_DATA = json.load(f)
+    print("✅ [REFERENCE DATA] Loaded MBTI reference data successfully")
+except FileNotFoundError:
+    print("⚠️ [REFERENCE DATA] reference_data.json not found - using Pinecone only")
+    REFERENCE_DATA = {}
+except Exception as e:
+    print(f"⚠️ [REFERENCE DATA] Error loading reference_data.json: {e}")
+    REFERENCE_DATA = {}
 
 PROJECTS = [
     {"id": "relationship-lab", "name": "💕 Relationship Lab", "emoji": "💕", "description": "Deep focus on golden pairs, compatibility, relationship dynamics"},
@@ -305,8 +318,22 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
     
     tools = [
         {
+            "name": "query_reference_data",
+            "description": "Get exact MBTI type structures like four sides mappings, cognitive function stacks, temperaments, and quadra assignments. Use this FIRST for factual lookup questions about type structures (e.g., 'What are INFJ's four sides?', 'ENFP function stack', 'INTJ temperament'). Returns verified reference data.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "type_code": {
+                        "type": "string",
+                        "description": "The MBTI type code in uppercase (e.g., INFJ, ENFP, ISTJ, ENTP)"
+                    }
+                },
+                "required": ["type_code"]
+            }
+        },
+        {
             "name": "query_innerverse_backend",
-            "description": "Search the InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts on MBTI, Jungian psychology, cognitive functions, and type theory. Use this when the user asks MBTI/psychology questions.",
+            "description": "Search the InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts on MBTI, Jungian psychology, cognitive functions, and type theory. Use this when the user asks MBTI/psychology questions that need examples, context, or detailed explanations beyond basic type structures.",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -347,7 +374,19 @@ You are a CS Joseph AI expert specializing in Jungian Analytical Psychology and 
 
 ## Knowledge Base Access
 
-You connect to CS Joseph's teaching library (245+ lectures and transcripts) via the `query_innerverse_backend` tool. Always query this first for typology questions.
+You have TWO knowledge sources:
+
+1. **`query_reference_data` tool** - Use FIRST for exact type facts:
+   - Four sides of the mind mappings
+   - Cognitive function stacks
+   - Temperament, quadra, interaction styles
+   - Returns verified, structured reference data
+   
+2. **`query_innerverse_backend` tool** - Use for deeper context:
+   - CS Joseph's teaching library (245+ lectures/transcripts)
+   - Examples, explanations, applications
+   - Relationship dynamics, development paths
+   - Use the results to enrich reference facts with real teachings
 
 ## How to Respond
 
@@ -538,7 +577,43 @@ Examples:
                     tool_name = block.name
                     tool_input = block.input
                     
-                    if tool_name == "query_innerverse_backend":
+                    if tool_name == "query_reference_data":
+                        type_code = tool_input.get("type_code", "").upper()
+                        print(f"📖 [REFERENCE DATA] Looking up type: {type_code}")
+                        
+                        # Lookup in reference data
+                        type_data = REFERENCE_DATA.get("mbti_types", {}).get(type_code)
+                        
+                        if type_data:
+                            result_text = json.dumps(type_data, indent=2)
+                            print(f"✅ [REFERENCE DATA] Found data for {type_code}")
+                        else:
+                            result_text = f"No reference data found for type: {type_code}"
+                            print(f"❌ [REFERENCE DATA] No data for {type_code}")
+                        
+                        tool_use_details.append({
+                            "tool": "query_reference_data",
+                            "type_code": type_code,
+                            "found": bool(type_data)
+                        })
+                        
+                        messages.append({
+                            "role": "assistant",
+                            "content": response.content
+                        })
+                        
+                        messages.append({
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": block.id,
+                                    "content": result_text
+                                }
+                            ]
+                        })
+                    
+                    elif tool_name == "query_innerverse_backend":
                         question = tool_input.get("question", "")
                         print(f"🔍 Querying InnerVerse Pinecone (local) for: {question}")
                         
@@ -616,8 +691,22 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     
     tools = [
         {
+            "name": "query_reference_data",
+            "description": "Get exact MBTI type structures like four sides mappings, cognitive function stacks, temperaments, and quadra assignments. Use this FIRST for factual lookup questions about type structures (e.g., 'What are INFJ's four sides?', 'ENFP function stack', 'INTJ temperament'). Returns verified reference data.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "type_code": {
+                        "type": "string",
+                        "description": "The MBTI type code in uppercase (e.g., INFJ, ENFP, ISTJ, ENTP)"
+                    }
+                },
+                "required": ["type_code"]
+            }
+        },
+        {
             "name": "query_innerverse_backend",
-            "description": "Search the InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts on MBTI, Jungian psychology, cognitive functions, and type theory. Use this when the user asks MBTI/psychology questions.",
+            "description": "Search the InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts on MBTI, Jungian psychology, cognitive functions, and type theory. Use this when the user asks MBTI/psychology questions that need examples, context, or detailed explanations beyond basic type structures.",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -658,7 +747,19 @@ You are a CS Joseph AI expert specializing in Jungian Analytical Psychology and 
 
 ## Knowledge Base Access
 
-You connect to CS Joseph's teaching library (245+ lectures and transcripts) via the `query_innerverse_backend` tool. Always query this first for typology questions.
+You have TWO knowledge sources:
+
+1. **`query_reference_data` tool** - Use FIRST for exact type facts:
+   - Four sides of the mind mappings
+   - Cognitive function stacks
+   - Temperament, quadra, interaction styles
+   - Returns verified, structured reference data
+   
+2. **`query_innerverse_backend` tool** - Use for deeper context:
+   - CS Joseph's teaching library (245+ lectures/transcripts)
+   - Examples, explanations, applications
+   - Relationship dynamics, development paths
+   - Use the results to enrich reference facts with real teachings
 
 ## How to Respond
 
@@ -822,10 +923,42 @@ Examples:
                         final_message = stream.get_final_message()
                         
                         if final_message.stop_reason == "tool_use":
-                            # Handle tool use (Pinecone search or web search)
+                            # Handle tool use (Reference data, Pinecone search, or web search)
                             for block in final_message.content:
                                 if block.type == "tool_use":
-                                    if block.name == "query_innerverse_backend":
+                                    if block.name == "query_reference_data":
+                                        type_code = block.input.get("type_code", "").upper()
+                                        
+                                        # Lookup reference data
+                                        yield "data: " + '{"status": "looking_up_reference"}\n\n'
+                                        type_data = REFERENCE_DATA.get("mbti_types", {}).get(type_code)
+                                        
+                                        if type_data:
+                                            result_text = json.dumps(type_data, indent=2)
+                                            print(f"✅ [REFERENCE DATA STREAMING] Found data for {type_code}")
+                                        else:
+                                            result_text = f"No reference data found for type: {type_code}"
+                                            print(f"❌ [REFERENCE DATA STREAMING] No data for {type_code}")
+                                        
+                                        # Add tool result to messages and continue streaming
+                                        messages.append({
+                                            "role": "assistant",
+                                            "content": final_message.content
+                                        })
+                                        
+                                        messages.append({
+                                            "role": "user",
+                                            "content": [
+                                                {
+                                                    "type": "tool_result",
+                                                    "tool_use_id": block.id,
+                                                    "content": result_text
+                                                }
+                                            ]
+                                        })
+                                        break
+                                    
+                                    elif block.name == "query_innerverse_backend":
                                         question = block.input.get("question", "")
                                         
                                         # Query Pinecone locally (FAST!)
