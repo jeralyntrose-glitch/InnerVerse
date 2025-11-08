@@ -2,7 +2,7 @@
 Four Sides Canonical Mapping
 =============================
 Maps all 16 MBTI types to their Ego, Subconscious, Unconscious, and Superego (Shadow).
-Based on CS Joseph's Season 32 Octagram framework.
+Based on CS Joseph's MBTI framework.
 
 Usage:
     from src.services.four_sides_map import get_four_sides, FOUR_SIDES_MAP
