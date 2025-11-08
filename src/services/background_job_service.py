@@ -98,6 +98,9 @@ class BackgroundJobService:
         
         Returns:
             Dict with job details or None if not found
+            
+        Raises:
+            Exception: If database error occurs (not 404, but infrastructure failure)
         """
         conn = None
         cursor = None
@@ -125,11 +128,11 @@ class BackgroundJobService:
             
             if row:
                 return dict(row)
-            return None
+            return None  # Legitimate 404 - job doesn't exist
             
         except Exception as e:
-            logger.error(f"Error getting job status for job {job_id}: {e}")
-            return None
+            logger.error(f"Database error getting job status for job {job_id}: {e}")
+            raise  # Propagate to caller so API can return 500
         finally:
             if cursor:
                 cursor.close()
@@ -145,7 +148,10 @@ class BackgroundJobService:
             status: New status ('queued', 'processing', 'completed', 'failed')
         
         Returns:
-            True if successful, False otherwise
+            True if update succeeded, False if job not found
+            
+        Raises:
+            Exception: If database error occurs
         """
         conn = None
         cursor = None
@@ -159,15 +165,21 @@ class BackgroundJobService:
                 WHERE id = %s
             """, (status, job_id))
             
+            # Check if any rows were actually updated
+            if cursor.rowcount == 0:
+                logger.warning(f"Job {job_id} not found for status update")
+                conn.rollback()
+                return False
+            
             conn.commit()
             logger.info(f"Updated job {job_id} status to {status}")
             return True
             
         except Exception as e:
-            logger.error(f"Error updating job status for job {job_id}: {e}")
+            logger.error(f"Database error updating job status for job {job_id}: {e}")
             if conn:
                 conn.rollback()
-            return False
+            raise  # Propagate to caller
         finally:
             if cursor:
                 cursor.close()
@@ -189,7 +201,10 @@ class BackgroundJobService:
             error_message: Optional error message if job failed
         
         Returns:
-            True if successful, False otherwise
+            True if update succeeded, False if job not found
+            
+        Raises:
+            Exception: If database error occurs
         """
         status = 'failed' if error_message else 'completed'
         
@@ -209,15 +224,21 @@ class BackgroundJobService:
                 WHERE id = %s
             """, (status, response_content, error_message, job_id))
             
+            # Check if any rows were actually updated
+            if cursor.rowcount == 0:
+                logger.warning(f"Job {job_id} not found for completion")
+                conn.rollback()
+                return False
+            
             conn.commit()
             logger.info(f"Completed job {job_id} with status {status}")
             return True
             
         except Exception as e:
-            logger.error(f"Error completing job {job_id}: {e}")
+            logger.error(f"Database error completing job {job_id}: {e}")
             if conn:
                 conn.rollback()
-            return False
+            raise  # Propagate to caller
         finally:
             if cursor:
                 cursor.close()

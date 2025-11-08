@@ -6338,6 +6338,50 @@ async def assign_content(request: Request):
         raise HTTPException(status_code=500, detail=f"Content assignment failed: {str(e)}")
 
 
+# =============================================================================
+# BACKGROUND JOBS API
+# =============================================================================
+
+@app.get("/api/jobs/{job_id}/status")
+async def get_job_status(job_id: int):
+    """
+    Get the status of a background job.
+    
+    Returns:
+        {
+            "success": true,
+            "job": {
+                "id": 4,
+                "conversation_id": 74,
+                "lesson_id": null,
+                "job_type": "main_chat",
+                "status": "completed",  // queued, processing, completed, failed
+                "response_content": "AI response here...",
+                "created_at": "2025-11-07T...",
+                "completed_at": "2025-11-07T...",
+                "error_message": null
+            }
+        }
+    """
+    try:
+        job_service = BackgroundJobService()
+        job = job_service.get_job_status(job_id)
+        
+        if not job:
+            raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+        
+        return {
+            "success": True,
+            "job": job
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting job status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/node_modules", StaticFiles(directory="node_modules"), name="node_modules")
