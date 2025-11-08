@@ -301,6 +301,67 @@ class ChatService:
             print(f"Error querying concepts: {e}")
             return []
     
+    def get_lesson_assigned_concepts(self, lesson_id: str) -> List[Dict]:
+        """
+        Get high/medium confidence concepts assigned to this lesson (Phase 6)
+        
+        Args:
+            lesson_id: Lesson UUID
+            
+        Returns:
+            List of concept dicts with name and description
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Get top 5 high/medium confidence concepts
+            cursor.execute(
+                """
+                SELECT concept_id, confidence, assignment_rank
+                FROM lesson_concepts
+                WHERE lesson_id = %s 
+                  AND confidence IN ('high', 'medium')
+                ORDER BY assignment_rank ASC
+                LIMIT 5
+                """,
+                (lesson_id,)
+            )
+            
+            rows = cursor.fetchall()
+            
+            if not rows:
+                return []
+            
+            # Get concept details from knowledge graph
+            if not self.kg_manager:
+                return []
+            
+            graph = self.kg_manager.load_graph()
+            concepts = []
+            
+            for row in rows:
+                concept_id, confidence, rank = row
+                
+                # Find concept in graph
+                for node in graph['nodes']:
+                    if node['id'] == concept_id:
+                        concepts.append({
+                            'id': concept_id,
+                            'name': node.get('label', concept_id),
+                            'definition': node.get('definition', ''),
+                            'confidence': confidence
+                        })
+                        break
+            
+            return concepts
+            
+        except Exception as e:
+            print(f"Error getting lesson concepts: {e}")
+            return []
+        finally:
+            conn.close()
+    
     def query_pinecone_organized(self, query: str, top_k: int = 10, organize_by: str = 'primary_category') -> str:
         """
         Query Pinecone and return organized results by metadata
@@ -603,14 +664,20 @@ ALWAYS prioritize clarity, structure, and scannability over length!
             # 🔍 PRIORITY 1: Check reference data for exact type facts
             reference_answer = self.get_reference_answer(user_message)
             
-            # Query relevant concepts from Knowledge Graph
-            concepts = self.query_relevant_concepts(user_message)
+            # Get high/medium confidence concepts assigned to this lesson (Phase 6)
+            assigned_concepts = self.get_lesson_assigned_concepts(lesson_id)
+            
+            # Query relevant concepts from Knowledge Graph (semantic search)
+            semantic_concepts = self.query_relevant_concepts(user_message)
+            
+            # Merge assigned concepts with semantic search (prioritize assigned concepts)
+            all_concepts = assigned_concepts + [c for c in semantic_concepts if c.get('id') not in [ac.get('id') for ac in assigned_concepts]]
             
             # Query Pinecone for organized content by category
             pinecone_context = self.query_pinecone_organized(user_message, top_k=10, organize_by='primary_category')
             
             # Build system prompt with all context (including reference data if found)
-            system_prompt = self.build_system_prompt(lesson_context, concepts, pinecone_context, reference_answer)
+            system_prompt = self.build_system_prompt(lesson_context, all_concepts, pinecone_context, reference_answer)
             
             # Get chat history
             history = self.get_chat_history(thread_id, limit=10)

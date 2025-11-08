@@ -133,7 +133,7 @@ body {
     margin-bottom: 32px;
 }
 
-/* Concept Cards */
+/* Concept Cards - Phase 6 */
 .concepts-section {
     margin-bottom: 32px;
 }
@@ -144,37 +144,123 @@ body {
     margin-bottom: 16px;
 }
 
-.concepts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 16px;
-}
-
-.concept-card {
-    background: var(--bg-primary);
-    padding: 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    transition: all 0.2s;
-    cursor: pointer;
-}
-
-.concept-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--primary);
-}
-
-.concept-title {
+.concepts-header {
+    font-size: 18px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 16px;
     color: var(--text-primary);
 }
 
-.concept-description {
-    font-size: 14px;
+.empty-state {
+    text-align: center;
+    padding: 48px;
     color: var(--text-secondary);
+    font-size: 16px;
+}
+
+.concepts-grid-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+@media (min-width: 640px) {
+    .concepts-grid-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .concepts-grid-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.concept-card {
+    padding: 14px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.concept-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.concept-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.concept-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.concept-emoji {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.concept-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.concept-toggle-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.concept-toggle-btn:hover {
+    color: var(--text-primary);
+    transform: scale(1.1);
+}
+
+.concept-description {
+    font-size: 13px;
     line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.concept-short,
+.concept-full {
+    margin-bottom: 8px;
+}
+
+.concept-meta {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 12px;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+}
+
+.confidence-badge {
+    font-weight: 600;
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
 }
 
 /* Video */

@@ -1,0 +1,141 @@
+LESSONS
+
+CONTEXT:
+- Database has 1,632 concepts (already in Pinecone with embeddings)
+- Concepts have metadata: types_discussed, functions_covered, primary_category, quadra, temple
+- Lessons need 3-10 relevant concepts assigned automatically
+- Need confidence scoring: high/medium/low
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: DATABASE MIGRATION
+
+Create new table:
+
+CREATE TABLE lesson_concepts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lesson_id INTEGER NOT NULL,
+    concept_id INTEGER NOT NULL,
+    confidence TEXT CHECK(confidence IN ('high', 'medium', 'low')) NOT NULL,
+    similarity_score REAL NOT NULL,
+    metadata_overlap_score REAL NOT NULL,
+    assignment_rank INTEGER NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE,
+    FOREIGN KEY (concept_id) REFERENCES concepts(id) ON DELETE CASCADE,
+    UNIQUE(lesson_id, concept_id)
+);
+
+CREATE INDEX idx_lesson_concepts_lesson ON lesson_concepts(lesson_id);
+CREATE INDEX idx_lesson_concepts_confidence ON lesson_concepts(confidence);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: CREATE BATCH ASSIGNMENT SCRIPT
+
+File: scripts/assign_concepts_to_lessons.py
+
+ALGORITHM:
+1. For each lesson, create embedding of: title + description + first 500 chars of content
+2. Query Pinecone with that embedding (top_k=50)
+3. Filter results to only concept-type chunks
+4. For each concept, calculate composite score:
+   - Vector similarity (from Pinecone): 50%
+   - Metadata overlap: 35%
+     * Compare lesson and concept metadata fields: types_discussed, functions_covered, primary_category, quadra, temple
+     * Calculate overlap ratio for each field
+   - Prominence: 15%
+     * Boost if concept name appears in lesson title or description
+5. Assign confidence based on final score:
+   - High: ≥0.75
+   - Medium: 0.60-0.74
+   - Low: 0.45-0.59
+   - Skip: <0.45
+6. Select top 3-10 concepts per lesson
+7. Save to lesson_concepts table with rank
+
+REQUIREMENTS:
+- Clear existing assignments before inserting new ones (allow re-runs)
+- Print progress: "Processing lesson X/Y: [title]"
+- Print final stats: total lessons processed, avg concepts per lesson
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: ADD API ENDPOINT
+
+File: app.py (or appropriate service file)
+
+@app.route('/api/lessons/<int:lesson_id>/concepts', methods=['GET'])
+def get_lesson_concepts(lesson_id):
+    """Get concepts assigned to a lesson, ordered by rank"""
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT 
+            c.id,
+            c.name,
+            c.description,
+            lc.confidence,
+            lc.similarity_score,
+            lc.assignment_rank
+        FROM lesson_concepts lc
+        JOIN concepts c ON lc.concept_id = c.id
+        WHERE lc.lesson_id = ?
+        ORDER BY lc.assignment_rank ASC
+    """, (lesson_id,))
+    
+    concepts = [...]  # Format rows as JSON
+    return jsonify({'concepts': concepts})
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: UPDATE LESSON CHAT CONTEXT
+
+File: src/services/chat_service.py
+
+Modify the lesson chat to include assigned concepts in the context:
+- Query lesson_concepts table for high/medium confidence concepts (top 5)
+- Add to system prompt: "Key concepts in this lesson: [list with descriptions]"
+- This helps AI give more targeted tutoring
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: CREATE CONCEPT CARDS UI COMPONENT
+
+File: src/components/ConceptCards.jsx
+
+Requirements:
+- Display concepts in responsive grid (1 col mobile, 2 col tablet, 3 col desktop)
+- Each card shows: concept name, confidence badge, expand/collapse button
+- Expanded state shows: full description, match score percentage
+- Color-coded by confidence:
+  * High: green background (bg-green-100 border-green-300)
+  * Medium: yellow background (bg-yellow-100 border-yellow-300)  
+  * Low: gray background (bg-gray-100 border-gray-300)
+- Confidence emoji: 🎯 (high), ✓ (medium), ○ (low)
+- Header: "📚 Related Concepts (X)"
+- If no concepts: show "No concepts assigned yet"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 6: UPDATE LESSON PAGE
+
+File: src/pages/LessonPage.jsx (or wherever lesson is displayed)
+
+Changes:
+- Import ConceptCards component
+- Add useEffect to fetch concepts: GET /api/lessons/{lessonId}/concepts
+- Render ConceptCards below lesson content, above chat interface
+- Pass concepts array as prop
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TESTING CHECKLIST:
+
+After implementation:
+1. Run assignment script on all lessons
+2. Check output stats look reasonable
+3. Browse to a lesson page - verify concept cards appear
+4. Click to expand/collapse cards
+5. Test lesson chat - ask about a concept, verify AI is aware of it
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NOTES:
+
+- Concepts already exist in Pinecone with embeddings - reuse those!
+- Use existing OpenAI client for generating lesson embeddings
+- Use existing Pinecone client and index
+- Follow existing code patterns for database access and API structure
+- The metadata_overlap calculation should handle missing fields gracefully (not all lessons/concepts have all metadata fields)

@@ -103,18 +103,20 @@ async function loadLessonData() {
 }
 
 async function loadConcepts() {
-    if (state.lesson.concept_ids && state.lesson.concept_ids.length > 0) {
-        try {
-            const conceptsPromises = state.lesson.concept_ids.map(id => 
-                fetch(`${CONFIG.api.concepts}/${id}`).then(r => r.json())
-            );
-            const results = await Promise.all(conceptsPromises);
-            state.concepts = results.filter(r => r.success).map(r => r.concept);
-        } catch (error) {
-            console.error('Error loading concepts:', error);
+    try {
+        // Phase 6: Load concepts assigned to this lesson with confidence scores
+        const response = await fetch(`${CONFIG.api.lessons}/${state.lessonId}/concepts`);
+        const result = await response.json();
+        
+        if (result.success) {
+            state.concepts = result.concepts || [];
+            console.log(`✅ Loaded ${state.concepts.length} assigned concepts`);
+        } else {
+            console.warn('Failed to load concepts:', result);
             state.concepts = [];
         }
-    } else {
+    } catch (error) {
+        console.error('Error loading concepts:', error);
         state.concepts = [];
     }
 }
@@ -170,16 +172,89 @@ function renderConcepts() {
     const grid = document.getElementById('concepts-grid');
     
     if (state.concepts.length === 0) {
-        grid.innerHTML = '<div class="loading-skeleton">No concepts assigned yet (Phase 6)</div>';
+        grid.innerHTML = '<div class="empty-state">📚 No concepts assigned yet</div>';
         return;
     }
     
-    grid.innerHTML = state.concepts.map(concept => `
-        <div class="concept-card" data-concept-id="${concept.id}" onclick="openConceptDetail('${concept.id}')">
-            <div class="concept-title">${concept.name}</div>
-            <div class="concept-description">${concept.description || 'Click to learn more'}</div>
-        </div>
-    `).join('');
+    // Header with count
+    const header = `<div class="concepts-header">📚 Related Concepts (${state.concepts.length})</div>`;
+    
+    // Confidence colors and emojis
+    const confidenceStyles = {
+        'high': { bg: '#dcfce7', border: '#86efac', emoji: '🎯' },
+        'medium': { bg: '#fef9c3', border: '#fde047', emoji: '✓' },
+        'low': { bg: '#f3f4f6', border: '#d1d5db', emoji: '○' }
+    };
+    
+    // Generate concept cards
+    const cards = state.concepts.map((concept, index) => {
+        const style = confidenceStyles[concept.confidence] || confidenceStyles.low;
+        const truncatedDesc = concept.description?.substring(0, 120) || 'No description available';
+        const hasMore = (concept.description || '').length > 120;
+        
+        return `
+            <div class="concept-card" 
+                 data-concept-id="${concept.id}"
+                 data-expanded="false"
+                 style="background: ${style.bg}; border: 2px solid ${style.border};">
+                <div class="concept-card-header">
+                    <div class="concept-title-row">
+                        <span class="concept-emoji">${style.emoji}</span>
+                        <span class="concept-name">${concept.name}</span>
+                    </div>
+                    <button class="concept-toggle-btn" 
+                            onclick="toggleConcept('${concept.id}', event)"
+                            aria-label="Toggle concept details">
+                        ▼
+                    </button>
+                </div>
+                <div class="concept-description concept-collapsed">
+                    <div class="concept-short">
+                        ${truncatedDesc}${hasMore ? '...' : ''}
+                    </div>
+                    <div class="concept-full" style="display: none;">
+                        ${concept.description || 'No description available'}
+                        <div class="concept-meta">
+                            <span class="meta-item">
+                                📊 Match: ${Math.round(concept.similarity_score * 100)}%
+                            </span>
+                            <span class="meta-item confidence-badge">
+                                ${style.emoji} ${concept.confidence.toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    grid.innerHTML = header + '<div class="concepts-grid-container">' + cards + '</div>';
+}
+
+function toggleConcept(conceptId, event) {
+    event?.stopPropagation();
+    
+    const card = document.querySelector(`[data-concept-id="${conceptId}"]`);
+    if (!card) return;
+    
+    const isExpanded = card.getAttribute('data-expanded') === 'true';
+    const toggleBtn = card.querySelector('.concept-toggle-btn');
+    const shortDesc = card.querySelector('.concept-short');
+    const fullDesc = card.querySelector('.concept-full');
+    
+    if (isExpanded) {
+        // Collapse
+        card.setAttribute('data-expanded', 'false');
+        toggleBtn.textContent = '▼';
+        shortDesc.style.display = 'block';
+        fullDesc.style.display = 'none';
+    } else {
+        // Expand
+        card.setAttribute('data-expanded', 'true');
+        toggleBtn.textContent = '▲';
+        shortDesc.style.display = 'none';
+        fullDesc.style.display = 'block';
+    }
 }
 
 function showVideo(url) {

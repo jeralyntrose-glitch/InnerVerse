@@ -150,10 +150,36 @@ def init_database():
                 ON api_usage(timestamp DESC)
             """)
             
+            # Create lesson_concepts table for Phase 6
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS lesson_concepts (
+                    id SERIAL PRIMARY KEY,
+                    lesson_id VARCHAR(255) NOT NULL,
+                    concept_id VARCHAR(255) NOT NULL,
+                    confidence VARCHAR(10) CHECK(confidence IN ('high', 'medium', 'low')) NOT NULL,
+                    similarity_score REAL NOT NULL,
+                    metadata_overlap_score REAL NOT NULL,
+                    assignment_rank INTEGER NOT NULL,
+                    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+                    UNIQUE(lesson_id, concept_id)
+                )
+            """)
+            
+            # Create indexes for lesson_concepts
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_lesson_concepts_lesson 
+                ON lesson_concepts(lesson_id)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_lesson_concepts_confidence 
+                ON lesson_concepts(confidence)
+            """)
+            
             conn.commit()
             cursor.close()
             conn.close()
-            print("✅ Database initialized successfully")
+            print("✅ Database initialized successfully (with lesson_concepts table)")
             return True
             
         except psycopg2.OperationalError as e:
@@ -6200,6 +6226,67 @@ async def delete_lesson(lesson_id: str):
         raise
     except Exception as e:
         print(f"❌ Error deleting lesson: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/lessons/{lesson_id}/concepts")
+async def get_lesson_concepts(lesson_id: str):
+    """Get concepts assigned to a lesson, ordered by rank (Phase 6)"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        # Get concepts with their assignment data
+        cursor.execute("""
+            SELECT 
+                lc.concept_id as id,
+                lc.confidence,
+                lc.similarity_score,
+                lc.metadata_overlap_score,
+                lc.assignment_rank
+            FROM lesson_concepts lc
+            WHERE lc.lesson_id = %s
+            ORDER BY lc.assignment_rank ASC
+        """, (lesson_id,))
+        
+        assignments = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Load knowledge graph to get concept details
+        kg_manager = get_knowledge_graph_manager()
+        
+        concepts = []
+        for assignment in assignments:
+            concept_id = assignment['id']
+            
+            # Get concept details from knowledge graph
+            graph = kg_manager.load_graph()
+            concept_node = None
+            for node in graph['nodes']:
+                if node['id'] == concept_id:
+                    concept_node = node
+                    break
+            
+            if concept_node:
+                concepts.append({
+                    'id': concept_id,
+                    'name': concept_node.get('label', concept_id),
+                    'description': concept_node.get('definition', ''),
+                    'category': concept_node.get('category', ''),
+                    'confidence': assignment['confidence'],
+                    'similarity_score': float(assignment['similarity_score']),
+                    'metadata_overlap_score': float(assignment['metadata_overlap_score']),
+                    'assignment_rank': assignment['assignment_rank']
+                })
+        
+        return {"success": True, "concepts": concepts}
+        
+    except Exception as e:
+        print(f"❌ Error getting lesson concepts: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
