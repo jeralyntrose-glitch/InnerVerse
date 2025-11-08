@@ -27,11 +27,12 @@ Preferred communication style: Simple, everyday language with a decent amount of
 
 ## Learning Paths System
 - **Overview**: Structured learning tracks for MBTI education with AI-powered course generation and smart content assignment.
-- **Database Schema**: `courses`, `lessons`, `user_progress`, and `course_prerequisites` tables.
+- **Database Schema**: `courses`, `lessons`, `user_progress`, `course_prerequisites`, and `lesson_concepts` tables.
 - **AI Generation**: `CourseGenerator` uses Claude Sonnet 4 for curriculum generation. `ContentAssigner` uses a 3-tier confidence system for content assignment. Both track costs.
 - **Business Logic**: Full CRUD for courses/lessons, progress tracking, and helper methods for AI integration. Uses JSONB fields for flexible metadata.
-- **API Endpoints**: Comprehensive API for course and lesson management, progress tracking, AI-powered course generation (`POST /api/courses/generate`), smart content assignment (`POST /api/courses/assign-content`), and AI cost statistics.
+- **API Endpoints**: Comprehensive API for course and lesson management, progress tracking, AI-powered course generation (`POST /api/courses/generate`), smart content assignment (`POST /api/courses/assign-content`), AI cost statistics, and concept retrieval (`GET /api/lessons/{lesson_id}/concepts`).
 - **Knowledge Graph Integration**: Fetches single concepts and performs semantic concept searches for AI generation.
+- **Phase 6 - Semantic Concept Assignment (COMPLETED 2025-11-08)**: Auto-assigns 3-10 relevant knowledge graph concepts to each lesson using Pinecone vector similarity. System embedded 1,632 concepts to Pinecone with `type='concept'` metadata, generated 1,001 assignments across 121 lessons (avg 8.3/lesson) with confidence scores (high/medium/low). Backend uses composite scoring (70% vector similarity, 30% prominence) with API endpoint returning concept details with O(1) lookup performance. Scripts: `scripts/embed_concepts_to_pinecone.py`, `scripts/assign_concepts_to_lessons.py`. Cost: $0.0052 for embeddings. **Phase 6.5 (UI Polish)**: Frontend concept rendering pending - page loads successfully but XHR/fetch blocked by environmental issue (service worker/BackgroundMessageManager interference). Concepts accessible via API but UI cards not displaying yet.
 
 ## Document Processing Pipeline
 - **PDF Parsing**: PyPDF2 for text extraction.
@@ -44,9 +45,10 @@ Preferred communication style: Simple, everyday language with a decent amount of
 - **Reference Data Validator**: Module at `src/services/reference_validator.py` provides comprehensive validation for all MBTI metadata (types, functions, quadras, temperaments, interaction styles). Supports auto-correction, case-insensitive matching, and detailed logging. Performance: 1000 validations in ~1.3ms.
 
 ## Vector Storage and Search
-- **Vector Database**: Pinecone (`mbti-knowledge` production index).
-- **Embedding Generation**: Primarily `text-embedding-3-large` (3072 dimensions).
+- **Vector Database**: Pinecone (`mbti-knowledge-v2` production index, 3072 dimensions).
+- **Embedding Generation**: `text-embedding-3-large` (3072 dimensions) for all embeddings.
 - **Hybrid Search System**: Combines vector similarity with metadata filters, smart re-ranking, and MBTI ontology-aware query rewriting.
+- **Concept Embeddings**: 1,632 knowledge graph concepts embedded with `type='concept'` metadata for semantic lesson matching (Phase 6).
 
 ## API Structure
 - **Core APIs**: For upload (PDF, audio, base64), querying, text-to-PDF conversion, and re-processing.

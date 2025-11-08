@@ -115,13 +115,16 @@ async function loadLessonData() {
         throw new Error('Lesson not found');
     }
     
-    console.log('📡 Loading concepts...');
-    await loadConcepts();
-    console.log('✅ Concepts loaded');
-    
-    console.log('🎨 Rendering lesson content...');
+    console.log('🎨 Rendering lesson content (concepts will load async)...');
     renderLessonContent();
     console.log('✅ Lesson content rendered');
+    
+    console.log('📡 Loading concepts asynchronously...');
+    loadConcepts().then(() => {
+        console.log('✅ Concepts loaded, re-rendering...');
+        renderConcepts(); // Re-render concepts section after they load
+    });
+    console.log('✅ Concepts loading in background');
     
     console.log('📝 Loading notes...');
     loadNotes();
@@ -132,45 +135,53 @@ async function loadConcepts() {
     const conceptsUrl = `${CONFIG.api.lessons}/${state.lessonId}/concepts`;
     console.log('🌐 Concepts URL:', conceptsUrl);
     
-    try {
-        console.log('📡 Starting fetch for concepts with 5s timeout...');
+    // Use XMLHttpRequest as fallback to bypass potential fetch interceptors
+    return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
         
-        // Create abort controller for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-        
-        const response = await fetch(conceptsUrl, { 
-            signal: controller.signal,
-            headers: { 'Accept': 'application/json' }
-        });
-        clearTimeout(timeoutId);
-        
-        console.log('✅ Fetch complete, status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
-        console.log('📦 Parsing JSON...');
-        const result = await response.json();
-        console.log('✅ JSON parsed, success:', result.success);
-        
-        if (result.success) {
-            state.concepts = result.concepts || [];
-            console.log(`✅ Loaded ${state.concepts.length} assigned concepts`);
-        } else {
-            console.warn('❌ API returned success=false:', result);
+        xhr.timeout = 3000; // 3 second timeout
+        xhr.ontimeout = () => {
+            console.error('❌ XHR timeout after 3s');
             state.concepts = [];
-        }
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            console.error('❌ Concepts fetch timed out after 5s');
-        } else {
-            console.error('❌ Error loading concepts:', error);
-        }
-        console.error('❌ Error details:', error.message);
-        state.concepts = []; // Gracefully fail - page will still load
-    }
+            resolve();
+        };
+        
+        xhr.onerror = (error) => {
+            console.error('❌ XHR error:', error);
+            state.concepts = [];
+            resolve();
+        };
+        
+        xhr.onload = () => {
+            console.log('✅ XHR complete, status:', xhr.status);
+            try {
+                if (xhr.status === 200) {
+                    const result = JSON.parse(xhr.responseText);
+                    console.log('✅ JSON parsed, success:', result.success);
+                    
+                    if (result.success) {
+                        state.concepts = result.concepts || [];
+                        console.log(`✅ Loaded ${state.concepts.length} assigned concepts`);
+                    } else {
+                        console.warn('❌ API returned success=false');
+                        state.concepts = [];
+                    }
+                } else {
+                    console.error('❌ Bad status:', xhr.status);
+                    state.concepts = [];
+                }
+            } catch (error) {
+                console.error('❌ Parse error:', error);
+                state.concepts = [];
+            }
+            resolve();
+        };
+        
+        console.log('📡 Starting XHR request...');
+        xhr.open('GET', conceptsUrl);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.send();
+    });
 }
 
 // ============================================================================
