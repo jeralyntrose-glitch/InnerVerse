@@ -1891,6 +1891,21 @@
         window.addEventListener('load', updateInputBarHeight);
     </script>
     
+    <!-- Unregister any existing service workers -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister().then(success => {
+                        if (success) {
+                            console.log('✅ Service Worker unregistered successfully');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+    
     <!-- Knowledge Graph button click handler -->
     <script>
         const knowledgeGraphBtn = document.getElementById('knowledgeGraphBtn');
