@@ -275,42 +275,37 @@ function renderConcepts() {
         'low': { bg: '#f3f4f6', border: '#d1d5db', emoji: '○' }
     };
     
-    // Generate concept cards
+    // Generate concept cards (now rectangular and collapsible)
     const cards = state.concepts.map((concept, index) => {
         const style = confidenceStyles[concept.confidence] || confidenceStyles.low;
-        const truncatedDesc = concept.description?.substring(0, 120) || 'No description available';
-        const hasMore = (concept.description || '').length > 120;
         
         return `
             <div class="concept-card" 
                  data-concept-id="${concept.id}"
                  data-expanded="false"
+                 onclick="toggleConceptCard(event, '${concept.id}')"
                  style="background: ${style.bg}; border: 2px solid ${style.border};">
                 <div class="concept-card-header">
                     <div class="concept-title-row">
                         <span class="concept-emoji">${style.emoji}</span>
                         <span class="concept-name">${concept.name}</span>
                     </div>
-                    <button class="concept-toggle-btn" 
-                            onclick="toggleConcept('${concept.id}', event)"
-                            aria-label="Toggle concept details">
-                        ▼
-                    </button>
+                    <span class="concept-toggle-btn">▼</span>
                 </div>
-                <div class="concept-description concept-collapsed">
-                    <div class="concept-short">
-                        ${truncatedDesc}${hasMore ? '...' : ''}
-                    </div>
-                    <div class="concept-full" style="display: none;">
+                <div class="concept-full" style="display: none;">
+                    <div class="concept-description">
                         ${concept.description || 'No description available'}
-                        <div class="concept-meta">
-                            <span class="meta-item">
-                                📊 Match: ${Math.round(concept.similarity_score * 100)}%
-                            </span>
-                            <span class="meta-item confidence-badge">
-                                ${style.emoji} ${concept.confidence.toUpperCase()}
-                            </span>
-                        </div>
+                    </div>
+                    <div class="concept-meta">
+                        <span class="meta-item">
+                            📊 Match: ${Math.round(concept.similarity_score * 100)}%
+                        </span>
+                        <span class="meta-item">
+                            📁 ${concept.category || 'General'}
+                        </span>
+                        <span class="meta-item confidence-badge">
+                            ${style.emoji} ${concept.confidence.toUpperCase()}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -320,28 +315,23 @@ function renderConcepts() {
     grid.innerHTML = header + '<div class="concepts-grid-container">' + cards + '</div>';
 }
 
-function toggleConcept(conceptId, event) {
+// Toggle concept card expansion (Phase 6.5)
+function toggleConceptCard(event, conceptId) {
     event?.stopPropagation();
     
     const card = document.querySelector(`[data-concept-id="${conceptId}"]`);
     if (!card) return;
     
     const isExpanded = card.getAttribute('data-expanded') === 'true';
-    const toggleBtn = card.querySelector('.concept-toggle-btn');
-    const shortDesc = card.querySelector('.concept-short');
     const fullDesc = card.querySelector('.concept-full');
     
     if (isExpanded) {
         // Collapse
         card.setAttribute('data-expanded', 'false');
-        toggleBtn.textContent = '▼';
-        shortDesc.style.display = 'block';
         fullDesc.style.display = 'none';
     } else {
         // Expand
         card.setAttribute('data-expanded', 'true');
-        toggleBtn.textContent = '▲';
-        shortDesc.style.display = 'none';
         fullDesc.style.display = 'block';
     }
 }
@@ -413,6 +403,8 @@ function setupEventListeners() {
         showToast('Regular chat mode coming in Phase 5!', 'info');
     });
     
+    document.getElementById('delete-lesson-btn').addEventListener('click', handleDeleteLesson);
+    
     let notesTimeout;
     document.getElementById('lesson-notes').addEventListener('input', () => {
         clearTimeout(notesTimeout);
@@ -465,6 +457,44 @@ function navigateLesson(direction) {
     
     const nextLesson = state.allLessons[newIndex];
     window.location.href = `/learning-paths/${state.courseId}/${nextLesson.id}`;
+}
+
+// Delete lesson with 2-step confirmation (Phase 6.5)
+async function handleDeleteLesson() {
+    const lessonTitle = state.lesson.title || 'this lesson';
+    
+    // First confirmation
+    const confirm1 = confirm(
+        `⚠️ Delete this lesson?\n\n"${lessonTitle}"\n\nThis will remove all concept assignments.`
+    );
+    
+    if (!confirm1) return;
+    
+    // Second confirmation
+    const confirm2 = confirm('🚨 Are you SURE? This cannot be undone!');
+    
+    if (!confirm2) return;
+    
+    try {
+        showLoading();
+        
+        const response = await fetch(`/api/lessons/${state.lessonId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ ' + data.message);
+            window.location.href = '/learning-paths';
+        } else {
+            alert('❌ Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('❌ Failed to delete: ' + error.message);
+    } finally {
+        hideLoading();
+    }
 }
 
 // ============================================================================

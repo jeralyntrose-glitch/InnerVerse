@@ -1,0 +1,535 @@
+
+
+🎯 PHASE 6.5: FINAL POLISH + DELETE BUTTONS
+Copy this COMPLETE spec to Replit:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 6.5: CONCEPT CARDS REDESIGN + DELETE FUNCTIONALITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PART 1: Redesign concept cards as smaller rectangles
+PART 2: Add all 3 delete button types with confirmations
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1: CONCEPT CARDS REDESIGN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CURRENT: Large square cards in grid
+DESIRED: Smaller horizontal rectangles, left-aligned, stacked vertically
+
+Update the concept cards CSS/styling:
+
+CHANGES NEEDED:
+
+1. Layout: Change from grid to vertical stack
+   - Remove grid layout (grid-cols-1/2/3)
+   - Use flex column or simple stacking
+   - Left-align (max-width: 600px or similar)
+
+2. Card shape: Make rectangular (not square)
+   - Reduce height
+   - Keep width reasonable
+   - Horizontal layout inside card
+
+3. Card structure:
+   COLLAPSED STATE:
+   - Left: Confidence badge (emoji + color border)
+   - Center: Concept name (bold, larger)
+   - Right: Expand arrow (▼)
+   - Compact height (~60-80px)
+   
+   EXPANDED STATE:
+   - Same header as collapsed
+   - Below: Full description
+   - Below: Metadata (category, score, etc)
+   - Taller but still compact
+
+4. Colors: Keep current system
+   - Green bg/border for high
+   - Yellow bg/border for medium  
+   - Gray bg/border for low
+
+EXAMPLE CSS STRUCTURE:
+
+.concepts-container {
+  max-width: 600px;
+  width: 100%;
+  margin-left: 0; /* Left-aligned */
+}
+
+.concept-card {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 2px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.concept-card:hover {
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.concept-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.confidence-badge {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.concept-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.expand-icon {
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.expanded .expand-icon {
+  transform: rotate(180deg);
+}
+
+.concept-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.1);
+  display: none;
+}
+
+.expanded .concept-details {
+  display: block;
+}
+
+/* Color variants */
+.concept-card.high {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.concept-card.medium {
+  background: #fefce8;
+  border-color: #fde047;
+}
+
+.concept-card.low {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+HTML STRUCTURE:
+
+<div class="concepts-container">
+  <h3>📚 Related Concepts (10)</h3>
+  
+  <div class="concept-card high" onclick="toggleExpand(this)">
+    <div class="concept-header">
+      <span class="confidence-badge">🧠</span>
+      <span class="concept-name">ENFP</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="concept-details">
+      <p class="concept-description">
+        Myers-Briggs personality type characterized by...
+      </p>
+      <div class="concept-meta">
+        <span>Category: Typing Methodology</span>
+        <span>Match: 85%</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- More cards... -->
+</div>
+
+JAVASCRIPT:
+
+function toggleExpand(card) {
+  card.classList.toggle('expanded');
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2: DELETE FUNCTIONALITY (ALL 3 TYPES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add backend endpoints + frontend buttons for deleting:
+1. Individual lessons
+2. Entire courses  
+3. All content (nuclear reset)
+
+BACKEND - Add to app.py or main.py:
+
+# 1. DELETE INDIVIDUAL LESSON
+@app.delete('/api/lessons/<int:lesson_id>')
+def delete_lesson(lesson_id):
+    """Delete a single lesson and its concept assignments"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if lesson exists
+        cursor.execute("SELECT id, title FROM lessons WHERE id = ?", (lesson_id,))
+        lesson = cursor.fetchone()
+        if not lesson:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Lesson not found'}), 404
+        
+        lesson_title = lesson['title']
+        
+        # Delete lesson (CASCADE handles lesson_concepts)
+        cursor.execute("DELETE FROM lessons WHERE id = ?", (lesson_id,))
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ Deleted lesson: {lesson_title}")
+        return jsonify({
+            'success': True, 
+            'message': f'Deleted: {lesson_title}'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error deleting lesson {lesson_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# 2. DELETE ENTIRE COURSE
+@app.delete('/api/courses/<int:course_id>')
+def delete_course(course_id):
+    """Delete a course and all its lessons"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if course exists
+        cursor.execute("SELECT id, title FROM courses WHERE id = ?", (course_id,))
+        course = cursor.fetchone()
+        if not course:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Course not found'}), 404
+        
+        course_title = course['title']
+        
+        # Count lessons
+        cursor.execute("SELECT COUNT(*) as count FROM lessons WHERE course_id = ?", (course_id,))
+        lesson_count = cursor.fetchone()['count']
+        
+        # Delete course (CASCADE handles lessons and lesson_concepts)
+        cursor.execute("DELETE FROM courses WHERE id = ?", (course_id,))
+        conn.commit()
+        conn.close()
+        
+        print(f"✅ Deleted course '{course_title}' with {lesson_count} lessons")
+        return jsonify({
+            'success': True,
+            'message': f'Deleted "{course_title}" and {lesson_count} lessons'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error deleting course {course_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# 3. DELETE ALL CONTENT (NUCLEAR)
+@app.delete('/api/admin/reset-all')
+def reset_all_content():
+    """Delete ALL courses, lessons, and assignments"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Count everything
+        cursor.execute("SELECT COUNT(*) as count FROM courses")
+        course_count = cursor.fetchone()['count']
+        
+        cursor.execute("SELECT COUNT(*) as count FROM lessons")
+        lesson_count = cursor.fetchone()['count']
+        
+        cursor.execute("SELECT COUNT(*) as count FROM lesson_concepts")
+        assignment_count = cursor.fetchone()['count']
+        
+        # Delete everything
+        cursor.execute("DELETE FROM lesson_concepts")
+        cursor.execute("DELETE FROM lessons")
+        cursor.execute("DELETE FROM courses")
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"🗑️ NUCLEAR RESET: {course_count} courses, {lesson_count} lessons, {assignment_count} assignments")
+        return jsonify({
+            'success': True,
+            'message': f'Deleted {course_count} courses, {lesson_count} lessons, {assignment_count} assignments'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in nuclear reset: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FRONTEND: DELETE LESSON BUTTON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add to lesson page (near title or in menu):
+
+HTML:
+<button 
+  id="delete-lesson-btn"
+  onclick="handleDeleteLesson()"
+  class="delete-btn"
+  title="Delete this lesson"
+>
+  🗑️ Delete Lesson
+</button>
+
+CSS:
+.delete-btn {
+  padding: 6px 12px;
+  font-size: 14px;
+  color: #dc2626;
+  background: white;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-btn:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+JAVASCRIPT:
+async function handleDeleteLesson() {
+  const lessonId = /* get current lesson ID */;
+  const lessonTitle = /* get current lesson title */;
+  
+  // Two confirmations
+  const confirm1 = confirm(
+    `⚠️ Delete this lesson?\n\n"${lessonTitle}"\n\nThis will remove all concept assignments.`
+  );
+  if (!confirm1) return;
+  
+  const confirm2 = confirm('🚨 Are you SURE? This cannot be undone!');
+  if (!confirm2) return;
+  
+  try {
+    const response = await fetch(`/api/lessons/${lessonId}`, {
+      method: 'DELETE'
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('✅ ' + data.message);
+      window.location.href = '/'; // Go to home
+    } else {
+      alert('❌ Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('❌ Failed: ' + error.message);
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FRONTEND: DELETE COURSE BUTTON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add to course tree/list view:
+
+HTML (add to each course node/card):
+<button 
+  onclick="handleDeleteCourse(courseId, courseTitle)"
+  class="delete-btn delete-course-btn"
+  title="Delete entire course"
+>
+  🗑️
+</button>
+
+JAVASCRIPT:
+async function handleDeleteCourse(courseId, courseTitle) {
+  // Two confirmations
+  const confirm1 = confirm(
+    `⚠️ Delete entire course?\n\n"${courseTitle}"\n\nThis will delete ALL lessons in this course!`
+  );
+  if (!confirm1) return;
+  
+  const confirm2 = confirm(
+    '🚨 ABSOLUTELY SURE?\n\nAll lessons will be PERMANENTLY deleted!'
+  );
+  if (!confirm2) return;
+  
+  try {
+    const response = await fetch(`/api/courses/${courseId}`, {
+      method: 'DELETE'
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('✅ ' + data.message);
+      window.location.reload(); // Refresh to update tree
+    } else {
+      alert('❌ Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('❌ Failed: ' + error.message);
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FRONTEND: NUCLEAR RESET BUTTON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add to settings page or admin area:
+
+HTML:
+<div class="danger-zone">
+  <h3 class="danger-title">⚠️ Danger Zone</h3>
+  <p class="danger-text">
+    Delete all courses, lessons, and assignments. This cannot be undone.
+  </p>
+  <button 
+    onclick="handleNuclearReset()"
+    class="nuclear-btn"
+  >
+    🗑️ Reset All Content
+  </button>
+</div>
+
+CSS:
+.danger-zone {
+  border: 2px solid #dc2626;
+  border-radius: 8px;
+  padding: 20px;
+  background: #fef2f2;
+  max-width: 500px;
+  margin: 40px 0;
+}
+
+.danger-title {
+  color: #991b1b;
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.danger-text {
+  color: #991b1b;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.nuclear-btn {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  background: #dc2626;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.nuclear-btn:hover {
+  background: #991b1b;
+}
+
+JAVASCRIPT:
+async function handleNuclearReset() {
+  // THREE confirmations!
+  const confirm1 = confirm(
+    '🚨 NUCLEAR RESET 🚨\n\nDelete:\n- ALL courses\n- ALL lessons\n- ALL assignments\n\nAre you sure?'
+  );
+  if (!confirm1) return;
+  
+  const confirm2 = confirm(
+    '⚠️ FINAL WARNING ⚠️\n\nEverything PERMANENTLY deleted.\n\nYou must regenerate all content.\n\nContinue?'
+  );
+  if (!confirm2) return;
+  
+  // Type confirmation
+  const typeConfirm = prompt('Type "DELETE EVERYTHING" to confirm:');
+  if (typeConfirm !== 'DELETE EVERYTHING') {
+    alert('Text did not match. Reset cancelled.');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/admin/reset-all', {
+      method: 'DELETE'
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('🗑️ ' + data.message + '\n\nRedirecting...');
+      window.location.href = '/';
+    } else {
+      alert('❌ Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('❌ Failed: ' + error.message);
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TESTING CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT CARDS:
+□ Cards are smaller rectangles (not large squares)
+□ Left-aligned (not centered)
+□ Stacked vertically
+□ Collapsed state is compact (~60-80px)
+□ Expanded state shows full description + meta
+□ Click to expand/collapse works
+□ Colors still show correctly (green/yellow/gray)
+□ Order maintained (high → medium → low)
+□ Hover effect works
+
+DELETE LESSON:
+□ Button appears on lesson page
+□ Two confirmation dialogs show
+□ Successfully deletes lesson
+□ Redirects after deletion
+□ Concept assignments also deleted
+
+DELETE COURSE:
+□ Button appears on course view
+□ Two confirmation dialogs show
+□ Successfully deletes course + all lessons
+□ UI updates after deletion
+□ Shows count in success message
+
+NUCLEAR RESET:
+□ Button in danger zone (settings/admin)
+□ Three confirmations (2 dialogs + typed text)
+□ Only proceeds if "DELETE EVERYTHING" typed exactly
+□ Successfully deletes all content
+□ Shows summary with counts
+□ Redirects to home
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUCCESS CRITERIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Concept cards redesigned as compact rectangles
+✅ Cards left-aligned and stacked
+✅ Expand/collapse shows more info
+✅ All 3 delete endpoints working
+✅ Delete buttons in appropriate places
+✅ Multiple confirmations prevent accidents
+✅ Proper error handling and messages
+
+ESTIMATED TIME: 1.5-2 hours
+
+Phase 6.5 = COMPLETE content management + polished UI! 🎨🗑️

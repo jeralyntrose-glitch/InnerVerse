@@ -6328,6 +6328,168 @@ async def mark_lesson_complete(course_id: str, lesson_id: str):
 
 
 # =============================================================================
+# DELETE API - Content Management (Phase 6.5)
+# =============================================================================
+
+@app.delete("/api/lessons/{lesson_id}")
+async def delete_lesson(lesson_id: str):
+    """Delete a single lesson and its concept assignments"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        # Check if lesson exists
+        cursor.execute("SELECT id, title FROM lessons WHERE id = %s", (lesson_id,))
+        lesson = cursor.fetchone()
+        
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+        
+        lesson_title = lesson['title']
+        
+        # Delete lesson (CASCADE should handle lesson_concepts if configured)
+        # If not, explicitly delete concept assignments first
+        cursor.execute("DELETE FROM lesson_concepts WHERE lesson_id = %s", (lesson_id,))
+        cursor.execute("DELETE FROM lessons WHERE id = %s", (lesson_id,))
+        
+        conn.commit()
+        
+        print(f"✅ [DELETE] Deleted lesson: {lesson_title} (ID: {lesson_id})")
+        return {
+            "success": True,
+            "message": f"Deleted: {lesson_title}"
+        }
+        
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"❌ Error deleting lesson {lesson_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.delete("/api/courses/{course_id}")
+async def delete_course(course_id: str):
+    """Delete a course and all its lessons"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        # Check if course exists
+        cursor.execute("SELECT id, title FROM courses WHERE id = %s", (course_id,))
+        course = cursor.fetchone()
+        
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        course_title = course['title']
+        
+        # Count lessons to be deleted
+        cursor.execute("SELECT COUNT(*) as count FROM lessons WHERE course_id = %s", (course_id,))
+        lesson_count_result = cursor.fetchone()
+        lesson_count = lesson_count_result['count'] if lesson_count_result else 0
+        
+        # Get all lesson IDs for this course
+        cursor.execute("SELECT id FROM lessons WHERE course_id = %s", (course_id,))
+        lesson_ids = [row['id'] for row in cursor.fetchall()]
+        
+        # Delete concept assignments for all lessons
+        if lesson_ids:
+            cursor.execute(
+                "DELETE FROM lesson_concepts WHERE lesson_id = ANY(%s)",
+                (lesson_ids,)
+            )
+        
+        # Delete lessons (CASCADE handles this if configured, but we're being explicit)
+        cursor.execute("DELETE FROM lessons WHERE course_id = %s", (course_id,))
+        
+        # Delete course
+        cursor.execute("DELETE FROM courses WHERE id = %s", (course_id,))
+        
+        conn.commit()
+        
+        print(f"✅ [DELETE] Deleted course '{course_title}' (ID: {course_id}) with {lesson_count} lessons")
+        return {
+            "success": True,
+            "message": f"Deleted \"{course_title}\" and {lesson_count} lessons"
+        }
+        
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"❌ Error deleting course {course_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.delete("/api/admin/reset-all")
+async def reset_all_content():
+    """Delete ALL courses, lessons, and assignments (admin only)"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        # Count everything first
+        cursor.execute("SELECT COUNT(*) as count FROM courses")
+        course_count_result = cursor.fetchone()
+        course_count = course_count_result['count'] if course_count_result else 0
+        
+        cursor.execute("SELECT COUNT(*) as count FROM lessons")
+        lesson_count_result = cursor.fetchone()
+        lesson_count = lesson_count_result['count'] if lesson_count_result else 0
+        
+        cursor.execute("SELECT COUNT(*) as count FROM lesson_concepts")
+        assignment_count_result = cursor.fetchone()
+        assignment_count = assignment_count_result['count'] if assignment_count_result else 0
+        
+        # Delete everything (in order due to foreign keys)
+        cursor.execute("DELETE FROM lesson_concepts")
+        cursor.execute("DELETE FROM lessons")
+        cursor.execute("DELETE FROM courses")
+        
+        conn.commit()
+        
+        print(f"🗑️ [NUCLEAR RESET] Deleted {course_count} courses, {lesson_count} lessons, {assignment_count} assignments")
+        return {
+            "success": True,
+            "message": f"Deleted {course_count} courses, {lesson_count} lessons, {assignment_count} assignments"
+        }
+        
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"❌ Error in nuclear reset: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            conn.close()
+
+
+# =============================================================================
 # AI GENERATION API - Course Generation & Content Assignment
 # =============================================================================
 
