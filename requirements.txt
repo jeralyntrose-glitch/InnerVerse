@@ -21,3 +21,4 @@ pycryptodome
 youtube-transcript-api
 anthropic
 gunicorn
+python-dotenv

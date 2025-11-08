@@ -141,33 +141,39 @@ def calculate_composite_score(
     """
     Calculate composite score from all factors
     
-    Weights:
-    - Vector similarity: 50%
-    - Metadata overlap: 35%
-    - Prominence: 15%
+    UPDATED: Since lessons don't have MBTI metadata, weights adjusted:
+    - Vector similarity: 70% (increased from 50%)
+    - Prominence: 30% (increased from 15%)
+    - Metadata overlap: 0% (lessons lack MBTI metadata fields)
     
     Args:
         similarity_score: Pinecone vector similarity (0-1)
-        metadata_overlap: Metadata overlap score (0-1)
+        metadata_overlap: Metadata overlap score (0-1) - UNUSED for lessons
         prominence: Prominence score (0-1)
     
     Returns:
         Composite score from 0.0 to 1.0
     """
     return (
-        similarity_score * 0.50 +
-        metadata_overlap * 0.35 +
-        prominence * 0.15
+        similarity_score * 0.70 +
+        prominence * 0.30
     )
 
 
 def assign_confidence(score: float) -> str:
-    """Assign confidence level based on composite score"""
-    if score >= 0.75:
+    """
+    Assign confidence level based on composite score
+    
+    UPDATED: Lowered thresholds to account for lack of lesson metadata:
+    - high: >= 0.60 (was 0.75)
+    - medium: >= 0.45 (was 0.60)
+    - low: >= 0.30 (was 0.45)
+    """
+    if score >= 0.60:
         return 'high'
-    elif score >= 0.60:
-        return 'medium'
     elif score >= 0.45:
+        return 'medium'
+    elif score >= 0.30:
         return 'low'
     else:
         return None  # Skip
@@ -182,11 +188,13 @@ def get_all_lessons():
                 SELECT 
                     id, 
                     title, 
-                    description, 
-                    content,
-                    metadata
+                    description,
+                    learning_objectives,
+                    key_takeaways,
+                    course_id,
+                    order_index
                 FROM lessons
-                ORDER BY created_at
+                ORDER BY course_id, order_index
             """)
             lessons = cur.fetchall()
             return [dict(lesson) for lesson in lessons]
@@ -199,16 +207,17 @@ def assign_concepts_to_lesson(lesson: Dict) -> List[Tuple[str, str, float, float
     Assign concepts to a single lesson
     
     Args:
-        lesson: Lesson dict with id, title, description, content, metadata
+        lesson: Lesson dict with id, title, description, learning_objectives, key_takeaways
     
     Returns:
         List of tuples: (concept_id, confidence, similarity_score, metadata_overlap, rank)
     """
-    # Create search text: title + description + first 500 chars of content
+    # Create search text: title + description + learning_objectives + key_takeaways
     search_text = f"{lesson['title']} {lesson.get('description', '')}"
-    if lesson.get('content'):
-        content_preview = lesson['content'][:500]
-        search_text += f" {content_preview}"
+    if lesson.get('learning_objectives'):
+        search_text += f" {lesson['learning_objectives']}"
+    if lesson.get('key_takeaways'):
+        search_text += f" {lesson['key_takeaways']}"
     
     # Create embedding
     print(f"  📊 Creating embedding for lesson text...")
@@ -225,6 +234,13 @@ def assign_concepts_to_lesson(lesson: Dict) -> List[Tuple[str, str, float, float
     # Filter to concept-type chunks and calculate scores
     concept_scores = {}  # concept_id -> {score, similarity, metadata, prominence}
     lesson_metadata = lesson.get('metadata') or {}
+    
+    # DEBUG: Log first few results to see what we're getting
+    if len(results.matches) > 0:
+        print(f"  📋 DEBUG: Received {len(results.matches)} total matches from Pinecone")
+        first_match = results.matches[0]
+        print(f"      First match type: {first_match.metadata.get('type') if first_match.metadata else 'NO METADATA'}")
+        print(f"      First match keys: {list(first_match.metadata.keys()) if first_match.metadata else 'NO METADATA'}")
     
     for match in results.matches:
         metadata = match.metadata or {}
