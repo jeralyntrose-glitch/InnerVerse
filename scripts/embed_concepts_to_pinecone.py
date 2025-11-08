@@ -23,7 +23,7 @@ pinecone_index = pc.Index(os.environ.get('PINECONE_INDEX', 'mbti-knowledge'))
 
 # Constants
 EMBEDDING_MODEL = 'text-embedding-3-large'
-EMBEDDING_DIMENSIONS = 3072
+EMBEDDING_DIMENSIONS = 1536  # FIXED: Match Pinecone index dimension (was 3072)
 BATCH_SIZE = 100
 
 
@@ -142,12 +142,18 @@ def batch_upsert_concepts(concepts: List[Dict]) -> int:
                 'metadata': prepared_concept['metadata']
             })
         
-        # Upsert to Pinecone
+        # Upsert to Pinecone with error handling
         print(f"  💾 Upserting to Pinecone...")
-        pinecone_index.upsert(vectors=vectors)
-        
-        embedded_count += len(batch)
-        print(f"  ✅ Embedded {embedded_count}/{total} concepts (${batch_cost:.4f})\n")
+        try:
+            pinecone_index.upsert(vectors=vectors)
+            embedded_count += len(batch)
+            print(f"  ✅ Batch {batch_num} upserted successfully")
+            print(f"  ✅ Progress: {embedded_count}/{total} concepts (${batch_cost:.4f})\n")
+        except Exception as e:
+            print(f"❌ ERROR upserting batch {batch_num}: {e}")
+            print(f"   Vector dimension: {len(vectors[0]['values']) if vectors else 'N/A'}")
+            print(f"   First vector ID: {vectors[0]['id'] if vectors else 'N/A'}")
+            raise  # Re-raise to stop script
         
         # Rate limiting
         time.sleep(0.5)
@@ -170,6 +176,13 @@ def main():
         print("❌ No concepts found in knowledge graph!")
         return
     
+    # Test embedding dimension before starting
+    print("🧪 Testing embedding dimension...")
+    test_embedding = create_embedding("test")
+    print(f"✅ Embedding dimension: {len(test_embedding)}")
+    assert len(test_embedding) == 1536, f"Dimension mismatch! Expected 1536, got {len(test_embedding)}"
+    print()
+    
     # Embed and upsert
     embedded_count, total_cost = batch_upsert_concepts(concepts)
     
@@ -180,6 +193,26 @@ def main():
     print(f"✅ Embedded {embedded_count} concepts")
     print(f"💰 Total cost: ~${total_cost:.4f}")
     print(f"📊 Average: ${(total_cost / embedded_count):.6f} per concept")
+    
+    # Verification: Test that concepts are queryable with type filter
+    print("\n🧪 VERIFICATION: Testing type='concept' filter...")
+    test_query = pinecone_index.query(
+        vector=[0.01] * 1536,
+        filter={'type': 'concept'},
+        top_k=5,
+        include_metadata=True
+    )
+    concepts_found = len(test_query.matches)
+    print(f"✅ Found {concepts_found} concept vectors with type filter")
+    
+    if concepts_found > 0:
+        print("\nSample concepts:")
+        for match in test_query.matches[:3]:
+            name = match.metadata.get('concept_name', 'N/A')
+            print(f"  - {name}")
+    
+    assert concepts_found > 0, "❌ Type filter not working! No concepts found."
+    
     print("\n🎯 Concepts are now searchable in Pinecone with type='concept'")
     print("🚀 You can now run: python scripts/assign_concepts_to_lessons.py")
     print("=" * 70)
