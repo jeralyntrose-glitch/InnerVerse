@@ -238,6 +238,7 @@ function renderCourseCard(course) {
             <span class="category-badge category-${course.category}">
                 ${CONFIG.categoryToDifficulty[course.category] || course.category.toUpperCase()}
             </span>
+            <button class="delete-course-btn" onclick="handleDeleteCourse(event, '${course.id}', '${course.title.replace(/'/g, "&apos;")}')">🗑️</button>
         </div>
         <div class="course-title">${course.title}</div>
         <div class="course-description">${course.description || 'No description'}</div>
@@ -383,6 +384,47 @@ function closeModal() {
 
 function viewLesson(courseId, lessonId) {
     window.location.href = `/learning-paths/${courseId}/${lessonId}`;
+}
+
+// Delete course with 2-step confirmation (Phase 6.5)
+async function handleDeleteCourse(event, courseId, courseTitle) {
+    // Stop event propagation to prevent opening the modal
+    event.stopPropagation();
+    event.preventDefault();
+    
+    // First confirmation
+    const confirm1 = confirm(
+        `⚠️ Delete this course?\n\n"${courseTitle}"\n\nThis will delete all lessons and concept assignments.`
+    );
+    
+    if (!confirm1) return;
+    
+    // Second confirmation
+    const confirm2 = confirm('🚨 Are you SURE? This cannot be undone!');
+    
+    if (!confirm2) return;
+    
+    try {
+        showLoading(true);
+        
+        const response = await fetch(`/api/courses/${courseId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Success', data.message, 'success');
+            // Reload courses to update the view
+            await loadCourses();
+        } else {
+            showToast('Error', data.error || 'Failed to delete course', 'error');
+        }
+    } catch (error) {
+        showToast('Error', 'Failed to delete: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
 }
 
 function openGenerateModal() {

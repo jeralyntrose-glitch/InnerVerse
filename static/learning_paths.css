@@ -346,6 +346,40 @@ body {
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: var(--spacing-sm);
+    position: relative;
+}
+
+.delete-course-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.course-card:hover .delete-course-btn,
+.delete-course-btn:focus,
+.delete-course-btn:focus-visible {
+    opacity: 1;
+}
+
+.delete-course-btn:hover {
+    background: var(--danger-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+.delete-course-btn:focus-visible {
+    outline: 2px solid var(--danger-color);
+    outline-offset: 2px;
 }
 
 .course-status {
