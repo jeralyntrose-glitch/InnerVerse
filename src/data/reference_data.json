@@ -1,980 +1,276 @@
 {
   "mbti_types": {
-    "ESTJ": {
-      "descriptors": {
-        "letters": ["Extraverted", "Sensing", "Thinking", "Judging"]
-      },
-      "categories": {
-        "temperament": "Guardian (SJ)",
-        "temple": "Mind",
-        "quadra": "Delta",
-        "house": "Philosophers",
-        "archetype": "Judicator",
-        "interaction_style": "Structure"
-      },
-      "expression": {
-        "communication": "Direct",
-        "action": "Initiating",
-        "motivation": "Outcome"
-      },
-      "worldview": {
-        "perception": "Concrete",
-        "decision": "Affiliative",
-        "organization": "Systematic"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ESTJ",
-          "functions": {
-            "hero": {"code": "Te", "name": "Extraverted Thinking"},
-            "parent": {"code": "Si", "name": "Introverted Sensing"},
-            "child": {"code": "Ne", "name": "Extraverted Intuition"},
-            "inferior": {"code": "Fi", "name": "Introverted Feeling"}
-          }
-        },
-        "unconscious": {
-          "type": "ISTP",
-          "functions": {
-            "nemesis": {"code": "Ti", "name": "Introverted Thinking"},
-            "critic": {"code": "Se", "name": "Extraverted Sensing"},
-            "trickster": {"code": "Ni", "name": "Introverted Intuition"},
-            "demon": {"code": "Fe", "name": "Extraverted Feeling"}
-          }
-        },
-        "subconscious": {
-          "type": "INFP",
-          "functions": {
-            "1": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "2": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "3": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "4": {"code": "Te", "keywords": "Rationale, Understand, Metrics"}
-          }
-        },
-        "superego": {
-          "type": "ENFJ",
-          "functions": {
-            "1": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "2": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "3": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "4": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"}
-          }
-        }
-      }
-    },
-    "ESTP": {
-      "descriptors": {
-        "letters": ["Extraverted", "Sensing", "Thinking", "Perceiving"]
-      },
-      "categories": {
-        "temperament": "Artisan (SP)",
-        "temple": "Soul",
-        "quadra": "Beta",
-        "house": "Templars",
-        "archetype": "Gladiator",
-        "interaction_style": "Structure"
-      },
-      "expression": {
-        "communication": "Direct",
-        "action": "Initiating",
-        "motivation": "Outcome"
-      },
-      "worldview": {
-        "perception": "Concrete",
-        "decision": "Pragmatic",
-        "organization": "Interest"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ESTP",
-          "functions": {
-            "hero": {"code": "Se", "name": "Extraverted Sensing"},
-            "parent": {"code": "Ti", "name": "Introverted Thinking"},
-            "child": {"code": "Fe", "name": "Extraverted Feeling"},
-            "inferior": {"code": "Ni", "name": "Introverted Intuition"}
-          }
-        },
-        "unconscious": {
-          "type": "ISTJ",
-          "functions": {
-            "nemesis": {"code": "Si", "name": "Introverted Sensing"},
-            "critic": {"code": "Te", "name": "Extraverted Thinking"},
-            "trickster": {"code": "Fi", "name": "Introverted Feeling"},
-            "demon": {"code": "Ne", "name": "Extraverted Intuition"}
-          }
-        },
-        "subconscious": {
-          "type": "INFJ",
-          "functions": {
-            "1": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "2": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "3": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "4": {"code": "Se", "keywords": "Physics, Is, Performance, Action"}
-          }
-        },
-        "superego": {
-          "type": "ENFP",
-          "functions": {
-            "1": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "2": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "3": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "4": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"}
-          }
-        }
-      }
-    },
-    "ENTJ": {
-      "descriptors": {
-        "letters": ["Extraverted", "Intuitive", "Thinking", "Judging"]
-      },
-      "categories": {
-        "temperament": "Intellectual (NT)",
-        "temple": "Body",
-        "quadra": "Gamma",
-        "house": "Wayfarers",
-        "archetype": "Marshal",
-        "interaction_style": "Structure"
-      },
-      "expression": {
-        "communication": "Direct",
-        "action": "Initiating",
-        "motivation": "Outcome"
-      },
-      "worldview": {
-        "perception": "Abstract",
-        "decision": "Pragmatic",
-        "organization": "Systematic"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ENTJ",
-          "functions": {
-            "hero": {"code": "Te", "name": "Extraverted Thinking"},
-            "parent": {"code": "Ni", "name": "Introverted Intuition"},
-            "child": {"code": "Se", "name": "Extraverted Sensing"},
-            "inferior": {"code": "Fi", "name": "Introverted Feeling"}
-          }
-        },
-        "unconscious": {
-          "type": "INTP",
-          "functions": {
-            "nemesis": {"code": "Ti", "name": "Introverted Thinking"},
-            "critic": {"code": "Ne", "name": "Extraverted Intuition"},
-            "trickster": {"code": "Si", "name": "Introverted Sensing"},
-            "demon": {"code": "Fe", "name": "Extraverted Feeling"}
-          }
-        },
-        "subconscious": {
-          "type": "ISFP",
-          "functions": {
-            "1": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "2": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "3": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "4": {"code": "Te", "keywords": "Rationale, Understand, Metrics"}
-          }
-        },
-        "superego": {
-          "type": "ESFJ",
-          "functions": {
-            "1": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "2": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "3": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "4": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"}
-          }
-        }
-      }
-    },
-    "ENFJ": {
-      "descriptors": {
-        "letters": ["Extraverted", "Intuitive", "Feeling", "Judging"]
-      },
-      "categories": {
-        "temperament": "Idealist (NF)",
-        "temple": "Mind",
-        "quadra": "Beta",
-        "house": "Templars",
-        "archetype": "Cleric",
-        "interaction_style": "Structure"
-      },
-      "expression": {
-        "communication": "Direct",
-        "action": "Initiating",
-        "motivation": "Outcome"
-      },
-      "worldview": {
-        "perception": "Abstract",
-        "decision": "Affiliative",
-        "organization": "Interest"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ENFJ",
-          "functions": {
-            "hero": {"code": "Fe", "name": "Extraverted Feeling"},
-            "parent": {"code": "Ni", "name": "Introverted Intuition"},
-            "child": {"code": "Se", "name": "Extraverted Sensing"},
-            "inferior": {"code": "Ti", "name": "Introverted Thinking"}
-          }
-        },
-        "unconscious": {
-          "type": "INFP",
-          "functions": {
-            "nemesis": {"code": "Fi", "name": "Introverted Feeling"},
-            "critic": {"code": "Ne", "name": "Extraverted Intuition"},
-            "trickster": {"code": "Si", "name": "Introverted Sensing"},
-            "demon": {"code": "Te", "name": "Extraverted Thinking"}
-          }
-        },
-        "subconscious": {
-          "type": "ISTP",
-          "functions": {
-            "1": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "2": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "3": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "4": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"}
-          }
-        },
-        "superego": {
-          "type": "ESTJ",
-          "functions": {
-            "1": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "2": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "3": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "4": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"}
-          }
-        }
-      }
-    },
-    "ESFJ": {
-      "descriptors": {
-        "letters": ["Extraverted", "Sensing", "Feeling", "Judging"]
-      },
-      "categories": {
-        "temperament": "Guardian (SJ)",
-        "temple": "Body",
-        "quadra": "Alpha",
-        "house": "Crusaders",
-        "archetype": "Cavalier",
-        "interaction_style": "Starter"
-      },
-      "expression": {
-        "communication": "Informative",
-        "action": "Initiating",
-        "motivation": "Progression"
-      },
-      "worldview": {
-        "perception": "Concrete",
-        "decision": "Affiliative",
-        "organization": "Systematic"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ESFJ",
-          "functions": {
-            "hero": {"code": "Fe", "name": "Extraverted Feeling"},
-            "parent": {"code": "Si", "name": "Introverted Sensing"},
-            "child": {"code": "Ne", "name": "Extraverted Intuition"},
-            "inferior": {"code": "Ti", "name": "Introverted Thinking"}
-          }
-        },
-        "unconscious": {
-          "type": "ISFP",
-          "functions": {
-            "nemesis": {"code": "Fi", "name": "Introverted Feeling"},
-            "critic": {"code": "Se", "name": "Extraverted Sensing"},
-            "trickster": {"code": "Ni", "name": "Introverted Intuition"},
-            "demon": {"code": "Te", "name": "Extraverted Thinking"}
-          }
-        },
-        "subconscious": {
-          "type": "INTP",
-          "functions": {
-            "1": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "2": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "3": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "4": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"}
-          }
-        },
-        "superego": {
-          "type": "ENTJ",
-          "functions": {
-            "1": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "2": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "3": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "4": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"}
-          }
-        }
-      }
-    },
-    "ESFP": {
-      "descriptors": {
-        "letters": ["Extraverted", "Sensing", "Feeling", "Perceiving"]
-      },
-      "categories": {
-        "temperament": "Artisan (SP)",
-        "temple": "Heart",
-        "quadra": "Gamma",
-        "house": "Wayfarers",
-        "archetype": "Duelist",
-        "interaction_style": "Starter"
-      },
-      "expression": {
-        "communication": "Informative",
-        "action": "Initiating",
-        "motivation": "Progression"
-      },
-      "worldview": {
-        "perception": "Concrete",
-        "decision": "Pragmatic",
-        "organization": "Interest"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ESFP",
-          "functions": {
-            "hero": {"code": "Se", "name": "Extraverted Sensing"},
-            "parent": {"code": "Fi", "name": "Introverted Feeling"},
-            "child": {"code": "Te", "name": "Extraverted Thinking"},
-            "inferior": {"code": "Ni", "name": "Introverted Intuition"}
-          }
-        },
-        "unconscious": {
-          "type": "ISFJ",
-          "functions": {
-            "nemesis": {"code": "Si", "name": "Introverted Sensing"},
-            "critic": {"code": "Fe", "name": "Extraverted Feeling"},
-            "trickster": {"code": "Ti", "name": "Introverted Thinking"},
-            "demon": {"code": "Ne", "name": "Extraverted Intuition"}
-          }
-        },
-        "subconscious": {
-          "type": "INTJ",
-          "functions": {
-            "1": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "2": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "3": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "4": {"code": "Se", "keywords": "Physics, Is, Performance, Action"}
-          }
-        },
-        "superego": {
-          "type": "ENTP",
-          "functions": {
-            "1": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "2": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "3": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "4": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"}
-          }
-        }
-      }
-    },
-    "ENTP": {
-      "descriptors": {
-        "letters": ["Extraverted", "Intuitive", "Thinking", "Perceiving"]
-      },
-      "categories": {
-        "temperament": "Intellectual (NT)",
-        "temple": "Heart",
-        "quadra": "Alpha",
-        "house": "Crusaders",
-        "archetype": "Rogue",
-        "interaction_style": "Starter"
-      },
-      "expression": {
-        "communication": "Informative",
-        "action": "Initiating",
-        "motivation": "Progression"
-      },
-      "worldview": {
-        "perception": "Abstract",
-        "decision": "Pragmatic",
-        "organization": "Systematic"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ENTP",
-          "functions": {
-            "hero": {"code": "Ne", "name": "Extraverted Intuition"},
-            "parent": {"code": "Ti", "name": "Introverted Thinking"},
-            "child": {"code": "Fe", "name": "Extraverted Feeling"},
-            "inferior": {"code": "Si", "name": "Introverted Sensing"}
-          }
-        },
-        "unconscious": {
-          "type": "INTJ",
-          "functions": {
-            "nemesis": {"code": "Ni", "name": "Introverted Intuition"},
-            "critic": {"code": "Te", "name": "Extraverted Thinking"},
-            "trickster": {"code": "Fi", "name": "Introverted Feeling"},
-            "demon": {"code": "Se", "name": "Extraverted Sensing"}
-          }
-        },
-        "subconscious": {
-          "type": "ISFJ",
-          "functions": {
-            "1": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "2": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "3": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "4": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"}
-          }
-        },
-        "superego": {
-          "type": "ESFP",
-          "functions": {
-            "1": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "2": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "3": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "4": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"}
-          }
-        }
-      }
-    },
     "ENFP": {
-      "descriptors": {
-        "letters": ["Extraverted", "Intuitive", "Feeling", "Perceiving"]
-      },
-      "categories": {
-        "temperament": "Idealist (NF)",
-        "temple": "Soul",
-        "quadra": "Delta",
-        "house": "Philosophers",
-        "archetype": "Bard",
-        "interaction_style": "Starter"
-      },
-      "expression": {
-        "communication": "Informative",
-        "action": "Initiating",
-        "motivation": "Progression"
-      },
-      "worldview": {
-        "perception": "Abstract",
-        "decision": "Affiliative",
-        "organization": "Interest"
-      },
       "four_sides": {
-        "ego": {
-          "type": "ENFP",
-          "functions": {
-            "hero": {"code": "Ne", "name": "Extraverted Intuition"},
-            "parent": {"code": "Fi", "name": "Introverted Feeling"},
-            "child": {"code": "Te", "name": "Extraverted Thinking"},
-            "inferior": {"code": "Si", "name": "Introverted Sensing"}
-          }
-        },
-        "unconscious": {
-          "type": "INFJ",
-          "functions": {
-            "nemesis": {"code": "Ni", "name": "Introverted Intuition"},
-            "critic": {"code": "Fe", "name": "Extraverted Feeling"},
-            "trickster": {"code": "Ti", "name": "Introverted Thinking"},
-            "demon": {"code": "Se", "name": "Extraverted Sensing"}
-          }
-        },
-        "subconscious": {
-          "type": "ISTJ",
-          "functions": {
-            "1": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "2": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "3": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "4": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"}
-          }
-        },
-        "superego": {
-          "type": "ESTP",
-          "functions": {
-            "1": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "2": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "3": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "4": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"}
-          }
-        }
-      }
-    },
-    "ISTJ": {
-      "descriptors": {
-        "letters": ["Introverted", "Sensing", "Thinking", "Judging"]
+        "ego": "ENFP",
+        "subconscious": "ISTJ",
+        "unconscious": "INFJ",
+        "superego": "ESTP"
       },
-      "categories": {
-        "temperament": "Guardian (SJ)",
-        "temple": "Soul",
-        "quadra": "Delta",
-        "house": "Philosophers",
-        "archetype": "Archivist",
-        "interaction_style": "Finisher"
-      },
-      "expression": {
-        "communication": "Direct",
-        "action": "Responding",
-        "motivation": "Progression"
-      },
-      "worldview": {
-        "perception": "Concrete",
-        "decision": "Affiliative",
-        "organization": "Systematic"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ISTJ",
-          "functions": {
-            "hero": {"code": "Si", "name": "Introverted Sensing"},
-            "parent": {"code": "Te", "name": "Extraverted Thinking"},
-            "child": {"code": "Fi", "name": "Introverted Feeling"},
-            "inferior": {"code": "Ne", "name": "Extraverted Intuition"}
-          }
-        },
-        "unconscious": {
-          "type": "ESTP",
-          "functions": {
-            "nemesis": {"code": "Se", "name": "Extraverted Sensing"},
-            "critic": {"code": "Ti", "name": "Introverted Thinking"},
-            "trickster": {"code": "Fe", "name": "Extraverted Feeling"},
-            "demon": {"code": "Ni", "name": "Introverted Intuition"}
-          }
-        },
-        "subconscious": {
-          "type": "ENFP",
-          "functions": {
-            "1": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "2": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "3": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "4": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"}
-          }
-        },
-        "superego": {
-          "type": "INFJ",
-          "functions": {
-            "1": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "2": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "3": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "4": {"code": "Se", "keywords": "Physics, Is, Performance, Action"}
-          }
-        }
-      }
-    },
-    "ISTP": {
-      "descriptors": {
-        "letters": ["Introverted", "Sensing", "Thinking", "Perceiving"]
-      },
-      "categories": {
-        "temperament": "Artisan (SP)",
-        "temple": "Mind",
-        "quadra": "Beta",
-        "house": "Templars",
-        "archetype": "Artificer",
-        "interaction_style": "Finisher"
-      },
-      "expression": {
-        "communication": "Direct",
-        "action": "Responding",
-        "motivation": "Progression"
-      },
-      "worldview": {
-        "perception": "Concrete",
-        "decision": "Pragmatic",
-        "organization": "Interest"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ISTP",
-          "functions": {
-            "hero": {"code": "Ti", "name": "Introverted Thinking"},
-            "parent": {"code": "Se", "name": "Extraverted Sensing"},
-            "child": {"code": "Ni", "name": "Introverted Intuition"},
-            "inferior": {"code": "Fe", "name": "Extraverted Feeling"}
-          }
-        },
-        "unconscious": {
-          "type": "ESTJ",
-          "functions": {
-            "nemesis": {"code": "Te", "name": "Extraverted Thinking"},
-            "critic": {"code": "Si", "name": "Introverted Sensing"},
-            "trickster": {"code": "Ne", "name": "Extraverted Intuition"},
-            "demon": {"code": "Fi", "name": "Introverted Feeling"}
-          }
-        },
-        "subconscious": {
-          "type": "ENFJ",
-          "functions": {
-            "1": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "2": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "3": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "4": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"}
-          }
-        },
-        "superego": {
-          "type": "INFP",
-          "functions": {
-            "1": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "2": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "3": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "4": {"code": "Te", "keywords": "Rationale, Understand, Metrics"}
-          }
-        }
-      }
-    },
-    "INTJ": {
-      "descriptors": {
-        "letters": ["Introverted", "Intuitive", "Thinking", "Judging"]
-      },
-      "categories": {
-        "temperament": "Intellectual (NT)",
-        "temple": "Heart",
-        "quadra": "Gamma",
-        "house": "Wayfarers",
-        "archetype": "Ranger",
-        "interaction_style": "Finisher"
-      },
-      "expression": {
-        "communication": "Direct",
-        "action": "Responding",
-        "motivation": "Progression"
-      },
-      "worldview": {
-        "perception": "Abstract",
-        "decision": "Pragmatic",
-        "organization": "Systematic"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "INTJ",
-          "functions": {
-            "hero": {"code": "Ni", "name": "Introverted Intuition"},
-            "parent": {"code": "Te", "name": "Extraverted Thinking"},
-            "child": {"code": "Fi", "name": "Introverted Feeling"},
-            "inferior": {"code": "Se", "name": "Extraverted Sensing"}
-          }
-        },
-        "unconscious": {
-          "type": "ENTP",
-          "functions": {
-            "nemesis": {"code": "Ne", "name": "Extraverted Intuition"},
-            "critic": {"code": "Ti", "name": "Introverted Thinking"},
-            "trickster": {"code": "Fe", "name": "Extraverted Feeling"},
-            "demon": {"code": "Si", "name": "Introverted Sensing"}
-          }
-        },
-        "subconscious": {
-          "type": "ESFP",
-          "functions": {
-            "1": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "2": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "3": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "4": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"}
-          }
-        },
-        "superego": {
-          "type": "ISFJ",
-          "functions": {
-            "1": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "2": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "3": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "4": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"}
-          }
-        }
-      }
+      "function_stack": [
+        "Ne - Extraverted Intuition (Hero)",
+        "Fi - Introverted Feeling (Parent)",
+        "Te - Extraverted Thinking (Child)",
+        "Si - Introverted Sensing (Inferior)"
+      ],
+      "temperament": "Idealist (NF)",
+      "quadra": "Gamma",
+      "interaction_style": "Involve"
     },
     "INFJ": {
-      "descriptors": {
-        "letters": ["Introverted", "Intuitive", "Feeling", "Judging"]
-      },
-      "categories": {
-        "temperament": "Idealist (NF)",
-        "temple": "Soul",
-        "quadra": "Beta",
-        "house": "Templars",
-        "archetype": "Paladin",
-        "interaction_style": "Finisher"
-      },
-      "expression": {
-        "communication": "Direct",
-        "action": "Responding",
-        "motivation": "Progression"
-      },
-      "worldview": {
-        "perception": "Abstract",
-        "decision": "Affiliative",
-        "organization": "Interest"
-      },
       "four_sides": {
-        "ego": {
-          "type": "INFJ",
-          "functions": {
-            "hero": {"code": "Ni", "name": "Introverted Intuition"},
-            "parent": {"code": "Fe", "name": "Extraverted Feeling"},
-            "child": {"code": "Ti", "name": "Introverted Thinking"},
-            "inferior": {"code": "Se", "name": "Extraverted Sensing"}
-          }
-        },
-        "unconscious": {
-          "type": "ENFP",
-          "functions": {
-            "nemesis": {"code": "Ne", "name": "Extraverted Intuition"},
-            "critic": {"code": "Fi", "name": "Introverted Feeling"},
-            "trickster": {"code": "Te", "name": "Extraverted Thinking"},
-            "demon": {"code": "Si", "name": "Introverted Sensing"}
-          }
-        },
-        "subconscious": {
-          "type": "ESTP",
-          "functions": {
-            "1": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "2": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "3": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "4": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"}
-          }
-        },
-        "superego": {
-          "type": "ISTJ",
-          "functions": {
-            "1": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "2": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "3": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "4": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"}
-          }
-        }
-      }
+        "ego": "INFJ",
+        "subconscious": "ESTP",
+        "unconscious": "ENFP",
+        "superego": "ISTJ"
+      },
+      "function_stack": [
+        "Ni - Introverted Intuition (Hero)",
+        "Fe - Extraverted Feeling (Parent)",
+        "Ti - Introverted Thinking (Child)",
+        "Se - Extraverted Sensing (Inferior)"
+      ],
+      "temperament": "Idealist (NF)",
+      "quadra": "Beta",
+      "interaction_style": "Direct"
+    },
+    "ISTJ": {
+      "four_sides": {
+        "ego": "ISTJ",
+        "subconscious": "ENFP",
+        "unconscious": "ESTP",
+        "superego": "INFJ"
+      },
+      "function_stack": [
+        "Si - Introverted Sensing (Hero)",
+        "Te - Extraverted Thinking (Parent)",
+        "Fi - Introverted Feeling (Child)",
+        "Ne - Extraverted Intuition (Inferior)"
+      ],
+      "temperament": "Guardian (SJ)",
+      "quadra": "Gamma",
+      "interaction_style": "Direct"
+    },
+    "ESTP": {
+      "four_sides": {
+        "ego": "ESTP",
+        "subconscious": "INFJ",
+        "unconscious": "ISTJ",
+        "superego": "ENFP"
+      },
+      "function_stack": [
+        "Se - Extraverted Sensing (Hero)",
+        "Ti - Introverted Thinking (Parent)",
+        "Fe - Extraverted Feeling (Child)",
+        "Ni - Introverted Intuition (Inferior)"
+      ],
+      "temperament": "Artisan (SP)",
+      "quadra": "Beta",
+      "interaction_style": "Structure"
+    },
+    "INTJ": {
+      "four_sides": {
+        "ego": "INTJ",
+        "subconscious": "ESFP",
+        "unconscious": "ISTP",
+        "superego": "ENFJ"
+      },
+      "function_stack": [
+        "Ni - Introverted Intuition (Hero)",
+        "Te - Extraverted Thinking (Parent)",
+        "Fi - Introverted Feeling (Child)",
+        "Se - Extraverted Sensing (Inferior)"
+      ],
+      "temperament": "Rational (NT)",
+      "quadra": "Gamma",
+      "interaction_style": "Direct"
+    },
+    "ESFP": {
+      "four_sides": {
+        "ego": "ESFP",
+        "subconscious": "INTJ",
+        "unconscious": "ENFJ",
+        "superego": "ISTP"
+      },
+      "function_stack": [
+        "Se - Extraverted Sensing (Hero)",
+        "Fi - Introverted Feeling (Parent)",
+        "Te - Extraverted Thinking (Child)",
+        "Ni - Introverted Intuition (Inferior)"
+      ],
+      "temperament": "Artisan (SP)",
+      "quadra": "Gamma",
+      "interaction_style": "Involve"
+    },
+    "ISTP": {
+      "four_sides": {
+        "ego": "ISTP",
+        "subconscious": "ENFJ",
+        "unconscious": "INTJ",
+        "superego": "ESFP"
+      },
+      "function_stack": [
+        "Ti - Introverted Thinking (Hero)",
+        "Se - Extraverted Sensing (Parent)",
+        "Ni - Introverted Intuition (Child)",
+        "Fe - Extraverted Feeling (Inferior)"
+      ],
+      "temperament": "Artisan (SP)",
+      "quadra": "Delta",
+      "interaction_style": "Direct"
+    },
+    "ENFJ": {
+      "four_sides": {
+        "ego": "ENFJ",
+        "subconscious": "ISTP",
+        "unconscious": "ESFP",
+        "superego": "INTJ"
+      },
+      "function_stack": [
+        "Fe - Extraverted Feeling (Hero)",
+        "Ni - Introverted Intuition (Parent)",
+        "Se - Extraverted Sensing (Child)",
+        "Ti - Introverted Thinking (Inferior)"
+      ],
+      "temperament": "Idealist (NF)",
+      "quadra": "Delta",
+      "interaction_style": "Structure"
+    },
+    "ENTP": {
+      "four_sides": {
+        "ego": "ENTP",
+        "subconscious": "ISFJ",
+        "unconscious": "INTP",
+        "superego": "ESFJ"
+      },
+      "function_stack": [
+        "Ne - Extraverted Intuition (Hero)",
+        "Ti - Introverted Thinking (Parent)",
+        "Fe - Extraverted Feeling (Child)",
+        "Si - Introverted Sensing (Inferior)"
+      ],
+      "temperament": "Rational (NT)",
+      "quadra": "Alpha",
+      "interaction_style": "Involve"
     },
     "ISFJ": {
-      "descriptors": {
-        "letters": ["Introverted", "Sensing", "Feeling", "Judging"]
-      },
-      "categories": {
-        "temperament": "Guardian (SJ)",
-        "temple": "Heart",
-        "quadra": "Alpha",
-        "house": "Crusaders",
-        "archetype": "Knight",
-        "interaction_style": "Background"
-      },
-      "expression": {
-        "communication": "Informative",
-        "action": "Responding",
-        "motivation": "Outcome"
-      },
-      "worldview": {
-        "perception": "Concrete",
-        "decision": "Affiliative",
-        "organization": "Systematic"
-      },
       "four_sides": {
-        "ego": {
-          "type": "ISFJ",
-          "functions": {
-            "hero": {"code": "Si", "name": "Introverted Sensing"},
-            "parent": {"code": "Fe", "name": "Extraverted Feeling"},
-            "child": {"code": "Ti", "name": "Introverted Thinking"},
-            "inferior": {"code": "Ne", "name": "Extraverted Intuition"}
-          }
-        },
-        "unconscious": {
-          "type": "ESFP",
-          "functions": {
-            "nemesis": {"code": "Se", "name": "Extraverted Sensing"},
-            "critic": {"code": "Fi", "name": "Introverted Feeling"},
-            "trickster": {"code": "Te", "name": "Extraverted Thinking"},
-            "demon": {"code": "Ni", "name": "Introverted Intuition"}
-          }
-        },
-        "subconscious": {
-          "type": "ENTP",
-          "functions": {
-            "1": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "2": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "3": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "4": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"}
-          }
-        },
-        "superego": {
-          "type": "INTJ",
-          "functions": {
-            "1": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "2": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "3": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "4": {"code": "Se", "keywords": "Physics, Is, Performance, Action"}
-          }
-        }
-      }
-    },
-    "ISFP": {
-      "descriptors": {
-        "letters": ["Introverted", "Sensing", "Feeling", "Perceiving"]
+        "ego": "ISFJ",
+        "subconscious": "ENTP",
+        "unconscious": "ESFJ",
+        "superego": "INTP"
       },
-      "categories": {
-        "temperament": "Artisan (SP)",
-        "temple": "Body",
-        "quadra": "Gamma",
-        "house": "Wayfarers",
-        "archetype": "Druid",
-        "interaction_style": "Background"
-      },
-      "expression": {
-        "communication": "Informative",
-        "action": "Responding",
-        "motivation": "Outcome"
-      },
-      "worldview": {
-        "perception": "Concrete",
-        "decision": "Pragmatic",
-        "organization": "Interest"
-      },
-      "four_sides": {
-        "ego": {
-          "type": "ISFP",
-          "functions": {
-            "hero": {"code": "Fi", "name": "Introverted Feeling"},
-            "parent": {"code": "Se", "name": "Extraverted Sensing"},
-            "child": {"code": "Ni", "name": "Introverted Intuition"},
-            "inferior": {"code": "Te", "name": "Extraverted Thinking"}
-          }
-        },
-        "unconscious": {
-          "type": "ESFJ",
-          "functions": {
-            "nemesis": {"code": "Fe", "name": "Extraverted Feeling"},
-            "critic": {"code": "Si", "name": "Introverted Sensing"},
-            "trickster": {"code": "Ne", "name": "Extraverted Intuition"},
-            "demon": {"code": "Ti", "name": "Introverted Thinking"}
-          }
-        },
-        "subconscious": {
-          "type": "ENTJ",
-          "functions": {
-            "1": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "2": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "3": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "4": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"}
-          }
-        },
-        "superego": {
-          "type": "INTP",
-          "functions": {
-            "1": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "2": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "3": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "4": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"}
-          }
-        }
-      }
+      "function_stack": [
+        "Si - Introverted Sensing (Hero)",
+        "Fe - Extraverted Feeling (Parent)",
+        "Ti - Introverted Thinking (Child)",
+        "Ne - Extraverted Intuition (Inferior)"
+      ],
+      "temperament": "Guardian (SJ)",
+      "quadra": "Alpha",
+      "interaction_style": "Direct"
     },
     "INTP": {
-      "descriptors": {
-        "letters": ["Introverted", "Intuitive", "Thinking", "Perceiving"]
-      },
-      "categories": {
-        "temperament": "Intellectual (NT)",
-        "temple": "Body",
-        "quadra": "Alpha",
-        "house": "Crusaders",
-        "archetype": "Ardent",
-        "interaction_style": "Background"
-      },
-      "expression": {
-        "communication": "Informative",
-        "action": "Responding",
-        "motivation": "Outcome"
-      },
-      "worldview": {
-        "perception": "Abstract",
-        "decision": "Pragmatic",
-        "organization": "Systematic"
-      },
       "four_sides": {
-        "ego": {
-          "type": "INTP",
-          "functions": {
-            "hero": {"code": "Ti", "name": "Introverted Thinking"},
-            "parent": {"code": "Ne", "name": "Extraverted Intuition"},
-            "child": {"code": "Si", "name": "Introverted Sensing"},
-            "inferior": {"code": "Fe", "name": "Extraverted Feeling"}
-          }
-        },
-        "unconscious": {
-          "type": "ENTJ",
-          "functions": {
-            "nemesis": {"code": "Te", "name": "Extraverted Thinking"},
-            "critic": {"code": "Ni", "name": "Introverted Intuition"},
-            "trickster": {"code": "Se", "name": "Extraverted Sensing"},
-            "demon": {"code": "Fi", "name": "Introverted Feeling"}
-          }
-        },
-        "subconscious": {
-          "type": "ESFJ",
-          "functions": {
-            "1": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"},
-            "2": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "3": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "4": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"}
-          }
-        },
-        "superego": {
-          "type": "ISFP",
-          "functions": {
-            "1": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"},
-            "2": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "3": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "4": {"code": "Te", "keywords": "Rationale, Understand, Metrics"}
-          }
-        }
-      }
+        "ego": "INTP",
+        "subconscious": "ESFJ",
+        "unconscious": "ENTP",
+        "superego": "ISFJ"
+      },
+      "function_stack": [
+        "Ti - Introverted Thinking (Hero)",
+        "Ne - Extraverted Intuition (Parent)",
+        "Si - Introverted Sensing (Child)",
+        "Fe - Extraverted Feeling (Inferior)"
+      ],
+      "temperament": "Rational (NT)",
+      "quadra": "Alpha",
+      "interaction_style": "Direct"
+    },
+    "ESFJ": {
+      "four_sides": {
+        "ego": "ESFJ",
+        "subconscious": "INTP",
+        "unconscious": "ISFJ",
+        "superego": "ENTP"
+      },
+      "function_stack": [
+        "Fe - Extraverted Feeling (Hero)",
+        "Si - Introverted Sensing (Parent)",
+        "Ne - Extraverted Intuition (Child)",
+        "Ti - Introverted Thinking (Inferior)"
+      ],
+      "temperament": "Guardian (SJ)",
+      "quadra": "Alpha",
+      "interaction_style": "Involve"
+    },
+    "ENTJ": {
+      "four_sides": {
+        "ego": "ENTJ",
+        "subconscious": "ISFP",
+        "unconscious": "ESTJ",
+        "superego": "INFP"
+      },
+      "function_stack": [
+        "Te - Extraverted Thinking (Hero)",
+        "Ni - Introverted Intuition (Parent)",
+        "Se - Extraverted Sensing (Child)",
+        "Fi - Introverted Feeling (Inferior)"
+      ],
+      "temperament": "Rational (NT)",
+      "quadra": "Beta",
+      "interaction_style": "Structure"
+    },
+    "ISFP": {
+      "four_sides": {
+        "ego": "ISFP",
+        "subconscious": "ENTJ",
+        "unconscious": "INFP",
+        "superego": "ESTJ"
+      },
+      "function_stack": [
+        "Fi - Introverted Feeling (Hero)",
+        "Se - Extraverted Sensing (Parent)",
+        "Ni - Introverted Intuition (Child)",
+        "Te - Extraverted Thinking (Inferior)"
+      ],
+      "temperament": "Artisan (SP)",
+      "quadra": "Beta",
+      "interaction_style": "Direct"
+    },
+    "ESTJ": {
+      "four_sides": {
+        "ego": "ESTJ",
+        "subconscious": "INFP",
+        "unconscious": "ENTJ",
+        "superego": "ISFP"
+      },
+      "function_stack": [
+        "Te - Extraverted Thinking (Hero)",
+        "Si - Introverted Sensing (Parent)",
+        "Ne - Extraverted Intuition (Child)",
+        "Fi - Introverted Feeling (Inferior)"
+      ],
+      "temperament": "Guardian (SJ)",
+      "quadra": "Delta",
+      "interaction_style": "Structure"
     },
     "INFP": {
-      "descriptors": {
-        "letters": ["Introverted", "Intuitive", "Feeling", "Perceiving"]
-      },
-      "categories": {
-        "temperament": "Idealist (NF)",
-        "temple": "Mind",
-        "quadra": "Delta",
-        "house": "Philosophers",
-        "archetype": "Mystic",
-        "interaction_style": "Background"
-      },
-      "expression": {
-        "communication": "Informative",
-        "action": "Responding",
-        "motivation": "Outcome"
-      },
-      "worldview": {
-        "perception": "Abstract",
-        "decision": "Affiliative",
-        "organization": "Interest"
-      },
       "four_sides": {
-        "ego": {
-          "type": "INFP",
-          "functions": {
-            "hero": {"code": "Fi", "name": "Introverted Feeling"},
-            "parent": {"code": "Ne", "name": "Extraverted Intuition"},
-            "child": {"code": "Si", "name": "Introverted Sensing"},
-            "inferior": {"code": "Te", "name": "Extraverted Thinking"}
-          }
-        },
-        "unconscious": {
-          "type": "ENFJ",
-          "functions": {
-            "nemesis": {"code": "Fe", "name": "Extraverted Feeling"},
-            "critic": {"code": "Ni", "name": "Introverted Intuition"},
-            "trickster": {"code": "Se", "name": "Extraverted Sensing"},
-            "demon": {"code": "Ti", "name": "Introverted Thinking"}
-          }
-        },
-        "subconscious": {
-          "type": "ESTJ",
-          "functions": {
-            "1": {"code": "Te", "keywords": "Rationale, Understand, Metrics"},
-            "2": {"code": "Si", "keywords": "Duty/Faith, Was, Experience, Memory"},
-            "3": {"code": "Ne", "keywords": "Metaphysics, Could, Possibilities"},
-            "4": {"code": "Fi", "keywords": "Morals, Value, Principles, Worth"}
-          }
-        },
-        "superego": {
-          "type": "ISTP",
-          "functions": {
-            "1": {"code": "Ti", "keywords": "Logic, Know, Verify, Truth"},
-            "2": {"code": "Se", "keywords": "Physics, Is, Performance, Action"},
-            "3": {"code": "Ni", "keywords": "Willpower, Will, Choice, Destiny"},
-            "4": {"code": "Fe", "keywords": "Ethics, Accept, Culture, Care"}
-          }
-        }
-      }
+        "ego": "INFP",
+        "subconscious": "ESTJ",
+        "unconscious": "ISFP",
+        "superego": "ENTJ"
+      },
+      "function_stack": [
+        "Fi - Introverted Feeling (Hero)",
+        "Ne - Extraverted Intuition (Parent)",
+        "Si - Introverted Sensing (Child)",
+        "Te - Extraverted Thinking (Inferior)"
+      ],
+      "temperament": "Idealist (NF)",
+      "quadra": "Delta",
+      "interaction_style": "Direct"
     }
   }
 }
