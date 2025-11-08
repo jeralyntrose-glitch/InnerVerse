@@ -17,12 +17,6 @@ const CONFIG = {
     }
 };
 
-// =============================================================================
-// FEATURE FLAG: PWA BACKGROUND PROCESSING
-// =============================================================================
-const ENABLE_BACKGROUND_PROCESSING = false; // OFF - Stable, working version
-console.log(`🚦 [Lesson] Background processing: ${ENABLE_BACKGROUND_PROCESSING ? 'ENABLED' : 'DISABLED (using synchronous chat)'}`);
-
 // ============================================================================
 // STATE
 // ============================================================================
@@ -604,56 +598,6 @@ function showToast(message, type = 'info') {
     container.appendChild(toast);
     
     setTimeout(() => toast.remove(), 3000);
-}
-
-// ============================================================================
-// BACKGROUND PROCESSING INITIALIZATION (PWA)
-// ============================================================================
-
-let backgroundManager = null;
-if (ENABLE_BACKGROUND_PROCESSING) {
-    console.log('🚀 [Lesson] Initializing BackgroundMessageManager');
-    backgroundManager = new BackgroundMessageManager();
-    
-    // Initialize and check for pending jobs on page load
-    (async () => {
-        await backgroundManager.ready;
-        console.log('✅ [Lesson] BackgroundMessageManager ready');
-        
-        // Check for pending jobs immediately on page load
-        // Note: Lesson chat needs a background endpoint to fully support this
-        await backgroundManager.checkPendingJobsOnResume(null, state.lessonId, (response) => {
-            if (response) {
-                addChatMessage(response, 'ai');
-            }
-        });
-    })();
-    
-    // Resume detection: Check for pending jobs when app comes back to foreground
-    document.addEventListener('visibilitychange', async () => {
-        if (!document.hidden && backgroundManager) {
-            console.log('👀 [Lesson] App visible - checking for pending messages');
-            await backgroundManager.checkPendingJobsOnResume(null, state.lessonId, (response) => {
-                if (response) {
-                    addChatMessage(response, 'ai');
-                }
-            });
-        }
-    });
-    
-    // Also check on focus (for iOS)
-    window.addEventListener('focus', async () => {
-        if (backgroundManager) {
-            console.log('🔍 [Lesson] Window focused - checking for pending messages');
-            await backgroundManager.checkPendingJobsOnResume(null, state.lessonId, (response) => {
-                if (response) {
-                    addChatMessage(response, 'ai');
-                }
-            });
-        }
-    });
-    
-    console.log('✅ [Lesson] Background processing listeners registered');
 }
 
 window.LessonPage = { state, loadLessonData, renderLessonContent };
