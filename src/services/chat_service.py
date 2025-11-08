@@ -2,6 +2,7 @@
 Chat Service - Handles lesson-aware AI tutoring
 """
 import os
+import json
 import anthropic
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -11,6 +12,16 @@ import uuid as uuid_lib
 from pinecone import Pinecone
 import openai
 from src.services.pinecone_organizer import extract_all_metadata, organize_results_by_metadata, format_organized_context
+
+# Load reference data once at module level
+REFERENCE_DATA = {}
+reference_path = os.path.join(os.path.dirname(__file__), '../data/reference_data.json')
+try:
+    with open(reference_path, 'r') as f:
+        REFERENCE_DATA = json.load(f)
+    print(f"✅ [CHAT SERVICE] Loaded reference data for {len(REFERENCE_DATA.get('mbti_types', {}))} MBTI types")
+except Exception as e:
+    print(f"⚠️ [CHAT SERVICE] Failed to load reference data: {e}")
 
 
 class ChatService:
@@ -173,6 +184,63 @@ class ChatService:
         finally:
             conn.close()
     
+    def get_reference_answer(self, user_question: str) -> Optional[str]:
+        """
+        Check if user is asking about type structure facts (four sides, function stack, etc.)
+        Returns formatted reference answer if found, None otherwise
+        
+        Args:
+            user_question: User's message
+            
+        Returns:
+            Formatted reference answer string or None
+        """
+        question_lower = user_question.lower()
+        
+        # Extract MBTI type code (4 letters) from question
+        import re
+        type_match = re.search(r'\b([ieIE][nsNS][ftFT][jpJP])\b', user_question)
+        
+        if not type_match:
+            return None
+        
+        type_code = type_match.group(1).upper()
+        type_data = REFERENCE_DATA.get("mbti_types", {}).get(type_code)
+        
+        if not type_data:
+            return None
+        
+        # Detect what specific info user wants
+        if any(keyword in question_lower for keyword in ['four sides', 'sides of the mind', 'four selves', '4 sides']):
+            # Return four sides info
+            sides = type_data.get("four_sides", {})
+            return f"""**{type_code} Four Sides of the Mind:**
+
+🎭 **Ego (Conscious):** {sides.get('ego')}
+👤 **Subconscious (Shadow):** {sides.get('subconscious')}
+😈 **Unconscious (Demon):** {sides.get('unconscious')}
+🌟 **Superego (Aspirational):** {sides.get('superego')}"""
+        
+        elif any(keyword in question_lower for keyword in ['function stack', 'cognitive functions', 'functions', 'stack']):
+            # Return function stack
+            stack = type_data.get("function_stack", [])
+            stack_text = "\n".join([f"{i+1}. {func}" for i, func in enumerate(stack)])
+            return f"""**{type_code} Cognitive Function Stack:**
+
+{stack_text}"""
+        
+        elif any(keyword in question_lower for keyword in ['temperament', 'keirsey']):
+            return f"**{type_code} Temperament:** {type_data.get('temperament')}"
+        
+        elif any(keyword in question_lower for keyword in ['quadra', 'socionics']):
+            return f"**{type_code} Quadra:** {type_data.get('quadra')}"
+        
+        elif any(keyword in question_lower for keyword in ['interaction style', 'interaction', 'communication style']):
+            return f"**{type_code} Interaction Style:** {type_data.get('interaction_style')}"
+        
+        # If type found but no specific question matched, return nothing (let Claude handle)
+        return None
+    
     def get_lesson_context(self, lesson_id: str) -> Dict:
         """
         Get lesson information for context
@@ -281,7 +349,7 @@ class ChatService:
             print(f"Error querying Pinecone: {e}")
             return ""
     
-    def build_system_prompt(self, lesson_context: Dict, concepts: List[Dict], pinecone_context: str = "") -> str:
+    def build_system_prompt(self, lesson_context: Dict, concepts: List[Dict], pinecone_context: str = "", reference_answer: Optional[str] = None) -> str:
         """
         Build system prompt with lesson context
         
@@ -289,10 +357,16 @@ class ChatService:
             lesson_context: Lesson information
             concepts: Relevant concepts from knowledge base
             pinecone_context: Organized context from Pinecone search
+            reference_answer: Pre-formatted reference data answer (if found)
             
         Returns:
             System prompt string
         """
+        # PRIORITY 1: Reference data (exact facts)
+        reference_text = ""
+        if reference_answer:
+            reference_text = f"\n\n📖 VERIFIED REFERENCE DATA (Use this first!):\n{reference_answer}\n"
+        
         concepts_text = ""
         if concepts:
             concepts_text = "\n\nRelevant concepts from CS Joseph's teachings:\n"
@@ -312,7 +386,7 @@ CURRENT LESSON CONTEXT:
 - Description: {lesson_context.get('description', 'No description')}
 - Difficulty: {lesson_context.get('difficulty', 'foundational')}
 - Duration: {lesson_context.get('duration', 30)} minutes
-{concepts_text}{knowledge_base_text}
+{reference_text}{concepts_text}{knowledge_base_text}
 
 YOUR ROLE:
 - Be a supportive, engaging tutor who explains concepts clearly
@@ -526,14 +600,17 @@ ALWAYS prioritize clarity, structure, and scannability over length!
             # Get lesson context
             lesson_context = self.get_lesson_context(lesson_id)
             
+            # 🔍 PRIORITY 1: Check reference data for exact type facts
+            reference_answer = self.get_reference_answer(user_message)
+            
             # Query relevant concepts from Knowledge Graph
             concepts = self.query_relevant_concepts(user_message)
             
             # Query Pinecone for organized content by category
             pinecone_context = self.query_pinecone_organized(user_message, top_k=10, organize_by='primary_category')
             
-            # Build system prompt with all context
-            system_prompt = self.build_system_prompt(lesson_context, concepts, pinecone_context)
+            # Build system prompt with all context (including reference data if found)
+            system_prompt = self.build_system_prompt(lesson_context, concepts, pinecone_context, reference_answer)
             
             # Get chat history
             history = self.get_chat_history(thread_id, limit=10)
