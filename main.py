@@ -6256,19 +6256,18 @@ async def get_lesson_concepts(lesson_id: str):
         cursor.close()
         conn.close()
         
-        # Load knowledge graph to get concept details
+        # Load knowledge graph to get concept details (OPTIMIZED: load once, build lookup dict)
         graph = kg_manager.load_graph()
+        
+        # Build O(1) lookup dictionary for concepts
+        concept_lookup = {node['id']: node for node in graph.get('nodes', [])}
         
         concepts = []
         for assignment in assignments:
             concept_id = assignment['id']
             
-            # Get concept details from knowledge graph
-            concept_node = None
-            for node in graph['nodes']:
-                if node['id'] == concept_id:
-                    concept_node = node
-                    break
+            # O(1) lookup instead of O(N) nested loop
+            concept_node = concept_lookup.get(concept_id)
             
             if concept_node:
                 concepts.append({
