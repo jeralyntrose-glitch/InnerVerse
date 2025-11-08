@@ -51,20 +51,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.courseId = pathParts[2];
         state.lessonId = pathParts[3];
         
+        console.log('📍 Course ID:', state.courseId);
+        console.log('📍 Lesson ID:', state.lessonId);
+        
         if (!state.courseId || !state.lessonId) {
+            console.error('❌ Invalid URL - missing course/lesson ID');
             showError('Invalid lesson URL');
             return;
         }
         
+        console.log('⏳ Loading lesson data...');
         await loadLessonData();
-        setupEventListeners();
+        console.log('✅ Lesson data loaded');
         
-        console.log('✅ Lesson page initialized');
+        console.log('⏳ Setting up event listeners...');
+        setupEventListeners();
+        console.log('✅ Event listeners set up');
+        
+        console.log('✅ Lesson page initialized successfully');
     } catch (error) {
         console.error('❌ Error loading lesson:', error);
+        console.error('❌ Error stack:', error.stack);
         showError(error.message);
     } finally {
+        console.log('🔄 Hiding loading overlay...');
         hideLoading();
+        console.log('✅ Loading overlay hidden');
     }
 });
 
@@ -73,7 +85,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================================================
 
 async function loadLessonData() {
+    console.log('📡 Fetching course data...');
     const courseResponse = await fetch(`${CONFIG.api.courses}/${state.courseId}`);
+    console.log('✅ Course response received');
     const courseResult = await courseResponse.json();
     
     if (!courseResult.success) {
@@ -81,8 +95,11 @@ async function loadLessonData() {
     }
     
     state.course = courseResult.course;
+    console.log('✅ Course data stored');
     
+    console.log('📡 Fetching lessons data...');
     const lessonsResponse = await fetch(`${CONFIG.api.courses}/${state.courseId}/lessons`);
+    console.log('✅ Lessons response received');
     const lessonsResult = await lessonsResponse.json();
     
     if (!lessonsResult.success) {
@@ -92,32 +109,67 @@ async function loadLessonData() {
     state.allLessons = lessonsResult.lessons;
     state.lesson = state.allLessons.find(l => l.id === state.lessonId);
     state.currentLessonIndex = state.allLessons.findIndex(l => l.id === state.lessonId);
+    console.log('✅ Found lesson at index', state.currentLessonIndex);
     
     if (!state.lesson) {
         throw new Error('Lesson not found');
     }
     
+    console.log('📡 Loading concepts...');
     await loadConcepts();
+    console.log('✅ Concepts loaded');
+    
+    console.log('🎨 Rendering lesson content...');
     renderLessonContent();
+    console.log('✅ Lesson content rendered');
+    
+    console.log('📝 Loading notes...');
     loadNotes();
+    console.log('✅ Notes loaded');
 }
 
 async function loadConcepts() {
+    const conceptsUrl = `${CONFIG.api.lessons}/${state.lessonId}/concepts`;
+    console.log('🌐 Concepts URL:', conceptsUrl);
+    
     try {
-        // Phase 6: Load concepts assigned to this lesson with confidence scores
-        const response = await fetch(`${CONFIG.api.lessons}/${state.lessonId}/concepts`);
+        console.log('📡 Starting fetch for concepts with 5s timeout...');
+        
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        const response = await fetch(conceptsUrl, { 
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' }
+        });
+        clearTimeout(timeoutId);
+        
+        console.log('✅ Fetch complete, status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        console.log('📦 Parsing JSON...');
         const result = await response.json();
+        console.log('✅ JSON parsed, success:', result.success);
         
         if (result.success) {
             state.concepts = result.concepts || [];
             console.log(`✅ Loaded ${state.concepts.length} assigned concepts`);
         } else {
-            console.warn('Failed to load concepts:', result);
+            console.warn('❌ API returned success=false:', result);
             state.concepts = [];
         }
     } catch (error) {
-        console.error('Error loading concepts:', error);
-        state.concepts = [];
+        if (error.name === 'AbortError') {
+            console.error('❌ Concepts fetch timed out after 5s');
+        } else {
+            console.error('❌ Error loading concepts:', error);
+        }
+        console.error('❌ Error details:', error.message);
+        state.concepts = []; // Gracefully fail - page will still load
     }
 }
 
