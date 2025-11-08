@@ -5747,13 +5747,6 @@ def serve_knowledge_graph():
 def serve_chat_ui():
     return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
-@app.get("/sw.js", include_in_schema=False)
-def serve_service_worker():
-    return FileResponse("sw.js", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
-
-@app.get("/manifest.json", include_in_schema=False)
-def serve_manifest():
-    return FileResponse("manifest.json", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/brain-icon-192.png", include_in_schema=False)
 def serve_icon_192():
