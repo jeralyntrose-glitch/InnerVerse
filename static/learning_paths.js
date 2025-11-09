@@ -456,13 +456,30 @@ async function handleGenerateSubmit(event) {
     document.querySelector('.btn-loading').style.display = 'flex';
     
     try {
+        console.log('🚀 Sending course generation request:', data);
+        
         const response = await fetch(CONFIG.api.generate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         
+        console.log('📡 Response status:', response.status, response.statusText);
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('❌ Non-JSON response:', text);
+            throw new Error(`Server returned non-JSON response: ${text.substring(0, 200)}`);
+        }
+        
         const result = await response.json();
+        console.log('✅ Parsed result:', result);
+        
+        if (!response.ok) {
+            throw new Error(result.detail || result.error || `Server error: ${response.status}`);
+        }
         
         if (!result.success) {
             throw new Error(result.error || 'Generation failed');
@@ -512,8 +529,17 @@ async function handleGenerateSubmit(event) {
         }
         
     } catch (error) {
-        console.error('Generation error:', error);
-        showToast('Generation Failed', error.message, 'error');
+        console.error('❌ Generation error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            response: error.response
+        });
+        
+        // Show error message that stays longer
+        const errorMsg = error.message || 'Unknown error occurred';
+        alert(`Course Generation Failed:\n\n${errorMsg}\n\nCheck browser console (F12) for details.`);
+        showToast('Generation Failed', errorMsg, 'error');
     } finally {
         submitBtn.disabled = false;
         document.querySelector('.btn-text').style.display = 'block';
