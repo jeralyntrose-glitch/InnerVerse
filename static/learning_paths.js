@@ -790,10 +790,10 @@ function renderGridView() {
                     </div>
                 </div>
                 <div class="grid-card-actions">
-                    <button class="grid-btn-primary" onclick="window.LearningPaths.viewCourse('${course.id}')">
+                    <button class="grid-btn-primary" onclick="window.LearningPaths.viewCourse(${course.id})">
                         View Course
                     </button>
-                    <button class="grid-btn-delete" onclick="window.LearningPaths.deleteCourse('${course.id}', event)">
+                    <button class="grid-btn-delete" onclick="window.LearningPaths.deleteCourse(${course.id}, event)">
                         🗑️
                     </button>
                 </div>
@@ -853,6 +853,16 @@ function setupEventListeners() {
     });
 }
 
+// Helper to find course by ID and open modal
+function viewCourseById(courseId) {
+    const course = state.courses.find(c => c.id === parseInt(courseId));
+    if (course) {
+        openCourseModal(course);
+    } else {
+        showToast('Error', 'Course not found', 'error');
+    }
+}
+
 window.LearningPaths = {
     state,
     loadCourses,
@@ -861,6 +871,6 @@ window.LearningPaths = {
     toggleViewMode,
     openGenerateModal,
     fitToView,
-    viewCourse: openCourseModal,
+    viewCourse: viewCourseById,
     deleteCourse: confirmDeleteCourse
 };
