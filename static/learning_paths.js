@@ -531,9 +531,10 @@ async function pollStructureGenerationProgress(jobId) {
     
     console.log(`🏗️ Starting structure generation polling for job ${jobId}`);
     
-    // Show progress in result div
+    // Show progress in result div (button hidden by default in HTML)
     document.getElementById('generate-form').style.display = 'none';
     document.getElementById('generation-result').style.display = 'block';
+    document.getElementById('view-generated-course-btn').style.display = 'none'; // Ensure button is hidden
     document.getElementById('generated-course-title').textContent = 'Generating Course Structure...';
     document.getElementById('generated-course-info').textContent = 'Calling Claude API to design your learning path...';
     
@@ -608,7 +609,8 @@ async function pollStructureGenerationProgress(jobId) {
                     
                     pollContentGenerationProgress(data.content_job_id, courses.length > 1, courses);
                 } else {
-                    // No content generation, close modal
+                    // No content generation, show button and allow closing
+                    document.getElementById('view-generated-course-btn').style.display = 'block';
                     setTimeout(() => closeModal(), 1500);
                 }
                 
