@@ -1,0 +1,570 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+YOUTUBE IMPORT SYSTEM - IMPLEMENTATION PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GOAL: Import YouTube URLs from extracted .txt files and intelligently match them to existing or future PDF transcripts
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: DATABASE SCHEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add columns to existing documents table:
+
+ALTER TABLE documents ADD COLUMN youtube_url TEXT;
+ALTER TABLE documents ADD COLUMN youtube_video_id TEXT;
+ALTER TABLE documents ADD COLUMN youtube_duration TEXT;
+
+Create new table for pending videos (not yet matched to PDFs):
+
+CREATE TABLE pending_youtube_videos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_title TEXT NOT NULL,
+    youtube_url TEXT NOT NULL,
+    youtube_video_id TEXT NOT NULL,
+    playlist_name TEXT,
+    season_number TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    matched_to_document_id INTEGER,
+    FOREIGN KEY (matched_to_document_id) REFERENCES documents(id)
+);
+
+CREATE INDEX idx_pending_video_title ON pending_youtube_videos(video_title);
+CREATE INDEX idx_pending_matched ON pending_youtube_videos(matched_to_document_id);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: IMPORT SCRIPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: scripts/import_youtube_urls.py
+
+FUNCTIONALITY:
+1. Read all .txt files from a specified folder
+2. Parse each file to extract video titles and URLs
+3. Extract video ID from URL (everything after watch?v=)
+4. Try to match each video to existing documents in database
+5. If match found → update document with YouTube URL
+6. If no match → store in pending_youtube_videos table
+7. Generate detailed report
+
+MATCHING ALGORITHM:
+- Normalize both strings (lowercase, remove special chars, collapse whitespace)
+- Try exact match first
+- Try fuzzy match with similarity threshold (80%+)
+- Match on key phrases (season number, topic keywords)
+
+EXAMPLE MATCHES:
+PDF filename: "Season 17.2 - Crusader (ENTP, INTP, ESFJ, ISFJ) Ab.pdf"
+Video title: "Alpha Quadra - Crusader Abusers - Relationship Dynamics"
+Match score: 75% (season 17, "crusader" appears in both)
+
+CODE STRUCTURE:
+
+import sqlite3
+import re
+from pathlib import Path
+from difflib import SequenceMatcher
+
+class YouTubeImporter:
+    def __init__(self, db_path='innerverse.db'):
+        self.db = sqlite3.connect(db_path)
+        self.matched = []
+        self.pending = []
+        
+    def parse_txt_file(self, filepath):
+        """Parse a .txt file and extract video data"""
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # First line is playlist name
+        lines = content.strip().split('\n')
+        playlist_name = lines[0] if lines else 'Unknown Playlist'
+        
+        # Extract season number from playlist name
+        season_match = re.search(r'Season (\d+\.?\d*)', playlist_name, re.IGNORECASE)
+        season_number = season_match.group(1) if season_match else None
+        
+        # Parse videos (skip first line)
+        videos = []
+        for line in lines[2:]:  # Skip playlist name and blank line
+            if not line.strip():
+                continue
+            
+            # Split on last occurrence of ' - https://'
+            parts = line.rsplit(' - https://', 1)
+            if len(parts) == 2:
+                title = parts[0].strip()
+                url = 'https://' + parts[1].strip()
+                video_id = self.extract_video_id(url)
+                
+                videos.append({
+                    'title': title,
+                    'url': url,
+                    'video_id': video_id,
+                    'playlist_name': playlist_name,
+                    'season_number': season_number
+                })
+        
+        return videos
+    
+    def extract_video_id(self, url):
+        """Extract video ID from YouTube URL"""
+        match = re.search(r'[?&]v=([^&]+)', url)
+        return match.group(1) if match else url.split('/')[-1]
+    
+    def normalize_string(self, s):
+        """Normalize string for matching"""
+        # Lowercase
+        s = s.lower()
+        # Remove special characters except spaces and dashes
+        s = re.sub(r'[^\w\s-]', '', s)
+        # Collapse whitespace
+        s = re.sub(r'\s+', ' ', s)
+        return s.strip()
+    
+    def calculate_similarity(self, str1, str2):
+        """Calculate similarity between two strings"""
+        norm1 = self.normalize_string(str1)
+        norm2 = self.normalize_string(str2)
+        return SequenceMatcher(None, norm1, norm2).ratio()
+    
+    def find_matching_document(self, video):
+        """Try to find existing document that matches this video"""
+        cursor = self.db.cursor()
+        
+        # Get all documents
+        cursor.execute("SELECT id, filename FROM documents")
+        documents = cursor.fetchall()
+        
+        best_match = None
+        best_score = 0.0
+        
+        for doc_id, filename in documents:
+            # Calculate similarity
+            score = self.calculate_similarity(video['title'], filename)
+            
+            # Bonus points if season numbers match
+            if video['season_number']:
+                if f"season {video['season_number']}" in filename.lower():
+                    score += 0.1
+                if f"[{video['season_number']}]" in filename.lower():
+                    score += 0.1
+            
+            if score > best_score:
+                best_score = score
+                best_match = doc_id
+        
+        # Return match if score is high enough
+        if best_score >= 0.70:  # 70% similarity threshold
+            return best_match, best_score
+        
+        return None, 0.0
+    
+    def import_video(self, video):
+        """Import a single video - match or store as pending"""
+        doc_id, score = self.find_matching_document(video)
+        
+        cursor = self.db.cursor()
+        
+        if doc_id:
+            # Match found - update document
+            cursor.execute("""
+                UPDATE documents 
+                SET youtube_url = ?, 
+                    youtube_video_id = ?
+                WHERE id = ?
+            """, (video['url'], video['video_id'], doc_id))
+            
+            self.matched.append({
+                'video': video,
+                'doc_id': doc_id,
+                'score': score
+            })
+        else:
+            # No match - store as pending
+            cursor.execute("""
+                INSERT INTO pending_youtube_videos 
+                (video_title, youtube_url, youtube_video_id, playlist_name, season_number)
+                VALUES (?, ?, ?, ?, ?)
+            """, (video['title'], video['url'], video['video_id'], 
+                  video['playlist_name'], video['season_number']))
+            
+            self.pending.append(video)
+        
+        self.db.commit()
+    
+    def import_from_folder(self, folder_path):
+        """Import all .txt files from a folder"""
+        folder = Path(folder_path)
+        txt_files = list(folder.glob('*.txt'))
+        
+        print(f"Found {len(txt_files)} .txt files to import\n")
+        
+        for txt_file in txt_files:
+            print(f"Processing {txt_file.name}...")
+            videos = self.parse_txt_file(txt_file)
+            
+            for video in videos:
+                self.import_video(video)
+            
+            print(f"  ✅ Processed {len(videos)} videos\n")
+        
+        self.print_report()
+    
+    def print_report(self):
+        """Print detailed import report"""
+        print("\n" + "="*60)
+        print("YOUTUBE IMPORT REPORT")
+        print("="*60)
+        
+        print(f"\n✅ MATCHED: {len(self.matched)} videos")
+        if self.matched:
+            print("\nTop matches:")
+            for item in self.matched[:10]:
+                print(f"  • {item['video']['title'][:60]}")
+                print(f"    Score: {item['score']:.0%}, Doc ID: {item['doc_id']}")
+        
+        print(f"\n⏳ PENDING: {len(self.pending)} videos (waiting for transcripts)")
+        if self.pending:
+            print("\nPending videos:")
+            for video in self.pending[:10]:
+                print(f"  • {video['title'][:60]}")
+                print(f"    Playlist: {video['playlist_name']}")
+        
+        print("\n" + "="*60)
+        print(f"TOTAL: {len(self.matched) + len(self.pending)} videos imported")
+        print("="*60 + "\n")
+
+# USAGE
+if __name__ == '__main__':
+    import sys
+    
+    if len(sys.argv) < 2:
+        print("Usage: python import_youtube_urls.py <folder_with_txt_files>")
+        sys.exit(1)
+    
+    folder = sys.argv[1]
+    importer = YouTubeImporter()
+    importer.import_from_folder(folder)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: AUTO-LINKING ON UPLOAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Modify upload handler to check for pending YouTube videos:
+
+File: app.py (or wherever upload endpoint is)
+
+# NEW: Add utility functions for YouTube matching
+import re
+from difflib import SequenceMatcher
+
+def normalize_string(s):
+    """Normalize string for matching"""
+    s = s.lower()
+    s = re.sub(r'[^\w\s-]', '', s)
+    s = re.sub(r'\s+', ' ', s)
+    return s.strip()
+
+def calculate_similarity(str1, str2):
+    """Calculate similarity between two strings"""
+    norm1 = normalize_string(str1)
+    norm2 = normalize_string(str2)
+    return SequenceMatcher(None, norm1, norm2).ratio()
+
+@app.route('/api/upload', methods=['POST'])
+def upload_document():
+    # ... existing upload logic ...
+    
+    # After document is saved to database
+    doc_id = cursor.lastrowid
+    filename = file.filename
+    
+    # NEW: Check for pending YouTube videos that match this filename
+    cursor.execute("""
+        SELECT id, youtube_url, youtube_video_id, video_title
+        FROM pending_youtube_videos
+        WHERE matched_to_document_id IS NULL
+    """)
+    
+    pending_videos = cursor.fetchall()
+    
+    best_match = None
+    best_score = 0.0
+    
+    for vid_id, url, video_id, title in pending_videos:
+        # Calculate similarity
+        score = calculate_similarity(filename, title)
+        
+        if score > best_score:
+            best_score = score
+            best_match = (vid_id, url, video_id)
+    
+    # If good match found (70%+), link them
+    if best_match and best_score >= 0.70:
+        vid_id, url, video_id = best_match
+        
+        # Update document with YouTube URL
+        cursor.execute("""
+            UPDATE documents
+            SET youtube_url = ?, youtube_video_id = ?
+            WHERE id = ?
+        """, (url, video_id, doc_id))
+        
+        # Mark pending video as matched
+        cursor.execute("""
+            UPDATE pending_youtube_videos
+            SET matched_to_document_id = ?
+            WHERE id = ?
+        """, (doc_id, vid_id))
+        
+        db.commit()
+        
+        # Include in response
+        return jsonify({
+            'success': True,
+            'document_id': doc_id,
+            'youtube_linked': True,
+            'youtube_url': url,
+            'match_score': best_score
+        })
+    
+    # ... existing return statement ...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: UI ENHANCEMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A) Upload form shows YouTube linking status:
+
+When user uploads PDF:
+┌────────────────────────────────────┐
+│ ✅ Document uploaded successfully   │
+│                                     │
+│ 🎥 YouTube video auto-linked!       │
+│ Match confidence: 85%               │
+│                                     │
+│ [VIEW DOCUMENT] [WATCH VIDEO]       │
+└────────────────────────────────────┘
+
+B) Learning Paths lesson pages show YouTube video:
+
+Add to lesson page component:
+
+File: src/pages/LessonPage.jsx (or wherever lesson is rendered)
+
+// In lesson page component, fetch YouTube URL with lesson data
+useEffect(() => {
+    // ... existing lesson fetch ...
+    
+    // Check if lesson has associated YouTube video via documents
+    fetch(`/api/lessons/${lessonId}/youtube-video`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.youtube_url) {
+                setYoutubeUrl(data.youtube_url);
+                setYoutubeVideoId(data.youtube_video_id);
+            }
+        });
+}, [lessonId]);
+
+Lesson page structure (3-panel layout):
+
+COLLAPSED SIDEBAR:
+┌─┬──────────────────────────┬──────────────────┐
+│▶│ 🎯 LESSON CONTENT        │ 💬 AI TUTOR      │
+│ │                          │                  │
+│ │ 📺 MAIN VIDEO            │ Ask me anything..│
+│ │ ┌──────────────────────┐ │                  │
+│ │ │ <iframe              │ │                  │
+│ │ │   src="youtube..."   │ │                  │
+│ │ │   width="100%"       │ │                  │
+│ │ │   height="400"       │ │                  │
+│ │ │ />                   │ │                  │
+│ │ └──────────────────────┘ │                  │
+│ │ 📝 [SHOW TRANSCRIPT] ▼   │                  │
+│ │                          │                  │
+│ │ 📖 LESSON CONTENT        │                  │
+│ │ [AI-generated text]      │                  │
+└─┴──────────────────────────┴──────────────────┘
+2%        58%                      40%
+
+EXPANDED SIDEBAR:
+┌─────────────┬────────────────┬──────────────────┐
+│◀ CONCEPTS   │ 🎯 LESSON      │ 💬 AI TUTOR      │
+│             │                │                  │
+│ 🎯 Card 1   │ 📺 VIDEO       │ Ask me anything..│
+│ [High conf] │ [Embedded]     │                  │
+│             │                │                  │
+│ ✓ Card 2    │ 📖 CONTENT     │                  │
+│ [Medium]    │ [Lesson text]  │                  │
+│             │                │                  │
+│ ○ Card 3    │                │                  │
+│ [Low conf]  │                │                  │
+└─────────────┴────────────────┴──────────────────┘
+    20%            40%                40%
+
+IMPLEMENTATION DETAILS:
+
+1. Collapsible Sidebar Component:
+   - Default state: EXPANDED (show concepts)
+   - Toggle button: Arrow icon (◀ collapse, ▶ expand)
+   - Transition: Smooth width animation (200ms)
+   - Collapsed width: 2% (just shows toggle button)
+   - Expanded width: 20%
+
+2. Middle Panel (Lesson Content):
+   - Contains YouTube iframe embed
+   - Transcript toggle button
+   - Lesson text content
+   - Width adjusts based on sidebar state:
+     * Sidebar collapsed: 58%
+     * Sidebar expanded: 40%
+
+3. Right Panel (AI Chat):
+   - Fixed width: 40% (never changes)
+   - Contains chat interface
+
+4. YouTube Embed Code:
+   <iframe
+     src="https://youtube.com/embed/{VIDEO_ID}"
+     width="100%"
+     height="400px"
+     frameborder="0"
+     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+     allowfullscreen
+   />
+
+NOTE: Collapsible sidebar is a separate UI enhancement. Can be implemented after YouTube integration is working if needed.
+
+API endpoint to get YouTube video for lesson:
+
+@app.route('/api/lessons/<int:lesson_id>/youtube-video', methods=['GET'])
+def get_lesson_youtube_video(lesson_id):
+    """Get YouTube video associated with this lesson"""
+    cursor = db.cursor()
+    
+    # IMPLEMENTATION NOTE: How to find the right document for this lesson
+    # 
+    # Option A: If you have a lesson_resources table (from Phase 6):
+    # SELECT d.youtube_url, d.youtube_video_id
+    # FROM documents d
+    # JOIN lesson_resources lr ON d.id = lr.document_id
+    # WHERE lr.lesson_id = ? AND lr.resource_type = 'primary_video'
+    #
+    # Option B: If lessons have a primary_document_id column:
+    # SELECT youtube_url, youtube_video_id
+    # FROM documents
+    # WHERE id = (SELECT primary_document_id FROM lessons WHERE id = ?)
+    #
+    # Option C: Match based on lesson title similarity to document filename:
+    # (Use the calculate_similarity function like in auto-linking)
+    
+    # Example using Option B (simplest):
+    cursor.execute("""
+        SELECT d.youtube_url, d.youtube_video_id
+        FROM documents d
+        JOIN lessons l ON d.id = l.primary_document_id
+        WHERE l.id = ? AND d.youtube_url IS NOT NULL
+    """, (lesson_id,))
+    
+    result = cursor.fetchone()
+    
+    if result:
+        return jsonify({
+            'youtube_url': result[0],
+            'youtube_video_id': result[1],
+            'has_video': True
+        })
+    
+    return jsonify({
+        'youtube_url': None,
+        'has_video': False
+    })
+
+C) Upload form enhancement (OPTIONAL):
+
+Add optional YouTube URL field to upload form:
+┌────────────────────────────────────┐
+│ 📄 Upload Document                  │
+│                                     │
+│ File: [Choose file...]              │
+│                                     │
+│ 🎥 YouTube URL (optional):          │
+│ [https://youtube.com/watch?v=...]   │
+│                                     │
+│ [UPLOAD]                            │
+└────────────────────────────────────┘
+
+If user provides URL during upload, save directly to document:
+- No need to wait for auto-matching
+- Immediate linking
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: TESTING CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+□ Database migrations run successfully
+□ Import script parses .txt files correctly
+□ Matching algorithm finds existing PDFs (test with known matches)
+□ Unmatched videos stored in pending table
+□ Auto-linking works on new uploads
+□ YouTube videos display in Learning Paths lesson pages
+□ Transcript toggle works on lesson pages
+
+TEST DATA:
+Create a test folder with 2-3 .txt files from bookmarklet
+Run import script
+Verify some match existing PDFs, some go to pending
+Upload a new PDF that matches a pending video
+Verify auto-linking occurs
+Open a lesson page and verify YouTube video displays
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPLEMENTATION ORDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PHASE 1: YouTube Integration (Core functionality)
+1. Run database migrations (add columns + pending table)
+2. Create import script (scripts/import_youtube_urls.py)
+3. Test import with sample .txt files
+4. Add auto-linking to upload handler
+5. Test auto-linking with new upload
+6. Add YouTube video embed to Learning Paths lesson pages (middle panel)
+7. Add API endpoint for lesson YouTube videos
+8. (Optional) Add YouTube URL field to upload form
+
+PHASE 2: UI Enhancement (Can be done separately)
+9. Move concept cards to collapsible left sidebar
+10. Add expand/collapse functionality with smooth transitions
+11. Adjust panel widths based on sidebar state
+12. Full system test
+
+ESTIMATED TIME: 
+- Phase 1 (YouTube): 2-3 hours
+- Phase 2 (Sidebar): 1 hour
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NOTES FOR REPLIT AGENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Use existing database connection patterns
+- Follow existing code style and structure
+- The .txt files will be in a user-specified folder
+- Similarity matching threshold is 70% (tunable if needed)
+- Video IDs are extracted from URLs (watch?v=VIDEO_ID)
+- Auto-linking happens silently on upload (no user action needed)
+- YouTube videos display in Learning Paths lesson pages using iframe embeds
+- Upload form YouTube URL field is OPTIONAL (nice-to-have, not required)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUCCESS CRITERIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ User can extract YouTube URLs using bookmarklet
+✅ User can run import script on folder of .txt files
+✅ System matches videos to existing PDFs automatically
+✅ Unmatched videos stored for future linking
+✅ New PDF uploads auto-link to pending videos
+✅ YouTube videos display in Learning Paths lesson pages (embedded player)
+✅ Lesson pages show "View Transcript" toggle
+✅ All 900+ videos can be imported and tracked
