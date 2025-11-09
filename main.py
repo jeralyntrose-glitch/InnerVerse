@@ -5755,6 +5755,10 @@ def serve_knowledge_graph():
 def serve_chat_ui():
     return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+@app.get("/learning-paths", include_in_schema=False)
+def serve_learning_paths():
+    return FileResponse("static/learning_paths.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
 
 @app.get("/brain-icon-192.png", include_in_schema=False)
 def serve_icon_192():
