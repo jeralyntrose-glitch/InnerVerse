@@ -6559,6 +6559,43 @@ def generate_course_structure_worker(job_id: int):
         
         print(f"✅ [STRUCTURE GEN] Job {job_id}: Created {len(created_courses)} courses with {total_lessons} lessons")
         
+        # STEP 2.5: Assign knowledge graph concepts to lessons
+        from src.services.concept_assigner import ConceptAssigner
+        concept_cost = 0.0
+        concepts_assigned = 0
+        
+        try:
+            print(f"🎯 [STRUCTURE GEN] Job {job_id}: Starting concept assignment for {len(created_courses)} courses")
+            
+            concept_assigner = ConceptAssigner(
+                database_url=DATABASE_URL,
+                pinecone_api_key=PINECONE_API_KEY,
+                pinecone_index_name=PINECONE_INDEX,
+                openai_api_key=OPENAI_API_KEY
+            )
+            
+            for course in created_courses:
+                course_id = course['id']
+                print(f"🎯 [STRUCTURE GEN] Job {job_id}: Assigning concepts to course {course['title']}")
+                
+                assignment_result = concept_assigner.assign_concepts_to_course(course_id)
+                
+                if assignment_result['success']:
+                    concepts_assigned += assignment_result['total_concepts_assigned']
+                    concept_cost += assignment_result['cost']
+                    print(f"✅ [STRUCTURE GEN] Job {job_id}: Assigned {assignment_result['total_concepts_assigned']} concepts to {assignment_result['lessons_processed']} lessons")
+                else:
+                    # Log warning but don't fail the entire job
+                    print(f"⚠️ [STRUCTURE GEN] Job {job_id}: Concept assignment failed for course {course_id}: {assignment_result.get('error', 'Unknown error')}")
+            
+            print(f"✅ [STRUCTURE GEN] Job {job_id}: Concept assignment complete. Total: {concepts_assigned} concepts, cost: ${concept_cost:.4f}")
+            
+        except Exception as e:
+            # Log error but continue with content generation
+            print(f"⚠️ [STRUCTURE GEN] Job {job_id}: Concept assignment failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+        
         # STEP 3: Launch lesson content generation job
         course_ids = [course['id'] for course in created_courses]
         content_job_id = job_service.create_course_content_job(course_ids)
@@ -6568,12 +6605,15 @@ def generate_course_structure_worker(job_id: int):
         # Update payload with results
         payload['courses_created'] = created_courses
         payload['content_job_id'] = content_job_id
-        payload['total_cost'] = generation_cost
+        total_cost = generation_cost + concept_cost
+        payload['total_cost'] = total_cost
+        payload['concept_cost'] = concept_cost
+        payload['concepts_assigned'] = concepts_assigned
         payload['path_type'] = learning_path.get('path_type', 'simple')
         payload['path_summary'] = learning_path.get('path_summary', '')
         
         # Mark job as complete
-        summary = f"Generated {len(created_courses)} courses with {total_lessons} lessons. Cost: ${generation_cost:.4f}"
+        summary = f"Generated {len(created_courses)} courses with {total_lessons} lessons, {concepts_assigned} concepts. Cost: ${total_cost:.4f}"
         job_service.complete_job(job_id, summary, error_message=None)
         
         # Launch the content generation worker (this continues in background)
