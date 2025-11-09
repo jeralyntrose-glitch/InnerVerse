@@ -341,20 +341,25 @@ body {
     border-color: var(--primary-color);
 }
 
+.course-card-top {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    position: relative;
+}
+
 .course-card-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: var(--spacing-sm);
 }
 
-.course-card-header .header-left {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
 .delete-course-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
     background: rgba(239, 68, 68, 0.1);
     color: var(--danger-color);
     border: none;

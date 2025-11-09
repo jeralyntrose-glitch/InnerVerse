@@ -233,14 +233,14 @@ function renderCourseCard(course) {
     const status = determineStatus(course, progress);
     
     return `
-        <div class="course-card-header">
-            <div class="header-left">
-                <span class="status-icon ${status.replace('_', '-')}">${CONFIG.statusIcons[status]}</span>
-                <span class="category-badge category-${course.category}">
-                    ${CONFIG.categoryToDifficulty[course.category] || course.category.toUpperCase()}
-                </span>
-            </div>
+        <div class="course-card-top">
+            <span class="category-badge category-${course.category}">
+                ${CONFIG.categoryToDifficulty[course.category] || course.category.toUpperCase()}
+            </span>
             <button class="delete-course-btn" onclick="handleDeleteCourse(event, '${course.id}', '${course.title.replace(/'/g, "&apos;")}')">🗑️</button>
+        </div>
+        <div class="course-card-header">
+            <span class="status-icon ${status.replace('_', '-')}">${CONFIG.statusIcons[status]}</span>
         </div>
         <div class="course-title">${course.title}</div>
         <div class="course-description">${course.description || 'No description'}</div>
