@@ -514,19 +514,18 @@ async function handleGenerateSubmit(event) {
             : `Generated "${result.course.title}"`;
         showToast('Success!', message, 'success');
         
-        // Start polling for content generation progress
-        const jobId = result.content_generation_job_id;
-        if (jobId) {
-            console.log(`📝 Starting content generation polling for job ${jobId}`);
-            pollContentGenerationProgress(jobId, totalCourses > 1);
+        // Reload courses immediately (content generation disabled for now)
+        await loadCourses();
+        if (state.viewMode === 'grid') {
+            renderGridView();
         } else {
-            // No job ID, just close modal after refresh
-            setTimeout(async () => {
-                await loadCourses();
-                renderCanvas();
-                closeModal();
-            }, 1500);
+            renderCanvas();
         }
+        
+        // Close modal after a brief delay
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
         
     } catch (error) {
         console.error('❌ Generation error:', error);

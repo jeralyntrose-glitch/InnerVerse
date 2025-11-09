@@ -6663,15 +6663,14 @@ async def generate_course(request: Request, background_tasks: BackgroundTasks):
         created_courses = result['created_courses']
         total_lessons = result['total_lessons']
         
-        # Create background job for lesson content generation
-        job_service = BackgroundJobService()
-        course_ids = [course['id'] for course in created_courses]
-        job_id = job_service.create_course_content_job(course_ids)
-        
-        # Launch background worker to generate lesson content
-        background_tasks.add_task(generate_lesson_content_worker, job_id, course_ids)
-        
-        print(f"📝 [COURSE GEN] Launched content generation job {job_id} for {len(course_ids)} courses")
+        # TEMPORARY FIX: Disable automatic content generation (it's too slow/hangs)
+        # TODO: Re-enable once we optimize the content generator
+        job_id = None
+        # job_service = BackgroundJobService()
+        # course_ids = [course['id'] for course in created_courses]
+        # job_id = job_service.create_course_content_job(course_ids)
+        # background_tasks.add_task(generate_lesson_content_worker, job_id, course_ids)
+        # print(f"📝 [COURSE GEN] Launched content generation job {job_id} for {len(course_ids)} courses")
         
         return {
             "success": True,
