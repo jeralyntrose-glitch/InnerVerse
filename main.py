@@ -5347,6 +5347,11 @@ async def get_content_atlas_analytics():
 from src.services.knowledge_graph_manager import KnowledgeGraphManager
 kg_manager = KnowledgeGraphManager()
 
+# Warm the cache at startup to avoid first-request penalty
+print("🔥 Warming knowledge graph cache...")
+kg_manager.load_graph()
+print("✅ Knowledge graph cache warmed")
+
 @app.get("/api/knowledge-graph")
 async def get_knowledge_graph():
     """
@@ -6493,6 +6498,109 @@ async def reset_all_content():
 
 
 # =============================================================================
+# COURSE STRUCTURE GENERATION - Background Worker
+# =============================================================================
+
+def generate_course_structure_worker(job_id: int):
+    """
+    Background worker to generate course structure using Claude AI.
+    Runs in FastAPI's thread pool automatically.
+    
+    Flow:
+    1. Call Claude to generate course structure (5-25s)
+    2. Create courses in database
+    3. Launch lesson content generation job
+    4. Update job status
+    """
+    print(f"🏗️ [STRUCTURE GEN] Starting job {job_id}")
+    
+    job_service = None
+    
+    try:
+        # Initialize services
+        job_service = BackgroundJobService()
+        generator = get_course_generator()
+        manager = get_course_manager()
+        
+        # Get job details
+        job = job_service.get_job_status(job_id)
+        if not job:
+            raise Exception(f"Job {job_id} not found")
+        
+        payload = job['request_payload']
+        user_goal = payload['user_goal']
+        request_data = payload['request_data']
+        
+        print(f"🤖 [STRUCTURE GEN] Job {job_id}: Calling Claude for goal: {user_goal}")
+        
+        # Update status to processing
+        job_service.update_job_status(job_id, 'processing')
+        
+        # STEP 1: Generate learning path using AI (HEAVY - 5-25s)
+        learning_path = generator.generate_curriculum(
+            user_goal=user_goal,
+            relevant_concept_ids=request_data.get("relevant_concept_ids"),
+            max_lessons=request_data.get("max_lessons", 12),
+            target_category=request_data.get("target_category")
+        )
+        
+        print(f"✅ [STRUCTURE GEN] Job {job_id}: Claude returned course structure")
+        
+        # STEP 2: Create courses in database
+        courses_data = learning_path.get('courses', [])
+        result = manager.create_learning_path(
+            courses_data=courses_data,
+            user_goal=user_goal
+        )
+        
+        created_courses = result['created_courses']
+        total_lessons = result['total_lessons']
+        generation_cost = learning_path.get('generation_metadata', {}).get('cost', 0.0)
+        
+        print(f"✅ [STRUCTURE GEN] Job {job_id}: Created {len(created_courses)} courses with {total_lessons} lessons")
+        
+        # STEP 3: Launch lesson content generation job
+        course_ids = [course['id'] for course in created_courses]
+        content_job_id = job_service.create_course_content_job(course_ids)
+        
+        print(f"📝 [STRUCTURE GEN] Job {job_id}: Launched content job {content_job_id}")
+        
+        # Update payload with results
+        payload['courses_created'] = created_courses
+        payload['content_job_id'] = content_job_id
+        payload['total_cost'] = generation_cost
+        payload['path_type'] = learning_path.get('path_type', 'simple')
+        payload['path_summary'] = learning_path.get('path_summary', '')
+        
+        # Mark job as complete
+        summary = f"Generated {len(created_courses)} courses with {total_lessons} lessons. Cost: ${generation_cost:.4f}"
+        job_service.complete_job(job_id, summary, error_message=None)
+        
+        # Launch the content generation worker (this continues in background)
+        from fastapi import BackgroundTasks
+        # Note: We can't use BackgroundTasks here since we're already in a background task
+        # Instead, we'll call the worker directly (it will run in the same thread)
+        generate_lesson_content_worker(content_job_id, course_ids)
+        
+        print(f"🎉 [STRUCTURE GEN] Job {job_id} complete!")
+        
+    except Exception as e:
+        # Fatal error - entire job failed
+        print(f"❌ [STRUCTURE GEN] Job {job_id} FATAL ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Always try to mark job as failed
+        try:
+            if job_service is None:
+                job_service = BackgroundJobService()
+            job_service.update_job_status(job_id, 'failed')
+            job_service.complete_job(job_id, "", error_message=str(e))
+        except Exception as final_error:
+            print(f"❌ [STRUCTURE GEN] Could not update job status: {str(final_error)}")
+
+
+# =============================================================================
 # LESSON CONTENT GENERATION - Background Worker
 # =============================================================================
 
@@ -6631,67 +6739,37 @@ async def generate_course(request: Request, background_tasks: BackgroundTasks):
         }
     """
     try:
-        print(f"🚀 [COURSE GEN] Received request")
+        print(f"🚀 [COURSE GEN] Received request - NEW ASYNC VERSION")
         data = await request.json()
         user_goal = data.get("user_goal")
-        print(f"📋 [COURSE GEN] Goal: {user_goal}")
         
         if not user_goal or not user_goal.strip():
             raise HTTPException(status_code=400, detail="user_goal is required")
         
-        print(f"🔧 [COURSE GEN] Initializing generator and manager")
-        generator = get_course_generator()
-        manager = get_course_manager()
-        
-        # Generate learning path using AI (returns multiple courses)
-        # WARNING: This is a BLOCKING call to Claude API (5-30 seconds)
-        print(f"🤖 [COURSE GEN] Calling Claude API (this may take 5-30s)...")
-        learning_path = generator.generate_curriculum(
-            user_goal=user_goal,
-            relevant_concept_ids=data.get("relevant_concept_ids"),
-            max_lessons=data.get("max_lessons", 12),
-            target_category=data.get("target_category")
-        )
-        print(f"✅ [COURSE GEN] Claude API returned successfully")
-        
-        # Extract courses array and metadata
-        courses_data = learning_path.get('courses', [])
-        path_type = learning_path.get('path_type', 'simple')
-        path_summary = learning_path.get('path_summary', '')
-        generation_cost = learning_path.get('generation_metadata', {}).get('cost', 0.0)
-        
-        # ATOMICALLY create all courses + lessons + prerequisites in ONE transaction
-        result = manager.create_learning_path(
-            courses_data=courses_data,
-            user_goal=user_goal
-        )
-        
-        created_courses = result['created_courses']
-        total_lessons = result['total_lessons']
-        
-        # Create background job for lesson content generation (ASYNC - doesn't block response)
+        # Create background job for course structure generation
         job_service = BackgroundJobService()
-        course_ids = [course['id'] for course in created_courses]
-        job_id = job_service.create_course_content_job(course_ids)
+        request_data = {
+            "relevant_concept_ids": data.get("relevant_concept_ids"),
+            "max_lessons": data.get("max_lessons", 12),
+            "target_category": data.get("target_category")
+        }
         
-        # Launch background worker to generate lesson content (runs independently)
-        background_tasks.add_task(generate_lesson_content_worker, job_id, course_ids)
+        job_id = job_service.create_course_structure_job(user_goal, request_data)
         
-        print(f"📝 [COURSE GEN] Launched content generation job {job_id} for {len(course_ids)} courses")
+        # Launch background worker (this will do the Claude call + course creation + content generation)
+        background_tasks.add_task(generate_course_structure_worker, job_id)
         
+        print(f"✅ [COURSE GEN] Created job {job_id}, returning immediately")
+        
+        # Return immediately with job ID (response time: <100ms)
         return {
             "success": True,
-            "message": f"Generated learning path with {len(created_courses)} courses and {total_lessons} total lessons. Content generation started.",
-            "path_type": path_type,
-            "path_summary": path_summary,
-            "courses": created_courses,
-            "total_courses": len(created_courses),
-            "total_lessons": total_lessons,
-            "cost": generation_cost,
-            "content_generation_job_id": job_id,  # NEW: Job ID for progress tracking
-            # Legacy fields for backwards compatibility (use first course)
-            "course_id": created_courses[0]['id'] if created_courses else None,
-            "course": created_courses[0] if created_courses else None
+            "message": "Course generation started. Poll the job status for progress.",
+            "job_id": job_id,
+            "user_goal": user_goal,
+            # For frontend compatibility - it expects these fields
+            "structure_job_id": job_id,
+            "status": "processing"
         }
         
     except ValueError as e:
@@ -6701,6 +6779,55 @@ async def generate_course(request: Request, background_tasks: BackgroundTasks):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Learning path generation failed: {str(e)}")
+
+
+@app.get("/api/courses/structure-generation/{job_id}")
+async def get_structure_generation_status(job_id: int):
+    """
+    Poll the status of a course structure generation job.
+    
+    Returns:
+        {
+            "success": true,
+            "job_id": 123,
+            "status": "processing",  # queued, processing, completed, failed
+            "courses_created": [...],  # Available when completed
+            "content_job_id": 456,  # Available when completed
+            "cost": 0.05,
+            "created_at": "2025-11-09T...",
+            "completed_at": null,
+            "error_message": null
+        }
+    """
+    try:
+        job_service = BackgroundJobService()
+        job = job_service.get_job_status(job_id)
+        
+        if not job:
+            raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+        
+        payload = job['request_payload']
+        
+        return {
+            "success": True,
+            "job_id": job_id,
+            "status": job['status'],
+            "user_goal": payload.get('user_goal'),
+            "courses_created": payload.get('courses_created', []),
+            "content_job_id": payload.get('content_job_id'),
+            "cost": payload.get('total_cost', 0.0),
+            "created_at": job['created_at'].isoformat() if job['created_at'] else None,
+            "completed_at": job['completed_at'].isoformat() if job['completed_at'] else None,
+            "error_message": job['error_message']
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Structure generation status error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/courses/content-generation/{job_id}")

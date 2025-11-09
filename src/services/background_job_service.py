@@ -392,6 +392,60 @@ class BackgroundJobService:
             if conn:
                 conn.close()
     
+    def create_course_structure_job(self, user_goal: str, request_data: Dict[str, Any]) -> int:
+        """
+        Create a job for course structure generation (the Claude API call to generate course outline).
+        
+        Args:
+            user_goal: The user's learning goal
+            request_data: The original request parameters (max_lessons, target_category, etc.)
+        
+        Returns:
+            The new job ID
+        """
+        conn = None
+        cursor = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT INTO background_jobs 
+                (job_type, status, request_payload, created_at)
+                VALUES (%s, %s, %s, NOW())
+                RETURNING id
+            """, (
+                'course_structure_generation',
+                'queued',
+                json.dumps({
+                    'user_goal': user_goal,
+                    'request_data': request_data,
+                    'courses_created': [],
+                    'content_job_id': None,
+                    'total_cost': 0.0
+                })
+            ))
+            
+            result = cursor.fetchone()
+            if not result:
+                raise Exception("Failed to create course structure job - no ID returned")
+            job_id = result[0]
+            conn.commit()
+            
+            logger.info(f"Created course structure generation job {job_id} for goal: {user_goal}")
+            return job_id
+            
+        except Exception as e:
+            logger.error(f"Error creating course structure job: {e}")
+            if conn:
+                conn.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+    
     def update_content_generation_progress(
         self,
         job_id: int,

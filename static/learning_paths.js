@@ -507,32 +507,18 @@ async function handleGenerateSubmit(event) {
                 `${result.course.lesson_count} lessons · ${result.course.estimated_hours}h · Cost: $${result.cost.toFixed(4)}`;
         }
         
-        state.generatedCourseId = result.course_id;
+        // NEW ASYNC RESPONSE: Backend returns job_id immediately
+        const structureJobId = result.job_id || result.structure_job_id;
         
-        const message = totalCourses > 1 
-            ? `Generated ${totalCourses}-course learning path!` 
-            : `Generated "${result.course.title}"`;
-        showToast('Success!', message, 'success');
-        
-        // Reload courses immediately (course structure is ready, content generates in background)
-        await loadCourses();
-        if (state.viewMode === 'grid') {
-            renderGridView();
-        } else {
-            renderCanvas();
+        if (!structureJobId) {
+            throw new Error("No job_id returned from server");
         }
         
-        // Start polling for content generation progress (if job_id provided)
-        const jobId = result.content_generation_job_id;
-        if (jobId) {
-            console.log(`📝 Starting content generation polling for job ${jobId}`);
-            pollContentGenerationProgress(jobId, totalCourses > 1);
-        } else {
-            // No job ID, just close modal
-            setTimeout(() => {
-                closeModal();
-            }, 1500);
-        }
+        console.log(`🏗️ Course structure generation started (job ${structureJobId})`);
+        showToast('Generating Course...', 'Course structure generation started', 'info');
+        
+        // Poll for structure generation progress
+        pollStructureGenerationProgress(structureJobId);
         
     } catch (error) {
         console.error('❌ Generation error:', error);
@@ -551,6 +537,89 @@ async function handleGenerateSubmit(event) {
         document.querySelector('.btn-text').style.display = 'block';
         document.querySelector('.btn-loading').style.display = 'none';
     }
+}
+
+async function pollStructureGenerationProgress(jobId) {
+    let pollInterval = null;
+    let pollCount = 0;
+    const maxPolls = 150; // 5 minutes max (150 * 2s)
+    
+    console.log(`🏗️ Starting structure generation polling for job ${jobId}`);
+    
+    // Show progress in result div
+    document.getElementById('generate-form').style.display = 'none';
+    document.getElementById('generation-result').style.display = 'block';
+    document.getElementById('generated-course-title').textContent = 'Generating Course Structure...';
+    document.getElementById('generated-course-info').textContent = 'Calling Claude API to design your learning path...';
+    
+    pollInterval = setInterval(async () => {
+        pollCount++;
+        
+        if (pollCount > maxPolls) {
+            clearInterval(pollInterval);
+            showToast('Timeout', 'Generation took too long. Please try again.', 'error');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/courses/structure-generation/${jobId}`);
+            const data = await response.json();
+            
+            console.log(`📊 Structure job ${jobId} status:`, data.status);
+            
+            if (data.status === 'completed') {
+                clearInterval(pollInterval);
+                
+                // Structure generation complete!
+                const courses = data.courses_created || [];
+                const totalLessons = courses.reduce((sum, c) => sum + (c.lesson_count || 0), 0);
+                
+                console.log(`✅ Structure complete! ${courses.length} courses, ${totalLessons} lessons`);
+                
+                // Update UI
+                if (courses.length > 1) {
+                    document.getElementById('generated-course-title').textContent = 
+                        `Learning Path: ${courses.length} Courses`;
+                    document.getElementById('generated-course-info').textContent = 
+                        `${totalLessons} total lessons · ${courses.length} courses · Cost: $${data.cost.toFixed(4)}`;
+                } else if (courses.length === 1) {
+                    document.getElementById('generated-course-title').textContent = courses[0].title;
+                    document.getElementById('generated-course-info').textContent = 
+                        `${courses[0].lesson_count} lessons · Cost: $${data.cost.toFixed(4)}`;
+                }
+                
+                showToast('Success!', `Course structure created! Generating lesson content...`, 'success');
+                
+                // Reload courses to show the new ones
+                await loadCourses();
+                if (state.viewMode === 'grid') {
+                    renderGridView();
+                } else {
+                    renderCanvas();
+                }
+                
+                // Start polling for lesson content generation if there's a content job
+                if (data.content_job_id) {
+                    console.log(`📝 Starting content generation polling for job ${data.content_job_id}`);
+                    pollContentGenerationProgress(data.content_job_id, courses.length > 1);
+                } else {
+                    // No content generation, close modal
+                    setTimeout(() => closeModal(), 1500);
+                }
+                
+            } else if (data.status === 'failed') {
+                clearInterval(pollInterval);
+                showToast('Error', data.error_message || 'Generation failed', 'error');
+                console.error('❌ Structure generation failed:', data.error_message);
+            }
+            // else: still processing, keep polling
+            
+        } catch (error) {
+            console.error('❌ Polling error:', error);
+            clearInterval(pollInterval);
+            showToast('Error', 'Failed to check generation status', 'error');
+        }
+    }, 2000); // Poll every 2 seconds
 }
 
 async function pollContentGenerationProgress(jobId, isMultiCourse) {

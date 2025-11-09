@@ -21,6 +21,9 @@ class KnowledgeGraphManager:
     def __init__(self, file_path: str = "data/knowledge-graph.json"):
         self.file_path = file_path
         self.lock = threading.Lock()  # Thread-safe file operations
+        self._cache = None  # In-memory cache for parsed graph
+        self._cache_mtime = None  # File modification time when cached
+        self._cache_size = None  # File size when cached
         self._ensure_file_exists()
     
     def _ensure_file_exists(self):
@@ -43,7 +46,8 @@ class KnowledgeGraphManager:
     
     def load_graph(self) -> Dict[str, Any]:
         """
-        Load the knowledge graph from JSON file.
+        Load the knowledge graph from JSON file with in-memory caching.
+        Uses mtime/size validation to detect file changes.
         Thread-safe with file locking.
         
         Returns:
@@ -51,9 +55,28 @@ class KnowledgeGraphManager:
         """
         with self.lock:
             try:
+                # Check file modification time and size
+                stat = os.stat(self.file_path)
+                current_mtime = stat.st_mtime
+                current_size = stat.st_size
+                
+                # Return cached graph if file hasn't changed
+                if (self._cache is not None and 
+                    self._cache_mtime == current_mtime and 
+                    self._cache_size == current_size):
+                    return self._cache
+                
+                # File changed or no cache - load from disk
                 with open(self.file_path, 'r') as f:
                     graph = json.load(f)
+                
+                # Update cache
+                self._cache = graph
+                self._cache_mtime = current_mtime
+                self._cache_size = current_size
+                
                 return graph
+                
             except FileNotFoundError:
                 self._ensure_file_exists()
                 return self.load_graph()
@@ -74,7 +97,7 @@ class KnowledgeGraphManager:
     
     def save_graph(self, graph: Dict[str, Any]) -> bool:
         """
-        Save the knowledge graph to JSON file.
+        Save the knowledge graph to JSON file and invalidate cache.
         Thread-safe with file locking.
         
         Args:
@@ -95,6 +118,11 @@ class KnowledgeGraphManager:
                 # Write to file with pretty formatting
                 with open(self.file_path, 'w') as f:
                     json.dump(graph, f, indent=2, ensure_ascii=False)
+                
+                # Invalidate cache - next load will refresh
+                self._cache = None
+                self._cache_mtime = None
+                self._cache_size = None
                 
                 return True
             except Exception as e:
