@@ -6493,11 +6493,74 @@ async def reset_all_content():
 
 
 # =============================================================================
+# LESSON CONTENT GENERATION - Background Worker
+# =============================================================================
+
+def generate_lesson_content_worker(job_id: int, course_ids: list[str]):
+    """
+    Background worker to generate lesson content for courses.
+    Runs in FastAPI's thread pool automatically.
+    """
+    print(f"📝 [CONTENT GEN] Starting job {job_id} for {len(course_ids)} courses")
+    
+    job_service = BackgroundJobService()
+    content_generator = LessonContentGenerator()
+    
+    try:
+        # Update status to processing
+        job_service.update_job_status(job_id, 'processing')
+        
+        all_results = []
+        total_lessons = 0
+        completed = 0
+        failed = 0
+        total_cost = 0.0
+        
+        # Process each course
+        for course_id in course_ids:
+            print(f"📚 [CONTENT GEN] Processing course {course_id}")
+            
+            result = content_generator.generate_for_course(course_id)
+            
+            if result['success']:
+                total_lessons += result['total_lessons']
+                completed += result['generated']
+                failed += result['skipped']
+                total_cost += result['total_cost']
+                all_results.extend(result['results'])
+                
+                # Update progress after each course
+                job_service.update_content_generation_progress(
+                    job_id=job_id,
+                    total_lessons=total_lessons,
+                    completed=completed,
+                    failed=failed,
+                    total_cost=total_cost,
+                    per_lesson_results=all_results
+                )
+                
+                print(f"✅ [CONTENT GEN] Course {course_id}: {result['generated']}/{result['total_lessons']} lessons")
+            else:
+                print(f"❌ [CONTENT GEN] Course {course_id} failed: {result.get('error')}")
+        
+        # Mark job as completed
+        status = 'completed' if failed == 0 else 'completed_with_errors'
+        job_service.update_job_status(job_id, status)
+        
+        print(f"🎉 [CONTENT GEN] Job {job_id} complete: {completed} generated, {failed} failed, ${total_cost:.4f}")
+        
+    except Exception as e:
+        print(f"❌ [CONTENT GEN] Job {job_id} failed: {str(e)}")
+        job_service.update_job_status(job_id, 'failed')
+        job_service.complete_job(job_id, "", error_message=str(e))
+
+
+# =============================================================================
 # AI GENERATION API - Course Generation & Content Assignment
 # =============================================================================
 
 @app.post("/api/courses/generate")
-async def generate_course(request: Request):
+async def generate_course(request: Request, background_tasks: BackgroundTasks):
     """
     Generate a complete LEARNING PATH (1-4 courses) from user goal using AI.
     
@@ -6566,15 +6629,26 @@ async def generate_course(request: Request):
         created_courses = result['created_courses']
         total_lessons = result['total_lessons']
         
+        # Create background job for lesson content generation
+        job_service = BackgroundJobService()
+        course_ids = [course['id'] for course in created_courses]
+        job_id = job_service.create_course_content_job(course_ids)
+        
+        # Launch background worker to generate lesson content
+        background_tasks.add_task(generate_lesson_content_worker, job_id, course_ids)
+        
+        print(f"📝 [COURSE GEN] Launched content generation job {job_id} for {len(course_ids)} courses")
+        
         return {
             "success": True,
-            "message": f"Generated learning path with {len(created_courses)} courses and {total_lessons} total lessons",
+            "message": f"Generated learning path with {len(created_courses)} courses and {total_lessons} total lessons. Content generation started.",
             "path_type": path_type,
             "path_summary": path_summary,
             "courses": created_courses,
             "total_courses": len(created_courses),
             "total_lessons": total_lessons,
             "cost": generation_cost,
+            "content_generation_job_id": job_id,  # NEW: Job ID for progress tracking
             # Legacy fields for backwards compatibility (use first course)
             "course_id": created_courses[0]['id'] if created_courses else None,
             "course": created_courses[0] if created_courses else None
@@ -6587,6 +6661,67 @@ async def generate_course(request: Request):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Learning path generation failed: {str(e)}")
+
+
+@app.get("/api/courses/content-generation/{job_id}")
+async def get_content_generation_status(job_id: int):
+    """
+    Poll the status of a course content generation job.
+    
+    Returns:
+        {
+            "success": true,
+            "job_id": 123,
+            "status": "processing",  # queued, processing, completed, completed_with_errors, failed
+            "progress": {
+                "total_lessons": 10,
+                "completed": 7,
+                "failed": 1,
+                "percent": 70
+            },
+            "cost": 0.15,
+            "created_at": "2025-11-09T...",
+            "completed_at": null,  # null if not completed
+            "error_message": null
+        }
+    """
+    try:
+        job_service = BackgroundJobService()
+        job = job_service.get_job_status(job_id)
+        
+        if not job:
+            raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+        
+        # Extract progress from request_payload
+        payload = job['request_payload']
+        total_lessons = payload.get('total_lessons', 0)
+        completed = payload.get('completed', 0)
+        failed = payload.get('failed', 0)
+        total_cost = payload.get('total_cost', 0.0)
+        
+        percent = int((completed + failed) / total_lessons * 100) if total_lessons > 0 else 0
+        
+        return {
+            "success": True,
+            "job_id": job_id,
+            "status": job['status'],
+            "progress": {
+                "total_lessons": total_lessons,
+                "completed": completed,
+                "failed": failed,
+                "percent": percent
+            },
+            "cost": total_cost,
+            "created_at": job['created_at'].isoformat() if job['created_at'] else None,
+            "completed_at": job['completed_at'].isoformat() if job['completed_at'] else None,
+            "error_message": job['error_message']
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting job status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/courses/assign-content")

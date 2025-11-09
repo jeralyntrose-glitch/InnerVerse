@@ -334,3 +334,118 @@ class BackgroundJobService:
                 cursor.close()
             if conn:
                 conn.close()
+    
+    def create_course_content_job(self, course_ids: list[str]) -> int:
+        """
+        Create a job for course content generation.
+        
+        Args:
+            course_ids: List of course IDs to generate content for
+        
+        Returns:
+            The new job ID
+        """
+        conn = None
+        cursor = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT INTO background_jobs 
+                (job_type, status, request_payload, created_at)
+                VALUES (%s, %s, %s, NOW())
+                RETURNING id
+            """, (
+                'course_content_generation',
+                'queued',
+                json.dumps({
+                    'course_ids': course_ids,
+                    'total_lessons': 0,
+                    'completed': 0,
+                    'failed': 0,
+                    'total_cost': 0.0,
+                    'per_lesson_results': []
+                })
+            ))
+            
+            job_id = cursor.fetchone()[0]
+            conn.commit()
+            
+            logger.info(f"Created course content generation job {job_id} for {len(course_ids)} courses")
+            return job_id
+            
+        except Exception as e:
+            logger.error(f"Error creating course content job: {e}")
+            if conn:
+                conn.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+    
+    def update_content_generation_progress(
+        self,
+        job_id: int,
+        total_lessons: int,
+        completed: int,
+        failed: int,
+        total_cost: float,
+        per_lesson_results: list
+    ) -> bool:
+        """
+        Update progress for a course content generation job.
+        
+        Args:
+            job_id: The job ID
+            total_lessons: Total number of lessons
+            completed: Number of lessons completed
+            failed: Number of lessons failed
+            total_cost: Total cost so far
+            per_lesson_results: List of per-lesson results
+        
+        Returns:
+            True if update succeeded
+        """
+        conn = None
+        cursor = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Get current payload
+            cursor.execute("SELECT request_payload FROM background_jobs WHERE id = %s", (job_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+            
+            payload = dict(row['request_payload'])
+            payload.update({
+                'total_lessons': total_lessons,
+                'completed': completed,
+                'failed': failed,
+                'total_cost': total_cost,
+                'per_lesson_results': per_lesson_results
+            })
+            
+            cursor.execute("""
+                UPDATE background_jobs
+                SET request_payload = %s
+                WHERE id = %s
+            """, (json.dumps(payload), job_id))
+            
+            conn.commit()
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating content generation progress: {e}")
+            if conn:
+                conn.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
