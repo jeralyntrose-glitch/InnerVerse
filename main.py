@@ -44,6 +44,9 @@ from src.services.knowledge_graph_manager import KnowledgeGraphManager
 # Background Job Service
 from src.services.background_job_service import BackgroundJobService
 
+# Lesson Content Generator
+from src.services.lesson_content_generator import LessonContentGenerator
+
 # Reference Data Validator
 from src.services.reference_validator import VALIDATOR
 
