@@ -485,29 +485,7 @@ async function handleGenerateSubmit(event) {
             throw new Error(result.error || 'Generation failed');
         }
         
-        document.getElementById('generate-form').style.display = 'none';
-        document.getElementById('generation-result').style.display = 'block';
-        
-        // Handle multi-course response
-        const totalCourses = result.total_courses || 1;
-        const totalLessons = result.total_lessons || result.course?.lesson_count || 0;
-        const pathType = result.path_type || 'simple';
-        
-        if (totalCourses > 1) {
-            // Multi-course learning path
-            const courseList = result.courses.map(c => c.title).join(', ');
-            document.getElementById('generated-course-title').textContent = 
-                `Learning Path: ${totalCourses} Courses (${pathType})`;
-            document.getElementById('generated-course-info').textContent = 
-                `${totalLessons} total lessons · ${totalCourses} courses · Cost: $${result.cost.toFixed(4)}`;
-        } else {
-            // Single course (backwards compatible)
-            document.getElementById('generated-course-title').textContent = result.course.title;
-            document.getElementById('generated-course-info').textContent = 
-                `${result.course.lesson_count} lessons · ${result.course.estimated_hours}h · Cost: $${result.cost.toFixed(4)}`;
-        }
-        
-        // NEW ASYNC RESPONSE: Backend returns job_id immediately
+        // NEW ASYNC RESPONSE: Backend returns job_id immediately (no course data yet)
         const structureJobId = result.job_id || result.structure_job_id;
         
         if (!structureJobId) {
@@ -517,7 +495,7 @@ async function handleGenerateSubmit(event) {
         console.log(`🏗️ Course structure generation started (job ${structureJobId})`);
         showToast('Generating Course...', 'Course structure generation started', 'info');
         
-        // Poll for structure generation progress
+        // Poll for structure generation progress (this will show the UI and update it)
         pollStructureGenerationProgress(structureJobId);
         
     } catch (error) {
