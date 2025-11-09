@@ -566,7 +566,7 @@ async function pollStructureGenerationProgress(jobId) {
                         `${courses[0].lesson_count} lessons · Cost: $${data.cost.toFixed(4)}`;
                 }
                 
-                showToast('Success!', `Course structure created! Generating lesson content...`, 'success');
+                showToast('Success!', `Course structure created! 🎉`, 'success');
                 
                 // Reload courses to show the new ones
                 await loadCourses();
@@ -579,7 +579,18 @@ async function pollStructureGenerationProgress(jobId) {
                 // Start polling for lesson content generation if there's a content job
                 if (data.content_job_id) {
                     console.log(`📝 Starting content generation polling for job ${data.content_job_id}`);
-                    pollContentGenerationProgress(data.content_job_id, courses.length > 1);
+                    
+                    // Update UI to show content generation phase
+                    document.getElementById('generated-course-title').innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="spinner" style="width: 24px; height: 24px; border: 3px solid rgba(var(--teal-rgb), 0.3); border-top-color: var(--teal); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <span>Generating Lesson Content...</span>
+                        </div>
+                    `;
+                    document.getElementById('generated-course-info').textContent = 
+                        'Using Claude AI + Pinecone to create detailed lessons';
+                    
+                    pollContentGenerationProgress(data.content_job_id, courses.length > 1, courses);
                 } else {
                     // No content generation, close modal
                     setTimeout(() => closeModal(), 1500);
@@ -600,31 +611,93 @@ async function pollStructureGenerationProgress(jobId) {
     }, 2000); // Poll every 2 seconds
 }
 
-async function pollContentGenerationProgress(jobId, isMultiCourse) {
+async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
     let pollInterval = null;
     let pollCount = 0;
     const maxPolls = 300; // 10 minutes max (300 * 2s)
     
-    // Create progress display element
+    // Create beautiful progress display
     const resultDiv = document.getElementById('generation-result');
     const progressDiv = document.createElement('div');
     progressDiv.id = 'content-generation-progress';
-    progressDiv.style.cssText = 'margin-top: 16px; padding: 16px; background: rgba(var(--teal-rgb), 0.1); border-radius: 12px; border: 1px solid var(--teal);';
+    progressDiv.style.cssText = `
+        margin-top: 24px; 
+        padding: 24px; 
+        background: linear-gradient(135deg, rgba(var(--teal-rgb), 0.05) 0%, rgba(var(--teal-rgb), 0.15) 100%);
+        border-radius: 16px; 
+        border: 2px solid rgba(var(--teal-rgb), 0.3);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    `;
     progressDiv.innerHTML = `
-        <div style="font-size: 14px; color: var(--teal); font-weight: 600; margin-bottom: 8px;">
-            📝 Generating lesson content...
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="font-size: 24px;">✨</div>
+            <div>
+                <div style="font-size: 16px; color: var(--teal); font-weight: 700; margin-bottom: 4px;">
+                    Generating Educational Content
+                </div>
+                <div id="progress-status" style="font-size: 13px; color: var(--text-secondary);">
+                    Initializing AI content generation...
+                </div>
+            </div>
         </div>
-        <div id="progress-status" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
-            Starting...
+        
+        <div style="margin: 20px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span id="progress-text" style="font-size: 14px; font-weight: 600; color: var(--text-primary);">
+                    0%
+                </span>
+                <span id="progress-lessons" style="font-size: 13px; color: var(--text-secondary);">
+                    0 / 0 lessons
+                </span>
+            </div>
+            <div style="background: rgba(0,0,0,0.1); height: 12px; border-radius: 6px; overflow: hidden; position: relative;">
+                <div id="progress-bar" style="
+                    background: linear-gradient(90deg, var(--teal) 0%, #20b2aa 100%);
+                    height: 100%; 
+                    width: 0%; 
+                    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 0 10px rgba(var(--teal-rgb), 0.5);
+                    position: relative;
+                    overflow: hidden;
+                ">
+                    <div style="
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+                        animation: shimmer 2s infinite;
+                    "></div>
+                </div>
+            </div>
         </div>
-        <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
-            <div id="progress-bar" style="background: var(--teal); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
-        </div>
-        <div id="progress-cost" style="font-size: 12px; color: var(--text-tertiary); margin-top: 8px; text-align: right;">
-            Cost: $0.0000
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid rgba(var(--teal-rgb), 0.2);">
+            <div id="progress-cost" style="font-size: 13px; color: var(--text-tertiary);">
+                💰 Cost: $0.00
+            </div>
+            <div id="progress-time" style="font-size: 13px; color: var(--text-tertiary);">
+                ⏱️ Elapsed: 0s
+            </div>
         </div>
     `;
     resultDiv.appendChild(progressDiv);
+    
+    // Add shimmer animation
+    if (!document.getElementById('shimmer-style')) {
+        const style = document.createElement('style');
+        style.id = 'shimmer-style';
+        style.textContent = `
+            @keyframes shimmer {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    const startTime = Date.now();
     
     const pollOnce = async () => {
         try {
@@ -640,48 +713,77 @@ async function pollContentGenerationProgress(jobId, isMultiCourse) {
             const { status, progress, cost } = data;
             const { total_lessons, completed, failed, percent } = progress;
             
-            // Update progress UI
+            // Calculate elapsed time
+            const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsedSeconds / 60);
+            const seconds = elapsedSeconds % 60;
+            const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+            
+            // Update all progress elements with smooth animations
             document.getElementById('progress-status').textContent = 
-                `${completed} of ${total_lessons} lessons complete · ${failed} skipped`;
+                `Synthesizing content from knowledge base using Claude AI...`;
+            document.getElementById('progress-text').textContent = `${percent}%`;
+            document.getElementById('progress-lessons').textContent = 
+                `${completed} / ${total_lessons} lessons`;
             document.getElementById('progress-bar').style.width = `${percent}%`;
             document.getElementById('progress-cost').textContent = 
-                `Cost: $${cost.toFixed(4)}`;
+                `💰 Cost: $${cost.toFixed(4)}`;
+            document.getElementById('progress-time').textContent = 
+                `⏱️ Elapsed: ${timeStr}`;
             
-            console.log(`📝 Content gen progress: ${completed}/${total_lessons} (${percent}%)`);
+            console.log(`📝 Content gen progress: ${completed}/${total_lessons} (${percent}%) - ${timeStr}`);
             
             // Check if job is complete
             if (status === 'completed' || status === 'completed_with_errors' || status === 'failed') {
                 clearInterval(pollInterval);
                 
+                // Update UI for completion
+                progressDiv.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.2) 100%)';
+                progressDiv.style.borderColor = 'rgba(34, 197, 94, 0.5)';
+                
                 if (status === 'completed') {
-                    progressDiv.querySelector('div').innerHTML = '✅ Lesson content generated!';
+                    document.getElementById('progress-status').innerHTML = 
+                        `<div style="display: flex; align-items: center; gap: 8px;"><span>🎉</span><span style="color: #22c55e; font-weight: 700;">All lessons generated successfully!</span></div>`;
                     showToast('Success!', `Generated content for ${completed} lessons`, 'success');
                 } else if (status === 'completed_with_errors') {
-                    progressDiv.querySelector('div').innerHTML = `⚠️ Content generated with ${failed} failures`;
+                    document.getElementById('progress-status').innerHTML = 
+                        `<div style="display: flex; align-items: center; gap: 8px;"><span>⚠️</span><span style="color: #f59e0b; font-weight: 700;">Completed with ${failed} errors</span></div>`;
                     showToast('Partial Success', `${completed} lessons generated, ${failed} failed`, 'warning');
                 } else {
-                    progressDiv.querySelector('div').innerHTML = '❌ Content generation failed';
+                    progressDiv.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.2) 100%)';
+                    progressDiv.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                    document.getElementById('progress-status').innerHTML = 
+                        `<div style="display: flex; align-items: center; gap: 8px;"><span>❌</span><span style="color: #ef4444; font-weight: 700;">Generation failed</span></div>`;
                     showToast('Error', data.error_message || 'Content generation failed', 'error');
                 }
                 
-                // Reload courses and close modal after 2 seconds
+                // Reload courses and close modal after 3 seconds
                 setTimeout(async () => {
                     await loadCourses();
-                    renderCanvas();
+                    if (state.viewMode === 'grid') {
+                        renderGridView();
+                    } else {
+                        renderCanvas();
+                    }
                     closeModal();
-                }, 2000);
+                }, 3000);
             }
             
             // Safety check: stop polling after max attempts
             if (pollCount >= maxPolls) {
                 clearInterval(pollInterval);
-                progressDiv.querySelector('div').innerHTML = '⏱️ Content generation taking longer than expected...';
+                document.getElementById('progress-status').textContent = 
+                    '⏱️ Content generation taking longer than expected. The process is still running in the background.';
                 showToast('Info', 'Content generation is still running. Check back later.', 'info');
                 setTimeout(async () => {
                     await loadCourses();
-                    renderCanvas();
+                    if (state.viewMode === 'grid') {
+                        renderGridView();
+                    } else {
+                        renderCanvas();
+                    }
                     closeModal();
-                }, 2000);
+                }, 3000);
             }
             
         } catch (error) {
