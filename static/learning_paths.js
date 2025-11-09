@@ -47,7 +47,8 @@ const state = {
     activeModal: null,
     selectedCourse: null,
     searchQuery: '',
-    viewMode: 'tree'
+    viewMode: 'tree',
+    isGeneratingContent: false
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -378,6 +379,12 @@ function renderLessonsList(lessons, course) {
 }
 
 function closeModal() {
+    // Prevent closing if content is being generated
+    if (state.isGeneratingContent) {
+        showToast('Please Wait', 'Content generation in progress. Please wait for it to complete.', 'warning');
+        return;
+    }
+    
     if (state.activeModal === 'lesson') {
         document.getElementById('lesson-modal').style.display = 'none';
     } else if (state.activeModal === 'generate') {
@@ -580,6 +587,15 @@ async function pollStructureGenerationProgress(jobId) {
                 if (data.content_job_id) {
                     console.log(`📝 Starting content generation polling for job ${data.content_job_id}`);
                     
+                    // Set flag to prevent modal closing
+                    state.isGeneratingContent = true;
+                    
+                    // Hide the "View Course" button while content is generating
+                    const viewCourseBtn = document.getElementById('view-generated-course-btn');
+                    if (viewCourseBtn) {
+                        viewCourseBtn.style.display = 'none';
+                    }
+                    
                     // Update UI to show content generation phase
                     document.getElementById('generated-course-title').innerHTML = `
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -588,7 +604,7 @@ async function pollStructureGenerationProgress(jobId) {
                         </div>
                     `;
                     document.getElementById('generated-course-info').textContent = 
-                        'Using Claude AI + Pinecone to create detailed lessons';
+                        'Using Claude AI + Pinecone to create detailed lessons. Please keep this window open.';
                     
                     pollContentGenerationProgress(data.content_job_id, courses.length > 1, courses);
                 } else {
@@ -757,16 +773,21 @@ async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
                     showToast('Error', data.error_message || 'Content generation failed', 'error');
                 }
                 
-                // Reload courses and close modal after 3 seconds
-                setTimeout(async () => {
-                    await loadCourses();
-                    if (state.viewMode === 'grid') {
-                        renderGridView();
-                    } else {
-                        renderCanvas();
-                    }
-                    closeModal();
-                }, 3000);
+                // Reload courses and show "View Course" button
+                await loadCourses();
+                if (state.viewMode === 'grid') {
+                    renderGridView();
+                } else {
+                    renderCanvas();
+                }
+                
+                // Clear generation flag and show "Close" button
+                state.isGeneratingContent = false;
+                const viewCourseBtn = document.getElementById('view-generated-course-btn');
+                if (viewCourseBtn) {
+                    viewCourseBtn.style.display = '';
+                    viewCourseBtn.textContent = 'Close';
+                }
             }
             
             // Safety check: stop polling after max attempts
@@ -775,6 +796,17 @@ async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
                 document.getElementById('progress-status').textContent = 
                     '⏱️ Content generation taking longer than expected. The process is still running in the background.';
                 showToast('Info', 'Content generation is still running. Check back later.', 'info');
+                
+                // Clear generation flag so user can close modal
+                state.isGeneratingContent = false;
+                
+                // Show close button
+                const viewCourseBtn = document.getElementById('view-generated-course-btn');
+                if (viewCourseBtn) {
+                    viewCourseBtn.style.display = '';
+                    viewCourseBtn.textContent = 'Close';
+                }
+                
                 setTimeout(async () => {
                     await loadCourses();
                     if (state.viewMode === 'grid') {
