@@ -7068,8 +7068,16 @@ async def get_job_status(job_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Mount static files (CSS, JS)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files with custom handler for cache-busting
+class NoCacheStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
+app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 app.mount("/node_modules", StaticFiles(directory="node_modules"), name="node_modules")
 
 
