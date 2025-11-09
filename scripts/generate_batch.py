@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 """
-Generate lesson content in batches of 10 lessons
+DEPRECATED - This script is kept for reference only.
+
+Lesson content is now automatically generated when courses are created via:
+- POST /api/courses/generate (creates courses + launches background worker)
+- Background worker: generate_lesson_content_worker() in main.py
+- Service: LessonContentGenerator in src/services/lesson_content_generator.py
+
+This standalone script can still be used for manual/emergency content generation,
+but the integrated background system is preferred for normal operations.
+
+Original purpose: Generate lesson content in batches of 10 lessons
 """
 
 import os

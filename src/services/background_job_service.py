@@ -72,7 +72,10 @@ class BackgroundJobService:
                 json.dumps(request_payload)
             ))
             
-            job_id = cursor.fetchone()[0]
+            result = cursor.fetchone()
+            if not result:
+                raise Exception("Failed to create background job - no ID returned")
+            job_id = result[0]
             conn.commit()
             
             logger.info(f"Created background job {job_id} of type {job_type}")
@@ -369,7 +372,10 @@ class BackgroundJobService:
                 })
             ))
             
-            job_id = cursor.fetchone()[0]
+            result = cursor.fetchone()
+            if not result:
+                raise Exception("Failed to create course content job - no ID returned")
+            job_id = result[0]
             conn.commit()
             
             logger.info(f"Created course content generation job {job_id} for {len(course_ids)} courses")
