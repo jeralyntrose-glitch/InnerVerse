@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
 """
-Generate lesson content from Pinecone transcripts using Claude.
-
-This script:
-1. Loads all lessons from PostgreSQL
-2. For each lesson, queries Pinecone for relevant transcript chunks
-3. Uses Claude to synthesize structured lesson content
-4. Saves the generated content back to the database
+Test lesson content generation on a small sample (3 lessons)
 """
 
 import os
 import sys
-import asyncio
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from anthropic import Anthropic
 from pinecone import Pinecone
 from openai import OpenAI
 import time
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Configuration
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -32,25 +28,21 @@ pinecone_client = Pinecone(api_key=PINECONE_API_KEY)
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 index = pinecone_client.Index(PINECONE_INDEX_NAME)
 
-# Cost tracking
-total_cost = 0.0
-total_input_tokens = 0
-total_output_tokens = 0
-
 def get_db_connection():
     """Create database connection"""
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
-def get_all_lessons():
-    """Fetch all lessons from database"""
+def get_sample_lessons(limit=3):
+    """Fetch sample lessons"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT l.id, l.title, l.description, l.course_id, c.title as course_title
         FROM lessons l
         JOIN courses c ON l.course_id = c.id
         ORDER BY c.id, l.order_index
+        LIMIT {limit}
     """)
     
     lessons = cursor.fetchall()
@@ -86,43 +78,41 @@ def generate_embedding(text):
 
 def search_relevant_transcripts(lesson_title, lesson_description, concepts, top_k=10):
     """Search Pinecone for relevant transcript chunks"""
-    # Create search query from lesson info
     search_text = f"{lesson_title}. {lesson_description}"
     
-    # Add concept names if available
     if concepts:
-        concept_names = [c['concept_id'] for c in concepts[:5]]  # Top 5 concepts
+        concept_names = [c['concept_id'] for c in concepts[:5]]
         search_text += f" Related concepts: {', '.join(concept_names)}"
     
-    # Generate embedding
     query_vector = generate_embedding(search_text)
     
-    # Search Pinecone (exclude concept embeddings, only get document chunks)
     results = index.query(
         vector=query_vector,
         top_k=top_k,
-        include_metadata=True,
-        filter={"type": {"$ne": "concept"}}  # Exclude concept embeddings
+        include_metadata=True
     )
     
-    return results.matches
+    # Filter out concept embeddings manually
+    matches = [m for m in results['matches'] if m.get('metadata', {}).get('type') != 'concept']
+    
+    return matches
 
 def generate_lesson_content(lesson_title, lesson_description, transcript_chunks):
-    """Use Claude to generate structured lesson content from transcripts"""
-    global total_cost, total_input_tokens, total_output_tokens
-    
-    # Build context from transcript chunks
+    """Use Claude to generate structured lesson content"""
     context_parts = []
-    for i, chunk in enumerate(transcript_chunks[:8], 1):  # Use top 8 chunks
-        metadata = chunk.metadata
+    for i, chunk in enumerate(transcript_chunks[:8], 1):
+        metadata = chunk.get('metadata', {})
         text = metadata.get('text', '')
         source = metadata.get('filename', 'Unknown source')
         
-        context_parts.append(f"[Source {i}: {source}]\n{text}\n")
+        if text:
+            context_parts.append(f"[Source {i}: {source}]\n{text}\n")
+    
+    if not context_parts:
+        return None, 0, 0, 0
     
     context = "\n---\n".join(context_parts)
     
-    # Claude prompt
     prompt = f"""You are an expert MBTI educator creating structured lesson content.
 
 LESSON TOPIC: {lesson_title}
@@ -144,7 +134,6 @@ Format the output as clean HTML (no outer <html> or <body> tags, just the conten
 Begin with a brief introduction, then cover key points with subheadings, and conclude with practical takeaways."""
 
     try:
-        # Call Claude
         response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2000,
@@ -155,17 +144,11 @@ Begin with a brief introduction, then cover key points with subheadings, and con
             }]
         )
         
-        # Extract response
         content = response.content[0].text
         
-        # Calculate cost (Claude Sonnet 4 pricing: $3/M input, $15/M output)
         input_tokens = response.usage.input_tokens
         output_tokens = response.usage.output_tokens
         cost = (input_tokens * 3 / 1_000_000) + (output_tokens * 15 / 1_000_000)
-        
-        total_input_tokens += input_tokens
-        total_output_tokens += output_tokens
-        total_cost += cost
         
         return content, cost, input_tokens, output_tokens
         
@@ -195,103 +178,56 @@ def save_lesson_content(lesson_id, content):
         conn.close()
 
 def main():
-    """Main execution"""
     print("=" * 70)
-    print("LESSON CONTENT GENERATOR")
-    print("=" * 70)
-    print()
-    
-    # Get all lessons
-    print("📚 Loading lessons from database...")
-    lessons = get_all_lessons()
-    print(f"✅ Found {len(lessons)} lessons\n")
-    
-    # Ask for confirmation
-    print(f"This will generate content for {len(lessons)} lessons.")
-    print(f"Estimated cost: ${len(lessons) * 0.015:.2f} (assuming ~$0.015 per lesson)")
-    confirm = input("\nContinue? (y/n): ")
-    
-    if confirm.lower() != 'y':
-        print("❌ Cancelled")
-        return
-    
-    print()
-    print("=" * 70)
-    print("GENERATING CONTENT")
+    print("LESSON CONTENT GENERATION - TEST MODE (3 lessons)")
     print("=" * 70)
     print()
     
-    success_count = 0
-    skip_count = 0
-    error_count = 0
+    lessons = get_sample_lessons(3)
+    print(f"✅ Testing with {len(lessons)} lessons\n")
+    
+    total_cost = 0.0
     
     for i, lesson in enumerate(lessons, 1):
         lesson_id = lesson['id']
         lesson_title = lesson['title']
         lesson_description = lesson['description'] or ''
-        course_title = lesson['course_title']
         
-        print(f"[{i}/{len(lessons)}] {course_title} → {lesson_title[:50]}...")
+        print(f"[{i}/3] {lesson_title}")
         
-        # Get concepts
         concepts = get_lesson_concepts(lesson_id)
-        print(f"  📚 {len(concepts)} concepts assigned")
+        print(f"  📚 {len(concepts)} concepts")
         
-        # Search for relevant transcripts
-        print(f"  🔍 Searching Pinecone for relevant content...")
-        transcript_chunks = search_relevant_transcripts(
-            lesson_title, 
-            lesson_description, 
-            concepts,
-            top_k=10
-        )
+        print(f"  🔍 Searching transcripts...")
+        chunks = search_relevant_transcripts(lesson_title, lesson_description, concepts)
         
-        if not transcript_chunks:
-            print(f"  ⚠️  No relevant transcripts found - skipping")
-            skip_count += 1
+        if not chunks:
+            print(f"  ⚠️  No chunks found")
             continue
         
-        print(f"  ✅ Found {len(transcript_chunks)} relevant chunks")
+        print(f"  ✅ Found {len(chunks)} chunks")
         
-        # Generate content
-        print(f"  🤖 Generating content with Claude...")
-        content, cost, input_tokens, output_tokens = generate_lesson_content(
-            lesson_title,
-            lesson_description,
-            transcript_chunks
+        print(f"  🤖 Generating content...")
+        content, cost, input_tok, output_tok = generate_lesson_content(
+            lesson_title, lesson_description, chunks
         )
         
         if not content:
-            print(f"  ❌ Failed to generate content")
-            error_count += 1
+            print(f"  ❌ Generation failed")
             continue
         
-        print(f"  💰 Cost: ${cost:.4f} ({input_tokens} in / {output_tokens} out tokens)")
+        print(f"  💰 ${cost:.4f} ({input_tok} in / {output_tok} out)")
+        print(f"  📝 Generated {len(content)} characters")
         
-        # Save to database
         if save_lesson_content(lesson_id, content):
-            print(f"  ✅ Saved to database")
-            success_count += 1
+            print(f"  ✅ Saved!")
         else:
-            print(f"  ❌ Failed to save")
-            error_count += 1
+            print(f"  ❌ Save failed")
         
+        total_cost += cost
         print()
-        
-        # Small delay to avoid rate limits
-        time.sleep(0.5)
     
-    # Final report
-    print("=" * 70)
-    print("GENERATION COMPLETE")
-    print("=" * 70)
-    print(f"✅ Success: {success_count} lessons")
-    print(f"⏭️  Skipped: {skip_count} lessons (no transcripts found)")
-    print(f"❌ Errors: {error_count} lessons")
-    print()
-    print(f"📊 Total tokens: {total_input_tokens:,} input / {total_output_tokens:,} output")
-    print(f"💰 Total cost: ${total_cost:.4f}")
-    print("=" * 70)
+    print(f"💰 Total test cost: ${total_cost:.4f}")
 
 if __name__ == '__main__':
     main()
