@@ -6271,15 +6271,19 @@ async def get_lesson_concepts(lesson_id: str, response: Response):
         
         concepts = []
         for assignment in assignments:
-            concept_id = assignment['id']
+            concept_id_raw = assignment['id']
+            
+            # BUGFIX: Strip "concept_" prefix for knowledge graph lookup
+            # Pinecone uses "concept_octagram", but knowledge graph has "octagram"
+            concept_id_for_lookup = concept_id_raw.replace('concept_', '', 1) if concept_id_raw.startswith('concept_') else concept_id_raw
             
             # O(1) lookup instead of O(N) nested loop
-            concept_node = concept_lookup.get(concept_id)
+            concept_node = concept_lookup.get(concept_id_for_lookup)
             
             if concept_node:
                 concepts.append({
-                    'id': concept_id,
-                    'name': concept_node.get('label', concept_id),
+                    'id': concept_id_raw,  # Keep original ID from database
+                    'name': concept_node.get('label', concept_id_for_lookup),
                     'description': concept_node.get('definition', ''),
                     'category': concept_node.get('category', ''),
                     'confidence': assignment['confidence'],
