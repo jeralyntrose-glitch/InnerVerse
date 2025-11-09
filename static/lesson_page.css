@@ -404,6 +404,61 @@ body {
     overflow: hidden;
 }
 
+/* Lesson Content */
+.lesson-content-section {
+    margin-bottom: 32px;
+}
+
+.lesson-content-section h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.lesson-content-body {
+    background: var(--bg-primary);
+    padding: 24px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    line-height: 1.8;
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+.lesson-content-body h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 24px;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.lesson-content-body h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.lesson-content-body p {
+    margin-bottom: 16px;
+}
+
+.lesson-content-body ul, .lesson-content-body ol {
+    margin-left: 24px;
+    margin-bottom: 16px;
+}
+
+.lesson-content-body li {
+    margin-bottom: 8px;
+}
+
+.lesson-content-body strong {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 /* Transcript */
 .transcript-section {
     margin-bottom: 32px;

@@ -231,6 +231,10 @@ function renderLessonContent() {
     updateNavigationButtons();
     updateProgressBar();
     
+    if (state.lesson.lesson_content) {
+        showLessonContent(state.lesson.lesson_content);
+    }
+    
     if (state.lesson.video_references && state.lesson.video_references.length > 0) {
         showVideo(state.lesson.video_references[0].url);
     }
@@ -241,6 +245,14 @@ function renderLessonContent() {
             showTranscript('Transcript available for this lesson.');
         }
     }
+}
+
+function showLessonContent(content) {
+    const contentSection = document.getElementById('lesson-content-section');
+    const contentBody = document.getElementById('lesson-content-body');
+    
+    contentBody.innerHTML = content;
+    contentSection.style.display = 'block';
 }
 
 function updateLessonStatus() {
