@@ -6500,13 +6500,19 @@ def generate_lesson_content_worker(job_id: int, course_ids: list[str]):
     """
     Background worker to generate lesson content for courses.
     Runs in FastAPI's thread pool automatically.
+    
+    IMPORTANT: This worker is resilient to per-lesson failures.
+    One lesson failing does NOT fail the entire job.
     """
     print(f"📝 [CONTENT GEN] Starting job {job_id} for {len(course_ids)} courses")
     
-    job_service = BackgroundJobService()
-    content_generator = LessonContentGenerator()
+    job_service = None
+    content_generator = None
     
     try:
+        job_service = BackgroundJobService()
+        content_generator = LessonContentGenerator()
+        
         # Update status to processing
         job_service.update_job_status(job_id, 'processing')
         
@@ -6516,43 +6522,71 @@ def generate_lesson_content_worker(job_id: int, course_ids: list[str]):
         failed = 0
         total_cost = 0.0
         
-        # Process each course
+        # Process each course (continue even if one course fails)
         for course_id in course_ids:
-            print(f"📚 [CONTENT GEN] Processing course {course_id}")
-            
-            result = content_generator.generate_for_course(course_id)
-            
-            if result['success']:
-                total_lessons += result['total_lessons']
-                completed += result['generated']
-                failed += result['skipped']
-                total_cost += result['total_cost']
-                all_results.extend(result['results'])
+            try:
+                print(f"📚 [CONTENT GEN] Processing course {course_id}")
                 
-                # Update progress after each course
-                job_service.update_content_generation_progress(
-                    job_id=job_id,
-                    total_lessons=total_lessons,
-                    completed=completed,
-                    failed=failed,
-                    total_cost=total_cost,
-                    per_lesson_results=all_results
-                )
+                result = content_generator.generate_for_course(course_id)
                 
-                print(f"✅ [CONTENT GEN] Course {course_id}: {result['generated']}/{result['total_lessons']} lessons")
-            else:
-                print(f"❌ [CONTENT GEN] Course {course_id} failed: {result.get('error')}")
+                if result['success']:
+                    total_lessons += result['total_lessons']
+                    completed += result['generated']
+                    failed += result['skipped']
+                    total_cost += result['total_cost']
+                    all_results.extend(result['results'])
+                    
+                    print(f"✅ [CONTENT GEN] Course {course_id}: {result['generated']}/{result['total_lessons']} lessons")
+                else:
+                    print(f"⚠️ [CONTENT GEN] Course {course_id} failed: {result.get('error')}")
+                    # Count as failed but continue processing other courses
+                    failed += 1
+                
+                # Update progress after each course (resilient to DB errors)
+                try:
+                    job_service.update_content_generation_progress(
+                        job_id=job_id,
+                        total_lessons=total_lessons,
+                        completed=completed,
+                        failed=failed,
+                        total_cost=total_cost,
+                        per_lesson_results=all_results
+                    )
+                except Exception as progress_error:
+                    print(f"⚠️ [CONTENT GEN] Failed to update progress: {str(progress_error)}")
+                    # Continue anyway - progress update failure shouldn't kill the job
+                    
+            except Exception as course_error:
+                print(f"❌ [CONTENT GEN] Course {course_id} exception: {str(course_error)}")
+                import traceback
+                traceback.print_exc()
+                failed += 1
+                # Continue to next course
         
-        # Mark job as completed
-        status = 'completed' if failed == 0 else 'completed_with_errors'
-        job_service.update_job_status(job_id, status)
+        # Mark job as completed (always update final status)
+        final_status = 'completed' if failed == 0 else 'completed_with_errors'
+        job_service.update_job_status(job_id, final_status)
+        
+        # Store final results
+        final_summary = f"Generated content for {completed} lessons, {failed} failed, cost: ${total_cost:.4f}"
+        job_service.complete_job(job_id, final_summary, error_message=None)
         
         print(f"🎉 [CONTENT GEN] Job {job_id} complete: {completed} generated, {failed} failed, ${total_cost:.4f}")
         
     except Exception as e:
-        print(f"❌ [CONTENT GEN] Job {job_id} failed: {str(e)}")
-        job_service.update_job_status(job_id, 'failed')
-        job_service.complete_job(job_id, "", error_message=str(e))
+        # Fatal error - entire job failed
+        print(f"❌ [CONTENT GEN] Job {job_id} FATAL ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Always try to mark job as failed (even if job_service is None)
+        try:
+            if job_service is None:
+                job_service = BackgroundJobService()
+            job_service.update_job_status(job_id, 'failed')
+            job_service.complete_job(job_id, "", error_message=str(e))
+        except Exception as final_error:
+            print(f"❌ [CONTENT GEN] Could not update job status: {str(final_error)}")
 
 
 # =============================================================================

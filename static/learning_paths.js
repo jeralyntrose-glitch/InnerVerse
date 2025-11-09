@@ -497,11 +497,19 @@ async function handleGenerateSubmit(event) {
             : `Generated "${result.course.title}"`;
         showToast('Success!', message, 'success');
         
-        setTimeout(async () => {
-            await loadCourses();
-            renderCanvas();  // Re-render tree with new courses
-            closeModal();  // Auto-close modal after refresh
-        }, 1500);  // Give it 1.5 seconds
+        // Start polling for content generation progress
+        const jobId = result.content_generation_job_id;
+        if (jobId) {
+            console.log(`📝 Starting content generation polling for job ${jobId}`);
+            pollContentGenerationProgress(jobId, totalCourses > 1);
+        } else {
+            // No job ID, just close modal after refresh
+            setTimeout(async () => {
+                await loadCourses();
+                renderCanvas();
+                closeModal();
+            }, 1500);
+        }
         
     } catch (error) {
         console.error('Generation error:', error);
@@ -511,6 +519,101 @@ async function handleGenerateSubmit(event) {
         document.querySelector('.btn-text').style.display = 'block';
         document.querySelector('.btn-loading').style.display = 'none';
     }
+}
+
+async function pollContentGenerationProgress(jobId, isMultiCourse) {
+    let pollInterval = null;
+    let pollCount = 0;
+    const maxPolls = 300; // 10 minutes max (300 * 2s)
+    
+    // Create progress display element
+    const resultDiv = document.getElementById('generation-result');
+    const progressDiv = document.createElement('div');
+    progressDiv.id = 'content-generation-progress';
+    progressDiv.style.cssText = 'margin-top: 16px; padding: 16px; background: rgba(var(--teal-rgb), 0.1); border-radius: 12px; border: 1px solid var(--teal);';
+    progressDiv.innerHTML = `
+        <div style="font-size: 14px; color: var(--teal); font-weight: 600; margin-bottom: 8px;">
+            📝 Generating lesson content...
+        </div>
+        <div id="progress-status" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+            Starting...
+        </div>
+        <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+            <div id="progress-bar" style="background: var(--teal); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+        </div>
+        <div id="progress-cost" style="font-size: 12px; color: var(--text-tertiary); margin-top: 8px; text-align: right;">
+            Cost: $0.0000
+        </div>
+    `;
+    resultDiv.appendChild(progressDiv);
+    
+    const pollOnce = async () => {
+        try {
+            pollCount++;
+            
+            const response = await fetch(`/api/courses/content-generation/${jobId}`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error('Failed to fetch job status');
+            }
+            
+            const { status, progress, cost } = data;
+            const { total_lessons, completed, failed, percent } = progress;
+            
+            // Update progress UI
+            document.getElementById('progress-status').textContent = 
+                `${completed} of ${total_lessons} lessons complete · ${failed} skipped`;
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            document.getElementById('progress-cost').textContent = 
+                `Cost: $${cost.toFixed(4)}`;
+            
+            console.log(`📝 Content gen progress: ${completed}/${total_lessons} (${percent}%)`);
+            
+            // Check if job is complete
+            if (status === 'completed' || status === 'completed_with_errors' || status === 'failed') {
+                clearInterval(pollInterval);
+                
+                if (status === 'completed') {
+                    progressDiv.querySelector('div').innerHTML = '✅ Lesson content generated!';
+                    showToast('Success!', `Generated content for ${completed} lessons`, 'success');
+                } else if (status === 'completed_with_errors') {
+                    progressDiv.querySelector('div').innerHTML = `⚠️ Content generated with ${failed} failures`;
+                    showToast('Partial Success', `${completed} lessons generated, ${failed} failed`, 'warning');
+                } else {
+                    progressDiv.querySelector('div').innerHTML = '❌ Content generation failed';
+                    showToast('Error', data.error_message || 'Content generation failed', 'error');
+                }
+                
+                // Reload courses and close modal after 2 seconds
+                setTimeout(async () => {
+                    await loadCourses();
+                    renderCanvas();
+                    closeModal();
+                }, 2000);
+            }
+            
+            // Safety check: stop polling after max attempts
+            if (pollCount >= maxPolls) {
+                clearInterval(pollInterval);
+                progressDiv.querySelector('div').innerHTML = '⏱️ Content generation taking longer than expected...';
+                showToast('Info', 'Content generation is still running. Check back later.', 'info');
+                setTimeout(async () => {
+                    await loadCourses();
+                    renderCanvas();
+                    closeModal();
+                }, 2000);
+            }
+            
+        } catch (error) {
+            console.error('Polling error:', error);
+            // Don't stop polling on error, just log it
+        }
+    };
+    
+    // Start polling immediately, then every 2 seconds
+    await pollOnce();
+    pollInterval = setInterval(pollOnce, 2000);
 }
 
 function fitToView() {
