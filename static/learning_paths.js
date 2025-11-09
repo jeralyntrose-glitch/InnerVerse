@@ -714,6 +714,98 @@ function showToast(title, message, type = 'info') {
     }, 4000);
 }
 
+function toggleViewMode() {
+    state.viewMode = state.viewMode === 'tree' ? 'grid' : 'tree';
+    
+    const canvas = document.getElementById('learning-canvas');
+    const gridView = document.getElementById('grid-view');
+    const zoomControls = document.getElementById('zoom-controls');
+    const icon = document.getElementById('view-mode-icon');
+    const label = document.getElementById('view-mode-label');
+    
+    if (state.viewMode === 'grid') {
+        // Switch to grid view
+        canvas.style.display = 'none';
+        gridView.style.display = 'grid';
+        zoomControls.style.display = 'none';
+        icon.textContent = '🌳';
+        label.textContent = 'Tree View';
+        renderGridView();
+    } else {
+        // Switch to tree view
+        canvas.style.display = 'block';
+        gridView.style.display = 'none';
+        zoomControls.style.display = 'flex';
+        icon.textContent = '📊';
+        label.textContent = 'Grid View';
+        renderCanvas();
+    }
+}
+
+function renderGridView() {
+    const gridContainer = document.getElementById('grid-view');
+    gridContainer.innerHTML = '';
+    
+    if (!state.courses || state.courses.length === 0) {
+        return;
+    }
+    
+    // Group courses by category
+    const categories = ['foundations', 'your_type', 'relationships', 'advanced', 'integration', 'intermediate'];
+    const grouped = {};
+    
+    categories.forEach(cat => {
+        grouped[cat] = state.courses.filter(c => c.category === cat);
+    });
+    
+    // Render each category
+    Object.entries(grouped).forEach(([category, courses]) => {
+        if (courses.length === 0) return;
+        
+        const section = document.createElement('div');
+        section.className = 'grid-category-section';
+        section.innerHTML = `
+            <h3 class="grid-category-title">${category.replace('_', ' ').toUpperCase()}</h3>
+            <div class="grid-cards"></div>
+        `;
+        
+        const cardsContainer = section.querySelector('.grid-cards');
+        
+        courses.forEach(course => {
+            const card = document.createElement('div');
+            card.className = 'grid-course-card';
+            card.style.borderLeft = `4px solid ${CONFIG.colors[category]}`;
+            
+            card.innerHTML = `
+                <div class="grid-card-header">
+                    <h4>${course.title}</h4>
+                    <span class="category-badge" style="background: ${CONFIG.colors[category]}">${category.replace('_', ' ')}</span>
+                </div>
+                <div class="grid-card-body">
+                    <p class="grid-card-description">${course.description || 'No description'}</p>
+                    <div class="grid-card-meta">
+                        <span>📚 ${course.lesson_count || 0} lessons</span>
+                        <span>⏱️ ${course.estimated_hours || 0}h</span>
+                        <span class="status-dot ${course.status || 'not-started'}">●</span>
+                    </div>
+                </div>
+                <div class="grid-card-actions">
+                    <button class="grid-btn-primary" onclick="window.LearningPaths.viewCourse('${course.id}')">
+                        View Course
+                    </button>
+                    <button class="grid-btn-delete" onclick="window.LearningPaths.deleteCourse('${course.id}', event)">
+                        🗑️
+                    </button>
+                </div>
+            `;
+            
+            cardsContainer.appendChild(card);
+        });
+        
+        gridContainer.appendChild(section);
+    });
+}
+
 function setupEventListeners() {
     document.getElementById('search-btn').addEventListener('click', handleSearch);
     document.getElementById('search-input').addEventListener('keypress', (e) => {
@@ -730,9 +822,7 @@ function setupEventListeners() {
     
     document.getElementById('create-first-course-btn').addEventListener('click', openGenerateModal);
     document.getElementById('generate-course-btn').addEventListener('click', openGenerateModal);
-    document.getElementById('view-mode-toggle').addEventListener('click', () => {
-        showToast('Info', 'Grid view coming in Phase 4!', 'info');
-    });
+    document.getElementById('view-mode-toggle').addEventListener('click', toggleViewMode);
     
     document.getElementById('generate-form').addEventListener('submit', handleGenerateSubmit);
     document.getElementById('cancel-generate-btn').addEventListener('click', closeModal);
@@ -767,6 +857,10 @@ window.LearningPaths = {
     state,
     loadCourses,
     renderCanvas,
+    renderGridView,
+    toggleViewMode,
     openGenerateModal,
-    fitToView
+    fitToView,
+    viewCourse: openCourseModal,
+    deleteCourse: confirmDeleteCourse
 };
