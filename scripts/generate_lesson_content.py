@@ -206,14 +206,21 @@ def main():
     lessons = get_all_lessons()
     print(f"✅ Found {len(lessons)} lessons\n")
     
-    # Ask for confirmation
-    print(f"This will generate content for {len(lessons)} lessons.")
-    print(f"Estimated cost: ${len(lessons) * 0.015:.2f} (assuming ~$0.015 per lesson)")
-    confirm = input("\nContinue? (y/n): ")
+    # Check for --yes flag to skip confirmation
+    skip_confirm = '--yes' in sys.argv or '-y' in sys.argv
     
-    if confirm.lower() != 'y':
-        print("❌ Cancelled")
-        return
+    if not skip_confirm:
+        # Ask for confirmation
+        print(f"This will generate content for {len(lessons)} lessons.")
+        print(f"Estimated cost: ${len(lessons) * 0.015:.2f} (assuming ~$0.015 per lesson)")
+        confirm = input("\nContinue? (y/n): ")
+        
+        if confirm.lower() != 'y':
+            print("❌ Cancelled")
+            return
+    else:
+        print(f"🚀 Auto-confirmed: Generating content for {len(lessons)} lessons")
+        print(f"Estimated cost: ${len(lessons) * 0.015:.2f}")
     
     print()
     print("=" * 70)
