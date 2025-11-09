@@ -971,10 +971,10 @@ function renderGridView() {
                     </div>
                 </div>
                 <div class="grid-card-actions">
-                    <button class="grid-btn-primary" onclick="window.LearningPaths.viewCourse(${course.id})">
+                    <button class="grid-btn-primary" onclick="viewCourseById(${course.id})">
                         View Course
                     </button>
-                    <button class="grid-btn-delete" onclick="window.LearningPaths.deleteCourse(${course.id}, event)">
+                    <button class="grid-btn-delete" onclick="deleteCourse(${course.id}, event)">
                         🗑️
                     </button>
                 </div>
