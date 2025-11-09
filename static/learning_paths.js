@@ -234,10 +234,12 @@ function renderCourseCard(course) {
     
     return `
         <div class="course-card-header">
-            <span class="status-icon ${status.replace('_', '-')}">${CONFIG.statusIcons[status]}</span>
-            <span class="category-badge category-${course.category}">
-                ${CONFIG.categoryToDifficulty[course.category] || course.category.toUpperCase()}
-            </span>
+            <div class="header-left">
+                <span class="status-icon ${status.replace('_', '-')}">${CONFIG.statusIcons[status]}</span>
+                <span class="category-badge category-${course.category}">
+                    ${CONFIG.categoryToDifficulty[course.category] || course.category.toUpperCase()}
+                </span>
+            </div>
             <button class="delete-course-btn" onclick="handleDeleteCourse(event, '${course.id}', '${course.title.replace(/'/g, "&apos;")}')">🗑️</button>
         </div>
         <div class="course-title">${course.title}</div>

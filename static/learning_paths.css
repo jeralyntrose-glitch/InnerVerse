@@ -344,25 +344,27 @@ body {
 .course-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     margin-bottom: var(--spacing-sm);
-    position: relative;
+}
+
+.course-card-header .header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
 }
 
 .delete-course-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
     background: rgba(239, 68, 68, 0.1);
     color: var(--danger-color);
     border: none;
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 16px;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
     cursor: pointer;
     opacity: 0;
     transition: all 0.2s;
-    z-index: 10;
+    flex-shrink: 0;
 }
 
 .course-card:hover .delete-course-btn,
@@ -374,7 +376,7 @@ body {
 .delete-course-btn:hover {
     background: var(--danger-color);
     color: white;
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .delete-course-btn:focus-visible {
