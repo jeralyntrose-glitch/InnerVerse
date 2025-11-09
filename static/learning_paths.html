@@ -180,15 +180,40 @@
                     </div>
                 </form>
 
-                <div id="generation-result" style="display: none;">
+                <!-- Phase 1: Structure Generation -->
+                <div id="modal-phase-structure" style="display: none;">
+                    <div class="success-message">
+                        <span class="spinner-large"></span>
+                        <div>
+                            <strong id="structure-title">Generating Course Structure...</strong>
+                            <p id="structure-info">Calling Claude API to design your learning path...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 2: Content Generation -->
+                <div id="modal-phase-content" style="display: none;">
+                    <div class="success-message">
+                        <div style="width: 100%;">
+                            <strong id="content-title">Generating Lesson Content...</strong>
+                            <p id="content-info">Using Claude AI + Pinecone to create detailed lessons.</p>
+                            <div id="progress-container" class="progress-container" style="margin-top: 16px;">
+                                <!-- Progress bar will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 3: Complete -->
+                <div id="modal-phase-complete" style="display: none;">
                     <div class="success-message">
                         <span class="success-icon">✅</span>
                         <div>
-                            <strong id="generated-course-title"></strong>
-                            <p id="generated-course-info"></p>
+                            <strong id="complete-title">Course Generated!</strong>
+                            <p id="complete-info">Your learning path is ready</p>
                         </div>
                     </div>
-                    <button id="view-generated-course-btn" class="btn-primary full-width" style="display: none;">
+                    <button id="view-generated-course-btn" class="btn-primary full-width">
                         View Course
                     </button>
                 </div>

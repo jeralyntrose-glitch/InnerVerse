@@ -48,8 +48,93 @@ const state = {
     selectedCourse: null,
     searchQuery: '',
     viewMode: 'tree',
-    isGeneratingContent: false
+    isGeneratingContent: false,
+    generationPhase: null
 };
+
+// Modal state machine for course generation
+const ModalPhases = {
+    STRUCTURE_PENDING: 'structure_pending',
+    CONTENT_PENDING: 'content_pending',
+    COMPLETE: 'complete',
+    ERROR: 'error'
+};
+
+/**
+ * Centralized modal state transition handler
+ * Prevents race conditions by managing all phase visibility in one place
+ */
+function setGenerationModalState(phase, payload = {}) {
+    console.log(`🔄 Modal state transition: ${state.generationPhase} → ${phase}`);
+    state.generationPhase = phase;
+    
+    // Hide all phases first
+    document.getElementById('modal-phase-structure').style.display = 'none';
+    document.getElementById('modal-phase-content').style.display = 'none';
+    document.getElementById('modal-phase-complete').style.display = 'none';
+    
+    // Show the active phase
+    switch(phase) {
+        case ModalPhases.STRUCTURE_PENDING:
+            document.getElementById('modal-phase-structure').style.display = 'block';
+            // Optionally update text if provided
+            if (payload.title) document.getElementById('structure-title').textContent = payload.title;
+            if (payload.info) document.getElementById('structure-info').textContent = payload.info;
+            break;
+            
+        case ModalPhases.CONTENT_PENDING:
+            document.getElementById('modal-phase-content').style.display = 'block';
+            if (payload.title) document.getElementById('content-title').textContent = payload.title;
+            if (payload.info) document.getElementById('content-info').textContent = payload.info;
+            
+            // Initialize progress bar if not already present
+            const progressContainer = document.getElementById('progress-container');
+            if (!progressContainer.querySelector('.progress-bar')) {
+                progressContainer.innerHTML = `
+                    <div class="progress-header">
+                        <span class="progress-status" id="progress-status">Starting...</span>
+                        <span class="progress-percentage" id="progress-percentage">0%</span>
+                    </div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="progress-details" id="progress-details">
+                        <small>Lessons: <span id="progress-lessons">0/0</span></small>
+                        <small>Cost: $<span id="progress-cost">0.00</span></small>
+                        <small>Time: <span id="progress-time">0s</span></small>
+                    </div>
+                `;
+            }
+            break;
+            
+        case ModalPhases.COMPLETE:
+            document.getElementById('modal-phase-complete').style.display = 'block';
+            if (payload.title) document.getElementById('complete-title').textContent = payload.title;
+            if (payload.info) document.getElementById('complete-info').textContent = payload.info;
+            
+            // Setup button click handler
+            const viewBtn = document.getElementById('view-generated-course-btn');
+            if (payload.courseId && viewBtn) {
+                viewBtn.onclick = () => {
+                    window.location.href = `/learning-paths/${payload.courseId}/1`;
+                };
+            }
+            
+            // Auto-close after delay if specified
+            if (payload.autoClose) {
+                setTimeout(() => closeModal(), payload.autoCloseDelay || 1500);
+            }
+            break;
+            
+        case ModalPhases.ERROR:
+            // For now, just show structure phase with error message
+            document.getElementById('modal-phase-structure').style.display = 'block';
+            document.getElementById('structure-title').textContent = '❌ Generation Failed';
+            document.getElementById('structure-info').textContent = payload.error || 'An error occurred';
+            setTimeout(() => closeModal(), 3000);
+            break;
+    }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🎨 Initializing Learning Paths...');
