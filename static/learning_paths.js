@@ -387,7 +387,8 @@ function viewLesson(courseId, lessonId) {
 }
 
 // Delete course with 2-step confirmation (Phase 6.5)
-async function handleDeleteCourse(event, courseId, courseTitle) {
+// Make globally accessible for onclick handlers
+window.handleDeleteCourse = async function(event, courseId, courseTitle) {
     // Stop event propagation to prevent opening the modal
     event.stopPropagation();
     event.preventDefault();
