@@ -28,6 +28,21 @@
     </header>
 
     <div class="split-container">
+        <!-- Left Sidebar for Concepts (Phase 6.5) -->
+        <aside class="concepts-sidebar" id="concepts-sidebar">
+            <div class="sidebar-header">
+                <h3>📚 Key Concepts</h3>
+                <button class="sidebar-toggle" id="sidebar-toggle" title="Collapse sidebar">
+                    ◀
+                </button>
+            </div>
+            <div class="sidebar-content" id="concepts-grid">
+                <div class="loading-skeleton">
+                    Loading concepts...
+                </div>
+            </div>
+        </aside>
+
         <div class="content-pane">
             <div class="lesson-progress-bar">
                 <div class="progress-fill" id="lesson-progress-fill"></div>
@@ -44,15 +59,6 @@
                     Loading description...
                 </p>
             </div>
-
-            <section class="concepts-section">
-                <h2>📚 Key Concepts</h2>
-                <div class="concepts-grid" id="concepts-grid">
-                    <div class="loading-skeleton">
-                    Loading concepts...
-                    </div>
-                </div>
-            </section>
 
             <section class="video-section" id="video-section" style="display: none;">
                 <h2>🎥 Video</h2>

@@ -265,29 +265,26 @@ function renderConcepts() {
         return;
     }
     
-    // Header with count
-    const header = `<div class="concepts-header">📚 Related Concepts (${state.concepts.length})</div>`;
-    
-    // Confidence colors and emojis
-    const confidenceStyles = {
-        'high': { bg: '#dcfce7', border: '#86efac', emoji: '🎯' },
-        'medium': { bg: '#fef9c3', border: '#fde047', emoji: '✓' },
-        'low': { bg: '#f3f4f6', border: '#d1d5db', emoji: '○' }
+    // Confidence emojis
+    const confidenceEmojis = {
+        'high': '🎯',
+        'medium': '✓',
+        'low': '○'
     };
     
-    // Generate concept cards (now rectangular and collapsible)
+    // Generate compact concept cards for sidebar
     const cards = state.concepts.map((concept, index) => {
-        const style = confidenceStyles[concept.confidence] || confidenceStyles.low;
+        const emoji = confidenceEmojis[concept.confidence] || confidenceEmojis.low;
         
         return `
             <div class="concept-card" 
                  data-concept-id="${concept.id}"
+                 data-confidence="${concept.confidence}"
                  data-expanded="false"
-                 onclick="toggleConceptCard(event, '${concept.id}')"
-                 style="background: ${style.bg}; border: 2px solid ${style.border};">
+                 onclick="toggleConceptCard(event, '${concept.id}')">
                 <div class="concept-card-header">
                     <div class="concept-title-row">
-                        <span class="concept-emoji">${style.emoji}</span>
+                        <span class="concept-emoji">${emoji}</span>
                         <span class="concept-name">${concept.name}</span>
                     </div>
                     <span class="concept-toggle-btn">▼</span>
@@ -298,13 +295,13 @@ function renderConcepts() {
                     </div>
                     <div class="concept-meta">
                         <span class="meta-item">
-                            📊 Match: ${Math.round(concept.similarity_score * 100)}%
+                            📊 ${Math.round(concept.similarity_score * 100)}%
                         </span>
                         <span class="meta-item">
                             📁 ${concept.category || 'General'}
                         </span>
-                        <span class="meta-item confidence-badge">
-                            ${style.emoji} ${concept.confidence.toUpperCase()}
+                        <span class="confidence-badge ${concept.confidence}">
+                            ${concept.confidence}
                         </span>
                     </div>
                 </div>
@@ -312,7 +309,7 @@ function renderConcepts() {
         `;
     }).join('');
     
-    grid.innerHTML = header + '<div class="concepts-grid-container">' + cards + '</div>';
+    grid.innerHTML = cards;
 }
 
 // Toggle concept card expansion (Phase 6.5)
@@ -405,11 +402,20 @@ function setupEventListeners() {
     
     document.getElementById('delete-lesson-btn').addEventListener('click', handleDeleteLesson);
     
+    // Sidebar toggle (Phase 6.5)
+    document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+    
     let notesTimeout;
     document.getElementById('lesson-notes').addEventListener('input', () => {
         clearTimeout(notesTimeout);
         notesTimeout = setTimeout(saveNotes, 1000);
     });
+}
+
+// Toggle sidebar collapse (Phase 6.5)
+function toggleSidebar() {
+    const sidebar = document.getElementById('concepts-sidebar');
+    sidebar.classList.toggle('collapsed');
 }
 
 async function markComplete() {
