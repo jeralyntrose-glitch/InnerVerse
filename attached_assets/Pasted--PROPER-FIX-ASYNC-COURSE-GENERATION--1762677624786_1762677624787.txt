@@ -1,0 +1,463 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROPER FIX: ASYNC COURSE GENERATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROBLEM: Replit disabled lesson content generation instead of fixing it
+SOLUTION: Make it truly asynchronous with progress tracking
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ARCHITECTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FLOW:
+1. User clicks "Generate Course"
+2. Backend creates course structure immediately (fast)
+3. Backend returns course ID and job ID immediately
+4. Frontend shows course in tree right away
+5. Background worker generates lesson content asynchronously
+6. Frontend polls for progress and updates UI
+7. User can navigate to lessons - if content ready, show it; if not, show "Generating..."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: DATABASE SCHEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add status tracking to lessons table:
+
+ALTER TABLE lessons ADD COLUMN content_status TEXT DEFAULT 'pending';
+-- Values: 'pending', 'generating', 'complete', 'error'
+
+ALTER TABLE lessons ADD COLUMN content_error TEXT;
+
+Create jobs table for tracking background work:
+
+CREATE TABLE IF NOT EXISTS content_generation_jobs (
+    id TEXT PRIMARY KEY,
+    course_id INTEGER NOT NULL,
+    status TEXT DEFAULT 'running',
+    total_lessons INTEGER NOT NULL,
+    completed_lessons INTEGER DEFAULT 0,
+    failed_lessons INTEGER DEFAULT 0,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    error_message TEXT,
+    FOREIGN KEY (course_id) REFERENCES courses(id)
+);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: BACKEND ENDPOINT CHANGES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: main.py (or wherever course generation endpoint is)
+
+import uuid
+import threading
+
+@app.route('/api/courses/generate', methods=['POST'])
+def generate_course():
+    """Generate course structure immediately, content generation happens async"""
+    data = request.json
+    topic = data.get('topic')
+    
+    # STEP 1: Generate course structure with Claude (FAST - one API call)
+    course_structure = generate_course_structure(topic)
+    
+    # STEP 2: Create course and lessons in database (NO CONTENT YET)
+    cursor = db.cursor()
+    
+    cursor.execute("""
+        INSERT INTO courses (title, description, created_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+    """, (course_structure['title'], course_structure['description']))
+    
+    course_id = cursor.lastrowid
+    
+    lesson_ids = []
+    for lesson_data in course_structure['lessons']:
+        cursor.execute("""
+            INSERT INTO lessons (course_id, title, description, content_status)
+            VALUES (?, ?, ?, 'pending')
+        """, (course_id, lesson_data['title'], lesson_data['description']))
+        
+        lesson_ids.append(cursor.lastrowid)
+    
+    db.commit()
+    
+    # STEP 3: Create background job
+    job_id = str(uuid.uuid4())
+    
+    cursor.execute("""
+        INSERT INTO content_generation_jobs 
+        (id, course_id, status, total_lessons)
+        VALUES (?, ?, 'running', ?)
+    """, (job_id, course_id, len(lesson_ids)))
+    
+    db.commit()
+    
+    # STEP 4: Start background thread for content generation
+    thread = threading.Thread(
+        target=generate_lesson_content_background,
+        args=(job_id, course_id, lesson_ids)
+    )
+    thread.daemon = True
+    thread.start()
+    
+    # STEP 5: Return immediately (don't wait for content)
+    return jsonify({
+        'success': True,
+        'course_id': course_id,
+        'job_id': job_id,
+        'message': 'Course created! Generating lesson content in background...'
+    })
+
+def generate_lesson_content_background(job_id, course_id, lesson_ids):
+    """Background worker to generate lesson content"""
+    cursor = db.cursor()
+    
+    try:
+        for lesson_id in lesson_ids:
+            # Update status to 'generating'
+            cursor.execute("""
+                UPDATE lessons 
+                SET content_status = 'generating'
+                WHERE id = ?
+            """, (lesson_id,))
+            db.commit()
+            
+            # Get lesson info
+            cursor.execute("""
+                SELECT title, description FROM lessons WHERE id = ?
+            """, (lesson_id,))
+            title, description = cursor.fetchone()
+            
+            try:
+                # Generate content with Claude
+                content = generate_lesson_content_with_claude(title, description)
+                
+                # Update lesson with content
+                cursor.execute("""
+                    UPDATE lessons
+                    SET content = ?, content_status = 'complete'
+                    WHERE id = ?
+                """, (content, lesson_id))
+                
+                # Update job progress
+                cursor.execute("""
+                    UPDATE content_generation_jobs
+                    SET completed_lessons = completed_lessons + 1
+                    WHERE id = ?
+                """, (job_id,))
+                
+                db.commit()
+                
+            except Exception as e:
+                # Mark lesson as error
+                cursor.execute("""
+                    UPDATE lessons
+                    SET content_status = 'error', content_error = ?
+                    WHERE id = ?
+                """, (str(e), lesson_id))
+                
+                # Update job
+                cursor.execute("""
+                    UPDATE content_generation_jobs
+                    SET failed_lessons = failed_lessons + 1
+                    WHERE id = ?
+                """, (job_id,))
+                
+                db.commit()
+        
+        # Mark job as complete
+        cursor.execute("""
+            UPDATE content_generation_jobs
+            SET status = 'complete', completed_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (job_id,))
+        db.commit()
+        
+    except Exception as e:
+        # Job failed
+        cursor.execute("""
+            UPDATE content_generation_jobs
+            SET status = 'error', error_message = ?, completed_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (str(e), job_id))
+        db.commit()
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: PROGRESS ENDPOINT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+@app.route('/api/jobs/<job_id>/progress', methods=['GET'])
+def get_job_progress(job_id):
+    """Get progress of content generation job"""
+    cursor = db.cursor()
+    
+    cursor.execute("""
+        SELECT status, total_lessons, completed_lessons, failed_lessons, error_message
+        FROM content_generation_jobs
+        WHERE id = ?
+    """, (job_id,))
+    
+    result = cursor.fetchone()
+    
+    if not result:
+        return jsonify({'error': 'Job not found'}), 404
+    
+    status, total, completed, failed, error = result
+    
+    progress = 0
+    if total > 0:
+        progress = int((completed + failed) / total * 100)
+    
+    return jsonify({
+        'job_id': job_id,
+        'status': status,
+        'progress': progress,
+        'total_lessons': total,
+        'completed_lessons': completed,
+        'failed_lessons': failed,
+        'error_message': error
+    })
+
+@app.route('/api/lessons/<int:lesson_id>', methods=['GET'])
+def get_lesson(lesson_id):
+    """Get lesson with content status"""
+    cursor = db.cursor()
+    
+    cursor.execute("""
+        SELECT title, description, content, content_status, content_error
+        FROM lessons
+        WHERE id = ?
+    """, (lesson_id,))
+    
+    result = cursor.fetchone()
+    
+    if not result:
+        return jsonify({'error': 'Lesson not found'}), 404
+    
+    title, description, content, status, error = result
+    
+    return jsonify({
+        'id': lesson_id,
+        'title': title,
+        'description': description,
+        'content': content if status == 'complete' else None,
+        'content_status': status,
+        'content_error': error
+    })
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: FRONTEND CHANGES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: src/components/CourseGenerator.jsx (or similar)
+
+const [generatingJobId, setGeneratingJobId] = useState(null);
+const [progress, setProgress] = useState(0);
+
+const handleGenerateCourse = async () => {
+    setLoading(true);
+    
+    // Generate course
+    const response = await fetch('/api/courses/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: courseTopic })
+    });
+    
+    const data = await response.json();
+    
+    // Course created immediately!
+    setLoading(false);
+    
+    // Show success message
+    alert(`Course "${data.course_id}" created! Generating lesson content...`);
+    
+    // Start polling for progress
+    setGeneratingJobId(data.job_id);
+    startProgressPolling(data.job_id);
+    
+    // Refresh course list (course will appear immediately)
+    fetchCourses();
+};
+
+const startProgressPolling = (jobId) => {
+    const interval = setInterval(async () => {
+        const response = await fetch(`/api/jobs/${jobId}/progress`);
+        const data = await response.json();
+        
+        setProgress(data.progress);
+        
+        if (data.status === 'complete' || data.status === 'error') {
+            clearInterval(interval);
+            setGeneratingJobId(null);
+            
+            if (data.status === 'complete') {
+                alert('All lesson content generated!');
+            } else {
+                alert(`Content generation finished with ${data.failed_lessons} errors`);
+            }
+        }
+    }, 2000); // Poll every 2 seconds
+};
+
+// Show progress bar if generating
+{generatingJobId && (
+    <div className="progress-banner">
+        🎓 Generating lesson content... {progress}%
+        <div className="progress-bar">
+            <div className="progress-fill" style={{width: `${progress}%`}} />
+        </div>
+    </div>
+)}
+
+File: src/pages/LessonPage.jsx
+
+const [lessonData, setLessonData] = useState(null);
+const [contentStatus, setContentStatus] = useState('pending');
+
+useEffect(() => {
+    fetchLesson();
+    
+    // If content is generating, poll for updates
+    if (contentStatus === 'generating' || contentStatus === 'pending') {
+        const interval = setInterval(fetchLesson, 3000);
+        return () => clearInterval(interval);
+    }
+}, [lessonId, contentStatus]);
+
+const fetchLesson = async () => {
+    const response = await fetch(`/api/lessons/${lessonId}`);
+    const data = await response.json();
+    
+    setLessonData(data);
+    setContentStatus(data.content_status);
+};
+
+// Render based on status
+{contentStatus === 'complete' && (
+    <div>{lessonData.content}</div>
+)}
+
+{contentStatus === 'generating' && (
+    <div className="generating-state">
+        <div className="spinner"></div>
+        <p>Generating lesson content...</p>
+        <p className="small">This usually takes 30-60 seconds</p>
+    </div>
+)}
+
+{contentStatus === 'pending' && (
+    <div className="pending-state">
+        <p>Content generation queued...</p>
+    </div>
+)}
+
+{contentStatus === 'error' && (
+    <div className="error-state">
+        <p>⚠️ Error generating content</p>
+        <p className="error-message">{lessonData.content_error}</p>
+        <button onClick={retryGeneration}>Retry</button>
+    </div>
+)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: OPTIMIZATION (BONUS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A) Batch API calls (faster):
+Instead of calling Claude API for each lesson individually, batch them:
+
+def generate_lesson_content_batch(lessons):
+    """Generate content for multiple lessons in one API call"""
+    prompt = f"""Generate educational content for these {len(lessons)} lessons:
+    
+    {json.dumps(lessons, indent=2)}
+    
+    Return JSON with content for each lesson."""
+    
+    response = claude.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=16000,  # Higher for batch
+        messages=[{"role": "user", "content": prompt}]
+    )
+    
+    return json.loads(response.content[0].text)
+
+B) Parallel generation (even faster):
+Use ThreadPoolExecutor to generate multiple lessons simultaneously:
+
+from concurrent.futures import ThreadPoolExecutor
+
+def generate_lesson_content_background(job_id, course_id, lesson_ids):
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = []
+        for lesson_id in lesson_ids:
+            future = executor.submit(generate_single_lesson, lesson_id, job_id)
+            futures.append(future)
+        
+        # Wait for all to complete
+        for future in futures:
+            future.result()
+
+C) Cache common content:
+If multiple courses cover similar topics, cache generated content
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHY THIS IS BETTER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REPLIT'S "FIX":
+❌ Disabled content generation
+❌ Feature doesn't work at all
+❌ User has to manually generate everything
+
+THIS FIX:
+✅ Course appears immediately in tree
+✅ Content generates in background
+✅ User can navigate while it's generating
+✅ Progress bar shows status
+✅ Graceful error handling
+✅ Can retry failed lessons
+✅ Feature actually works as intended
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TESTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Click "Generate Course"
+   → Course appears in tree immediately ✅
+   
+2. Progress bar shows "Generating content... 0%"
+   → Updates every 2 seconds ✅
+   
+3. Click on a lesson while content is generating
+   → Shows "Generating..." spinner ✅
+   
+4. Wait for content to finish
+   → Progress bar reaches 100% ✅
+   → Alert: "All lesson content generated!" ✅
+   
+5. Click lesson again
+   → Content displays ✅
+   
+6. Simulate error (invalid API key)
+   → Lesson shows error state with retry button ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SEND THIS TO REPLIT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"The current 'fix' disables the core feature. Here's how to actually fix it:
+
+Make content generation truly asynchronous:
+1. Course structure creates immediately (returns in <1 second)
+2. Lesson content generates in background thread
+3. Frontend polls for progress every 2 seconds
+4. User can navigate to lessons while content is generating
+5. Show spinner if content not ready yet
+
+This is the proper async job pattern. Implement the attached specification.
+
+DO NOT just disable features. FIX them properly."
