@@ -6631,22 +6631,28 @@ async def generate_course(request: Request, background_tasks: BackgroundTasks):
         }
     """
     try:
+        print(f"🚀 [COURSE GEN] Received request")
         data = await request.json()
         user_goal = data.get("user_goal")
+        print(f"📋 [COURSE GEN] Goal: {user_goal}")
         
         if not user_goal or not user_goal.strip():
             raise HTTPException(status_code=400, detail="user_goal is required")
         
+        print(f"🔧 [COURSE GEN] Initializing generator and manager")
         generator = get_course_generator()
         manager = get_course_manager()
         
         # Generate learning path using AI (returns multiple courses)
+        # WARNING: This is a BLOCKING call to Claude API (5-30 seconds)
+        print(f"🤖 [COURSE GEN] Calling Claude API (this may take 5-30s)...")
         learning_path = generator.generate_curriculum(
             user_goal=user_goal,
             relevant_concept_ids=data.get("relevant_concept_ids"),
             max_lessons=data.get("max_lessons", 12),
             target_category=data.get("target_category")
         )
+        print(f"✅ [COURSE GEN] Claude API returned successfully")
         
         # Extract courses array and metadata
         courses_data = learning_path.get('courses', [])
