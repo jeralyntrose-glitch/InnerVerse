@@ -302,6 +302,9 @@ async function openCourseModal(course) {
         const fullCourse = courseResult.course;  // Fixed: use result.course not result.data
         const lessons = lessonsResult.success ? lessonsResult.lessons : [];
         
+        // Store lessons in state for "View Course Details" button
+        state.selectedCourseLessons = lessons;
+        
         document.getElementById('modal-course-title').textContent = fullCourse.title;
         document.getElementById('modal-category').textContent = fullCourse.category.replace('_', ' ');
         document.getElementById('modal-category').className = `category-badge category-${fullCourse.category}`;
@@ -632,8 +635,12 @@ function setupEventListeners() {
     document.getElementById('cancel-generate-btn').addEventListener('click', closeModal);
     
     document.getElementById('view-course-btn').addEventListener('click', () => {
-        if (state.selectedCourse) {
-            showToast('Info', 'Course detail page coming in Phase 4!', 'info');
+        if (state.selectedCourse && state.selectedCourseLessons && state.selectedCourseLessons.length > 0) {
+            // Navigate to first lesson to start the course
+            const firstLesson = state.selectedCourseLessons[0];
+            viewLesson(state.selectedCourse.id, firstLesson.id);
+        } else if (state.selectedCourse) {
+            showToast('Error', 'No lessons available in this course', 'error');
         }
     });
     
