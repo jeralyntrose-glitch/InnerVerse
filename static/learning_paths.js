@@ -4,6 +4,10 @@
  * Handles 2D tree visualization, zoom/pan, API integration
  */
 
+// IMMEDIATE LOAD TEST - Shows alert if JS loads
+console.log('🚀 LEARNING PATHS JS LOADING - VERSION 20251110041620');
+document.title = '✅ JS Loaded - Learning Paths';
+
 const CONFIG = {
     api: {
         baseUrl: '/api',
@@ -119,6 +123,7 @@ function setGenerationModalState(phase, payload = {}) {
             
             // Setup global function for button onclick
             window.handleViewGeneratedCourse = () => {
+                alert('Button clicked! CourseId: ' + window._generatedCourseId);
                 console.log('🔘 handleViewGeneratedCourse called');
                 console.log('📍 isGeneratingContent:', state.isGeneratingContent);
                 console.log('📍 _generatedCourseId:', window._generatedCourseId);
