@@ -6534,11 +6534,17 @@ def generate_course_structure_worker(job_id: int):
     3. Launch lesson content generation job
     4. Update job status
     """
-    print(f"🏗️ [STRUCTURE GEN] Starting job {job_id}")
+    # EMERGENCY DEBUG: Log immediately with flush to ensure it appears
+    import sys
+    print(f"🚨🚨🚨 [WORKER ENTRY] Worker function called with job_id={job_id}", flush=True)
+    sys.stdout.flush()
+    
+    print(f"🏗️ [STRUCTURE GEN] Starting job {job_id}", flush=True)
     
     job_service = None
     
     try:
+        print(f"🔍 [STRUCTURE GEN] Job {job_id}: Inside try block", flush=True)
         # Initialize services
         job_service = BackgroundJobService()
         generator = get_course_generator()
@@ -6762,6 +6768,20 @@ def generate_lesson_content_worker(job_id: int, course_ids: list[str]):
 # =============================================================================
 # AI GENERATION API - Course Generation & Content Assignment
 # =============================================================================
+
+# EMERGENCY DEBUG: Test if BackgroundTasks work at all
+def test_background_task(message: str):
+    """Simple test function to verify BackgroundTasks execute"""
+    import sys
+    print(f"🧪🧪🧪 [TEST BACKGROUND TASK] {message}", flush=True)
+    sys.stdout.flush()
+
+@app.get("/api/test-background")
+async def test_background(background_tasks: BackgroundTasks):
+    """Test endpoint to verify BackgroundTasks work"""
+    print("🧪 [TEST] Adding background task...", flush=True)
+    background_tasks.add_task(test_background_task, "Hello from background!")
+    return {"message": "Test task queued"}
 
 @app.post("/api/courses/generate")
 async def generate_course(request: Request, background_tasks: BackgroundTasks):
