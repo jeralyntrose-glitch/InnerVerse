@@ -845,9 +845,12 @@ async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
                 const debugInfo = `Courses length: ${courses.length}, First ID: ${courses[0]?.id || 'UNDEFINED'}`;
                 console.log('DEBUG:', debugInfo);
                 
+                // Add courseId to info text for debugging
+                const debugCompleteInfo = `${completeInfo}\n\nDEBUG: CourseId = ${courses[0]?.id || 'UNDEFINED'}`;
+                
                 setGenerationModalState(ModalPhases.COMPLETE, {
                     title: completeTitle,
-                    info: completeInfo,
+                    info: debugCompleteInfo,
                     courseId: courses[0]?.id,
                     autoClose: false // Let user manually close
                 });
