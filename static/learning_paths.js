@@ -114,9 +114,21 @@ function setGenerationModalState(phase, payload = {}) {
             
             // Setup button click handler
             const viewBtn = document.getElementById('view-generated-course-btn');
-            if (payload.courseId && viewBtn) {
-                viewBtn.onclick = () => {
-                    window.location.href = `/learning-paths/${payload.courseId}/1`;
+            if (viewBtn) {
+                // Remove old event listeners
+                const newBtn = viewBtn.cloneNode(true);
+                viewBtn.parentNode.replaceChild(newBtn, viewBtn);
+                
+                // Add new click handler
+                newBtn.onclick = () => {
+                    console.log('🔘 View Course button clicked, courseId:', payload.courseId);
+                    closeModal();
+                    
+                    if (payload.courseId) {
+                        // Navigate to first lesson
+                        console.log(`🔗 Navigating to /learning-paths/${payload.courseId}/1`);
+                        window.location.href = `/learning-paths/${payload.courseId}/1`;
+                    }
                 };
             }
             
