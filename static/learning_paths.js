@@ -846,6 +846,10 @@ async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
                 }
                 
                 // Transition to COMPLETE phase
+                console.log('🎯 Completing with courses:', courses);
+                console.log('🎯 First course:', courses[0]);
+                console.log('🎯 CourseId:', courses[0]?.id);
+                
                 setGenerationModalState(ModalPhases.COMPLETE, {
                     title: completeTitle,
                     info: completeInfo,
