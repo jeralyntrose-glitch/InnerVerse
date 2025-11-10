@@ -686,7 +686,7 @@ async function pollStructureGenerationProgress(jobId) {
                 clearInterval(pollInterval);
                 
                 // Structure generation complete!
-                const courses = data.courses || [];  // API returns 'courses', not 'courses_created'
+                const courses = data.courses_created || [];
                 const totalLessons = courses.reduce((sum, c) => sum + (c.lesson_count || 0), 0);
                 
                 console.log(`✅ Structure complete! ${courses.length} courses, ${totalLessons} lessons`);
