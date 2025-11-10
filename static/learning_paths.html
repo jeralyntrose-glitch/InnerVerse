@@ -213,7 +213,7 @@
                             <p id="complete-info">Your learning path is ready</p>
                         </div>
                     </div>
-                    <button id="view-generated-course-btn" class="btn-primary full-width" onclick="window.handleViewGeneratedCourse && window.handleViewGeneratedCourse()">
+                    <button id="view-generated-course-btn" class="btn-primary full-width" data-course-id="" onclick="window.handleViewGeneratedCourse && window.handleViewGeneratedCourse()">
                         View Course
                     </button>
                 </div>
@@ -227,8 +227,14 @@
     // EMERGENCY FIX: Global button handler added directly to HTML
     window.handleViewGeneratedCourse = function() {
         console.log('🔘 INLINE HANDLER: Button clicked!');
-        const courseId = window._generatedCourseId;
-        console.log('📍 CourseId:', courseId);
+        
+        // Try multiple sources for courseId
+        const button = document.getElementById('view-generated-course-btn');
+        const courseId = window._generatedCourseId || button?.dataset?.courseId || button?.getAttribute('data-course-id');
+        
+        console.log('📍 window._generatedCourseId:', window._generatedCourseId);
+        console.log('📍 button.dataset.courseId:', button?.dataset?.courseId);
+        console.log('📍 Final courseId:', courseId);
         
         // Close modal
         const modal = document.getElementById('generate-modal');
@@ -238,16 +244,16 @@
         }
         
         // Navigate
-        if (courseId) {
+        if (courseId && courseId !== '' && courseId !== 'undefined') {
             console.log('🔗 Navigating to:', `/learning-paths/${courseId}/1`);
             window.location.href = `/learning-paths/${courseId}/1`;
         } else {
-            alert('Error: No course ID found. CourseId=' + courseId);
+            alert('Error: No course ID found. Sources checked: window._generatedCourseId=' + window._generatedCourseId + ', data-course-id=' + button?.getAttribute('data-course-id'));
         }
     };
     console.log('✅ INLINE: handleViewGeneratedCourse defined');
     </script>
 
-    <script src="/static/learning_paths.js?v=20251110050055"></script>
+    <script src="/static/learning_paths.js?v=20251110050415"></script>
 </body>
 </html>

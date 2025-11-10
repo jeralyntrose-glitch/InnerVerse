@@ -117,9 +117,15 @@ function setGenerationModalState(phase, payload = {}) {
             if (payload.title) document.getElementById('complete-title').textContent = payload.title;
             if (payload.info) document.getElementById('complete-info').textContent = payload.info;
             
-            // Store courseId globally for the button handler
+            // Store courseId in MULTIPLE places for redundancy
             window._generatedCourseId = payload.courseId;
-            console.log('📦 Stored courseId in window:', window._generatedCourseId);
+            const viewBtn = document.getElementById('view-generated-course-btn');
+            if (viewBtn && payload.courseId) {
+                viewBtn.setAttribute('data-course-id', payload.courseId);
+            }
+            console.log('📦 Stored courseId:', payload.courseId);
+            console.log('📦 In window:', window._generatedCourseId);
+            console.log('📦 In button:', viewBtn?.getAttribute('data-course-id'));
             
             // Setup global function for button onclick
             window.handleViewGeneratedCourse = () => {
