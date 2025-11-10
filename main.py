@@ -12,7 +12,7 @@ from collections import deque
 from contextlib import asynccontextmanager
 from urllib.parse import quote
 from fastapi import FastAPI, UploadFile, File, Request, Response, Header, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from pydantic import BaseModel
@@ -5758,12 +5758,17 @@ def serve_chat_ui():
 @app.get("/learning-paths", include_in_schema=False)
 def serve_learning_paths():
     import time
-    return FileResponse(
-        "static/learning_paths.html", 
+    # Read file and add timestamp to force reload
+    with open("static/learning_paths.html", "r") as f:
+        html_content = f.read()
+    
+    return HTMLResponse(
+        content=html_content,
         headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
             "Pragma": "no-cache",
             "Expires": "0",
+            "X-Content-Type-Options": "nosniff",
             "X-Timestamp": str(int(time.time()))
         }
     )
