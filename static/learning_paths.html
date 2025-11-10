@@ -223,6 +223,31 @@
 
     <div id="toast-container" class="toast-container"></div>
 
+    <script>
+    // EMERGENCY FIX: Global button handler added directly to HTML
+    window.handleViewGeneratedCourse = function() {
+        console.log('🔘 INLINE HANDLER: Button clicked!');
+        const courseId = window._generatedCourseId;
+        console.log('📍 CourseId:', courseId);
+        
+        // Close modal
+        const modal = document.getElementById('generate-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        
+        // Navigate
+        if (courseId) {
+            console.log('🔗 Navigating to:', `/learning-paths/${courseId}/1`);
+            window.location.href = `/learning-paths/${courseId}/1`;
+        } else {
+            alert('Error: No course ID found. CourseId=' + courseId);
+        }
+    };
+    console.log('✅ INLINE: handleViewGeneratedCourse defined');
+    </script>
+
     <script src="/static/learning_paths.js?v=20251110043613"></script>
 </body>
 </html>
