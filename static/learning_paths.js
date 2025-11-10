@@ -476,11 +476,16 @@ function renderLessonsList(lessons, course) {
 }
 
 function closeModal() {
+    console.log('🚪 closeModal() called, isGeneratingContent:', state.isGeneratingContent);
+    
     // Prevent closing if content is being generated
     if (state.isGeneratingContent) {
+        console.warn('⚠️ Modal close blocked - generation in progress');
         showToast('Please Wait', 'Content generation in progress. Please wait for it to complete.', 'warning');
         return;
     }
+    
+    console.log('✅ Closing modal, activeModal:', state.activeModal);
     
     if (state.activeModal === 'lesson') {
         document.getElementById('lesson-modal').style.display = 'none';
@@ -489,6 +494,8 @@ function closeModal() {
     }
     state.activeModal = null;
     state.selectedCourse = null;
+    
+    console.log('✅ Modal closed successfully');
 }
 
 function viewLesson(courseId, lessonId) {
@@ -794,6 +801,7 @@ async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
                 
                 // Clear generation flag
                 state.isGeneratingContent = false;
+                console.log('✅ Generation complete, flag cleared. isGeneratingContent:', state.isGeneratingContent);
                 
                 // Determine completion message and transition to COMPLETE phase
                 let completeTitle, completeInfo;
@@ -1081,10 +1089,8 @@ function setupEventListeners() {
         }
     });
     
-    document.getElementById('view-generated-course-btn').addEventListener('click', () => {
-        closeModal();
-        showToast('Success', 'Course added to canvas!', 'success');
-    });
+    // NOTE: view-generated-course-btn click handler is set dynamically in setGenerationModalState()
+    // to ensure proper courseId is available. DO NOT add static listener here.
     
     document.addEventListener('keydown', (e) => {
         // Check if user is typing in an input field
