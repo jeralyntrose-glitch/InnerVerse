@@ -5757,7 +5757,16 @@ def serve_chat_ui():
 
 @app.get("/learning-paths", include_in_schema=False)
 def serve_learning_paths():
-    return FileResponse("static/learning_paths.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    import time
+    return FileResponse(
+        "static/learning_paths.html", 
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "X-Timestamp": str(int(time.time()))
+        }
+    )
 
 
 @app.get("/brain-icon-192.png", include_in_schema=False)
