@@ -127,24 +127,9 @@ function setGenerationModalState(phase, payload = {}) {
             console.log('📦 In window:', window._generatedCourseId);
             console.log('📦 In button:', viewBtn?.getAttribute('data-course-id'));
             
-            // Setup global function for button onclick
-            window.handleViewGeneratedCourse = () => {
-                alert('Button clicked! CourseId: ' + window._generatedCourseId);
-                console.log('🔘 handleViewGeneratedCourse called');
-                console.log('📍 isGeneratingContent:', state.isGeneratingContent);
-                console.log('📍 _generatedCourseId:', window._generatedCourseId);
-                
-                closeModal();
-                
-                if (window._generatedCourseId) {
-                    console.log(`🔗 Navigating to /learning-paths/${window._generatedCourseId}/1`);
-                    setTimeout(() => {
-                        window.location.href = `/learning-paths/${window._generatedCourseId}/1`;
-                    }, 100);
-                }
-            };
-            
-            console.log('✅ Button handler setup complete');
+            // NOTE: window.handleViewGeneratedCourse is defined inline in the HTML to avoid caching issues
+            // We just store the data here, the handler in HTML will read it
+            console.log('✅ CourseId stored, inline handler will use it');
             
             // Auto-close after delay if specified
             if (payload.autoClose) {
