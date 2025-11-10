@@ -542,10 +542,23 @@ function openGenerateModal() {
     document.getElementById('generation-result').style.display = 'none';
     document.getElementById('generate-form').reset();
     state.activeModal = 'generate';
+    
+    // Focus management for accessibility
+    setTimeout(() => {
+        const firstInput = document.querySelector('#generate-form input, #generate-form textarea');
+        if (firstInput) firstInput.focus();
+    }, 100);
 }
 
 async function handleGenerateSubmit(event) {
     event.preventDefault();
+    
+    // Prevent spam clicks - check if already generating
+    if (state.isGeneratingContent) {
+        console.warn('⚠️ Generation already in progress, ignoring duplicate submit');
+        showToast('Please Wait', 'Course generation is already in progress', 'warning');
+        return;
+    }
     
     const formData = new FormData(event.target);
     const data = {
@@ -1074,10 +1087,18 @@ function setupEventListeners() {
     });
     
     document.addEventListener('keydown', (e) => {
+        // Check if user is typing in an input field
+        const isEditableElement = e.target.tagName === 'INPUT' || 
+                                   e.target.tagName === 'TEXTAREA' || 
+                                   e.target.isContentEditable;
+        
+        // ESC to close modal
         if (e.key === 'Escape' && state.activeModal) {
             closeModal();
         }
-        if (e.key === ' ' && !state.activeModal) {
+        
+        // Space bar to reset view (only when NOT in modal and NOT typing)
+        if (e.key === ' ' && !state.activeModal && !isEditableElement) {
             e.preventDefault();
             resetView();
         }
