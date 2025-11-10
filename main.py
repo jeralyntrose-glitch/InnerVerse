@@ -6630,19 +6630,21 @@ def generate_course_structure_worker(job_id: int):
         
         print(f"📝 [STRUCTURE GEN] Job {job_id}: Launched content job {content_job_id}")
         
-        # Update payload with results
-        payload['courses_created'] = created_courses
-        payload['content_job_id'] = content_job_id
+        # Prepare payload updates with results
         total_cost = generation_cost + concept_cost
-        payload['total_cost'] = total_cost
-        payload['concept_cost'] = concept_cost
-        payload['concepts_assigned'] = concepts_assigned
-        payload['path_type'] = learning_path.get('path_type', 'simple')
-        payload['path_summary'] = learning_path.get('path_summary', '')
+        payload_updates = {
+            'courses_created': created_courses,
+            'content_job_id': content_job_id,
+            'total_cost': total_cost,
+            'concept_cost': concept_cost,
+            'concepts_assigned': concepts_assigned,
+            'path_type': learning_path.get('path_type', 'simple'),
+            'path_summary': learning_path.get('path_summary', '')
+        }
         
-        # Mark job as complete
+        # Mark job as complete with payload updates
         summary = f"Generated {len(created_courses)} courses with {total_lessons} lessons, {concepts_assigned} concepts. Cost: ${total_cost:.4f}"
-        job_service.complete_job(job_id, summary, error_message=None)
+        job_service.complete_job(job_id, summary, error_message=None, payload_updates=payload_updates)
         
         # Launch the content generation worker (this continues in background)
         from fastapi import BackgroundTasks
@@ -6784,7 +6786,7 @@ async def test_background(background_tasks: BackgroundTasks):
     return {"message": "Test task queued"}
 
 @app.post("/api/courses/generate")
-async def generate_course(request: Request, background_tasks: BackgroundTasks):
+async def generate_course(request: Request):
     """
     Generate a complete LEARNING PATH (1-4 courses) from user goal using AI.
     
@@ -6821,7 +6823,7 @@ async def generate_course(request: Request, background_tasks: BackgroundTasks):
         }
     """
     try:
-        print(f"🚀 [COURSE GEN] Received request - NEW ASYNC VERSION")
+        print(f"🚀 [COURSE GEN] Received request - THREADING VERSION")
         data = await request.json()
         user_goal = data.get("user_goal")
         
@@ -6838,8 +6840,10 @@ async def generate_course(request: Request, background_tasks: BackgroundTasks):
         
         job_id = job_service.create_course_structure_job(user_goal, request_data)
         
-        # Launch background worker (this will do the Claude call + course creation + content generation)
-        background_tasks.add_task(generate_course_structure_worker, job_id)
+        # Launch background worker using threading.Thread (more reliable than BackgroundTasks)
+        thread = threading.Thread(target=generate_course_structure_worker, args=(job_id,))
+        thread.daemon = True
+        thread.start()
         
         print(f"✅ [COURSE GEN] Created job {job_id}, returning immediately")
         

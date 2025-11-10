@@ -193,7 +193,8 @@ class BackgroundJobService:
         self,
         job_id: int,
         response_content: str,
-        error_message: Optional[str] = None
+        error_message: Optional[str] = None,
+        payload_updates: Optional[dict] = None
     ) -> bool:
         """
         Mark a job as completed with its response.
@@ -202,6 +203,7 @@ class BackgroundJobService:
             job_id: The job ID
             response_content: The AI response content
             error_message: Optional error message if job failed
+            payload_updates: Optional dict to merge into request_payload
         
         Returns:
             True if update succeeded, False if job not found
@@ -217,15 +219,28 @@ class BackgroundJobService:
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            cursor.execute("""
-                UPDATE background_jobs
-                SET 
-                    status = %s,
-                    response_content = %s,
-                    error_message = %s,
-                    completed_at = NOW()
-                WHERE id = %s
-            """, (status, response_content, error_message, job_id))
+            # If payload updates provided, merge them into existing payload
+            if payload_updates:
+                cursor.execute("""
+                    UPDATE background_jobs
+                    SET 
+                        status = %s,
+                        response_content = %s,
+                        error_message = %s,
+                        completed_at = NOW(),
+                        request_payload = request_payload || %s::jsonb
+                    WHERE id = %s
+                """, (status, response_content, error_message, json.dumps(payload_updates), job_id))
+            else:
+                cursor.execute("""
+                    UPDATE background_jobs
+                    SET 
+                        status = %s,
+                        response_content = %s,
+                        error_message = %s,
+                        completed_at = NOW()
+                    WHERE id = %s
+                """, (status, response_content, error_message, job_id))
             
             # Check if any rows were actually updated
             if cursor.rowcount == 0:
