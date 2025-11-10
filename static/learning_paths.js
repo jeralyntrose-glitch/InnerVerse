@@ -686,7 +686,7 @@ async function pollStructureGenerationProgress(jobId) {
                 clearInterval(pollInterval);
                 
                 // Structure generation complete!
-                const courses = data.courses_created || [];
+                const courses = data.courses || [];  // API returns 'courses', not 'courses_created'
                 const totalLessons = courses.reduce((sum, c) => sum + (c.lesson_count || 0), 0);
                 
                 console.log(`✅ Structure complete! ${courses.length} courses, ${totalLessons} lessons`);
@@ -840,6 +840,10 @@ async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
                 console.log('🎯 Completing with courses:', courses);
                 console.log('🎯 First course:', courses[0]);
                 console.log('🎯 CourseId:', courses[0]?.id);
+                
+                // DEBUG: Show what we have
+                const debugInfo = `Courses length: ${courses.length}, First ID: ${courses[0]?.id || 'UNDEFINED'}`;
+                console.log('DEBUG:', debugInfo);
                 
                 setGenerationModalState(ModalPhases.COMPLETE, {
                     title: completeTitle,
