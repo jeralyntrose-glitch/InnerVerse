@@ -108,29 +108,32 @@ function setGenerationModalState(phase, payload = {}) {
             break;
             
         case ModalPhases.COMPLETE:
+            console.log('🎉 Entering COMPLETE phase, payload:', payload);
             document.getElementById('modal-phase-complete').style.display = 'block';
             if (payload.title) document.getElementById('complete-title').textContent = payload.title;
             if (payload.info) document.getElementById('complete-info').textContent = payload.info;
             
-            // Setup button click handler
-            const viewBtn = document.getElementById('view-generated-course-btn');
-            if (viewBtn) {
-                // Remove old event listeners
-                const newBtn = viewBtn.cloneNode(true);
-                viewBtn.parentNode.replaceChild(newBtn, viewBtn);
+            // Store courseId globally for the button handler
+            window._generatedCourseId = payload.courseId;
+            console.log('📦 Stored courseId in window:', window._generatedCourseId);
+            
+            // Setup global function for button onclick
+            window.handleViewGeneratedCourse = () => {
+                console.log('🔘 handleViewGeneratedCourse called');
+                console.log('📍 isGeneratingContent:', state.isGeneratingContent);
+                console.log('📍 _generatedCourseId:', window._generatedCourseId);
                 
-                // Add new click handler
-                newBtn.onclick = () => {
-                    console.log('🔘 View Course button clicked, courseId:', payload.courseId);
-                    closeModal();
-                    
-                    if (payload.courseId) {
-                        // Navigate to first lesson
-                        console.log(`🔗 Navigating to /learning-paths/${payload.courseId}/1`);
-                        window.location.href = `/learning-paths/${payload.courseId}/1`;
-                    }
-                };
-            }
+                closeModal();
+                
+                if (window._generatedCourseId) {
+                    console.log(`🔗 Navigating to /learning-paths/${window._generatedCourseId}/1`);
+                    setTimeout(() => {
+                        window.location.href = `/learning-paths/${window._generatedCourseId}/1`;
+                    }, 100);
+                }
+            };
+            
+            console.log('✅ Button handler setup complete');
             
             // Auto-close after delay if specified
             if (payload.autoClose) {
