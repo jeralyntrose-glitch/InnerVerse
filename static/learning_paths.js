@@ -159,11 +159,17 @@ function setGenerationModalState(phase, payload = {}) {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🎨 Initializing Learning Paths...');
     
-    initializeCanvas();
-    await loadCourses();
-    setupEventListeners();
-    
-    console.log('✅ Learning Paths initialized');
+    try {
+        initializeCanvas();
+        await loadCourses();
+        setupEventListeners();
+        
+        console.log('✅ Learning Paths initialized');
+    } catch (error) {
+        console.error('❌ FATAL ERROR during initialization:', error);
+        console.error('Stack trace:', error.stack);
+        alert('Failed to load Learning Paths. Check console for details.');
+    }
 });
 
 let svg, g, zoom, simulation;
@@ -192,8 +198,16 @@ async function loadCourses() {
     showLoading(true);
     
     try {
-        const response = await fetch(CONFIG.api.courses);
+        console.log('📡 Fetching courses from API...');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        
+        const response = await fetch(CONFIG.api.courses, { signal: controller.signal });
+        clearTimeout(timeout);
+        
+        console.log('✅ API response received, parsing JSON...');
         const result = await response.json();
+        console.log('✅ JSON parsed successfully');
         
         if (!result.success) {
             throw new Error(result.error || 'Failed to load courses');
@@ -215,8 +229,9 @@ async function loadCourses() {
         }
         
     } catch (error) {
-        console.error('Error loading courses:', error);
-        showToast('Error loading courses', error.message, 'error');
+        console.error('❌ ERROR loading courses:', error);
+        console.error('Error details:', error.message, error.stack);
+        showToast('Error loading courses: ' + error.message, 'error');
     } finally {
         showLoading(false);
     }
