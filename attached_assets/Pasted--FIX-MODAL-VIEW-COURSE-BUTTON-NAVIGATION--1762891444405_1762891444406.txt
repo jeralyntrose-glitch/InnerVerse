@@ -1,0 +1,245 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX: MODAL “VIEW COURSE” BUTTON NAVIGATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROBLEM:
+When user clicks “View Course” after generation completes, they get “Error: Lesson not found”
+
+ROOT CAUSE:
+The button is trying to navigate to a lesson page, but using incorrect lesson ID or URL format.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: IDENTIFY THE BUTTON HANDLER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FIND: The “View Course” button in the generation modal
+FILE: static/learning_paths_v2.js or static/learning_paths.html
+
+SEARCH FOR:
+
+- Button with ID: “view-generated-course-btn”
+- Or button text: “View Course”
+- Or onclick handler in the modal completion section
+
+EXPECTED LOCATION: Around line 540-600 based on previous fixes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: CHECK CURRENT IMPLEMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The button likely does ONE of these:
+
+OPTION A: Navigates to first lesson directly
+window.location.href = `/learning-paths/${courseId}/1`
+
+OPTION B: Calls viewCourseById() function
+viewCourseById(courseId)
+
+OPTION C: Tries to open course details modal
+openCourseDetails(courseId)
+
+IDENTIFY WHICH ONE IT’S DOING.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: THE CORRECT IMPLEMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The button should:
+
+1. Close the generation modal
+1. Open the course details modal (NOT navigate to lesson)
+1. Show course overview with list of lessons
+1. Let user choose which lesson to view
+
+CORRECT CODE:
+
+document.getElementById(‘view-generated-course-btn’).addEventListener(‘click’, function() {
+// Get the courseId that was stored when generation completed
+const courseId = window._generatedCourseId ||
+document.getElementById(‘view-generated-course-btn’).dataset.courseId;
+
+```
+if (!courseId) {
+    console.error('No courseId available for view button');
+    alert('Error: Course ID not found. Please refresh and try again.');
+    return;
+}
+
+console.log('View Course clicked, courseId:', courseId);
+
+// Close the generation modal
+const modal = document.getElementById('generate-course-modal');
+if (modal) {
+    modal.style.display = 'none';
+}
+
+// Open course details modal (NOT navigate to lesson)
+viewCourseById(courseId);
+```
+
+});
+
+CRITICAL: The button must call viewCourseById(courseId), NOT navigate directly to a lesson URL.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: VERIFY viewCourseById() WORKS WITH UUIDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FIND: The viewCourseById() function (around line 1141 based on previous fix)
+
+VERIFY IT CONTAINS THIS FIX:
+const course = state.courses.find(c => c.id == courseId || c.id === parseInt(courseId));
+
+If it still has the old code:
+const course = state.courses.find(c => c.id === parseInt(courseId));
+
+REPLACE WITH THE FIXED VERSION ABOVE.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: ENSURE COURSEID IS STORED CORRECTLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When course generation completes, the courseId MUST be stored.
+
+FIND: The polling completion handler (where “All Content Generated!” message appears)
+
+ADD THIS CODE when generation completes:
+
+// Store courseId for the View Course button
+if (data.courses_created && data.courses_created.length > 0) {
+const firstCourse = data.courses_created[0];
+const courseId = firstCourse.id;
+
+```
+// Store in multiple places for reliability
+window._generatedCourseId = courseId;
+document.getElementById('view-generated-course-btn').dataset.courseId = courseId;
+
+console.log('Stored courseId for View Course button:', courseId);
+```
+
+}
+
+CRITICAL: This must happen BEFORE the “View Course” button is shown.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 6: ADD DEFENSIVE ERROR HANDLING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In viewCourseById(), add this at the start:
+
+function viewCourseById(courseId) {
+console.log(‘viewCourseById called with:’, courseId, typeof courseId);
+
+```
+if (!courseId) {
+    console.error('viewCourseById: No courseId provided');
+    alert('Error: Course ID is missing');
+    return;
+}
+
+// Convert to string for UUID comparison
+courseId = String(courseId);
+
+// Rest of function...
+const course = state.courses.find(c => String(c.id) === courseId || c.id === parseInt(courseId));
+
+if (!course) {
+    console.error('viewCourseById: Course not found in state.courses', {
+        searchedFor: courseId,
+        availableCourses: state.courses.map(c => ({id: c.id, title: c.title}))
+    });
+    alert('Error: Course not found. Try refreshing the page.');
+    return;
+}
+
+console.log('Found course:', course.title);
+// Continue with modal display...
+```
+
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 7: TESTING CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After making changes:
+
+1. Clear browser cache completely (hard refresh won’t work - need actual cache clear)
+1. Open browser console (F12)
+1. Generate a new course
+1. When “View Course” button appears, check console for:
+   ✅ “Stored courseId for View Course button: [UUID]”
+1. Click “View Course” button
+1. Check console for:
+   ✅ “viewCourseById called with: [UUID] string”
+   ✅ “Found course: [Course Title]”
+1. Verify course details modal opens (NOT lesson page)
+1. From modal, click on first lesson
+1. Verify lesson page loads without “Lesson not found” error
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMMON MISTAKES TO AVOID
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ DON’T navigate directly to lesson URL from “View Course” button
+✅ DO call viewCourseById() to open course details modal
+
+❌ DON’T use parseInt() on UUIDs
+✅ DO use string comparison first: String(c.id) === String(courseId)
+
+❌ DON’T assume courseId is in global scope
+✅ DO explicitly store it in window._generatedCourseId and dataset
+
+❌ DON’T forget to convert courseId to string for comparison
+✅ DO use String(courseId) for UUID matching
+
+❌ DON’T hide error messages
+✅ DO log everything to console for debugging
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPLEMENTATION ORDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Find and verify viewCourseById() has UUID fix (Step 4)
+1. Add courseId storage when generation completes (Step 5)
+1. Fix “View Course” button click handler (Step 3)
+1. Add defensive error handling to viewCourseById() (Step 6)
+1. Test with browser console open (Step 7)
+
+DO NOT skip steps. DO NOT assume anything works without verifying.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXPECTED OUTCOME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BEFORE:
+User clicks “View Course” → Gets “Lesson not found” error
+
+AFTER:
+User clicks “View Course” → Course details modal opens → Shows lesson list → User clicks lesson → Lesson page loads successfully
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILES TO MODIFY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. static/learning_paths_v2.js
+- viewCourseById() function (add UUID handling + error logging)
+- Polling completion handler (store courseId)
+- “View Course” button click handler (call viewCourseById, not navigate)
+
+TOTAL CHANGES: 3 sections in one file
+
+ESTIMATED TIME: 15 minutes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUCCESS CRITERIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ “View Course” button calls viewCourseById(), not window.location
+✅ courseId is stored in window._generatedCourseId when generation completes
+✅ viewCourseById() handles both UUID strings and integer IDs
+✅ Console logs show “Found course: [title]” when button clicked
+✅ Course details modal opens (not lesson page)
+✅ No “Lesson not found” errors
+✅ Works on both desktop and mobile
