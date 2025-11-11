@@ -1138,15 +1138,31 @@ function setupEventListeners() {
 
 // Helper to find course by ID and open modal
 function viewCourseById(courseId) {
-    // Support both integer IDs (old courses) and UUID strings (new courses)
-    const course = state.courses.find(c => c.id == courseId || c.id === parseInt(courseId));
-    if (course) {
-        openCourseModal(course);
-    } else {
-        console.error('❌ Course not found:', courseId);
-        console.error('Available courses:', state.courses.map(c => ({id: c.id, title: c.title})));
-        showToast('Error', 'Course not found', 'error');
+    console.log('viewCourseById called with:', courseId, typeof courseId);
+    
+    if (!courseId) {
+        console.error('viewCourseById: No courseId provided');
+        alert('Error: Course ID is missing');
+        return;
     }
+    
+    // Convert to string for UUID comparison
+    courseId = String(courseId);
+    
+    // Support both integer IDs (old courses) and UUID strings (new courses)
+    const course = state.courses.find(c => String(c.id) === courseId || c.id === parseInt(courseId));
+    
+    if (!course) {
+        console.error('viewCourseById: Course not found in state.courses', {
+            searchedFor: courseId,
+            availableCourses: state.courses.map(c => ({id: c.id, title: c.title}))
+        });
+        alert('Error: Course not found. Try refreshing the page.');
+        return;
+    }
+    
+    console.log('Found course:', course.title);
+    openCourseModal(course);
 }
 
 window.LearningPaths = {

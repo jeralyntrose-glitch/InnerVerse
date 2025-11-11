@@ -224,11 +224,11 @@
     <div id="toast-container" class="toast-container"></div>
 
     <script>
-    // EMERGENCY FIX: Global button handler added directly to HTML
+    // "View Course" button handler - Opens course details modal (NOT lesson page)
     window.handleViewGeneratedCourse = function() {
-        console.log('🔘 INLINE HANDLER: Button clicked!');
+        console.log('🔘 View Course clicked!');
         
-        // Try multiple sources for courseId
+        // Get courseId from multiple sources for reliability
         const button = document.getElementById('view-generated-course-btn');
         const courseId = window._generatedCourseId || button?.dataset?.courseId || button?.getAttribute('data-course-id');
         
@@ -236,19 +236,27 @@
         console.log('📍 button.dataset.courseId:', button?.dataset?.courseId);
         console.log('📍 Final courseId:', courseId);
         
-        // Close modal
+        if (!courseId || courseId === '' || courseId === 'undefined') {
+            console.error('❌ No courseId available for view button');
+            alert('Error: Course ID not found. Please refresh and try again.');
+            return;
+        }
+        
+        // Close the generation modal
         const modal = document.getElementById('generate-modal');
         if (modal) {
             modal.style.display = 'none';
             document.body.style.overflow = '';
+            console.log('✅ Generation modal closed');
         }
         
-        // Navigate
-        if (courseId && courseId !== '' && courseId !== 'undefined') {
-            console.log('🔗 Navigating to:', `/learning-paths/${courseId}/1`);
-            window.location.href = `/learning-paths/${courseId}/1`;
+        // Open course details modal (NOT navigate to lesson)
+        console.log('✅ Calling viewCourseById with:', courseId);
+        if (window.LearningPaths && window.LearningPaths.viewCourse) {
+            window.LearningPaths.viewCourse(courseId);
         } else {
-            alert('Error: No course ID found. Sources checked: window._generatedCourseId=' + window._generatedCourseId + ', data-course-id=' + button?.getAttribute('data-course-id'));
+            console.error('❌ LearningPaths.viewCourse not available');
+            alert('Error: Course viewer not loaded. Please refresh the page.');
         }
     };
     console.log('✅ INLINE: handleViewGeneratedCourse defined');
