@@ -1138,10 +1138,13 @@ function setupEventListeners() {
 
 // Helper to find course by ID and open modal
 function viewCourseById(courseId) {
-    const course = state.courses.find(c => c.id === parseInt(courseId));
+    // Support both integer IDs (old courses) and UUID strings (new courses)
+    const course = state.courses.find(c => c.id == courseId || c.id === parseInt(courseId));
     if (course) {
         openCourseModal(course);
     } else {
+        console.error('❌ Course not found:', courseId);
+        console.error('Available courses:', state.courses.map(c => ({id: c.id, title: c.title})));
         showToast('Error', 'Course not found', 'error');
     }
 }
