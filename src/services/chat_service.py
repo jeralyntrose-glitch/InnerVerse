@@ -265,6 +265,16 @@ class ChatService:
                 def format_funcs(funcs):
                     return '\n'.join([f"  • {f.get('position', 'Unknown')}: {f.get('function', 'Unknown')}" for f in funcs])
                 
+                # DEBUG LOGGING
+                print(f"🔍 DEBUG - Type requested: {type_code}")
+                print(f"🔍 DEBUG - ego_type extracted: {ego_type}")
+                print(f"🔍 DEBUG - shadow_type extracted: {shadow_type}")
+                print(f"🔍 DEBUG - subconscious_type extracted: {subconscious_type}")
+                print(f"🔍 DEBUG - superego_type extracted: {superego_type}")
+                print(f"🔍 DEBUG - shadow_funcs extracted: {shadow_funcs}")
+                print(f"🔍 DEBUG - Full sides dict keys: {sides.keys()}")
+                print(f"🔍 DEBUG - Shadow dict: {sides.get('shadow', {})}")
+                
                 return f"""**{type_code} Four Sides of the Mind:**
 
 🎭 **Ego ({ego_type}):**
