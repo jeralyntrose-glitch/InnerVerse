@@ -248,12 +248,36 @@ class ChatService:
             # Detect what specific info user wants
             if any(keyword in question_lower for keyword in ['four sides', 'sides of the mind', 'four selves', '4 sides']):
                 sides = type_data.get("four_sides", {})
+                
+                # Extract type codes from each side
+                ego_type = sides.get('ego', {}).get('type', 'Unknown')
+                shadow_type = sides.get('shadow', {}).get('type', 'Unknown')
+                subconscious_type = sides.get('subconscious', {}).get('type', 'Unknown')
+                superego_type = sides.get('superego', {}).get('type', 'Unknown')
+                
+                # Extract functions for each side
+                ego_funcs = sides.get('ego', {}).get('functions', [])
+                shadow_funcs = sides.get('shadow', {}).get('functions', [])
+                subconscious_funcs = sides.get('subconscious', {}).get('functions', [])
+                superego_funcs = sides.get('superego', {}).get('functions', [])
+                
+                # Format function lists
+                def format_funcs(funcs):
+                    return '\n'.join([f"  • {f.get('position', 'Unknown')}: {f.get('function', 'Unknown')}" for f in funcs])
+                
                 return f"""**{type_code} Four Sides of the Mind:**
 
-🎭 **Ego (Conscious):** {sides.get('ego')}
-👤 **Subconscious (Shadow):** {sides.get('subconscious')}
-😈 **Unconscious (Demon):** {sides.get('unconscious')}
-🌟 **Superego (Aspirational):** {sides.get('superego')}"""
+🎭 **Ego ({ego_type}):**
+{format_funcs(ego_funcs)}
+
+👥 **Shadow ({shadow_type}):**
+{format_funcs(shadow_funcs)}
+
+🔄 **Subconscious ({subconscious_type}):**
+{format_funcs(subconscious_funcs)}
+
+⚡ **Superego ({superego_type}):**
+{format_funcs(superego_funcs)}"""
             
             elif any(keyword in question_lower for keyword in ['function stack', 'cognitive functions', 'functions', 'stack']):
                 stack = type_data.get("function_stack", [])
