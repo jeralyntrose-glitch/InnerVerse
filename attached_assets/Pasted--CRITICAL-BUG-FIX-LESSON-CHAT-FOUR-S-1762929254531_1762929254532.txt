@@ -1,0 +1,220 @@
+═══════════════════════════════════════════════════════════════
+CRITICAL BUG FIX: LESSON CHAT FOUR SIDES FORMATTING
+═══════════════════════════════════════════════════════════════
+
+SEVERITY: High - User-facing data incorrectly displayed
+SCOPE: Lesson chat endpoint only (claude_api.py already fixed)
+FILE: src/services/chat_service.py
+METHOD: get_reference_answer()
+ISSUE: Shadow type extraction returns wrong value
+
+═══════════════════════════════════════════════════════════════
+STEP 1: VERIFY THE PROBLEM
+═══════════════════════════════════════════════════════════════
+
+Run this to confirm the JSON data is correct:
+
+python3 << 'EOF'
+import json
+with open('src/data/reference_data.json', 'r') as f:
+    data = json.load(f)
+
+enfp = next((t for t in data['types'] if t['code'] == 'ENFP'), None)
+print("ENFP Shadow in JSON:")
+print(f"  Type: {enfp['four_sides']['shadow']['type']}")
+print(f"  Functions: {[f['function'] for f in enfp['four_sides']['shadow']['functions']]}")
+EOF
+
+EXPECTED OUTPUT:
+  Type: INFJ
+  Functions: ['Ni', 'Fe', 'Ti', 'Se']
+
+IF OUTPUT IS DIFFERENT: STOP and report the discrepancy
+
+═══════════════════════════════════════════════════════════════
+STEP 2: LOCATE THE BUGGY CODE
+═══════════════════════════════════════════════════════════════
+
+File: src/services/chat_service.py
+Method: get_reference_answer()
+Approximate Location: Lines 230-290
+
+Search for the section that handles four_sides queries:
+
+grep -n "four.sides" src/services/chat_service.py
+
+You should find code around line 250-280 that looks like:
+
+    if 'four sides' in question_lower or 'four_sides' in question_lower:
+        sides = type_info.get('four_sides', {})
+        
+        # Extract type codes from each side
+        ego_type = sides.get('ego', {}).get('type', 'Unknown')
+        shadow_type = sides.get('shadow', {}).get('type', 'Unknown')
+        ...
+
+═══════════════════════════════════════════════════════════════
+STEP 3: IDENTIFY THE EXACT BUG
+═══════════════════════════════════════════════════════════════
+
+The bug is that the code creates a formatted string but somewhere in the 
+response generation, it's using the WRONG variable or pulling from the 
+WRONG source.
+
+Run this to see the EXACT current code:
+
+sed -n '230,290p' src/services/chat_service.py | grep -A 50 "four sides"
+
+Show me the OUTPUT so I can see what's actually there.
+
+DO NOT PROCEED until you show me the current code.
+
+═══════════════════════════════════════════════════════════════
+STEP 4: THE CORRECT FIX (Apply After Showing Current Code)
+═══════════════════════════════════════════════════════════════
+
+The correct implementation should be IDENTICAL to what you did in 
+claude_api.py (lines 590-630).
+
+Required components:
+
+1. Extract type codes:
+   ego_type = sides.get('ego', {}).get('type', 'Unknown')
+   shadow_type = sides.get('shadow', {}).get('type', 'Unknown')  # MUST be 'shadow'
+   subconscious_type = sides.get('subconscious', {}).get('type', 'Unknown')
+   superego_type = sides.get('superego', {}).get('type', 'Unknown')
+
+2. Extract function lists:
+   ego_funcs = sides.get('ego', {}).get('functions', [])
+   shadow_funcs = sides.get('shadow', {}).get('functions', [])  # MUST be 'shadow'
+   subconscious_funcs = sides.get('subconscious', {}).get('functions', [])
+   superego_funcs = sides.get('superego', {}).get('functions', [])
+
+3. Format functions correctly:
+   def format_funcs(funcs, include_position=True):
+       if include_position:
+           return '\n'.join([
+               f"• {f.get('position', 'Unknown')}: {f.get('function', 'Unknown')} - {', '.join(f.get('keywords', []))}"
+               for f in funcs
+           ])
+       else:
+           return '\n'.join([
+               f"• {f.get('function', 'Unknown')} - {', '.join(f.get('keywords', []))}"
+               for f in funcs
+           ])
+
+4. Build response string using the EXTRACTED variables:
+   return f"""🎭 **{type_code} Four Sides of the Mind**
+
+🎭 **Ego ({ego_type} - Conscious Mind):**
+{format_funcs(ego_funcs, include_position=True)}
+
+👥 **Shadow/Unconscious ({shadow_type}):**
+{format_funcs(shadow_funcs, include_position=True)}
+
+🔄 **Subconscious ({subconscious_type}):**
+{format_funcs(subconscious_funcs, include_position=False)}
+
+⚡ **Superego/Aspirational ({superego_type}):**
+{format_funcs(superego_funcs, include_position=False)}
+"""
+
+CRITICAL: The {shadow_type} variable MUST be from sides.get('shadow', {}).get('type')
+DO NOT use any other source. DO NOT hardcode. DO NOT assume.
+
+═══════════════════════════════════════════════════════════════
+STEP 5: ADD DEBUG LOGGING
+═══════════════════════════════════════════════════════════════
+
+BEFORE the return statement, add:
+
+print(f"🔍 [LESSON CHAT DEBUG] Type requested: {type_code}")
+print(f"🔍 [LESSON CHAT DEBUG] shadow_type extracted: {shadow_type}")
+print(f"🔍 [LESSON CHAT DEBUG] shadow_type source: {sides.get('shadow', {}).get('type')}")
+print(f"🔍 [LESSON CHAT DEBUG] Full shadow dict: {sides.get('shadow', {})}")
+
+This will help verify the fix worked.
+
+═══════════════════════════════════════════════════════════════
+STEP 6: VERIFY THE FIX (Before Restarting)
+═══════════════════════════════════════════════════════════════
+
+Check your changes:
+
+1. Confirm shadow_type uses: sides.get('shadow', {}).get('type', 'Unknown')
+2. Confirm shadow_funcs uses: sides.get('shadow', {}).get('functions', [])
+3. Confirm the return string uses {shadow_type} variable
+4. Confirm debug logging is present
+
+Run syntax check:
+python3 -m py_compile src/services/chat_service.py
+
+EXPECTED: No output (success)
+IF ERROR: Fix syntax error before proceeding
+
+═══════════════════════════════════════════════════════════════
+STEP 7: RESTART SERVER
+═══════════════════════════════════════════════════════════════
+
+After confirming all changes:
+
+pkill -f "python.*main.py"
+sleep 2
+python3 main.py &
+
+Wait for:
+✅ [CHAT SERVICE] Loaded reference data for 16 MBTI types
+✅ Server running on 0.0.0.0:5000
+
+═══════════════════════════════════════════════════════════════
+STEP 8: POST-RESTART VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+After restart, immediately check logs for debug output:
+
+tail -f /tmp/logs/Server_*.log | grep "LESSON CHAT DEBUG"
+
+Leave this running.
+
+Then tell user to:
+1. Hard refresh browser (Cmd+Shift+R)
+2. Navigate to lesson page
+3. Ask: "What are ENFP's four sides?"
+
+You should see debug output like:
+🔍 [LESSON CHAT DEBUG] Type requested: ENFP
+🔍 [LESSON CHAT DEBUG] shadow_type extracted: INFJ
+🔍 [LESSON CHAT DEBUG] shadow_type source: INFJ
+
+═══════════════════════════════════════════════════════════════
+STEP 9: SUCCESS CRITERIA
+═══════════════════════════════════════════════════════════════
+
+The fix is ONLY successful if ALL conditions are met:
+
+✅ Debug logs show: shadow_type extracted: INFJ
+✅ User sees in lesson chat: Shadow/Unconscious (INFJ)
+✅ Shadow functions shown: Ni, Fe, Ti, Se (NOT Ni, Te, Fi, Se)
+✅ No server errors or crashes
+✅ Response time under 20 seconds
+
+If ANY criterion fails, the fix is NOT complete.
+
+═══════════════════════════════════════════════════════════════
+EXECUTION CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+[ ] Step 1: Verify JSON is correct (shadow = INFJ)
+[ ] Step 2: Show me current buggy code
+[ ] Step 3: Wait for my confirmation
+[ ] Step 4: Apply fix exactly as specified
+[ ] Step 5: Add debug logging
+[ ] Step 6: Verify changes before restart
+[ ] Step 7: Restart server
+[ ] Step 8: Monitor debug logs
+[ ] Step 9: Verify success criteria met
+
+DO NOT skip steps. DO NOT assume. SHOW YOUR WORK.
+
+Report back after EACH step with the output.
+═══════════════════════════════════════════════════════════════
