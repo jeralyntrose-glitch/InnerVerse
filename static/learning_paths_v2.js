@@ -118,18 +118,24 @@ function setGenerationModalState(phase, payload = {}) {
             if (payload.info) document.getElementById('complete-info').textContent = payload.info;
             
             // Store courseId in MULTIPLE places for redundancy
-            window._generatedCourseId = payload.courseId;
+            const courseIdStr = String(payload.courseId || '');
+            window._generatedCourseId = courseIdStr;
+            window._lastGeneratedCourseId = courseIdStr; // Additional backup
+            
             const viewBtn = document.getElementById('view-generated-course-btn');
             if (viewBtn && payload.courseId) {
-                viewBtn.setAttribute('data-course-id', payload.courseId);
+                viewBtn.setAttribute('data-course-id', courseIdStr);
+                viewBtn.dataset.courseId = courseIdStr; // Also set dataset property
+                console.log('📦 Stored courseId in button:');
+                console.log('   - dataset.courseId:', viewBtn.dataset.courseId);
+                console.log('   - getAttribute:', viewBtn.getAttribute('data-course-id'));
             }
-            console.log('📦 Stored courseId:', payload.courseId);
-            console.log('📦 In window:', window._generatedCourseId);
-            console.log('📦 In button:', viewBtn?.getAttribute('data-course-id'));
             
-            // NOTE: window.handleViewGeneratedCourse is defined inline in the HTML to avoid caching issues
-            // We just store the data here, the handler in HTML will read it
-            console.log('✅ CourseId stored, inline handler will use it');
+            console.log('📦 Final courseId storage:');
+            console.log('   - window._generatedCourseId:', window._generatedCourseId);
+            console.log('   - window._lastGeneratedCourseId:', window._lastGeneratedCourseId);
+            console.log('   - LearningPaths available:', !!window.LearningPaths);
+            console.log('   - viewCourse available:', !!window.LearningPaths?.viewCourse);
             
             // Auto-close after delay if specified
             if (payload.autoClose) {
@@ -836,22 +842,24 @@ async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
                     return;
                 }
                 
-                // Transition to COMPLETE phase
-                console.log('🎯 Completing with courses:', courses);
-                console.log('🎯 First course:', courses[0]);
-                console.log('🎯 CourseId:', courses[0]?.id);
+                // Transition to COMPLETE phase with proper courseId storage
+                const firstCourseId = courses[0]?.id;
+                console.log('✅ [GENERATION] Course created with ID:', firstCourseId, typeof firstCourseId);
+                console.log('✅ [GENERATION] Course title:', courses[0]?.title);
+                console.log('✅ [GENERATION] Courses array:', courses);
                 
-                // DEBUG: Show what we have
-                const debugInfo = `Courses length: ${courses.length}, First ID: ${courses[0]?.id || 'UNDEFINED'}`;
-                console.log('DEBUG:', debugInfo);
-                
-                // Add courseId to info text for debugging
-                const debugCompleteInfo = `${completeInfo}\n\nDEBUG: CourseId = ${courses[0]?.id || 'UNDEFINED'}`;
+                // Store globally BEFORE modal state change for immediate access
+                if (firstCourseId) {
+                    window._lastGeneratedCourseId = String(firstCourseId);
+                    console.log('✅ [GENERATION] Stored in window._lastGeneratedCourseId:', window._lastGeneratedCourseId);
+                } else {
+                    console.error('❌ [GENERATION] No courseId found in response!');
+                }
                 
                 setGenerationModalState(ModalPhases.COMPLETE, {
                     title: completeTitle,
-                    info: debugCompleteInfo,
-                    courseId: courses[0]?.id,
+                    info: completeInfo,
+                    courseId: firstCourseId,
                     autoClose: false // Let user manually close
                 });
             }
@@ -1138,30 +1146,54 @@ function setupEventListeners() {
 
 // Helper to find course by ID and open modal
 function viewCourseById(courseId) {
-    console.log('viewCourseById called with:', courseId, typeof courseId);
+    console.log('👁️ [VIEW COURSE] Function called with:', courseId, typeof courseId);
     
-    if (!courseId) {
-        console.error('viewCourseById: No courseId provided');
-        alert('Error: Course ID is missing');
+    if (!courseId || courseId === '' || courseId === 'undefined') {
+        console.error('❌ [VIEW COURSE] No valid courseId provided');
+        console.error('   Received:', courseId);
+        alert('Error: Course ID is missing. Please refresh the page.');
         return;
     }
     
     // Convert to string for UUID comparison
-    courseId = String(courseId);
+    const courseIdStr = String(courseId);
+    console.log('👁️ [VIEW COURSE] Searching for courseId:', courseIdStr);
+    console.log('👁️ [VIEW COURSE] Available courses:', state.courses.length);
+    console.log('👁️ [VIEW COURSE] Course IDs in state:', state.courses.map(c => c.id));
     
-    // Support both integer IDs (old courses) and UUID strings (new courses)
-    const course = state.courses.find(c => String(c.id) === courseId || c.id === parseInt(courseId));
+    // Find course - handle both UUID strings and integer IDs
+    const course = state.courses.find(c => {
+        const cIdStr = String(c.id);
+        
+        // Try string comparison first (for UUIDs)
+        if (cIdStr === courseIdStr) {
+            console.log('✅ [VIEW COURSE] Found course by string match:', c.title);
+            return true;
+        }
+        
+        // Try integer comparison (for old integer ID courses)
+        const courseIdInt = parseInt(courseId);
+        if (!isNaN(courseIdInt) && c.id === courseIdInt) {
+            console.log('✅ [VIEW COURSE] Found course by integer match:', c.title);
+            return true;
+        }
+        
+        return false;
+    });
     
     if (!course) {
-        console.error('viewCourseById: Course not found in state.courses', {
-            searchedFor: courseId,
-            availableCourses: state.courses.map(c => ({id: c.id, title: c.title}))
-        });
-        alert('Error: Course not found. Try refreshing the page.');
+        console.error('❌ [VIEW COURSE] Course not found!');
+        console.error('   Searched for:', courseIdStr);
+        console.error('   Available courses:', state.courses.map(c => ({
+            id: c.id,
+            title: c.title,
+            idType: typeof c.id
+        })));
+        alert('Error: Course not found. The course list may need to refresh. Please try again.');
         return;
     }
     
-    console.log('Found course:', course.title);
+    console.log('✅ [VIEW COURSE] Successfully found course:', course.title);
     openCourseModal(course);
 }
 

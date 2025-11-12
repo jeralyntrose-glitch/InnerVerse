@@ -226,38 +226,58 @@
     <script>
     // "View Course" button handler - Opens course details modal (NOT lesson page)
     window.handleViewGeneratedCourse = function() {
-        console.log('🔘 View Course clicked!');
+        console.log('🔘 [VIEW COURSE BTN] Button clicked');
         
-        // Get courseId from multiple sources for reliability
+        // Get courseId from multiple sources with fallback chain
         const button = document.getElementById('view-generated-course-btn');
-        const courseId = window._generatedCourseId || button?.dataset?.courseId || button?.getAttribute('data-course-id');
+        const courseId = button?.dataset?.courseId || 
+                        button?.getAttribute('data-course-id') || 
+                        window._generatedCourseId || 
+                        window._lastGeneratedCourseId;
         
-        console.log('📍 window._generatedCourseId:', window._generatedCourseId);
-        console.log('📍 button.dataset.courseId:', button?.dataset?.courseId);
-        console.log('📍 Final courseId:', courseId);
+        console.log('🔘 [VIEW COURSE BTN] CourseId retrieval:');
+        console.log('   - button.dataset.courseId:', button?.dataset?.courseId);
+        console.log('   - button.getAttribute:', button?.getAttribute('data-course-id'));
+        console.log('   - window._generatedCourseId:', window._generatedCourseId);
+        console.log('   - window._lastGeneratedCourseId:', window._lastGeneratedCourseId);
+        console.log('   - Final courseId:', courseId);
         
+        // Validate courseId
         if (!courseId || courseId === '' || courseId === 'undefined') {
-            console.error('❌ No courseId available for view button');
-            alert('Error: Course ID not found. Please refresh and try again.');
+            console.error('❌ [VIEW COURSE BTN] No courseId found!');
+            console.error('   All sources checked returned empty or invalid');
+            alert('Error: Course ID not found. Please refresh the page and try again.');
             return;
         }
+        
+        console.log('✅ [VIEW COURSE BTN] Using courseId:', courseId);
         
         // Close the generation modal
         const modal = document.getElementById('generate-modal');
         if (modal) {
             modal.style.display = 'none';
             document.body.style.overflow = '';
-            console.log('✅ Generation modal closed');
+            console.log('✅ [VIEW COURSE BTN] Generation modal closed');
+        }
+        
+        // Verify LearningPaths is available
+        if (!window.LearningPaths) {
+            console.error('❌ [VIEW COURSE BTN] window.LearningPaths is not defined!');
+            console.error('   The learning_paths_v2.js may not have loaded correctly');
+            alert('Error: Course viewer not loaded. Please refresh the page.');
+            return;
+        }
+        
+        if (!window.LearningPaths.viewCourse) {
+            console.error('❌ [VIEW COURSE BTN] window.LearningPaths.viewCourse is not defined!');
+            console.error('   Available methods:', Object.keys(window.LearningPaths));
+            alert('Error: Course viewer not loaded. Please refresh the page.');
+            return;
         }
         
         // Open course details modal (NOT navigate to lesson)
-        console.log('✅ Calling viewCourseById with:', courseId);
-        if (window.LearningPaths && window.LearningPaths.viewCourse) {
-            window.LearningPaths.viewCourse(courseId);
-        } else {
-            console.error('❌ LearningPaths.viewCourse not available');
-            alert('Error: Course viewer not loaded. Please refresh the page.');
-        }
+        console.log('✅ [VIEW COURSE BTN] Calling LearningPaths.viewCourse with:', courseId);
+        window.LearningPaths.viewCourse(courseId);
     };
     console.log('✅ INLINE: handleViewGeneratedCourse defined');
     </script>
