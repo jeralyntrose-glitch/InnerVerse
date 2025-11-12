@@ -1,0 +1,81 @@
+TWO CORE FEATURES BROKEN - NEED FIXING BEFORE YOUTUBE INTEGRATION
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE 1: CONCEPT CARDS MISSING FROM LESSON PAGES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT'S BROKEN:
+Lesson pages show "No concepts assigned yet" even though concepts exist in the database.
+
+WHAT SHOULD HAPPEN:
+Concept cards should display on the left side of lesson pages (the section currently shows empty).
+
+DEBUG STEPS:
+1. Check the API endpoint that fetches concepts for a lesson
+2. Verify it's returning concept data (test with curl or browser)
+3. Check the frontend JavaScript - is it calling the API?
+4. Check browser console for errors when lesson page loads
+5. Verify concept rendering code exists and works
+
+EXPECTED OUTCOME:
+Open any lesson → Concept cards appear on left side → Show concept names, confidence levels, and descriptions
+
+DO NOT:
+- Change the lesson content display
+- Modify the AI chat
+- Touch the course generation code
+- Redesign the layout
+
+PROOF REQUIRED:
+Screenshot of lesson page showing concept cards displayed correctly.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE 2: "VIEW COURSE" BUTTON ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT'S BROKEN:
+After course generation completes, clicking "View Course" shows error: "Course viewer not loaded"
+
+I ALREADY SENT DETAILED FIX INSTRUCTIONS:
+Check the file I sent earlier: "fix_modal_view_course_button.txt"
+
+FOLLOW THOSE INSTRUCTIONS EXACTLY:
+- Store courseId in window._generatedCourseId
+- Update button handler to call viewCourseById()
+- Add defensive error handling
+- Add console logging
+
+DO THIS FIRST:
+Show me the current code for:
+1. The "View Course" button click handler
+2. The viewCourseById() function
+3. Where courseId gets stored when generation completes
+
+Then implement the fix from my instructions.
+
+PROOF REQUIRED:
+1. Console logs showing: "viewCourseById called with: [UUID] string"
+2. Console logs showing: "Found course: [Course Title]"
+3. Screenshot of course details modal opening (NOT error message)
+4. Screenshot of successfully navigating to a lesson from that modal
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPLEMENTATION ORDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. FIX CONCEPT CARDS FIRST (simpler, different part of code)
+2. THEN FIX VIEW COURSE BUTTON (already have instructions)
+3. TEST BOTH (provide proof screenshots)
+4. ONLY THEN we move to YouTube Integration
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DO NOT say "it should work" without testing
+DO NOT say "try refreshing" without showing code changes
+DO NOT modify unrelated code
+DO TEST each fix on the live site
+DO SHOW screenshots proving it works
+
+These are core features, not polish. They must work correctly.
