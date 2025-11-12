@@ -1,0 +1,58 @@
+STOP IMMEDIATELY. DO NOT REGENERATE ANYTHING.
+
+I am uploading the COMPLETE, CORRECT reference_data.json file right now.
+
+Your job is simple:
+
+1. REPLACE src/data/reference_data.json with the file I'm uploading
+   - Do NOT modify it
+   - Do NOT try to "fix" it
+   - Do NOT try to regenerate from scripts
+   - Just use my file EXACTLY as-is
+
+2. VERIFY the file structure by running this:
+
+python3 << 'EOF'
+import json
+with open('src/data/reference_data.json', 'r') as f:
+    data = json.load(f)
+
+# Verify structure
+assert 'types' in data, "Missing 'types' key!"
+assert len(data['types']) == 16, f"Expected 16 types, got {len(data['types'])}"
+
+# Check one type has complete structure
+estp = next((t for t in data['types'] if t['code'] == 'ESTP'), None)
+assert estp is not None, "ESTP not found!"
+
+required_keys = ['code', 'descriptors', 'categories', 'expression', 'worldview', 'four_sides']
+for key in required_keys:
+    assert key in estp, f"ESTP missing key: {key}"
+
+# Verify four_sides structure
+assert 'ego' in estp['four_sides'], "Missing ego"
+assert 'shadow' in estp['four_sides'], "Missing shadow"
+assert 'subconscious' in estp['four_sides'], "Missing subconscious"
+assert 'superego' in estp['four_sides'], "Missing superego"
+
+# Verify ego has complete functions with keywords
+assert 'functions' in estp['four_sides']['ego'], "Missing ego functions"
+assert len(estp['four_sides']['ego']['functions']) == 4, "Ego should have 4 functions"
+
+first_func = estp['four_sides']['ego']['functions'][0]
+assert 'position' in first_func, "Missing function position"
+assert 'function' in first_func, "Missing function code"
+assert 'keywords' in first_func, "Missing function keywords"
+
+print("✅ ALL CHECKS PASSED!")
+print(f"✅ File has {len(data['types'])} types")
+print(f"✅ ESTP has all required fields")
+print(f"✅ Four sides structure is complete")
+print(f"✅ Functions have positions and keywords")
+EOF
+
+3. Restart the server to load the new data
+
+4. Report back with the verification output
+
+THIS IS NON-NEGOTIABLE. Use my file. Verify it. Done.

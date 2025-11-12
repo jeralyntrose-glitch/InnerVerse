@@ -25,7 +25,12 @@ class ReferenceValidator:
         """
         try:
             with open(reference_data_path, 'r') as f:
-                self.reference_data = json.load(f)
+                raw_data = json.load(f)
+                # Convert new structure (types array) to old structure (mbti_types dict) for backward compatibility
+                if 'types' in raw_data and isinstance(raw_data['types'], list):
+                    self.reference_data = {'mbti_types': {t['code']: t for t in raw_data['types']}}
+                else:
+                    self.reference_data = raw_data
             
             self._extract_valid_values()
             print(f"✅ [VALIDATOR] Loaded reference data: {len(self.valid_types)} types, "
@@ -54,28 +59,40 @@ class ReferenceValidator:
         self.valid_function_codes: Set[str] = set()
         
         for type_data in mbti_types.values():
-            for func in type_data.get('function_stack', []):
-                self.valid_functions.add(func)
-                code = func.split(' - ')[0] if ' - ' in func else func
-                self.valid_function_codes.add(code)
+            # Handle both old format (function_stack) and new format (four_sides.ego.functions)
+            functions = type_data.get('function_stack', [])
+            if not functions and 'four_sides' in type_data:
+                ego_functions = type_data.get('four_sides', {}).get('ego', {}).get('functions', [])
+                for func_obj in ego_functions:
+                    if isinstance(func_obj, dict):
+                        func_code = func_obj.get('function', '')
+                        self.valid_function_codes.add(func_code)
+            else:
+                for func in functions:
+                    self.valid_functions.add(func)
+                    code = func.split(' - ')[0] if ' - ' in func else func
+                    self.valid_function_codes.add(code)
         
-        # Valid temperaments
-        self.valid_temperaments: Set[str] = set(
-            type_data.get('temperament') 
-            for type_data in mbti_types.values()
-        )
+        # Valid temperaments - handle both old and new format
+        self.valid_temperaments: Set[str] = set()
+        for type_data in mbti_types.values():
+            temp = type_data.get('temperament') or type_data.get('categories', {}).get('temperament')
+            if temp:
+                self.valid_temperaments.add(temp)
         
-        # Valid quadras
-        self.valid_quadras: Set[str] = set(
-            type_data.get('quadra') 
-            for type_data in mbti_types.values()
-        )
+        # Valid quadras - handle both old and new format
+        self.valid_quadras: Set[str] = set()
+        for type_data in mbti_types.values():
+            quadra = type_data.get('quadra') or type_data.get('categories', {}).get('quadra')
+            if quadra:
+                self.valid_quadras.add(quadra)
         
-        # Valid interaction styles
-        self.valid_interaction_styles: Set[str] = set(
-            type_data.get('interaction_style') 
-            for type_data in mbti_types.values()
-        )
+        # Valid interaction styles - handle both old and new format
+        self.valid_interaction_styles: Set[str] = set()
+        for type_data in mbti_types.values():
+            style = type_data.get('interaction_style') or type_data.get('categories', {}).get('interaction_style')
+            if style:
+                self.valid_interaction_styles.add(style)
     
     def validate_mbti_type(self, type_code: str) -> Tuple[Optional[str], str]:
         """

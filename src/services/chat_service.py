@@ -18,7 +18,12 @@ REFERENCE_DATA = {}
 reference_path = os.path.join(os.path.dirname(__file__), '../data/reference_data.json')
 try:
     with open(reference_path, 'r') as f:
-        REFERENCE_DATA = json.load(f)
+        raw_data = json.load(f)
+        # Convert new structure (types array) to old structure (mbti_types dict) for backward compatibility
+        if 'types' in raw_data and isinstance(raw_data['types'], list):
+            REFERENCE_DATA['mbti_types'] = {t['code']: t for t in raw_data['types']}
+        else:
+            REFERENCE_DATA = raw_data
     print(f"✅ [CHAT SERVICE] Loaded reference data for {len(REFERENCE_DATA.get('mbti_types', {}))} MBTI types")
 except Exception as e:
     print(f"⚠️ [CHAT SERVICE] Failed to load reference data: {e}")
