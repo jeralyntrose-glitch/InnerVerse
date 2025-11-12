@@ -265,12 +265,6 @@ class ChatService:
                 def format_funcs(funcs):
                     return '\n'.join([f"  • {f.get('position', 'Unknown')}: {f.get('function', 'Unknown')}" for f in funcs])
                 
-                # DEBUG LOGGING
-                print(f"🔍 [LESSON CHAT DEBUG] Type requested: {type_code}")
-                print(f"🔍 [LESSON CHAT DEBUG] shadow_type extracted: {shadow_type}")
-                print(f"🔍 [LESSON CHAT DEBUG] shadow_type source: {sides.get('shadow', {}).get('type')}")
-                print(f"🔍 [LESSON CHAT DEBUG] Full shadow dict: {sides.get('shadow', {})}")
-                
                 return f"""**{type_code} Four Sides of the Mind:**
 
 🎭 **Ego ({ego_type}):**

@@ -594,13 +594,6 @@ Examples:
                             subconscious_type = four_sides.get('subconscious', {}).get('type', 'Unknown')
                             superego_type = four_sides.get('superego', {}).get('type', 'Unknown')
                             
-                            # DEBUG LOGGING
-                            print(f"🔍 DEBUG - Type requested: {type_code}")
-                            print(f"🔍 DEBUG - ego_type: {ego_type}")
-                            print(f"🔍 DEBUG - shadow_type: {shadow_type}")
-                            print(f"🔍 DEBUG - subconscious_type: {subconscious_type}")
-                            print(f"🔍 DEBUG - superego_type: {superego_type}")
-                            
                             # Format functions for each side
                             def format_functions(funcs):
                                 return '\n'.join([f"  • {f.get('position', 'Unknown')}: {f.get('function', 'Unknown')}" for f in funcs])
