@@ -585,8 +585,48 @@ Examples:
                         type_data = REFERENCE_DATA.get("mbti_types", {}).get(type_code)
                         
                         if type_data:
-                            result_text = json.dumps(type_data, indent=2)
-                            print(f"✅ [REFERENCE DATA] Found data for {type_code}")
+                            # Extract four sides data properly
+                            four_sides = type_data.get("four_sides", {})
+                            
+                            # Extract type codes from each side
+                            ego_type = four_sides.get('ego', {}).get('type', 'Unknown')
+                            shadow_type = four_sides.get('shadow', {}).get('type', 'Unknown')
+                            subconscious_type = four_sides.get('subconscious', {}).get('type', 'Unknown')
+                            superego_type = four_sides.get('superego', {}).get('type', 'Unknown')
+                            
+                            # DEBUG LOGGING
+                            print(f"🔍 DEBUG - Type requested: {type_code}")
+                            print(f"🔍 DEBUG - ego_type: {ego_type}")
+                            print(f"🔍 DEBUG - shadow_type: {shadow_type}")
+                            print(f"🔍 DEBUG - subconscious_type: {subconscious_type}")
+                            print(f"🔍 DEBUG - superego_type: {superego_type}")
+                            
+                            # Format functions for each side
+                            def format_functions(funcs):
+                                return '\n'.join([f"  • {f.get('position', 'Unknown')}: {f.get('function', 'Unknown')}" for f in funcs])
+                            
+                            # Build formatted response
+                            result_text = f"""**{type_code} Complete Type Information:**
+
+🎭 **Ego ({ego_type}):**
+{format_functions(four_sides.get('ego', {}).get('functions', []))}
+
+👥 **Shadow ({shadow_type}):**
+{format_functions(four_sides.get('shadow', {}).get('functions', []))}
+
+🔄 **Subconscious ({subconscious_type}):**
+{format_functions(four_sides.get('subconscious', {}).get('functions', []))}
+
+⚡ **Superego ({superego_type}):**
+{format_functions(four_sides.get('superego', {}).get('functions', []))}
+
+**Categories:**
+• Temperament: {type_data.get('categories', {}).get('temperament', 'Unknown')}
+• Quadra: {type_data.get('categories', {}).get('quadra', 'Unknown')}
+• Interaction Style: {type_data.get('categories', {}).get('interaction_style', 'Unknown')}
+• Temple: {type_data.get('categories', {}).get('temple', 'Unknown')}"""
+                            
+                            print(f"✅ [REFERENCE DATA] Found and formatted data for {type_code}")
                         else:
                             result_text = f"No reference data found for type: {type_code}"
                             print(f"❌ [REFERENCE DATA] No data for {type_code}")
