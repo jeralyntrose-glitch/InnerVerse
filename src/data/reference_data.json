@@ -15,7 +15,7 @@
       ],
       "temperament": "Idealist (NF)",
       "quadra": "Gamma",
-      "interaction_style": "Involve"
+      "interaction_style": "Starter"
     },
     "INFJ": {
       "four_sides": {
@@ -32,7 +32,7 @@
       ],
       "temperament": "Idealist (NF)",
       "quadra": "Beta",
-      "interaction_style": "Direct"
+      "interaction_style": "Finisher"
     },
     "ISTJ": {
       "four_sides": {
@@ -49,7 +49,7 @@
       ],
       "temperament": "Guardian (SJ)",
       "quadra": "Gamma",
-      "interaction_style": "Direct"
+      "interaction_style": "Finisher"
     },
     "ESTP": {
       "four_sides": {
@@ -83,7 +83,7 @@
       ],
       "temperament": "Rational (NT)",
       "quadra": "Gamma",
-      "interaction_style": "Direct"
+      "interaction_style": "Finisher"
     },
     "ESFP": {
       "four_sides": {
@@ -100,7 +100,7 @@
       ],
       "temperament": "Artisan (SP)",
       "quadra": "Gamma",
-      "interaction_style": "Involve"
+      "interaction_style": "Starter"
     },
     "ISTP": {
       "four_sides": {
@@ -117,7 +117,7 @@
       ],
       "temperament": "Artisan (SP)",
       "quadra": "Delta",
-      "interaction_style": "Direct"
+      "interaction_style": "Finisher"
     },
     "ENFJ": {
       "four_sides": {
@@ -151,7 +151,7 @@
       ],
       "temperament": "Rational (NT)",
       "quadra": "Alpha",
-      "interaction_style": "Involve"
+      "interaction_style": "Starter"
     },
     "ISFJ": {
       "four_sides": {
@@ -168,7 +168,7 @@
       ],
       "temperament": "Guardian (SJ)",
       "quadra": "Alpha",
-      "interaction_style": "Direct"
+      "interaction_style": "Background"
     },
     "INTP": {
       "four_sides": {
@@ -185,7 +185,7 @@
       ],
       "temperament": "Rational (NT)",
       "quadra": "Alpha",
-      "interaction_style": "Direct"
+      "interaction_style": "Background"
     },
     "ESFJ": {
       "four_sides": {
@@ -202,7 +202,7 @@
       ],
       "temperament": "Guardian (SJ)",
       "quadra": "Alpha",
-      "interaction_style": "Involve"
+      "interaction_style": "Starter"
     },
     "ENTJ": {
       "four_sides": {
@@ -236,7 +236,7 @@
       ],
       "temperament": "Artisan (SP)",
       "quadra": "Beta",
-      "interaction_style": "Direct"
+      "interaction_style": "Background"
     },
     "ESTJ": {
       "four_sides": {
@@ -270,7 +270,7 @@
       ],
       "temperament": "Idealist (NF)",
       "quadra": "Delta",
-      "interaction_style": "Direct"
+      "interaction_style": "Background"
     }
   }
 }

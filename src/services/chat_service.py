@@ -184,9 +184,40 @@ class ChatService:
         finally:
             conn.close()
     
+    @staticmethod
+    def _lookup_type_info(type_code: str) -> Optional[Dict]:
+        """Get complete info for a type from reference data"""
+        return REFERENCE_DATA.get("mbti_types", {}).get(type_code.upper())
+    
+    @staticmethod
+    def _lookup_interaction_style(type_code: str) -> Optional[str]:
+        """Get interaction style for a type"""
+        type_info = ChatService._lookup_type_info(type_code)
+        return type_info.get('interaction_style') if type_info else None
+    
+    @staticmethod
+    def _lookup_four_sides(type_code: str) -> Optional[Dict]:
+        """Get four sides for a type"""
+        type_info = ChatService._lookup_type_info(type_code)
+        return type_info.get('four_sides') if type_info else None
+    
+    @staticmethod
+    def _lookup_by_category(category_name: str, category_value: str) -> List[str]:
+        """
+        Find all types matching a category
+        Example: _lookup_by_category('interaction_style', 'Structure')
+        Returns: ['ESTP', 'ESTJ', 'ENTJ', 'ENFJ']
+        """
+        matching_types = []
+        for type_code, type_info in REFERENCE_DATA.get("mbti_types", {}).items():
+            if type_info.get(category_name) == category_value:
+                matching_types.append(type_code)
+        return sorted(matching_types)
+    
     def get_reference_answer(self, user_question: str) -> Optional[str]:
         """
         Check if user is asking about type structure facts (four sides, function stack, etc.)
+        OR category queries (e.g., "what types are Structure?")
         Returns formatted reference answer if found, None otherwise
         
         Args:
@@ -201,44 +232,81 @@ class ChatService:
         import re
         type_match = re.search(r'\b([ieIE][nsNS][ftFT][jpJP])\b', user_question)
         
-        if not type_match:
-            return None
-        
-        type_code = type_match.group(1).upper()
-        type_data = REFERENCE_DATA.get("mbti_types", {}).get(type_code)
-        
-        if not type_data:
-            return None
-        
-        # Detect what specific info user wants
-        if any(keyword in question_lower for keyword in ['four sides', 'sides of the mind', 'four selves', '4 sides']):
-            # Return four sides info
-            sides = type_data.get("four_sides", {})
-            return f"""**{type_code} Four Sides of the Mind:**
+        # CASE 1: Type-specific questions (e.g., "What are INFJ's four sides?")
+        if type_match:
+            type_code = type_match.group(1).upper()
+            type_data = self._lookup_type_info(type_code)
+            
+            if not type_data:
+                return None
+            
+            # Detect what specific info user wants
+            if any(keyword in question_lower for keyword in ['four sides', 'sides of the mind', 'four selves', '4 sides']):
+                sides = type_data.get("four_sides", {})
+                return f"""**{type_code} Four Sides of the Mind:**
 
 🎭 **Ego (Conscious):** {sides.get('ego')}
 👤 **Subconscious (Shadow):** {sides.get('subconscious')}
 😈 **Unconscious (Demon):** {sides.get('unconscious')}
 🌟 **Superego (Aspirational):** {sides.get('superego')}"""
-        
-        elif any(keyword in question_lower for keyword in ['function stack', 'cognitive functions', 'functions', 'stack']):
-            # Return function stack
-            stack = type_data.get("function_stack", [])
-            stack_text = "\n".join([f"{i+1}. {func}" for i, func in enumerate(stack)])
-            return f"""**{type_code} Cognitive Function Stack:**
+            
+            elif any(keyword in question_lower for keyword in ['function stack', 'cognitive functions', 'functions', 'stack']):
+                stack = type_data.get("function_stack", [])
+                stack_text = "\n".join([f"{i+1}. {func}" for i, func in enumerate(stack)])
+                return f"""**{type_code} Cognitive Function Stack:**
 
 {stack_text}"""
+            
+            elif any(keyword in question_lower for keyword in ['temperament', 'keirsey']):
+                return f"**{type_code} Temperament:** {type_data.get('temperament')}"
+            
+            elif any(keyword in question_lower for keyword in ['quadra', 'socionics']):
+                return f"**{type_code} Quadra:** {type_data.get('quadra')}"
+            
+            elif any(keyword in question_lower for keyword in ['interaction style', 'interaction', 'communication style']):
+                return f"**{type_code} Interaction Style:** {type_data.get('interaction_style')}"
         
-        elif any(keyword in question_lower for keyword in ['temperament', 'keirsey']):
-            return f"**{type_code} Temperament:** {type_data.get('temperament')}"
+        # CASE 2: Category queries (e.g., "What types are Structure?", "Which types are Direct?")
+        elif any(keyword in question_lower for keyword in ['what types', 'which types', 'who are', 'list types']):
+            # Check for interaction style categories
+            for style in ['Structure', 'Direct', 'Involve', 'Starter', 'Finisher', 'Background']:
+                if style.lower() in question_lower:
+                    matching_types = self._lookup_by_category('interaction_style', style)
+                    if matching_types:
+                        types_list = ', '.join(matching_types)
+                        return f"""**{style} Interaction Style Types:**
+
+{types_list}
+
+These types share the **{style}** interaction style in CS Joseph's system."""
+            
+            # Check for temperament categories
+            for temp in ['Idealist', 'Rational', 'Guardian', 'Artisan', 'NF', 'NT', 'SJ', 'SP']:
+                if temp.lower() in question_lower:
+                    # Match both full name and abbreviation
+                    matching_types = []
+                    for type_code, type_info in REFERENCE_DATA.get("mbti_types", {}).items():
+                        temperament = type_info.get('temperament', '')
+                        if temp.lower() in temperament.lower():
+                            matching_types.append(type_code)
+                    
+                    if matching_types:
+                        types_list = ', '.join(sorted(matching_types))
+                        return f"""**{temp} Temperament Types:**
+
+{types_list}"""
+            
+            # Check for quadra categories
+            for quadra in ['Alpha', 'Beta', 'Gamma', 'Delta']:
+                if quadra.lower() in question_lower:
+                    matching_types = self._lookup_by_category('quadra', quadra)
+                    if matching_types:
+                        types_list = ', '.join(matching_types)
+                        return f"""**{quadra} Quadra Types:**
+
+{types_list}"""
         
-        elif any(keyword in question_lower for keyword in ['quadra', 'socionics']):
-            return f"**{type_code} Quadra:** {type_data.get('quadra')}"
-        
-        elif any(keyword in question_lower for keyword in ['interaction style', 'interaction', 'communication style']):
-            return f"**{type_code} Interaction Style:** {type_data.get('interaction_style')}"
-        
-        # If type found but no specific question matched, return nothing (let Claude handle)
+        # If no match found, return None (let Claude handle)
         return None
     
     def get_lesson_context(self, lesson_id: str) -> Dict:

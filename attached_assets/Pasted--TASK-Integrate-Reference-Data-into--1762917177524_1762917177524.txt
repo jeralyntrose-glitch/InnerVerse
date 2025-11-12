@@ -1,0 +1,209 @@
+═══════════════════════════════════════════════════════════════
+TASK: Integrate Reference Data into AI Chat System
+═══════════════════════════════════════════════════════════════
+
+PROBLEM:
+AI tutor says it doesn't have interaction style data, but this data 
+EXISTS in our reference JSON file. The JSON is not being loaded or 
+queried by the chat system.
+
+FILE LOCATION:
+src/data/reference_data.json (or wherever you saved this JSON)
+
+GOAL:
+Make the AI tutor check reference JSON FIRST before searching Pinecone
+for structured MBTI facts (interaction styles, four sides, temples, etc.)
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION STEPS:
+═══════════════════════════════════════════════════════════════
+
+STEP 1: Update ChatService to Load Reference Data
+────────────────────────────────────────────────────────────────
+
+File: src/services/chat_service.py (or wherever chat logic lives)
+
+ADD at the top of the file:
+```python
+import json
+import os
+```
+
+ADD to the __init__ method:
+```python
+def __init__(self):
+    # ... existing initialization code ...
+    
+    # Load reference data
+    self.reference_data = self._load_reference_data()
+    
+def _load_reference_data(self):
+    """Load MBTI reference data from JSON file"""
+    try:
+        ref_file = os.path.join('src', 'data', 'reference_data.json')
+        with open(ref_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        # Index by type code for fast lookup
+        return {type_info['code']: type_info for type_info in data['types']}
+    except Exception as e:
+        print(f"Warning: Could not load reference data: {e}")
+        return {}
+```
+
+STEP 2: Create Reference Lookup Methods
+────────────────────────────────────────────────────────────────
+
+ADD these helper methods to ChatService:
+```python
+def _lookup_type_info(self, type_code):
+    """Get complete info for a type from reference data"""
+    return self.reference_data.get(type_code.upper())
+
+def _lookup_interaction_style(self, type_code):
+    """Get interaction style for a type"""
+    type_info = self._lookup_type_info(type_code)
+    if type_info:
+        return type_info['categories']['interaction_style']
+    return None
+
+def _lookup_four_sides(self, type_code):
+    """Get four sides for a type"""
+    type_info = self._lookup_type_info(type_code)
+    if type_info:
+        return type_info['four_sides']
+    return None
+
+def _lookup_by_category(self, category_name, category_value):
+    """Find all types matching a category
+    Example: _lookup_by_category('interaction_style', 'Structure')
+    Returns: ['ESTJ', 'ESTP', 'ENTJ', 'ENFJ']
+    """
+    matching_types = []
+    for type_code, type_info in self.reference_data.items():
+        if type_info['categories'].get(category_name) == category_value:
+            matching_types.append(type_code)
+    return matching_types
+```
+
+STEP 3: Update Query Method to Check Reference First
+────────────────────────────────────────────────────────────────
+
+MODIFY your main chat query method to check reference data BEFORE 
+searching Pinecone:
+```python
+async def query(self, user_message):
+    """Main query method - checks reference data first"""
+    
+    # 1. Check if question is about structured facts
+    reference_answer = self._check_reference_data(user_message)
+    if reference_answer:
+        # Found exact data in reference - still search Pinecone for context
+        concepts = await self.query_relevant_concepts(user_message)
+        
+        # Combine reference data + Pinecone context
+        return await self._generate_response_with_reference(
+            user_message, 
+            reference_answer, 
+            concepts
+        )
+    
+    # 2. Regular flow - just search Pinecone
+    concepts = await self.query_relevant_concepts(user_message)
+    return await self._generate_response(user_message, concepts)
+
+def _check_reference_data(self, question):
+    """Check if question is about structured facts in reference data"""
+    question_lower = question.lower()
+    
+    # Extract type code if present (INFJ, ENFP, etc.)
+    import re
+    type_match = re.search(r'\b([IE][NS][FT][JP])\b', question, re.IGNORECASE)
+    
+    if type_match:
+        type_code = type_match.group(1).upper()
+        type_info = self._lookup_type_info(type_code)
+        
+        if not type_info:
+            return None
+        
+        # Check what specific info is being asked
+        if 'interaction style' in question_lower:
+            return {
+                'type': 'interaction_style',
+                'type_code': type_code,
+                'data': type_info['categories']['interaction_style'],
+                'expression': type_info['expression']
+            }
+        
+        elif 'four sides' in question_lower or 'shadow' in question_lower or 'subconscious' in question_lower:
+            return {
+                'type': 'four_sides',
+                'type_code': type_code,
+                'data': type_info['four_sides']
+            }
+        
+        elif 'temple' in question_lower:
+            return {
+                'type': 'temple',
+                'type_code': type_code,
+                'data': type_info['categories']['temple']
+            }
+        
+        elif 'quadra' in question_lower or 'house' in question_lower:
+            return {
+                'type': 'quadra',
+                'type_code': type_code,
+                'data': {
+                    'quadra': type_info['categories']['quadra'],
+                    'house': type_info['categories']['house']
+                }
+            }
+        
+        elif 'functions' in question_lower or 'stack' in question_lower:
+            return {
+                'type': 'functions',
+                'type_code': type_code,
+                'data': type_info['four_sides']['ego']['functions']
+            }
+    
+    # Check for category questions (e.g., "what types are structure?")
+    elif 'structure' in question_lower and ('types' in question_lower or 'who' in question_lower):
+        return {
+            'type': 'category_lookup',
+            'category': 'interaction_style',
+            'value': 'Structure',
+            'types': self._lookup_by_category('interaction_style', 'Structure')
+        }
+    
+    elif 'starter' in question_lower and ('types' in question_lower or 'who' in question_lower):
+        return {
+            'type': 'category_lookup',
+            'category': 'interaction_style',
+            'value': 'Starter',
+            'types': self._lookup_by_category('interaction_style', 'Starter')
+        }
+    
+    elif 'finisher' in question_lower and ('types' in question_lower or 'who' in question_lower):
+        return {
+            'type': 'category_lookup',
+            'category': 'interaction_style',
+            'value': 'Finisher',
+            'types': self._lookup_by_category('interaction_style', 'Finisher')
+        }
+    
+    elif 'background' in question_lower and ('types' in question_lower or 'who' in question_lower):
+        return {
+            'type': 'category_lookup',
+            'category': 'interaction_style',
+            'value': 'Background',
+            'types': self._lookup_by_category('interaction_style', 'Background')
+        }
+    
+    return None
+```
+
+STEP 4: Update System Prompt
+────────────────────────────────────────────────────────────────
+
+ADD to your AI system prompt:
