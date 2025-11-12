@@ -198,7 +198,7 @@ class ChatService:
     def _lookup_interaction_style(type_code: str) -> Optional[str]:
         """Get interaction style for a type"""
         type_info = ChatService._lookup_type_info(type_code)
-        return type_info.get('interaction_style') if type_info else None
+        return type_info.get('categories', {}).get('interaction_style') if type_info else None
     
     @staticmethod
     def _lookup_four_sides(type_code: str) -> Optional[Dict]:
@@ -215,7 +215,7 @@ class ChatService:
         """
         matching_types = []
         for type_code, type_info in REFERENCE_DATA.get("mbti_types", {}).items():
-            if type_info.get(category_name) == category_value:
+            if type_info.get('categories', {}).get(category_name) == category_value:
                 matching_types.append(type_code)
         return sorted(matching_types)
     
@@ -263,13 +263,13 @@ class ChatService:
 {stack_text}"""
             
             elif any(keyword in question_lower for keyword in ['temperament', 'keirsey']):
-                return f"**{type_code} Temperament:** {type_data.get('temperament')}"
+                return f"**{type_code} Temperament:** {type_data.get('categories', {}).get('temperament')}"
             
             elif any(keyword in question_lower for keyword in ['quadra', 'socionics']):
-                return f"**{type_code} Quadra:** {type_data.get('quadra')}"
+                return f"**{type_code} Quadra:** {type_data.get('categories', {}).get('quadra')}"
             
             elif any(keyword in question_lower for keyword in ['interaction style', 'interaction', 'communication style']):
-                return f"**{type_code} Interaction Style:** {type_data.get('interaction_style')}"
+                return f"**{type_code} Interaction Style:** {type_data.get('categories', {}).get('interaction_style')}"
         
         # CASE 2: Category queries (e.g., "What types are Structure?", "Which types are Direct?")
         elif any(keyword in question_lower for keyword in ['what types', 'which types', 'who are', 'list types']):
@@ -291,7 +291,7 @@ These types share the **{style}** interaction style in CS Joseph's system."""
                     # Match both full name and abbreviation
                     matching_types = []
                     for type_code, type_info in REFERENCE_DATA.get("mbti_types", {}).items():
-                        temperament = type_info.get('temperament', '')
+                        temperament = type_info.get('categories', {}).get('temperament', '')
                         if temp.lower() in temperament.lower():
                             matching_types.append(type_code)
                     
