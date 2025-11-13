@@ -122,6 +122,26 @@ function setGenerationModalState(phase, payload = {}) {
                 highlightNewCourse(payload.courseId);
             }
             
+            // CRITICAL: Attach event listener to dismiss button AFTER it's visible
+            // This must happen here because the button is created dynamically in the HTML
+            const dismissBtn = document.getElementById('dismiss-success-btn');
+            if (dismissBtn) {
+                console.log('✅ [SUCCESS] Found dismiss button, attaching click listener');
+                
+                // Remove any existing listeners first (prevent double-binding)
+                const newDismissBtn = dismissBtn.cloneNode(true);
+                dismissBtn.parentNode.replaceChild(newDismissBtn, dismissBtn);
+                
+                newDismissBtn.addEventListener('click', function() {
+                    console.log('👋 [SUCCESS] User clicked OK button');
+                    closeModal();
+                });
+                
+                console.log('✅ [SUCCESS] Event listener attached successfully');
+            } else {
+                console.error('❌ [SUCCESS] CRITICAL: Could not find dismiss-success-btn element!');
+            }
+            
             // Auto-close after delay if specified
             if (payload.autoClose) {
                 setTimeout(() => closeModal(), payload.autoCloseDelay || 1500);
@@ -1140,11 +1160,8 @@ function setupEventListeners() {
     document.getElementById('generate-form').addEventListener('submit', handleGenerateSubmit);
     document.getElementById('cancel-generate-btn').addEventListener('click', closeModal);
     
-    // Dismiss button for generation success modal
-    document.getElementById('dismiss-success-btn').addEventListener('click', () => {
-        console.log('👋 [SUCCESS] User dismissed success modal');
-        closeModal();
-    });
+    // NOTE: dismiss-success-btn listener is attached dynamically in setGenerationModalState()
+    // when the COMPLETE phase is shown (button doesn't exist on page load)
     
     document.getElementById('view-course-btn').addEventListener('click', () => {
         if (state.selectedCourse && state.selectedCourseLessons && state.selectedCourseLessons.length > 0) {
