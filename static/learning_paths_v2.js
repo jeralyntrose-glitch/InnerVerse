@@ -873,17 +873,13 @@ async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
                     return;
                 }
                 
-                // Transition to COMPLETE phase with proper courseId storage
+                // Transition to COMPLETE phase
                 const firstCourseId = courses[0]?.id;
                 console.log('✅ [GENERATION] Course created with ID:', firstCourseId, typeof firstCourseId);
                 console.log('✅ [GENERATION] Course title:', courses[0]?.title);
-                console.log('✅ [GENERATION] Courses array:', courses);
+                console.log('✅ [GENERATION] Total courses:', courses.length);
                 
-                // Store globally BEFORE modal state change for immediate access
-                if (firstCourseId) {
-                    window._lastGeneratedCourseId = String(firstCourseId);
-                    console.log('✅ [GENERATION] Stored in window._lastGeneratedCourseId:', window._lastGeneratedCourseId);
-                } else {
+                if (!firstCourseId) {
                     console.error('❌ [GENERATION] No courseId found in response!');
                 }
                 
