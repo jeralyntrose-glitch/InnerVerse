@@ -388,11 +388,19 @@ from fastapi_csrf_protect.exceptions import CsrfProtectError
 from pydantic_settings import BaseSettings
 
 
+# Generate or load CSRF secret key
+_CSRF_SECRET = os.getenv("CSRF_SECRET_KEY")
+if not _CSRF_SECRET:
+    print("⚠️  WARNING: CSRF_SECRET_KEY not set - generating random key (not suitable for production!)")
+    print("⚠️  Set CSRF_SECRET_KEY environment variable for production deployments")
+    _CSRF_SECRET = secrets.token_urlsafe(32)
+
+
 class CsrfSettings(BaseSettings):
-    secret_key: str = secrets.token_urlsafe(32)
+    secret_key: str = _CSRF_SECRET
     cookie_samesite: str = "lax"
-    cookie_secure: bool = False  # Set to True in production with HTTPS
-    cookie_httponly: bool = True
+    cookie_secure: bool = os.getenv("PRODUCTION", "false").lower() == "true"
+    cookie_httponly: bool = True  # HttpOnly protects cookie; token delivered separately via meta tag
 
 
 @CsrfProtect.load_config
@@ -683,6 +691,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# CSRF exception handler
+@app.exception_handler(CsrfProtectError)
+def csrf_protect_exception_handler(request: Request, exc: CsrfProtectError):
+    return JSONResponse(
+        status_code=403,
+        content={"error": "CSRF token validation failed"}
+    )
 
 # Register Learning Paths UI Router
 app.include_router(learning_paths_ui_router)
@@ -3017,6 +3033,7 @@ from src.services.youtube_matcher import YouTubeMatcher
 
 @app.post("/api/youtube/import")
 async def import_youtube_csv(
+    request: Request,
     file: UploadFile = File(...),
     csrf_protect: CsrfProtect = Depends()
 ):
@@ -3027,8 +3044,8 @@ async def import_youtube_csv(
     Returns match results and statistics.
     """
     try:
-        # Validate CSRF token
-        await csrf_protect.validate_csrf(file)
+        # Validate CSRF token (double-submit: cookie + header comparison)
+        await csrf_protect.validate_csrf_in_cookies(request)
         
         print(f"📺 Received YouTube CSV file: {file.filename}")
         
@@ -3123,8 +3140,20 @@ async def get_pending_videos():
 
 
 @app.post("/api/youtube/link/{pending_id}/{lesson_id}")
-async def link_pending_video(pending_id: int, lesson_id: str):
+async def link_pending_video(
+    request: Request,
+    pending_id: int,
+    lesson_id: str,
+    csrf_protect: CsrfProtect = Depends()
+):
     """Link a pending YouTube video to a lesson"""
+    try:
+        # Validate CSRF token (double-submit: cookie + header comparison)
+        await csrf_protect.validate_csrf_in_cookies(request)
+        
+    except CsrfProtectError as e:
+        raise HTTPException(status_code=403, detail="CSRF token validation failed")
+    
     try:
         conn = get_db_connection()
         if not conn:

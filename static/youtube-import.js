@@ -14,8 +14,20 @@
     filteredVideos: [],
     currentFilter: 'all',
     currentPage: 1,
-    pageSize: 50
+    pageSize: 50,
+    csrfToken: null
   };
+  
+  /**
+   * Get CSRF token from meta tag
+   */
+  function getCsrfToken() {
+    if (!state.csrfToken) {
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      state.csrfToken = meta ? meta.getAttribute('content') : null;
+    }
+    return state.csrfToken;
+  }
   
   // Initialize when DOM is ready
   function initYouTubeImport() {
@@ -129,8 +141,15 @@
       statusText.textContent = 'Processing videos and matching to lessons...';
       progressBar.style.width = '50%';
       
+      const csrfToken = getCsrfToken();
+      const headers = {};
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+      
       const response = await fetch('/api/youtube/import', {
         method: 'POST',
+        headers: headers,
         body: formData
       });
       
@@ -527,8 +546,15 @@
   async function linkVideoToLesson(pendingId, lessonId) {
     console.log(`🔗 Linking video ${pendingId} to lesson ${lessonId}...`);
     
+    const csrfToken = getCsrfToken();
+    const headers = {};
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+    
     const response = await fetch(`/api/youtube/link/${pendingId}/${lessonId}`, {
-      method: 'POST'
+      method: 'POST',
+      headers: headers
     });
     
     if (!response.ok) {
