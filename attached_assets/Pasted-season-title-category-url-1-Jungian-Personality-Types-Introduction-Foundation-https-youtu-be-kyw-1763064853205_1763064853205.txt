@@ -1,0 +1,127 @@
+season,title,category,url
+1,Jungian Personality Types - Introduction,Foundation,https://youtu.be/kywOjcPgGl0
+1,Cognitive Functions - How They Work,Foundation,https://youtu.be/GN7od8N6wcA
+...
+```
+
+**Location:** I have it ready to send you. Want me to upload it somewhere you can access?
+
+---
+
+### **Q2: Matching algorithm priorities?**
+
+**YES - Season match FIRST, then title similarity.** ✅
+
+**Matching Logic (in order):**
+
+1. **Extract season number** from both video and PDF
+   - Video: `[1]`, `[17.1]`, `[20]` 
+   - PDF: Look for same pattern in filename/title
+
+2. **IF season matches** → Calculate title similarity (70%+ = confident match)
+
+3. **IF season doesn't match** → Skip (don't match across different seasons)
+
+**Why this order:**
+- Season is most reliable identifier
+- Prevents cross-season mismatches
+- Title alone isn't enough (many videos have similar titles)
+
+**Example:**
+```
+Video: [17.1] Alpha Quadra - Crusaders
+PDF: [17] Alpha Quadra Crusaders - Framework ESFJ ENTP ISFJ INTP
+
+Season match? ✅ (both 17.x)
+Title similarity? ✅ (85% - "Alpha Quadra Crusaders")
+Result: HIGH CONFIDENCE MATCH
+```
+
+---
+
+## **🎯 QUICK WINS:**
+
+**Agree 100%!** Your assessment is spot-on:
+- Stages 1-4: Immediate value ✅
+- Stage 5: Nice automation for later ✅
+- Zero API costs: Correct ✅
+
+---
+
+## **🤔 USER EXPERIENCE QUESTIONS:**
+
+### **Q3: Auto-play or manual start?**
+
+**MANUAL START** ✅
+
+**Reasoning:**
+- User might be on mobile with limited data
+- User might prefer reading transcript first
+- Auto-play can be annoying/intrusive
+- YouTube default behavior (user clicks play)
+
+**Implementation:** Standard YouTube embed (no autoplay parameter)
+
+---
+
+### **Q4: Transcript visible by default or collapsed?**
+
+**COLLAPSED BY DEFAULT** ✅
+
+**Layout:**
+```
+┌─────────────────────────────────────┐
+│                                     │
+│     [YOUTUBE VIDEO PLAYER]          │
+│         (takes up space)            │
+│                                     │
+├─────────────────────────────────────┤
+│ 📄 Transcript ▼ (Click to expand)   │  ← COLLAPSED
+└─────────────────────────────────────┘
+```
+
+**Reasoning:**
+- Video is primary content (most users will watch)
+- Transcript is backup/reference
+- Collapsed = cleaner UI, less scrolling
+- Easy to expand if user wants it
+
+**If NO video exists:**
+```
+┌─────────────────────────────────────┐
+│ 📄 Transcript ▼ (Click to expand)   │  ← STILL collapsed
+│                                     │
+│ (Lesson content below)              │
+└─────────────────────────────────────┘
+```
+
+---
+
+## **📋 SUMMARY FOR REPLIT:**
+
+**Tell them:**
+```
+Great questions! Here are the answers:
+
+1. CSV FILE: Yes, ready. I have youtube_links_master.csv with 310 videos 
+   (season, title, category, url). Where should I upload it?
+
+2. MATCHING ALGORITHM: 
+   Priority order:
+   - Step 1: Extract season number (e.g., 1, 17.1, 20)
+   - Step 2: IF seasons match → Calculate title similarity
+   - Step 3: IF similarity ≥ 70% → Potential match
+   - Step 4: IF similarity < 70% or seasons don't match → No match
+   
+   Only match videos to PDFs within the same season.
+
+3. VIDEO PLAYER: Manual start (no autoplay)
+   - User clicks play button to start
+   - Standard YouTube embed behavior
+
+4. TRANSCRIPT: Collapsed by default
+   - Show "📄 Transcript ▼" toggle
+   - User clicks to expand
+   - Cleaner UI, video takes focus
+
+Ready to proceed with Stage 1?

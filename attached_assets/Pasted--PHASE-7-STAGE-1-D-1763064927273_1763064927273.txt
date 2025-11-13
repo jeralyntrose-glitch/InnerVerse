@@ -1,0 +1,591 @@
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 7 - STAGE 1: DATABASE SETUP FOR YOUTUBE INTEGRATION
+═══════════════════════════════════════════════════════════════════════════════
+
+OBJECTIVE: Add YouTube URL storage to existing documents table and create new 
+pending_youtube_videos table for unmatched videos.
+
+ESTIMATED TIME: 15 minutes
+RISK LEVEL: Low (non-destructive schema additions)
+ROLLBACK: Available (see end of document)
+
+═══════════════════════════════════════════════════════════════════════════════
+PREREQUISITES - VERIFY BEFORE STARTING
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Database connection is working
+2. documents table exists and is accessible
+3. You have database write permissions
+4. Backup database before making changes (CRITICAL)
+
+TO BACKUP DATABASE:
+```bash
+# SQLite backup command
+cp path/to/your/database.db path/to/your/database.backup.db
+```
+
+VERIFY documents TABLE EXISTS:
+```sql
+SELECT name FROM sqlite_master WHERE type='table' AND name='documents';
+```
+
+Expected result: Should return 'documents'
+If empty: STOP - documents table doesn't exist, contact for help
+
+═══════════════════════════════════════════════════════════════════════════════
+MIGRATION 1: ADD YOUTUBE COLUMNS TO documents TABLE
+═══════════════════════════════════════════════════════════════════════════════
+
+PURPOSE: Store YouTube URL and video ID alongside existing PDF data
+
+COLUMNS TO ADD:
+1. youtube_url (TEXT, nullable) - Full YouTube URL with tracking params
+2. youtube_video_id (TEXT, nullable) - Extracted video ID for embedding
+
+WHY TWO COLUMNS?
+- youtube_url: Original URL for reference/linking
+- youtube_video_id: Clean ID for iframe embed (e.g., "kywOjcPgGl0")
+
+SQL COMMAND:
+```sql
+-- Add youtube_url column
+ALTER TABLE documents ADD COLUMN youtube_url TEXT DEFAULT NULL;
+
+-- Add youtube_video_id column  
+ALTER TABLE documents ADD COLUMN youtube_video_id TEXT DEFAULT NULL;
+```
+
+CRITICAL REQUIREMENTS:
+- ✅ Use TEXT data type (not VARCHAR)
+- ✅ Use DEFAULT NULL (not NOT NULL)
+- ✅ Run as two separate ALTER TABLE statements (SQLite limitation)
+- ✅ Column names must be EXACTLY as shown (lowercase, underscore)
+
+VERIFICATION AFTER RUNNING:
+```sql
+-- Check columns were added
+PRAGMA table_info(documents);
+```
+
+Expected result: Should show youtube_url and youtube_video_id in column list
+
+EXPECTED OUTPUT:
+cid | name              | type    | notnull | dflt_value | pk
+----|-------------------|---------|---------|------------|----
+... | youtube_url       | TEXT    | 0       | NULL       | 0
+... | youtube_video_id  | TEXT    | 0       | NULL       | 0
+
+If columns don't appear: Migration failed, check error message
+
+COMMON ERRORS:
+❌ "duplicate column name" → Columns already exist, skip this migration
+❌ "no such table: documents" → documents table doesn't exist, STOP
+❌ "database is locked" → Close other connections, try again
+
+═══════════════════════════════════════════════════════════════════════════════
+MIGRATION 2: CREATE pending_youtube_videos TABLE
+═══════════════════════════════════════════════════════════════════════════════
+
+PURPOSE: Store YouTube videos that don't yet have matching PDF transcripts
+
+TABLE SCHEMA:
+- id: Primary key, auto-increment
+- video_title: Original video title from YouTube
+- youtube_url: Full YouTube URL
+- youtube_video_id: Extracted video ID
+- season: Season number (e.g., "1", "17.1", "20")
+- category: Video category (e.g., "Foundation", "Framework")
+- confidence_score: Match confidence if attempted (0-100)
+- created_at: Timestamp when added
+- matched_to_document_id: Links to documents.id when matched (nullable)
+
+SQL COMMAND:
+```sql
+CREATE TABLE IF NOT EXISTS pending_youtube_videos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_title TEXT NOT NULL,
+    youtube_url TEXT NOT NULL,
+    youtube_video_id TEXT NOT NULL,
+    season TEXT NOT NULL,
+    category TEXT,
+    confidence_score INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    matched_to_document_id INTEGER,
+    FOREIGN KEY (matched_to_document_id) REFERENCES documents(id) ON DELETE SET NULL
+);
+```
+
+CRITICAL REQUIREMENTS:
+- ✅ Use IF NOT EXISTS (safe to re-run)
+- ✅ video_title, youtube_url, youtube_video_id, season are NOT NULL
+- ✅ category is nullable (some videos may not have category)
+- ✅ confidence_score defaults to 0
+- ✅ created_at auto-sets to current timestamp
+- ✅ Foreign key constraint includes ON DELETE SET NULL (safety)
+
+WHY THESE CONSTRAINTS?
+- NOT NULL on core fields: Can't store incomplete video data
+- NULLABLE category: Early videos may lack categories
+- ON DELETE SET NULL: If document deleted, pending video stays but unlinked
+
+VERIFICATION AFTER RUNNING:
+```sql
+-- Check table was created
+SELECT name FROM sqlite_master WHERE type='table' AND name='pending_youtube_videos';
+```
+
+Expected result: Should return 'pending_youtube_videos'
+
+CHECK TABLE STRUCTURE:
+```sql
+PRAGMA table_info(pending_youtube_videos);
+```
+
+EXPECTED OUTPUT:
+cid | name                    | type      | notnull | dflt_value         | pk
+----|-------------------------|-----------|---------|--------------------|----|
+0   | id                      | INTEGER   | 0       | NULL               | 1  |
+1   | video_title             | TEXT      | 1       | NULL               | 0  |
+2   | youtube_url             | TEXT      | 1       | NULL               | 0  |
+3   | youtube_video_id        | TEXT      | 1       | NULL               | 0  |
+4   | season                  | TEXT      | 1       | NULL               | 0  |
+5   | category                | TEXT      | 0       | NULL               | 0  |
+6   | confidence_score        | INTEGER   | 0       | 0                  | 0  |
+7   | created_at              | TIMESTAMP | 0       | CURRENT_TIMESTAMP  | 0  |
+8   | matched_to_document_id  | INTEGER   | 0       | NULL               | 0  |
+
+VERIFY FOREIGN KEY:
+```sql
+PRAGMA foreign_key_list(pending_youtube_videos);
+```
+
+Expected: Should show foreign key to documents(id)
+
+COMMON ERRORS:
+❌ "table pending_youtube_videos already exists" → Table exists, safe to skip
+❌ "foreign key mismatch" → documents table doesn't have id column, STOP
+❌ "no such table: documents" → Create documents table first
+
+═══════════════════════════════════════════════════════════════════════════════
+MIGRATION 3: CREATE INDEXES FOR PERFORMANCE
+═══════════════════════════════════════════════════════════════════════════════
+
+PURPOSE: Speed up common queries (matching, searching, filtering)
+
+INDEXES TO CREATE:
+
+INDEX 1: Search by season in pending videos
+```sql
+CREATE INDEX IF NOT EXISTS idx_pending_season 
+ON pending_youtube_videos(season);
+```
+
+WHY: Matching algorithm filters by season first (fastest filter)
+
+INDEX 2: Search by video title in pending videos
+```sql
+CREATE INDEX IF NOT EXISTS idx_pending_title 
+ON pending_youtube_videos(video_title);
+```
+
+WHY: Title matching is text-heavy, index speeds up LIKE queries
+
+INDEX 3: Find videos already matched
+```sql
+CREATE INDEX IF NOT EXISTS idx_pending_matched 
+ON pending_youtube_videos(matched_to_document_id);
+```
+
+WHY: Filter out already-matched videos from pending list
+
+INDEX 4: Search documents by YouTube video ID (for lookups)
+```sql
+CREATE INDEX IF NOT EXISTS idx_documents_video_id 
+ON documents(youtube_video_id);
+```
+
+WHY: When displaying lesson, quickly find if video exists
+
+CRITICAL REQUIREMENTS:
+- ✅ Use IF NOT EXISTS (safe to re-run)
+- ✅ Index names must be unique across entire database
+- ✅ Column names must match table schema exactly
+
+VERIFICATION AFTER RUNNING:
+```sql
+-- Check indexes were created
+SELECT name FROM sqlite_master WHERE type='index' 
+AND (name LIKE 'idx_pending%' OR name LIKE 'idx_documents_video%');
+```
+
+Expected result: Should return 4 index names
+
+EXPECTED OUTPUT:
+name
+------------------------
+idx_pending_season
+idx_pending_title
+idx_pending_matched
+idx_documents_video_id
+
+COMMON ERRORS:
+❌ "index already exists" → Indexes exist, safe to skip
+❌ "no such column" → Check column name spelling
+❌ "no such table" → Run migrations 1 & 2 first
+
+═══════════════════════════════════════════════════════════════════════════════
+COMPLETE MIGRATION SCRIPT
+═══════════════════════════════════════════════════════════════════════════════
+
+Run this complete script in ONE transaction for atomicity:
+
+```sql
+-- Start transaction
+BEGIN TRANSACTION;
+
+-- Migration 1: Add YouTube columns to documents
+ALTER TABLE documents ADD COLUMN youtube_url TEXT DEFAULT NULL;
+ALTER TABLE documents ADD COLUMN youtube_video_id TEXT DEFAULT NULL;
+
+-- Migration 2: Create pending videos table
+CREATE TABLE IF NOT EXISTS pending_youtube_videos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_title TEXT NOT NULL,
+    youtube_url TEXT NOT NULL,
+    youtube_video_id TEXT NOT NULL,
+    season TEXT NOT NULL,
+    category TEXT,
+    confidence_score INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    matched_to_document_id INTEGER,
+    FOREIGN KEY (matched_to_document_id) REFERENCES documents(id) ON DELETE SET NULL
+);
+
+-- Migration 3: Create indexes
+CREATE INDEX IF NOT EXISTS idx_pending_season 
+ON pending_youtube_videos(season);
+
+CREATE INDEX IF NOT EXISTS idx_pending_title 
+ON pending_youtube_videos(video_title);
+
+CREATE INDEX IF NOT EXISTS idx_pending_matched 
+ON pending_youtube_videos(matched_to_document_id);
+
+CREATE INDEX IF NOT EXISTS idx_documents_video_id 
+ON documents(youtube_video_id);
+
+-- Commit transaction
+COMMIT;
+```
+
+WHY USE TRANSACTION?
+- All changes succeed together OR all fail together
+- No partial migration state
+- Can rollback if error occurs
+
+IF ERROR OCCURS:
+```sql
+ROLLBACK;
+```
+
+This undoes all changes in the transaction.
+
+═══════════════════════════════════════════════════════════════════════════════
+VERIFICATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+After running complete migration script, verify:
+
+□ Step 1: Check documents table has new columns
+```sql
+PRAGMA table_info(documents);
+```
+Expected: youtube_url and youtube_video_id columns exist
+
+□ Step 2: Check pending_youtube_videos table exists
+```sql
+SELECT name FROM sqlite_master WHERE type='table' AND name='pending_youtube_videos';
+```
+Expected: Returns 'pending_youtube_videos'
+
+□ Step 3: Check pending_youtube_videos has correct structure
+```sql
+PRAGMA table_info(pending_youtube_videos);
+```
+Expected: 9 columns (id, video_title, youtube_url, youtube_video_id, season, 
+category, confidence_score, created_at, matched_to_document_id)
+
+□ Step 4: Check foreign key constraint exists
+```sql
+PRAGMA foreign_key_list(pending_youtube_videos);
+```
+Expected: Shows foreign key to documents(id)
+
+□ Step 5: Check all 4 indexes were created
+```sql
+SELECT name FROM sqlite_master WHERE type='index' 
+AND (name LIKE 'idx_pending%' OR name LIKE 'idx_documents_video%');
+```
+Expected: 4 index names returned
+
+□ Step 6: Test insert into pending_youtube_videos (dry run)
+```sql
+INSERT INTO pending_youtube_videos 
+(video_title, youtube_url, youtube_video_id, season, category) 
+VALUES 
+('Test Video', 'https://youtu.be/test123', 'test123', '1', 'Foundation');
+```
+Expected: Row inserted successfully
+
+□ Step 7: Verify test insert worked
+```sql
+SELECT * FROM pending_youtube_videos WHERE youtube_video_id = 'test123';
+```
+Expected: Returns 1 row with test data
+
+□ Step 8: Clean up test data
+```sql
+DELETE FROM pending_youtube_videos WHERE youtube_video_id = 'test123';
+```
+Expected: 1 row deleted
+
+□ Step 9: Test update documents table (dry run)
+```sql
+-- Get any document ID
+SELECT id FROM documents LIMIT 1;
+-- Use that ID in update (replace 1 with actual ID)
+UPDATE documents 
+SET youtube_url = 'https://youtu.be/test456', youtube_video_id = 'test456' 
+WHERE id = 1;
+```
+Expected: 1 row updated
+
+□ Step 10: Verify test update worked
+```sql
+SELECT youtube_url, youtube_video_id FROM documents WHERE id = 1;
+```
+Expected: Shows test values
+
+□ Step 11: Clean up test data
+```sql
+UPDATE documents 
+SET youtube_url = NULL, youtube_video_id = NULL 
+WHERE id = 1;
+```
+Expected: 1 row updated
+
+ALL CHECKS PASSED? ✅ Stage 1 is complete and verified.
+
+ANY CHECK FAILED? ❌ Do NOT proceed to Stage 2. Review error and fix.
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPLEMENTATION NOTES FOR DEVELOPER
+═══════════════════════════════════════════════════════════════════════════════
+
+DATABASE TYPE: SQLite
+
+LOCATION OF DATABASE FILE: 
+Check your Flask app configuration for database path. Typically:
+- app.config['DATABASE'] or
+- app.config['SQLALCHEMY_DATABASE_URI']
+
+HOW TO RUN MIGRATIONS:
+
+Option A: Via Python script (RECOMMENDED)
+```python
+import sqlite3
+
+# Connect to database
+conn = sqlite3.connect('path/to/your/database.db')
+cursor = conn.cursor()
+
+# Enable foreign keys (CRITICAL for SQLite)
+cursor.execute('PRAGMA foreign_keys = ON;')
+
+# Read complete migration script
+with open('migration_script.sql', 'r') as f:
+    migration_sql = f.read()
+
+# Execute migration
+cursor.executescript(migration_sql)
+
+# Verify
+cursor.execute("PRAGMA table_info(documents)")
+print("documents columns:", cursor.fetchall())
+
+cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pending_youtube_videos'")
+print("pending_youtube_videos exists:", cursor.fetchone() is not None)
+
+conn.close()
+```
+
+Option B: Via SQLite command line
+```bash
+sqlite3 path/to/your/database.db < migration_script.sql
+```
+
+Option C: Via Flask-Migrate (if using Alembic)
+Create migration file in migrations/versions/ folder with upgrade() and downgrade()
+
+CRITICAL SQLITE SETTING:
+```sql
+PRAGMA foreign_keys = ON;
+```
+
+This MUST be set every time you connect to SQLite. By default, foreign keys are 
+OFF in SQLite. Without this, foreign key constraints are ignored.
+
+TO MAKE PERMANENT (in your Flask app):
+```python
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+@db.event.listens_for(db.engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+ROLLBACK PLAN
+═══════════════════════════════════════════════════════════════════════════════
+
+IF SOMETHING GOES WRONG AND YOU NEED TO UNDO EVERYTHING:
+
+ROLLBACK SCRIPT:
+```sql
+BEGIN TRANSACTION;
+
+-- Drop indexes
+DROP INDEX IF EXISTS idx_documents_video_id;
+DROP INDEX IF EXISTS idx_pending_matched;
+DROP INDEX IF EXISTS idx_pending_title;
+DROP INDEX IF EXISTS idx_pending_season;
+
+-- Drop pending_youtube_videos table
+DROP TABLE IF EXISTS pending_youtube_videos;
+
+-- Remove columns from documents (SQLite doesn't support DROP COLUMN directly)
+-- You'll need to recreate the documents table without those columns
+-- OR just leave them (they won't hurt anything if empty)
+
+COMMIT;
+```
+
+SQLITE COLUMN REMOVAL LIMITATION:
+SQLite doesn't support ALTER TABLE DROP COLUMN directly. To remove columns:
+
+1. Rename old table:
+```sql
+ALTER TABLE documents RENAME TO documents_old;
+```
+
+2. Create new table without youtube columns:
+```sql
+CREATE TABLE documents (
+    -- Copy all original columns EXCEPT youtube_url and youtube_video_id
+    -- You'll need to know your original schema
+);
+```
+
+3. Copy data:
+```sql
+INSERT INTO documents SELECT [original columns] FROM documents_old;
+```
+
+4. Drop old table:
+```sql
+DROP TABLE documents_old;
+```
+
+EASIER ROLLBACK OPTION:
+Restore from backup:
+```bash
+cp path/to/your/database.backup.db path/to/your/database.db
+```
+
+This is why backups are CRITICAL before migrations.
+
+═══════════════════════════════════════════════════════════════════════════════
+POTENTIAL ISSUES & SOLUTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE 1: "duplicate column name: youtube_url"
+CAUSE: Migration already ran previously
+SOLUTION: Skip Migration 1, columns already exist
+ACTION: Verify columns exist, continue to Migration 2
+
+ISSUE 2: "table pending_youtube_videos already exists"
+CAUSE: Migration already ran previously
+SOLUTION: Skip Migration 2, table already exists
+ACTION: Verify table structure matches, continue to Migration 3
+
+ISSUE 3: "foreign key mismatch"
+CAUSE: documents table doesn't have id column as primary key
+SOLUTION: Check documents table schema
+ACTION: Run `PRAGMA table_info(documents)` and verify id column exists with pk=1
+
+ISSUE 4: "database is locked"
+CAUSE: Another connection has database locked
+SOLUTION: Close all other connections, wait, retry
+ACTION: Check for other Python processes, Flask dev server instances, DB browser tools
+
+ISSUE 5: Foreign keys not enforcing
+CAUSE: PRAGMA foreign_keys = ON not set
+SOLUTION: Enable foreign keys before migrations
+ACTION: Add `PRAGMA foreign_keys = ON;` at start of session
+
+ISSUE 6: Indexes not improving performance
+CAUSE: Database needs ANALYZE to update statistics
+SOLUTION: Run ANALYZE after creating indexes
+ACTION: `ANALYZE;` after all indexes created
+
+═══════════════════════════════════════════════════════════════════════════════
+SUCCESS CRITERIA
+═══════════════════════════════════════════════════════════════════════════════
+
+Stage 1 is COMPLETE and SUCCESSFUL when:
+
+✅ documents table has youtube_url column (TEXT, nullable)
+✅ documents table has youtube_video_id column (TEXT, nullable)
+✅ pending_youtube_videos table exists with 9 columns
+✅ Foreign key constraint from pending_youtube_videos to documents works
+✅ All 4 indexes exist and are queryable
+✅ Test insert into pending_youtube_videos succeeds
+✅ Test update documents with youtube_url succeeds
+✅ No error messages during migration
+✅ All verification checks pass
+✅ Database backup exists and is restorable
+
+READY TO PROCEED TO STAGE 2 WHEN:
+- All success criteria met
+- Verification checklist completed
+- No errors in logs
+- Database queries respond normally
+
+═══════════════════════════════════════════════════════════════════════════════
+COMPLETION REPORT
+═══════════════════════════════════════════════════════════════════════════════
+
+After completing Stage 1, report back with:
+
+1. ✅ Migration status: Success / Failed
+2. ✅ Verification checklist: All passed / Some failed (which ones?)
+3. ✅ Error messages: None / [paste errors]
+4. ✅ Test results: Passed / Failed
+5. ✅ Ready for Stage 2: Yes / No
+
+DO NOT proceed to Stage 2 until Stage 1 is verified and confirmed working.
+
+═══════════════════════════════════════════════════════════════════════════════
+END OF STAGE 1 SPECIFICATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Questions before implementing? Ask first.
+Errors during implementation? Stop and report.
+Success? Report completion and wait for Stage 2 spec.
+
+Estimated time: 15 minutes
+Actual time: [Fill in after completion]

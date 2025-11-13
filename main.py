@@ -179,10 +179,143 @@ def init_database():
                 ON lesson_concepts(confidence)
             """)
             
+            # === Phase 7: YouTube Integration Tables ===
+            
+            # Create doc_type enum if not exists
+            cursor.execute("""
+                DO $$ BEGIN
+                    CREATE TYPE doc_type AS ENUM ('youtube', 'pdf', 'transcript', 'audio');
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$;
+            """)
+            
+            # Create pending_status enum if not exists
+            cursor.execute("""
+                DO $$ BEGIN
+                    CREATE TYPE pending_status AS ENUM ('unmatched', 'pending_review', 'linked', 'rejected');
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$;
+            """)
+            
+            # Create documents table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS documents (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    doc_type doc_type NOT NULL,
+                    source_url TEXT,
+                    provider_video_id VARCHAR(100),
+                    title VARCHAR(500) NOT NULL,
+                    season VARCHAR(50),
+                    episode VARCHAR(50),
+                    duration_seconds INTEGER,
+                    transcript_text TEXT,
+                    transcript_status VARCHAR(50) DEFAULT 'pending',
+                    metadata JSONB DEFAULT '{}',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    UNIQUE(provider_video_id)
+                )
+            """)
+            
+            # Create indexes for documents table
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_documents_type 
+                ON documents(doc_type)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_documents_provider_video_id 
+                ON documents(provider_video_id) WHERE provider_video_id IS NOT NULL
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_documents_season 
+                ON documents(season) WHERE season IS NOT NULL
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_documents_metadata 
+                ON documents USING GIN(metadata)
+            """)
+            
+            # Create lesson_documents join table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS lesson_documents (
+                    id SERIAL PRIMARY KEY,
+                    lesson_id VARCHAR(36) NOT NULL,
+                    document_id UUID NOT NULL,
+                    relationship_type VARCHAR(50) DEFAULT 'primary_resource',
+                    display_order INTEGER DEFAULT 0,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    UNIQUE(lesson_id, document_id),
+                    FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE,
+                    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Create indexes for lesson_documents
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_lesson_documents_lesson 
+                ON lesson_documents(lesson_id)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_lesson_documents_document 
+                ON lesson_documents(document_id)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_lesson_documents_order 
+                ON lesson_documents(lesson_id, display_order)
+            """)
+            
+            # Create pending_youtube_videos table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS pending_youtube_videos (
+                    id SERIAL PRIMARY KEY,
+                    provider_video_id VARCHAR(100) NOT NULL,
+                    source_url TEXT NOT NULL,
+                    title VARCHAR(500) NOT NULL,
+                    season VARCHAR(50),
+                    category VARCHAR(100),
+                    duration_seconds INTEGER,
+                    raw_metadata JSONB DEFAULT '{}',
+                    status pending_status DEFAULT 'unmatched',
+                    confidence_score REAL DEFAULT 0.0,
+                    matched_lesson_id VARCHAR(36),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    UNIQUE(provider_video_id)
+                )
+            """)
+            
+            # Create indexes for pending_youtube_videos
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_pending_videos_status 
+                ON pending_youtube_videos(status)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_pending_videos_season 
+                ON pending_youtube_videos(season) WHERE season IS NOT NULL
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_pending_videos_confidence 
+                ON pending_youtube_videos(confidence_score DESC)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_pending_videos_provider_id 
+                ON pending_youtube_videos(provider_video_id)
+            """)
+            
             conn.commit()
             cursor.close()
             conn.close()
-            print("✅ Database initialized successfully (with lesson_concepts table)")
+            print("✅ Database initialized successfully (with YouTube integration tables)")
             return True
             
         except psycopg2.OperationalError as e:
