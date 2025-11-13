@@ -112,30 +112,15 @@ function setGenerationModalState(phase, payload = {}) {
             break;
             
         case ModalPhases.COMPLETE:
-            console.log('🎉 Entering COMPLETE phase, payload:', payload);
+            console.log('✅ [SUCCESS] Entering COMPLETE phase, payload:', payload);
             document.getElementById('modal-phase-complete').style.display = 'block';
             if (payload.title) document.getElementById('complete-title').textContent = payload.title;
             if (payload.info) document.getElementById('complete-info').textContent = payload.info;
             
-            // Store courseId in MULTIPLE places for redundancy
-            const courseIdStr = String(payload.courseId || '');
-            window._generatedCourseId = courseIdStr;
-            window._lastGeneratedCourseId = courseIdStr; // Additional backup
-            
-            const viewBtn = document.getElementById('view-generated-course-btn');
-            if (viewBtn && payload.courseId) {
-                viewBtn.setAttribute('data-course-id', courseIdStr);
-                viewBtn.dataset.courseId = courseIdStr; // Also set dataset property
-                console.log('📦 Stored courseId in button:');
-                console.log('   - dataset.courseId:', viewBtn.dataset.courseId);
-                console.log('   - getAttribute:', viewBtn.getAttribute('data-course-id'));
+            // Apply highlight animation to newly created course
+            if (payload.courseId) {
+                highlightNewCourse(payload.courseId);
             }
-            
-            console.log('📦 Final courseId storage:');
-            console.log('   - window._generatedCourseId:', window._generatedCourseId);
-            console.log('   - window._lastGeneratedCourseId:', window._lastGeneratedCourseId);
-            console.log('   - LearningPaths available:', !!window.LearningPaths);
-            console.log('   - viewCourse available:', !!window.LearningPaths?.viewCourse);
             
             // Auto-close after delay if specified
             if (payload.autoClose) {
@@ -341,6 +326,7 @@ function drawNodes(nodes) {
     
     fo.append('xhtml:div')
         .attr('class', 'course-card')
+        .attr('data-course-id', d => d.data.data.id)
         .html(d => renderCourseCard(d.data.data));
 }
 
@@ -577,6 +563,49 @@ function openGenerateModal() {
     }, 100);
 }
 
+// Highlight newly created course with animation
+function highlightNewCourse(courseId) {
+    console.log('🎨 [HIGHLIGHT] Applying highlight to new course:', courseId);
+    
+    // Small delay to ensure DOM has updated after course list refresh
+    setTimeout(() => {
+        // Find the course card element in the DOM
+        const courseCards = document.querySelectorAll('[data-course-id]');
+        let newCourseElement = null;
+        
+        const courseIdStr = String(courseId);
+        
+        for (const card of courseCards) {
+            if (String(card.dataset.courseId) === courseIdStr) {
+                newCourseElement = card;
+                break;
+            }
+        }
+        
+        if (newCourseElement) {
+            // Add highlight class
+            newCourseElement.classList.add('newly-created-highlight');
+            console.log('✅ [HIGHLIGHT] Highlight applied to course card');
+            
+            // Scroll into view if needed
+            newCourseElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+            });
+            
+            // Remove highlight after animation completes (5 seconds)
+            setTimeout(() => {
+                newCourseElement.classList.remove('newly-created-highlight');
+                console.log('🎨 [HIGHLIGHT] Highlight animation completed');
+            }, 5000);
+        } else {
+            console.warn('⚠️ [HIGHLIGHT] Could not find course card to highlight');
+            console.warn('   Searched for courseId:', courseIdStr);
+            console.warn('   Available cards:', Array.from(courseCards).map(c => c.dataset.courseId));
+        }
+    }, 300); // 300ms delay for DOM update
+}
+
 async function handleGenerateSubmit(event) {
     event.preventDefault();
     
@@ -811,13 +840,15 @@ async function pollContentGenerationProgress(jobId, isMultiCourse, courses) {
             if (status === 'completed' || status === 'completed_with_errors' || status === 'failed') {
                 clearInterval(pollInterval);
                 
-                // Reload courses
+                // CRITICAL: Reload courses list to ensure new course appears in DOM
+                console.log('🔄 [GENERATION] Refreshing course list...');
                 await loadCourses();
                 if (state.viewMode === 'grid') {
                     renderGridView();
                 } else {
                     renderCanvas();
                 }
+                console.log('✅ [GENERATION] Course list refreshed');
                 
                 // Clear generation flag
                 state.isGeneratingContent = false;
@@ -1059,6 +1090,7 @@ function renderGridView() {
         courses.forEach(course => {
             const card = document.createElement('div');
             card.className = 'grid-course-card';
+            card.setAttribute('data-course-id', course.id);
             card.style.borderLeft = `4px solid ${CONFIG.colors[category]}`;
             
             card.innerHTML = `

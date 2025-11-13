@@ -1,0 +1,571 @@
+═══════════════════════════════════════════════════════════════════════════════
+MASTER SPECIFICATION: VIEW COURSE BUTTON REPLACEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+PROJECT: InnerVerse Learning Paths
+PHASE: 6.5 (Bug Fixes)
+PRIORITY: HIGH - Blocking user access to newly generated courses
+FILE SCOPE: static/learning_paths_v2.js, static/learning_paths.html
+IMPLEMENTATION TIME: 30-45 minutes
+TESTING REQUIRED: Yes - full end-to-end test after implementation
+
+═══════════════════════════════════════════════════════════════════════════════
+PROBLEM STATEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+CURRENT BROKEN BEHAVIOR:
+
+- User generates a course successfully
+- “View Course” button appears in modal
+- Clicking button shows error: “Course viewer not loaded. Please refresh the page.”
+- Button has been broken despite multiple fix attempts
+- Root cause: Complex UUID passing and modal state management
+
+USER IMPACT:
+
+- Cannot access newly generated courses from modal
+- Must manually close modal and search for course in tree/grid
+- Poor user experience, confusing workflow
+
+═══════════════════════════════════════════════════════════════════════════════
+⚠️ CRITICAL: THIS SPECIFICATION REPLACES THE BROKEN “VIEW COURSE” BUTTON
+═══════════════════════════════════════════════════════════════════════════════
+
+DO NOT attempt to fix the existing “View Course” button.
+DO NOT keep the “View Course” button alongside this new solution.
+DO NOT try to make navigation work from the modal.
+
+INSTEAD: Remove the broken button entirely and implement the solution below.
+
+The “View Course” button has failed multiple fix attempts. We are abandoning
+that approach and replacing it with a simpler, more reliable solution that
+uses existing working navigation instead of trying to navigate from the modal.
+
+═══════════════════════════════════════════════════════════════════════════════
+SOLUTION OVERVIEW
+═══════════════════════════════════════════════════════════════════════════════
+
+REPLACE broken navigation button with:
+
+1. Auto-refresh course list when generation completes
+1. Visual highlight animation on newly created course
+1. Simple dismissible success modal (no navigation)
+1. User manually navigates to highlighted course via existing tree/grid
+
+BENEFITS:
+✅ Uses existing navigation (tree/grid) that already works
+✅ No complex UUID passing or state management
+✅ Clear visual feedback showing user exactly where new course is
+✅ User maintains control (dismisses modal when ready)
+✅ Eliminates entire class of navigation bugs
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPLEMENTATION REQUIREMENTS
+═══════════════════════════════════════════════════════════════════════════════
+
+FILE: static/learning_paths_v2.js
+LOCATION: Job polling function (where course generation status is checked)
+
+CRITICAL: All changes must be made in the job status polling logic, specifically
+in the section that handles when job.status === “completed”
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 1: AUTO-REFRESH COURSE LIST ON COMPLETION
+═══════════════════════════════════════════════════════════════════════════════
+
+LOCATION: In job polling function, after detecting job.status === “completed”
+
+EXISTING CODE PATTERN (find this):
+
+```javascript
+if (job.status === "completed") {
+    // Current code shows success message
+    // Current code enables broken "View Course" button
+}
+```
+
+REQUIRED CHANGES:
+
+1.1 BEFORE showing success modal, refresh the course list:
+
+```javascript
+if (job.status === "completed") {
+    console.log('✅ [GENERATION] Course generation completed');
+    
+    // Store the new course ID for highlighting
+    const newCourseId = job.course_id; // Adjust field name based on actual API response
+    
+    // CRITICAL: Refresh courses list to ensure new course is visible
+    console.log('🔄 [GENERATION] Refreshing course list...');
+    await loadCourses(); // Call existing loadCourses() function
+    console.log('✅ [GENERATION] Course list refreshed');
+    
+    // Continue to success modal (Step 2)
+}
+```
+
+VALIDATION CHECKS:
+
+- VERIFY loadCourses() function exists in learning_paths_v2.js
+- VERIFY loadCourses() returns a Promise (if not, remove ‘await’)
+- VERIFY job response contains course_id (check actual API response structure)
+- IF course_id field has different name, adjust: job.courses_created[0].id or similar
+
+ERROR HANDLING:
+
+```javascript
+try {
+    await loadCourses();
+} catch (error) {
+    console.error('❌ [GENERATION] Failed to refresh courses:', error);
+    // Continue anyway - user can manually refresh if needed
+}
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 2: APPLY HIGHLIGHT ANIMATION TO NEW COURSE
+═══════════════════════════════════════════════════════════════════════════════
+
+LOCATION: Immediately after loadCourses() completes, before showing success modal
+
+IMPLEMENTATION:
+
+```javascript
+// After loadCourses() completes
+console.log('🎨 [GENERATION] Applying highlight to new course:', newCourseId);
+
+// Find the course card element in the DOM
+const courseCards = document.querySelectorAll('[data-course-id]');
+let newCourseElement = null;
+
+for (const card of courseCards) {
+    if (card.dataset.courseId === newCourseId) {
+        newCourseElement = card;
+        break;
+    }
+}
+
+if (newCourseElement) {
+    // Add highlight class
+    newCourseElement.classList.add('newly-created-highlight');
+    console.log('✅ [GENERATION] Highlight applied to course card');
+    
+    // Scroll into view if needed
+    newCourseElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+    });
+    
+    // Remove highlight after animation completes (5 seconds)
+    setTimeout(() => {
+        newCourseElement.classList.remove('newly-created-highlight');
+        console.log('🎨 [GENERATION] Highlight animation completed');
+    }, 5000);
+} else {
+    console.warn('⚠️ [GENERATION] Could not find course card to highlight');
+    // Not critical - user can still find course manually
+}
+```
+
+CRITICAL REQUIREMENTS:
+
+- Course cards MUST have data-course-id attribute with UUID value
+- IF course cards use different attribute name (e.g., data-id, id), adjust selector
+- IF course cards use class-based identification, adjust logic accordingly
+- Verify actual DOM structure and adjust selector as needed
+
+FALLBACK: If course cards don’t have data attributes:
+
+```javascript
+// Alternative: Find by checking course ID in onclick handler or other attribute
+// Example if using card title:
+const newCourseElement = Array.from(courseCards).find(card => 
+    card.querySelector('.course-title')?.textContent.includes(courseTitle)
+);
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 3: UPDATE SUCCESS MODAL
+═══════════════════════════════════════════════════════════════════════════════
+
+LOCATION: Same section, after applying highlight
+
+REMOVE: Any code that enables/shows “View Course” button
+REMOVE: Any click handlers for “View Course” button
+REMOVE: Any navigation logic triggered by button
+
+REPLACE WITH: Simple dismissible success modal
+
+IMPLEMENTATION:
+
+```javascript
+// Update modal content for success state
+const modalTitle = document.querySelector('#generation-modal-title'); // Adjust selector
+const modalBody = document.querySelector('#generation-modal-body'); // Adjust selector
+const modalFooter = document.querySelector('#generation-modal-footer'); // Adjust selector
+
+// Update modal title
+if (modalTitle) {
+    modalTitle.innerHTML = '✅ Course Created Successfully!';
+}
+
+// Update modal body
+if (modalBody) {
+    const courseName = job.course_name || 'Your course'; // Adjust field name
+    const lessonCount = job.lesson_count || 'multiple'; // Adjust field name
+    
+    modalBody.innerHTML = `
+        <p style="font-size: 16px; margin-bottom: 12px;">
+            <strong>${courseName}</strong> has been generated with ${lessonCount} lessons.
+        </p>
+        <p style="font-size: 14px; color: #6b7280;">
+            Your new course is highlighted in the course list below. 
+            Click "OK" to dismiss this message and start learning!
+        </p>
+    `;
+}
+
+// Update modal footer with simple dismiss button
+if (modalFooter) {
+    modalFooter.innerHTML = `
+        <button 
+            id="dismiss-success-btn" 
+            class="btn btn-primary"
+            style="padding: 10px 24px; font-size: 16px;"
+        >
+            OK
+        </button>
+    `;
+    
+    // Add click handler for dismiss button
+    const dismissBtn = document.getElementById('dismiss-success-btn');
+    if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+            console.log('👋 [GENERATION] User dismissed success modal');
+            closeGenerationModal(); // Call existing modal close function
+        });
+    }
+}
+```
+
+CRITICAL: Verify actual modal element IDs/selectors in your HTML:
+
+- Check learning_paths.html for modal structure
+- Adjust #generation-modal-title, #generation-modal-body, #generation-modal-footer
+- Ensure closeGenerationModal() function exists (or use appropriate close method)
+- If using Bootstrap modal: $(’#generation-modal’).modal(‘hide’)
+- If using custom modal: adjust close logic accordingly
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 4: ADD CSS FOR HIGHLIGHT ANIMATION
+═══════════════════════════════════════════════════════════════════════════════
+
+FILE: static/learning_paths.css (or inline in learning_paths.html)
+
+ADD THE FOLLOWING CSS:
+
+```css
+/* Highlight animation for newly created course */
+.newly-created-highlight {
+    position: relative;
+    z-index: 10;
+    animation: pulse-glow 2.5s ease-in-out 2;
+    border: 2px solid #10b981 !important;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4) !important;
+    transition: all 0.5s ease-out;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+        transform: scale(1.02);
+    }
+}
+
+/* Ensure highlight is visible over other elements */
+.newly-created-highlight::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: inherit;
+    background: rgba(16, 185, 129, 0.1);
+    z-index: -1;
+    animation: pulse-bg 2.5s ease-in-out 2;
+}
+
+@keyframes pulse-bg {
+    0%, 100% { opacity: 0.1; }
+    50% { opacity: 0.2; }
+}
+```
+
+CUSTOMIZATION OPTIONS (if green doesn’t fit design):
+
+- Blue theme: Replace #10b981 with #3b82f6
+- Purple theme: Replace #10b981 with #8b5cf6
+- Adjust opacity in rgba() values for more/less intensity
+- Adjust animation duration (2.5s) for faster/slower pulse
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 5: VERIFY EXISTING MODAL CLOSE BUTTON WORKS
+═══════════════════════════════════════════════════════════════════════════════
+
+REQUIREMENT: The modal’s existing “×” (close button) must also dismiss the modal
+
+VERIFICATION:
+
+```javascript
+// Ensure the X button closes the modal
+const modalCloseBtn = document.querySelector('#generation-modal .close'); // Adjust selector
+if (modalCloseBtn) {
+    modalCloseBtn.onclick = () => {
+        console.log('👋 [GENERATION] User closed modal via X button');
+        closeGenerationModal();
+    };
+}
+```
+
+ADD THIS CHECK: After updating modal content in Step 3
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 6: CLEANUP - REMOVE BROKEN CODE
+═══════════════════════════════════════════════════════════════════════════════
+
+⚠️ CRITICAL: The “View Course” button must be completely removed.
+
+DELETE OR COMMENT OUT:
+
+1. HTML element for “View Course” button (in modal footer or body)
+1. Any code that creates/enables “View Course” button
+1. Any click handlers for viewGeneratedCourse() or similar
+1. Any navigation logic that tries to open course from modal
+1. Any UUID storage in window._lastGeneratedCourseId or similar
+1. Any viewCourseById() calls triggered from generation modal
+
+THE MODAL SHOULD ONLY HAVE:
+
+- Success message
+- “OK” button (from Step 3)
+- “×” close button (existing)
+- NO “View Course” button
+- NO navigation buttons of any kind
+
+SEARCH FOR AND REMOVE:
+
+```javascript
+// REMOVE lines like:
+document.getElementById('view-generated-course-btn')
+window._lastGeneratedCourseId = 
+viewCourseById(
+viewGeneratedCourse()
+```
+
+KEEP:
+
+- Job polling logic
+- loadCourses() function
+- Modal show/hide functions
+- Tree/grid rendering
+- Existing course navigation (via tree/grid clicks)
+
+═══════════════════════════════════════════════════════════════════════════════
+TESTING CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+After implementation, perform these tests IN ORDER:
+
+TEST 1: Course Generation
+□ Navigate to /learning-paths
+□ Click “✨ Generate Course”
+□ Enter test goal: “Test highlight animation”
+□ Click “Generate Course”
+□ Verify: Modal shows progress during generation
+□ Verify: No errors in browser console (F12)
+
+TEST 2: Completion Behavior
+□ Wait for generation to complete (~1-2 minutes)
+□ Verify: Console shows “🔄 [GENERATION] Refreshing course list…”
+□ Verify: Console shows “✅ [GENERATION] Course list refreshed”
+□ Verify: Console shows “🎨 [GENERATION] Applying highlight to new course”
+□ Verify: Console shows “✅ [GENERATION] Highlight applied to course card”
+□ Verify: Modal shows “✅ Course Created Successfully!”
+□ Verify: Modal body shows course name and lesson count
+□ Verify: Modal has “OK” button
+
+TEST 3: Highlight Animation
+□ Without closing modal, look at course list behind it
+□ Verify: New course is visible
+□ Verify: New course has pulsing green glow effect
+□ Verify: Animation is smooth (no jank)
+□ Verify: Course is scrolled into view (centered or near top)
+
+TEST 4: Modal Dismissal
+□ Click “OK” button
+□ Verify: Modal closes immediately
+□ Verify: No errors in console
+□ Verify: Highlight animation still playing on course
+□ Test alternate: Close modal with “×” button instead
+□ Verify: Same behavior (modal closes, highlight remains)
+
+TEST 5: Course Navigation
+□ Click on the highlighted course card
+□ Verify: Navigates to course page normally
+□ Verify: Course loads with all lessons
+□ Verify: All existing navigation still works
+
+TEST 6: Multiple Generations
+□ Generate another course
+□ Verify: Previous highlight is removed
+□ Verify: New course gets highlighted
+□ Verify: Only one course highlighted at a time
+
+TEST 7: Edge Cases
+□ Generate course, wait 10 minutes before dismissing modal
+□ Verify: Highlight still visible, animation may have ended (OK)
+□ Generate course, close browser tab immediately after completion
+□ Reopen: Verify course exists in list (no highlight - expected)
+
+TEST 8: Browser Compatibility
+□ Test in Chrome/Brave
+□ Test in Firefox
+□ Test in Safari (if available)
+□ Verify: Animation works in all browsers
+
+═══════════════════════════════════════════════════════════════════════════════
+ERROR HANDLING & EDGE CASES
+═══════════════════════════════════════════════════════════════════════════════
+
+CASE 1: loadCourses() fails
+HANDLING: Log error, continue to show modal anyway
+RESULT: User can manually refresh page
+
+CASE 2: Cannot find course card to highlight
+HANDLING: Log warning, continue to show modal
+RESULT: User can manually find course in list
+
+CASE 3: Modal close function doesn’t exist
+HANDLING: Use fallback: document.getElementById(‘generation-modal’).style.display = ‘none’
+RESULT: Modal still closes
+
+CASE 4: User refreshes page during generation
+HANDLING: Existing job polling should resume (no changes needed)
+RESULT: Generation continues, user sees normal completion
+
+CASE 5: Multiple courses generated rapidly
+HANDLING: Each completion triggers highlight, setTimeout clears previous
+RESULT: Only most recent course highlighted
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPLEMENTATION NOTES FOR DEVELOPER
+═══════════════════════════════════════════════════════════════════════════════
+
+1. READ ENTIRE SPECIFICATION FIRST
+   Do not skip ahead or implement partially
+1. VERIFY EXISTING CODE STRUCTURE
+   Before changing anything, verify:
+- Modal element IDs and structure
+- Course card selectors and attributes
+- Function names (loadCourses, closeGenerationModal, etc.)
+- Job polling implementation location
+1. MAKE CHANGES IN ORDER
+   Follow Steps 1-6 sequentially
+   Do not reorder or skip steps
+1. TEST AFTER EACH STEP
+   Add console.log statements as specified
+   Verify each step works before proceeding
+1. DO NOT ADD EXTRA FEATURES
+   No additional animations, sounds, or UI elements
+   No changes to tree/grid layout
+   No modifications to course navigation
+   Implement exactly what is specified, nothing more
+1. DO NOT IMPROVISE
+   If specification is unclear, ask for clarification
+   Do not guess at element IDs or function names
+   Do not substitute different approaches
+1. CONSOLE LOGGING IS REQUIRED
+   All console.log statements in specification are mandatory
+   These enable debugging if issues arise
+   Do not remove or skip logging statements
+1. MAINTAIN EXISTING FUNCTIONALITY
+   Do not break existing course generation
+   Do not break existing tree/grid navigation
+   Do not break existing modal behavior
+   Only change what is specified
+
+═══════════════════════════════════════════════════════════════════════════════
+VERIFICATION BEFORE DEPLOYMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+BEFORE marking this task complete, verify:
+
+□ All console.log statements from specification are present
+□ All Test 1-8 items pass successfully
+□ No errors appear in browser console during any test
+□ Modal closes properly with both “OK” and “×” buttons
+□ Highlight animation is smooth and visible
+□ New course appears in list after generation
+□ Existing course navigation still works
+□ No broken “View Course” button remains in code
+□ No navigation logic triggered from modal
+□ CSS animation renders correctly in all tested browsers
+
+IF ANY TEST FAILS:
+
+1. Review specification for that step
+1. Check console for errors
+1. Verify element selectors match actual HTML
+1. Ask for clarification before attempting fix
+
+DO NOT:
+
+- Mark task complete if any test fails
+- Deploy code that shows console errors
+- Assume “close enough” is acceptable
+- Skip testing steps
+
+═══════════════════════════════════════════════════════════════════════════════
+COMPLETION CRITERIA
+═══════════════════════════════════════════════════════════════════════════════
+
+This implementation is COMPLETE when:
+
+✅ User generates a course successfully
+✅ Course list refreshes automatically upon completion
+✅ New course is visually highlighted with pulsing glow
+✅ Success modal shows with “OK” button
+✅ Modal can be dismissed with “OK” or “×”
+✅ User can click highlighted course to navigate
+✅ All existing functionality remains intact
+✅ No errors in console during any workflow
+✅ All 8 test cases pass
+
+DEPLOYMENT:
+After all tests pass, deploy to production with note:
+“Fixed: Course generation completion flow. Replaced broken ‘View Course’
+button with auto-refresh + highlight animation. Modal now dismissible
+with clear visual feedback.”
+
+═══════════════════════════════════════════════════════════════════════════════
+END OF SPECIFICATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Questions or clarifications: Ask before implementing
+Estimated implementation time: 30-45 minutes
+Estimated testing time: 15-20 minutes
+Total: ~1 hour for complete implementation and verification
+
+DO NOT proceed with implementation until you have:
+
+1. Read this entire specification
+1. Verified existing code structure matches assumptions
+1. Identified exact element IDs and selectors to use
+1. Confirmed all referenced functions exist
+
+READY TO IMPLEMENT: Proceed with Step 1
