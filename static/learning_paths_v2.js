@@ -135,19 +135,25 @@ function setGenerationModalState(phase, payload = {}) {
                 dismissBtn.parentNode.replaceChild(newDismissBtn, dismissBtn);
                 
                 newDismissBtn.addEventListener('click', function(e) {
-                    // ALERT FIRST to confirm click is registering
-                    alert('🎯 BUTTON WAS CLICKED! This means the click handler IS working.');
+                    e.preventDefault();
+                    e.stopPropagation();
                     
-                    console.log('👋 [SUCCESS] User clicked OK button');
-                    console.log('📍 Event object:', e);
-                    console.log('📍 Event target:', e.target);
-                    console.log('📍 Current state.isGeneratingContent:', state.isGeneratingContent);
-                    console.log('📍 Current state.activeModal:', state.activeModal);
-                    console.log('🔄 Attempting to close modal...');
+                    console.log('👋 [SUCCESS] User clicked OK - using direct modal close');
                     
-                    closeModal();
+                    // BYPASS closeModal() - directly hide the modal
+                    const modal = document.getElementById('generate-modal');
+                    if (modal) {
+                        modal.style.display = 'none';
+                        console.log('✅ Modal hidden via direct DOM manipulation');
+                    } else {
+                        console.error('❌ Could not find generate-modal element');
+                    }
                     
-                    console.log('✅ closeModal() called successfully');
+                    // Clear modal state
+                    state.activeModal = null;
+                    state.isGeneratingContent = false;
+                    
+                    console.log('✅ Modal state cleared');
                 });
                 
                 console.log('✅ [SUCCESS] Event listener attached successfully');
