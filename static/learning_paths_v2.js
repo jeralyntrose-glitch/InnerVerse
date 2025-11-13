@@ -1144,6 +1144,12 @@ function setupEventListeners() {
     document.getElementById('generate-form').addEventListener('submit', handleGenerateSubmit);
     document.getElementById('cancel-generate-btn').addEventListener('click', closeModal);
     
+    // Dismiss button for generation success modal
+    document.getElementById('dismiss-success-btn').addEventListener('click', () => {
+        console.log('👋 [SUCCESS] User dismissed success modal');
+        closeModal();
+    });
+    
     document.getElementById('view-course-btn').addEventListener('click', () => {
         if (state.selectedCourse && state.selectedCourseLessons && state.selectedCourseLessons.length > 0) {
             // Navigate to first lesson to start the course
@@ -1153,9 +1159,6 @@ function setupEventListeners() {
             showToast('Error', 'No lessons available in this course', 'error');
         }
     });
-    
-    // NOTE: view-generated-course-btn click handler is set dynamically in setGenerationModalState()
-    // to ensure proper courseId is available. DO NOT add static listener here.
     
     document.addEventListener('keydown', (e) => {
         // Check if user is typing in an input field

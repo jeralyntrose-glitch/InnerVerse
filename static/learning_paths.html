@@ -227,20 +227,8 @@
     <div id="toast-container" class="toast-container"></div>
 
     <script>
-    // Simple dismiss button handler for success modal
-    document.addEventListener('DOMContentLoaded', function() {
-        const dismissBtn = document.getElementById('dismiss-success-btn');
-        if (dismissBtn) {
-            dismissBtn.addEventListener('click', function() {
-                console.log('👋 [SUCCESS] User dismissed success modal');
-                const modal = document.getElementById('generate-modal');
-                if (modal) {
-                    modal.style.display = 'none';
-                    document.body.style.overflow = '';
-                }
-            });
-        }
-    });
+    // Dismiss button handler - will be attached after learning_paths_v2.js loads
+    // The actual handler is registered in setupEventListeners() in learning_paths_v2.js
     </script>
 
     <script src="/static/learning_paths_v2.js"></script>
