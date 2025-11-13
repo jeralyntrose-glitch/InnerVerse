@@ -2992,6 +2992,196 @@ async def upload_audio(file: UploadFile = File(...)):
         )
 
 
+# === YouTube Video Import & Matching ===
+from src.services.youtube_matcher import YouTubeMatcher
+
+@app.post("/api/youtube/import")
+async def import_youtube_csv(file: UploadFile = File(...)):
+    """
+    Import YouTube videos from CSV and match to lessons.
+    
+    Expected CSV format: season, title, category, url
+    Returns match results and statistics.
+    """
+    try:
+        print(f"📺 Received YouTube CSV file: {file.filename}")
+        
+        # Validate file type
+        if not file.filename.endswith('.csv'):
+            return JSONResponse(
+                status_code=400,
+                content={"error": "File must be a CSV file"}
+            )
+        
+        # Read CSV content
+        contents = await file.read()
+        csv_content = contents.decode('utf-8')
+        
+        print(f"📊 CSV file size: {len(csv_content)} characters")
+        
+        # Process CSV with matcher
+        matcher = YouTubeMatcher()
+        results = matcher.process_csv_import(csv_content)
+        
+        # Return summary
+        return {
+            "message": "YouTube CSV processed successfully",
+            "summary": {
+                "total_videos": results['total'],
+                "high_confidence": results['high_confidence'],
+                "medium_confidence": results['medium_confidence'],
+                "low_confidence": results['low_confidence'],
+                "unmatched": results['unmatched']
+            },
+            "matches": [
+                {
+                    "video_title": r.video.title,
+                    "video_url": r.video.url,
+                    "video_id": r.video.video_id,
+                    "season": r.video.season,
+                    "lesson_id": r.lesson_id,
+                    "lesson_title": r.lesson_title,
+                    "confidence_score": round(r.confidence_score, 3),
+                    "match_type": r.match_type
+                }
+                for r in results['results']
+            ]
+        }
+        
+    except Exception as e:
+        print(f"❌ YouTube CSV import error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to process YouTube CSV: {str(e)}"}
+        )
+
+
+@app.get("/api/youtube/pending")
+async def get_pending_videos():
+    """Get all pending YouTube videos awaiting review"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Database connection failed"}
+            )
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT 
+                id, provider_video_id, source_url, title, season, category,
+                status, confidence_score, matched_lesson_id, created_at
+            FROM pending_youtube_videos
+            WHERE status IN ('unmatched', 'pending_review')
+            ORDER BY confidence_score DESC, created_at DESC
+        """)
+        
+        pending = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {
+            "count": len(pending),
+            "pending_videos": [dict(video) for video in pending]
+        }
+        
+    except Exception as e:
+        print(f"❌ Error fetching pending videos: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to fetch pending videos: {str(e)}"}
+        )
+
+
+@app.post("/api/youtube/link/{pending_id}/{lesson_id}")
+async def link_pending_video(pending_id: int, lesson_id: str):
+    """Link a pending YouTube video to a lesson"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Database connection failed"}
+            )
+        
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get pending video details
+        cursor.execute("""
+            SELECT provider_video_id, source_url, title, season, category
+            FROM pending_youtube_videos
+            WHERE id = %s
+        """, (pending_id,))
+        
+        video = cursor.fetchone()
+        if not video:
+            cursor.close()
+            conn.close()
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Pending video not found"}
+            )
+        
+        # Create document
+        cursor.execute("""
+            INSERT INTO documents (
+                doc_type, source_url, provider_video_id, title, season, metadata
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (provider_video_id) DO UPDATE
+            SET source_url = EXCLUDED.source_url,
+                title = EXCLUDED.title
+            RETURNING id
+        """, (
+            'youtube',
+            video['source_url'],
+            video['provider_video_id'],
+            video['title'],
+            video['season'],
+            Json({'category': video['category'], 'manually_linked': True})
+        ))
+        
+        document_id = cursor.fetchone()['id']
+        
+        # Link to lesson
+        cursor.execute("""
+            INSERT INTO lesson_documents (lesson_id, document_id, relationship_type)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (lesson_id, document_id) DO NOTHING
+        """, (lesson_id, document_id, 'primary_resource'))
+        
+        # Update pending video status
+        cursor.execute("""
+            UPDATE pending_youtube_videos
+            SET status = 'linked', matched_lesson_id = %s
+            WHERE id = %s
+        """, (lesson_id, pending_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        print(f"✅ Linked pending video {pending_id} to lesson {lesson_id}")
+        
+        return {
+            "message": "Video linked successfully",
+            "document_id": str(document_id),
+            "lesson_id": lesson_id
+        }
+        
+    except Exception as e:
+        print(f"❌ Error linking video: {str(e)}")
+        if conn:
+            conn.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to link video: {str(e)}"}
+        )
+
+
 # === Download YouTube Video with Proxy ===
 @app.post("/download-youtube")
 async def download_youtube(request: YouTubeDownloadRequest):
@@ -6322,6 +6512,32 @@ async def list_lessons(course_id: str):
         return {"success": True, "lessons": lessons}
     except Exception as e:
         print(f"❌ Error listing lessons: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/lessons")
+async def list_all_lessons():
+    """List all lessons across all courses (for YouTube linking UI)"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT l.id, l.title, l.course_id, l.order_index, c.title as course_title
+            FROM lessons l
+            LEFT JOIN courses c ON l.course_id = c.id
+            ORDER BY c.title, l.order_index
+        """)
+        
+        lessons = [dict(row) for row in cur.fetchall()]
+        
+        cur.close()
+        conn.close()
+        
+        return lessons
+        
+    except Exception as e:
+        print(f"❌ Error listing all lessons: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

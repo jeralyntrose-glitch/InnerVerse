@@ -129,6 +129,85 @@
       </div>
     </div>
 
+    <!-- 📺 YouTube Video Import Section (Collapsible) -->
+    <div class="youtube-import-section">
+      <button class="youtube-import-toggle" id="youtube-import-toggle">
+        <div class="youtube-import-toggle-content">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4M17 8l-5-5-5 5M12 3v12"></path>
+          </svg>
+          <span>📺 YouTube Library Import</span>
+        </div>
+        <svg class="youtube-import-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      <div class="youtube-import-content" id="youtube-import-content">
+        <p class="youtube-import-description">Upload CSV file with YouTube videos to match to lessons</p>
+        
+        <!-- CSV Upload -->
+        <div class="csv-upload-section">
+          <label for="csv-file-input" class="btn-csv-upload">📄 Select CSV File</label>
+          <input type="file" id="csv-file-input" accept=".csv" style="display: none;" />
+          <div id="csv-file-name" class="csv-file-name hidden"></div>
+          <button id="import-csv-btn" class="btn-import-csv hidden">🚀 Import & Match Videos</button>
+        </div>
+        
+        <!-- Import Progress -->
+        <div id="csv-import-progress" class="csv-import-progress hidden">
+          <div class="import-status-text">Processing CSV...</div>
+          <div class="import-progress-bar-container">
+            <div class="import-progress-bar"></div>
+          </div>
+        </div>
+        
+        <!-- Match Results Summary -->
+        <div id="match-results-summary" class="match-results-summary hidden">
+          <h3>📊 Match Results</h3>
+          <div class="match-stats-grid">
+            <div class="match-stat high-confidence">
+              <div class="stat-label">High Confidence</div>
+              <div id="stat-high" class="stat-value">0</div>
+              <div class="stat-desc">Auto-linked to lessons</div>
+            </div>
+            <div class="match-stat medium-confidence">
+              <div class="stat-label">Medium Confidence</div>
+              <div id="stat-medium" class="stat-value">0</div>
+              <div class="stat-desc">Needs review</div>
+            </div>
+            <div class="match-stat low-confidence">
+              <div class="stat-label">Low Confidence</div>
+              <div id="stat-low" class="stat-value">0</div>
+              <div class="stat-desc">Needs review</div>
+            </div>
+            <div class="match-stat unmatched">
+              <div class="stat-label">Unmatched</div>
+              <div id="stat-unmatched" class="stat-value">0</div>
+              <div class="stat-desc">No lesson found</div>
+            </div>
+          </div>
+          
+          <!-- View Pending Videos Button -->
+          <button id="view-pending-btn" class="btn-view-pending">
+            👁️ Review Pending Videos
+          </button>
+        </div>
+        
+        <!-- Pending Videos Review -->
+        <div id="pending-videos-section" class="pending-videos-section hidden">
+          <h3>📋 Pending Videos for Review</h3>
+          <div class="pending-filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="pending_review">Medium/Low</button>
+            <button class="filter-btn" data-filter="unmatched">Unmatched</button>
+          </div>
+          <div id="pending-videos-list" class="pending-videos-list">
+            <div class="pending-placeholder">Loading pending videos...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 📝 Text to PDF Section (Collapsible) -->
     <div class="text-to-pdf-section">
       <button class="text-pdf-toggle" id="text-pdf-toggle">
@@ -336,5 +415,532 @@
 
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="/static/script.js?v=40-BATCH-RETAG"></script>
+  <script src="/static/youtube-import.js"></script>
+  
+  <!-- YouTube Import Styles -->
+  <style>
+    /* YouTube Import Section */
+    .youtube-import-section {
+      margin-top: 20px;
+    }
+    
+    .youtube-import-toggle {
+      width: 100%;
+      padding: 16px 20px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+    
+    .youtube-import-toggle:hover {
+      background: var(--bg-hover);
+    }
+    
+    .youtube-import-toggle-content {
+      display: flex;
+      align-items: center;
+      font-size: 15px;
+      font-weight: 500;
+    }
+    
+    .youtube-import-chevron {
+      transition: transform 0.3s;
+    }
+    
+    .youtube-import-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+    
+    .youtube-import-content.active {
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+    }
+    
+    /* CSV Upload */
+    .csv-upload-section {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    
+    .btn-csv-upload {
+      padding: 12px 24px;
+      background: var(--primary-color);
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-csv-upload:hover {
+      opacity: 0.9;
+    }
+    
+    .csv-file-name {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    
+    .btn-import-csv {
+      padding: 12px 24px;
+      background: #14b8a6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .btn-import-csv:hover {
+      background: #0d9488;
+    }
+    
+    .btn-import-csv:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* Import Progress */
+    .csv-import-progress {
+      margin: 20px 0;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+    }
+    
+    .import-status-text {
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    
+    .import-progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .import-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #14b8a6, #06b6d4);
+      transition: width 0.3s;
+      width: 0%;
+    }
+    
+    /* Match Results */
+    .match-results-summary {
+      margin: 20px 0;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+    }
+    
+    .match-results-summary h3 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+    }
+    
+    .match-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .match-stat {
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .match-stat.high-confidence {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .match-stat.medium-confidence {
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+    
+    .match-stat.low-confidence {
+      background: rgba(249, 115, 22, 0.1);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+    
+    .match-stat.unmatched {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .stat-label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    
+    .stat-value {
+      display: block;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .stat-desc {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .btn-view-pending {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .btn-view-pending:hover {
+      opacity: 0.9;
+    }
+    
+    /* Pending Videos */
+    .pending-videos-section {
+      margin-top: 20px;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+    }
+    
+    .pending-videos-section h3 {
+      margin: 0 0 16px 0;
+    }
+    
+    .pending-filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .filter-btn {
+      padding: 8px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .filter-btn.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+    
+    .pending-videos-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .pending-video-card {
+      padding: 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .video-info {
+      flex: 1;
+    }
+    
+    .video-title {
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    .video-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .video-confidence.confidence-medium {
+      color: #eab308;
+    }
+    
+    .video-confidence.confidence-low {
+      color: #f97316;
+    }
+    
+    .video-confidence.confidence-unmatched {
+      color: #ef4444;
+    }
+    
+    .video-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-view-video, .btn-link-video {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .btn-view-video {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    
+    .btn-link-video {
+      background: #14b8a6;
+      color: white;
+    }
+    
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    
+    .page-btn {
+      padding: 8px 16px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    
+    .page-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .page-info {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .youtube-import-status {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    
+    .youtube-import-status.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .youtube-import-status.success {
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    /* Linking Modal */
+    .link-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 20px;
+    }
+    
+    .link-modal-content {
+      background: var(--bg-primary);
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .link-modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .link-modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+    
+    .close-modal:hover {
+      background: var(--bg-secondary);
+    }
+    
+    .link-modal-body {
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    
+    .video-preview {
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .preview-title {
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    .preview-meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .lesson-search-section {
+      margin-bottom: 16px;
+    }
+    
+    .lesson-search-section label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    .lesson-search-input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      font-size: 14px;
+    }
+    
+    .lessons-list {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+    
+    .lesson-option {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .lesson-option:last-child {
+      border-bottom: none;
+    }
+    
+    .lesson-option:hover {
+      background: var(--bg-secondary);
+    }
+    
+    .lesson-option.selected {
+      background: rgba(20, 184, 166, 0.1);
+      border-left: 3px solid #14b8a6;
+    }
+    
+    .lesson-option-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    
+    .lesson-option-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .loading-lessons, .no-lessons {
+      padding: 40px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    
+    .link-modal-footer {
+      padding: 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    
+    .cancel-link, .confirm-link {
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      border: none;
+    }
+    
+    .cancel-link {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+    
+    .confirm-link {
+      background: #14b8a6;
+      color: white;
+    }
+    
+    .confirm-link:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
 </body>
 </html>
