@@ -7,11 +7,12 @@ import httpx
 import csv
 import tempfile
 import subprocess
+import secrets
 from datetime import datetime, timezone, timedelta
 from collections import deque
 from contextlib import asynccontextmanager
 from urllib.parse import quote
-from fastapi import FastAPI, UploadFile, File, Request, Response, Header, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Request, Response, Header, HTTPException, BackgroundTasks, Cookie, Depends
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -379,6 +380,25 @@ def check_rate_limit(max_requests_per_hour=100):
     # Add current timestamp
     request_timestamps.append(now.isoformat())
     return True, len(request_timestamps)
+
+
+# === CSRF Protection ===
+from fastapi_csrf_protect import CsrfProtect
+from fastapi_csrf_protect.exceptions import CsrfProtectError
+from pydantic_settings import BaseSettings
+
+
+class CsrfSettings(BaseSettings):
+    secret_key: str = secrets.token_urlsafe(32)
+    cookie_samesite: str = "lax"
+    cookie_secure: bool = False  # Set to True in production with HTTPS
+    cookie_httponly: bool = True
+
+
+@CsrfProtect.load_config
+def get_csrf_config():
+    return CsrfSettings()
+
 
 # Initialize clients
 def get_openai_client():
@@ -2996,7 +3016,10 @@ async def upload_audio(file: UploadFile = File(...)):
 from src.services.youtube_matcher import YouTubeMatcher
 
 @app.post("/api/youtube/import")
-async def import_youtube_csv(file: UploadFile = File(...)):
+async def import_youtube_csv(
+    file: UploadFile = File(...),
+    csrf_protect: CsrfProtect = Depends()
+):
     """
     Import YouTube videos from CSV and match to lessons.
     
@@ -3004,6 +3027,9 @@ async def import_youtube_csv(file: UploadFile = File(...)):
     Returns match results and statistics.
     """
     try:
+        # Validate CSRF token
+        await csrf_protect.validate_csrf(file)
+        
         print(f"📺 Received YouTube CSV file: {file.filename}")
         
         # Validate file type
@@ -5987,8 +6013,30 @@ def serve_frontend():
     return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/uploader", include_in_schema=False)
-def serve_uploader():
-    return FileResponse("uploader.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+def serve_uploader(response: Response, csrf_protect: CsrfProtect = Depends()):
+    """Serve uploader page with CSRF token"""
+    # Generate and set CSRF token in cookie
+    csrf_token = csrf_protect.generate_csrf()
+    response.set_cookie(
+        key="fastapi-csrf-token",
+        value=csrf_token,
+        max_age=3600,  # 1 hour
+        httponly=True,
+        samesite="lax"
+    )
+    
+    # Read HTML and inject CSRF token
+    with open("uploader.html", "r") as f:
+        html_content = f.read()
+    
+    # Inject CSRF token into a meta tag for JavaScript access
+    csrf_meta = f'<meta name="csrf-token" content="{csrf_token}">'
+    html_content = html_content.replace('</head>', f'{csrf_meta}\n</head>')
+    
+    return HTMLResponse(
+        content=html_content,
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )
 
 @app.get("/privacy", include_in_schema=False)
 def serve_privacy():
