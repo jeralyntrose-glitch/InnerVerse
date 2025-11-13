@@ -127,17 +127,31 @@ function setGenerationModalState(phase, payload = {}) {
             const dismissBtn = document.getElementById('dismiss-success-btn');
             if (dismissBtn) {
                 console.log('✅ [SUCCESS] Found dismiss button, attaching click listener');
+                console.log('✅ [SUCCESS] Button element:', dismissBtn);
+                console.log('✅ [SUCCESS] Button parent:', dismissBtn.parentNode);
                 
                 // Remove any existing listeners first (prevent double-binding)
                 const newDismissBtn = dismissBtn.cloneNode(true);
                 dismissBtn.parentNode.replaceChild(newDismissBtn, dismissBtn);
                 
-                newDismissBtn.addEventListener('click', function() {
+                newDismissBtn.addEventListener('click', function(e) {
+                    // ALERT FIRST to confirm click is registering
+                    alert('🎯 BUTTON WAS CLICKED! This means the click handler IS working.');
+                    
                     console.log('👋 [SUCCESS] User clicked OK button');
+                    console.log('📍 Event object:', e);
+                    console.log('📍 Event target:', e.target);
+                    console.log('📍 Current state.isGeneratingContent:', state.isGeneratingContent);
+                    console.log('📍 Current state.activeModal:', state.activeModal);
+                    console.log('🔄 Attempting to close modal...');
+                    
                     closeModal();
+                    
+                    console.log('✅ closeModal() called successfully');
                 });
                 
                 console.log('✅ [SUCCESS] Event listener attached successfully');
+                console.log('✅ [SUCCESS] New button with listener:', newDismissBtn);
             } else {
                 console.error('❌ [SUCCESS] CRITICAL: Could not find dismiss-success-btn element!');
             }
