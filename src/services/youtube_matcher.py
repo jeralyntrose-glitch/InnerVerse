@@ -243,10 +243,10 @@ class YouTubeMatcher:
             # Extract season from lesson title
             lesson_season = self.extract_season_number(lesson['title'])
             
-            # Skip if seasons don't match
-            if video_season and lesson_season:
+            # STRICT season-first filtering: videos WITH seasons ONLY match lessons with SAME season
+            if video_season:
                 # Normalize season numbers for comparison (1.0 == 1)
-                if float(video_season) != float(lesson_season):
+                if not lesson_season or float(video_season) != float(lesson_season):
                     continue
             
             # Calculate title similarity
