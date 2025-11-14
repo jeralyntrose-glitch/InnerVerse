@@ -6042,17 +6042,10 @@ def serve_frontend():
     return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/uploader", include_in_schema=False)
-def serve_uploader(response: Response, csrf_protect: CsrfProtect = Depends()):
+def serve_uploader(csrf_protect: CsrfProtect = Depends()):
     """Serve uploader page with CSRF token"""
-    # Generate and set CSRF token in cookie
-    csrf_token = csrf_protect.generate_csrf()
-    response.set_cookie(
-        key="fastapi-csrf-token",
-        value=csrf_token,
-        max_age=3600,  # 1 hour
-        httponly=True,
-        samesite="lax"
-    )
+    # Generate CSRF tokens (correct method name)
+    csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
     
     # Read HTML and inject CSRF token
     with open("uploader.html", "r") as f:
@@ -6062,10 +6055,14 @@ def serve_uploader(response: Response, csrf_protect: CsrfProtect = Depends()):
     csrf_meta = f'<meta name="csrf-token" content="{csrf_token}">'
     html_content = html_content.replace('</head>', f'{csrf_meta}\n</head>')
     
-    return HTMLResponse(
+    # Create response with CSRF cookie
+    response = HTMLResponse(
         content=html_content,
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
     )
+    csrf_protect.set_csrf_cookie(signed_token, response)
+    
+    return response
 
 @app.get("/privacy", include_in_schema=False)
 def serve_privacy():
