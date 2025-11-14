@@ -3044,8 +3044,8 @@ async def import_youtube_csv(
     Returns match results and statistics.
     """
     try:
-        # Validate CSRF token (double-submit: cookie + header comparison)
-        await csrf_protect.validate_csrf_in_cookies(request)
+        # Validate CSRF token
+        await csrf_protect.validate_csrf(request)
         
         print(f"📺 Received YouTube CSV file: {file.filename}")
         
@@ -3148,8 +3148,8 @@ async def link_pending_video(
 ):
     """Link a pending YouTube video to a lesson"""
     try:
-        # Validate CSRF token (double-submit: cookie + header comparison)
-        await csrf_protect.validate_csrf_in_cookies(request)
+        # Validate CSRF token
+        await csrf_protect.validate_csrf(request)
         
     except CsrfProtectError as e:
         raise HTTPException(status_code=403, detail="CSRF token validation failed")
