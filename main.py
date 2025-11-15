@@ -4291,6 +4291,397 @@ async def get_season_data(season_number: str) -> Dict[str, Any]:
 # END PHASE 7.2 ROUTES
 # ==============================================================================
 
+# ==============================================================================
+# PHASE 7.3: LESSON PAGE ROUTES
+# ==============================================================================
+
+@app.get("/lesson/{lesson_id}")
+async def serve_lesson_page(lesson_id: int):
+    """
+    Serve the lesson page HTML
+    
+    Args:
+        lesson_id: Lesson ID from curriculum table
+    
+    Returns:
+        HTML page with video, AI content, transcript, chat
+    """
+    return FileResponse("static/lesson_page.html")
+
+
+@app.get("/api/lesson/{lesson_id}")
+async def get_lesson_data(lesson_id: int) -> Dict[str, Any]:
+    """
+    Get complete lesson data including progress and navigation
+    
+    Args:
+        lesson_id: Lesson ID from curriculum table
+    
+    Returns:
+        {
+          "lesson": {...},
+          "progress": {...},
+          "navigation": {...},
+          "season_lessons": [...]
+        }
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get lesson data
+        cursor.execute("""
+            SELECT 
+                c.lesson_id,
+                c.lesson_title,
+                c.lesson_number,
+                c.season_number,
+                c.season_name,
+                c.module_number,
+                c.module_name,
+                c.youtube_url,
+                c.has_video,
+                c.transcript_id,
+                c.duration,
+                c.order_index,
+                c.description
+            FROM curriculum c
+            WHERE c.lesson_id = %s
+        """, (lesson_id,))
+        
+        lesson_row = cursor.fetchone()
+        
+        if not lesson_row:
+            raise HTTPException(status_code=404, detail=f"Lesson {lesson_id} not found")
+        
+        lesson = {
+            "lesson_id": int(lesson_row[0]),
+            "lesson_title": str(lesson_row[1]),
+            "lesson_number": int(lesson_row[2]),
+            "season_number": str(lesson_row[3]),
+            "season_name": str(lesson_row[4]),
+            "module_number": int(lesson_row[5]),
+            "module_name": str(lesson_row[6]),
+            "youtube_url": str(lesson_row[7]) if lesson_row[7] else None,
+            "has_video": bool(lesson_row[8]),
+            "transcript_id": str(lesson_row[9]),
+            "duration": str(lesson_row[10]) if lesson_row[10] else None,
+            "order_index": int(lesson_row[11]),
+            "description": str(lesson_row[12]) if lesson_row[12] else None
+        }
+        
+        current_order = lesson["order_index"]
+        season_number = lesson["season_number"]
+        
+        # Get or create progress
+        cursor.execute("""
+            SELECT completed, last_accessed
+            FROM progress
+            WHERE lesson_id = %s
+        """, (lesson_id,))
+        
+        progress_row = cursor.fetchone()
+        
+        if progress_row:
+            progress = {
+                "completed": bool(progress_row[0]),
+                "last_accessed": progress_row[1].isoformat() if progress_row[1] else None
+            }
+        else:
+            # Create progress entry for this lesson
+            cursor.execute("""
+                INSERT INTO progress (lesson_id, completed, last_accessed)
+                VALUES (%s, FALSE, CURRENT_TIMESTAMP)
+            """, (lesson_id,))
+            conn.commit()
+            
+            progress = {
+                "completed": False,
+                "last_accessed": None
+            }
+        
+        # Update last_accessed
+        cursor.execute("""
+            UPDATE progress
+            SET last_accessed = CURRENT_TIMESTAMP
+            WHERE lesson_id = %s
+        """, (lesson_id,))
+        conn.commit()
+        
+        # Get previous lesson (same season only)
+        cursor.execute("""
+            SELECT lesson_id, lesson_title
+            FROM curriculum
+            WHERE season_number = %s
+              AND order_index < %s
+            ORDER BY order_index DESC
+            LIMIT 1
+        """, (season_number, current_order))
+        
+        prev_row = cursor.fetchone()
+        prev_lesson_id = int(prev_row[0]) if prev_row else None
+        
+        # Get next lesson (same season only)
+        cursor.execute("""
+            SELECT lesson_id, lesson_title
+            FROM curriculum
+            WHERE season_number = %s
+              AND order_index > %s
+            ORDER BY order_index ASC
+            LIMIT 1
+        """, (season_number, current_order))
+        
+        next_row = cursor.fetchone()
+        next_lesson_id = int(next_row[0]) if next_row else None
+        
+        navigation = {
+            "prev_lesson_id": prev_lesson_id,
+            "next_lesson_id": next_lesson_id,
+            "has_prev": prev_lesson_id is not None,
+            "has_next": next_lesson_id is not None
+        }
+        
+        # Get all lessons in this season (for sidebar)
+        cursor.execute("""
+            SELECT 
+                c.lesson_id,
+                c.lesson_number,
+                c.lesson_title,
+                c.duration,
+                p.completed
+            FROM curriculum c
+            LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+            WHERE c.season_number = %s
+            ORDER BY c.order_index ASC
+        """, (season_number,))
+        
+        season_lessons = []
+        for row in cursor.fetchall():
+            season_lessons.append({
+                "lesson_id": int(row[0]),
+                "lesson_number": int(row[1]),
+                "lesson_title": str(row[2]),
+                "duration": str(row[3]) if row[3] else None,
+                "completed": bool(row[4]) if row[4] is not None else False
+            })
+        
+        return {
+            "lesson": lesson,
+            "progress": progress,
+            "navigation": navigation,
+            "season_lessons": season_lessons
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting lesson data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.get("/api/lesson/{lesson_id}/chat")
+async def get_lesson_chat(lesson_id: int) -> Dict[str, Any]:
+    """
+    Get chat history for a lesson
+    
+    Returns:
+        {
+          "messages": [
+            {"role": "user", "content": "...", "timestamp": "..."},
+            {"role": "assistant", "content": "...", "timestamp": "..."}
+          ]
+        }
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT messages
+            FROM lesson_chats
+            WHERE lesson_id = %s
+        """, (lesson_id,))
+        
+        row = cursor.fetchone()
+        
+        if row and row[0]:
+            messages = row[0]  # Already a list from JSONB
+        else:
+            messages = []
+        
+        return {"messages": messages}
+        
+    except Exception as e:
+        logger.error(f"Error getting chat history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.post("/api/lesson/{lesson_id}/chat")
+async def save_lesson_chat(lesson_id: int, message: Dict[str, str]):
+    """
+    Save a chat message for a lesson
+    
+    Args:
+        message: {"role": "user"|"assistant", "content": "...", "timestamp": "..."}
+    
+    Returns:
+        {"success": true}
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Check if chat history exists
+        cursor.execute("""
+            SELECT lesson_id FROM lesson_chats WHERE lesson_id = %s
+        """, (lesson_id,))
+        
+        exists = cursor.fetchone()
+        
+        if exists:
+            # Append to existing messages
+            cursor.execute("""
+                UPDATE lesson_chats
+                SET 
+                    messages = messages || %s::jsonb,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE lesson_id = %s
+            """, (json.dumps([message]), lesson_id))
+        else:
+            # Create new chat history
+            cursor.execute("""
+                INSERT INTO lesson_chats (lesson_id, messages, created_at, updated_at)
+                VALUES (%s, %s::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """, (lesson_id, json.dumps([message])))
+        
+        conn.commit()
+        
+        return {"success": True}
+        
+    except Exception as e:
+        logger.error(f"Error saving chat message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.post("/api/lesson/{lesson_id}/complete")
+async def mark_lesson_complete_route(lesson_id: int):
+    """
+    Mark a lesson as complete
+    
+    Returns:
+        {"success": true, "completed": true}
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Update or insert progress
+        cursor.execute("""
+            INSERT INTO progress (lesson_id, completed, last_accessed)
+            VALUES (%s, TRUE, CURRENT_TIMESTAMP)
+            ON CONFLICT (lesson_id)
+            DO UPDATE SET 
+                completed = TRUE,
+                last_accessed = CURRENT_TIMESTAMP
+        """, (lesson_id,))
+        
+        conn.commit()
+        
+        return {"success": True, "completed": True}
+        
+    except Exception as e:
+        logger.error(f"Error marking lesson complete: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.post("/api/lesson/{lesson_id}/ai-chat")
+async def lesson_ai_chat(lesson_id: int, request: dict):
+    """
+    Server-side proxy for AI chat - keeps credentials secure
+    
+    Args:
+        lesson_id: Lesson ID
+        request: {"question": "...", "transcript_id": "..."}
+    
+    Returns:
+        StreamingResponse with AI answer
+    """
+    import httpx
+    
+    question = request.get("question", "")
+    transcript_id = request.get("transcript_id", "")
+    
+    if not question:
+        raise HTTPException(status_code=400, detail="Question is required")
+    
+    # Get backend credentials from environment (server-side only!)
+    backend_api = os.getenv("AXIS_BACKEND_API", "https://axis-of-mind.replit.app/query")
+    backend_key = os.getenv("AXIS_BACKEND_KEY", "")
+    
+    if not backend_key:
+        raise HTTPException(status_code=500, detail="Backend API key not configured")
+    
+    async def generate():
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream(
+                    "POST",
+                    backend_api,
+                    headers={
+                        "Authorization": f"Bearer {backend_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "document_id": "",
+                        "question": question,
+                        "tags": [transcript_id] if transcript_id else []
+                    }
+                ) as response:
+                    if response.status_code != 200:
+                        yield f"Error: Backend API returned {response.status_code}\n"
+                        return
+                    
+                    async for chunk in response.aiter_bytes():
+                        yield chunk
+        
+        except Exception as e:
+            logger.error(f"Error in AI chat: {e}")
+            yield f"Error: {str(e)}\n"
+    
+    return StreamingResponse(generate(), media_type="text/plain")
+
+# ==============================================================================
+# END PHASE 7.3 ROUTES
+# ==============================================================================
+
 
 # === Batch Re-Tagging System ===
 @app.post("/api/batch-retag")

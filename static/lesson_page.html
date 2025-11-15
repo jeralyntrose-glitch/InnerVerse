@@ -2,160 +2,134 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lesson - InnerVerse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lesson - CS Joseph University</title>
     <link rel="stylesheet" href="/static/lesson_page.css">
 </head>
-<body>
-    
-    <header class="lesson-header">
-        <div class="header-left">
-            <button class="btn-link" id="back-btn">← Back to Course</button>
-            <div class="breadcrumb">
-                <span id="course-title">Loading...</span>
-                <span class="separator">›</span>
-                <span id="lesson-title">Loading...</span>
-            </div>
-        </div>
-        <div class="header-right">
-            <span id="lesson-number" class="lesson-number">
-                Lesson 1 of 10
-            </span>
-            <button id="delete-lesson-btn" class="delete-btn" title="Delete this lesson">
-                🗑️ Delete
-            </button>
-        </div>
-    </header>
+<body data-theme="dark">
+    <!-- Mobile Hamburger -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <span class="hamburger-icon">☰</span>
+    </button>
 
-    <div class="split-container">
-        <!-- Left Sidebar for Concepts (Phase 6.5) -->
-        <aside class="concepts-sidebar" id="concepts-sidebar">
+    <!-- Sidebar Overlay (Mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Container -->
+    <div class="lesson-container">
+        
+        <!-- Mini Sidebar -->
+        <aside class="lesson-sidebar" id="lessonSidebar">
             <div class="sidebar-header">
-                <h3>📚 Key Concepts</h3>
-                <button class="sidebar-toggle" id="sidebar-toggle" title="Collapse sidebar">
-                    ◀
+                <a href="javascript:history.back()" class="back-link">
+                    <span class="back-icon">←</span>
+                    <span class="back-text">Back to Season</span>
+                </a>
+                
+                <button id="themeToggle" class="theme-toggle-small" aria-label="Toggle theme">
+                    <span class="theme-icon">🌙</span>
                 </button>
             </div>
-            <div class="sidebar-content" id="concepts-grid">
-                <div class="loading-skeleton">
-                    Loading concepts...
-                </div>
+
+            <div class="sidebar-content" id="sidebarContent">
+                <!-- Season lessons will be loaded here -->
+                <div class="loading-spinner"></div>
             </div>
         </aside>
 
-        <div class="content-pane">
-            <div class="lesson-progress-bar">
-                <div class="progress-fill" id="lesson-progress-fill"></div>
-            </div>
+        <!-- Lesson Content -->
+        <main class="lesson-main">
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb" id="breadcrumb">
+                <a href="/" class="breadcrumb-link">Dashboard</a>
+                <span class="breadcrumb-separator">›</span>
+                <span id="breadcrumbModule">...</span>
+                <span class="breadcrumb-separator">›</span>
+                <span id="breadcrumbSeason">...</span>
+            </nav>
 
-            <div class="lesson-header-content">
-                <h1 id="lesson-title-main">Loading lesson...</h1>
-                <div class="lesson-meta">
-                    <span>⏱️ <span id="lesson-duration">30 min</span></span>
-                    <span>📊 <span id="lesson-difficulty">foundational</span></span>
-                    <span id="lesson-status">● Not Started</span>
-                </div>
-                <p class="lesson-description" id="lesson-description">
-                    Loading description...
-                </p>
-            </div>
+            <!-- Lesson Header -->
+            <header class="lesson-header" id="lessonHeader">
+                <div class="lesson-meta-small" id="lessonMetaSmall">Loading...</div>
+                <h1 class="lesson-title" id="lessonTitle">Loading lesson...</h1>
+            </header>
 
-            <section class="video-section" id="video-section" style="display: none;">
-                <h2>🎥 Video</h2>
-                <div class="video-container" id="video-container">
-                    <iframe width="100%" height="450" src="" frameborder="0" allowfullscreen id="video-iframe"></iframe>
-                </div>
+            <!-- Video Section -->
+            <section class="video-section" id="videoSection">
+                <!-- Video or Skool message will be inserted here -->
             </section>
 
-            <section class="lesson-content-section" id="lesson-content-section" style="display: none;">
-                <h2>📖 Lesson Content</h2>
-                <div class="lesson-content-body" id="lesson-content-body">
-                    Loading content...
+            <!-- AI-Generated Lesson Content -->
+            <section class="lesson-content-section">
+                <h2 class="section-title">📝 Lesson Summary</h2>
+                <div class="lesson-content" id="lessonContent">
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Generating lesson content...</p>
+                    </div>
                 </div>
-            </section>
-
-            <section class="transcript-section" id="transcript-section" style="display: none;">
-                <h2>📄 Transcript</h2>
-                <div class="transcript-content" id="transcript-content">
-                    Loading transcript...
-                </div>
-            </section>
-
-            <section class="notes-section">
-                <h2>📝 Your Notes</h2>
-                <textarea class="notes-textarea" id="lesson-notes" placeholder="Take notes about this lesson..."></textarea>
-                <div class="notes-status" id="notes-status">
-                    Notes auto-saved
-                </div>
-            </section>
-
-            <div class="lesson-navigation">
-                <button class="btn-secondary nav-btn" id="prev-lesson-btn">
-                    ← Previous Lesson
+                
+                <button class="mark-complete-btn" id="markCompleteBtn" style="display: none;">
+                    <span class="btn-icon">✓</span>
+                    <span class="btn-text">Mark as Complete</span>
                 </button>
-                <div style="flex: 1;"></div>
-                <button class="btn-primary" id="mark-complete-btn">
-                    ✓ Mark as Complete
-                </button>
-                <div style="flex: 1;"></div>
-                <button class="btn-secondary nav-btn" id="next-lesson-btn">
-                    Next Lesson →
-                </button>
-            </div>
+            </section>
 
-        </div>
+            <!-- Transcript Section -->
+            <section class="transcript-section">
+                <button class="transcript-toggle" id="transcriptToggle" disabled>
+                    <span class="toggle-icon">📄</span>
+                    <span class="toggle-text">Show Transcript</span>
+                    <span class="toggle-arrow">▼</span>
+                </button>
+                
+                <div class="transcript-content" id="transcriptContent" style="display: none;">
+                    <div class="transcript-text" id="transcriptText">
+                        <!-- Transcript will be loaded here -->
+                    </div>
+                </div>
+            </section>
 
-        <div class="chat-pane">
+            <!-- Navigation -->
+            <nav class="lesson-navigation">
+                <button class="nav-btn prev-btn" id="prevBtn" disabled>
+                    <span class="nav-icon">◀</span>
+                    <span class="nav-text">Previous Lesson</span>
+                </button>
+                
+                <button class="nav-btn next-btn" id="nextBtn" disabled>
+                    <span class="nav-text">Next Lesson</span>
+                    <span class="nav-icon">▶</span>
+                </button>
+            </nav>
+        </main>
+
+        <!-- AI Tutor Chat -->
+        <aside class="chat-panel">
             <div class="chat-header">
-                <div class="chat-mode-indicator">
-                    <div class="mode-icon">🎓</div>
-                    <div class="mode-info">
-                        <strong>Lesson Mode</strong>
-                        <div class="mode-description">AI focused on current lesson</div>
-                    </div>
-                </div>
-                <button class="btn-link" id="switch-to-regular">
-                    Switch to Regular Chat →
-                </button>
+                <h2 class="chat-title">💬 AI Tutor</h2>
+                <p class="chat-subtitle">Ask anything about this lesson</p>
             </div>
 
-            <div class="chat-context">
-                <span class="context-label">Current Context:</span>
-                This lesson + related concepts
-            </div>
-
-            <div class="chat-messages" id="chat-messages">
-                <div class="chat-message ai-message">
-                    <div class="message-avatar">🤖</div>
-                    <div class="message-content">
-                        Hi! I'm your MBTI tutor. I'm here to help you understand this lesson. Ask me anything about the concepts, examples, or how this applies to your type!
-                    </div>
-                </div>
+            <div class="chat-messages" id="chatMessages">
+                <!-- Chat messages will be loaded here -->
             </div>
 
             <div class="chat-input-container">
-                <textarea class="chat-input" id="chat-input" placeholder="Ask a question about this lesson..." rows="2"></textarea>
-                <button class="btn-primary send-btn" id="send-btn">
-                    Send
+                <textarea 
+                    id="chatInput"
+                    class="chat-input"
+                    placeholder="Ask a question about this lesson..."
+                    rows="2"
+                ></textarea>
+                <button id="sendBtn" class="send-btn">
+                    <span class="send-icon">▶</span>
                 </button>
             </div>
-
-        </div>
+        </aside>
 
     </div>
 
-    <div class="loading-overlay" id="loading-overlay">
-        <div class="spinner"></div>
-        <div style="color: white; margin-top: 16px;">Loading lesson...</div>
-    </div>
-
-    <div class="toast-container" id="toast-container"></div>
-
-    <!-- Markdown rendering libraries -->
-    <script src="/node_modules/marked/lib/marked.umd.js"></script>
-    <script src="/node_modules/dompurify/dist/purify.min.js"></script>
-    
-    <script src="/static/lesson_page.js?v=20251109214328"></script>
-
+    <script src="/static/lesson_page.js"></script>
 </body>
 </html>

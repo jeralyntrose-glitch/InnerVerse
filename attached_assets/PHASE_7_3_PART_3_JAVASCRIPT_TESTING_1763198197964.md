@@ -1,3 +1,19 @@
+# PHASE 7.3: LESSON PAGE - PART 3 (JavaScript + Testing)
+
+**Project:** InnerVerse - CS Joseph University  
+**Phase:** 7.3 of 7 (Part 3 of 3 - FINAL)  
+**Goal:** Complete JavaScript functionality + Testing  
+**Prerequisites:** Phase 7.3 Part 1 ✅ Part 2 ✅ (Database + Backend + HTML + CSS working)
+
+---
+
+## 🎨 STEP 5: FRONTEND - JAVASCRIPT
+
+### 5.1 Create static/lesson_page.js
+
+**File:** `static/lesson_page.js`
+
+```javascript
 // ==============================================================================
 // PHASE 7.3: LESSON PAGE - COMPLETE JAVASCRIPT
 //
@@ -19,6 +35,8 @@
 
 const CONFIG = {
     API_BASE: '',  // Same origin
+    BACKEND_API: 'https://axis-of-mind.replit.app/query',
+    BACKEND_KEY: 'axis_ZMEmIg-mAqwIhVELvOthykohrRufDX3VTskCV6VbxrU',
     RETRY_ATTEMPTS: 3,
     RETRY_DELAY: 1000,
     CHUNK_TIMEOUT: 30000  // 30 seconds for streaming timeout
@@ -368,13 +386,15 @@ async function generateLessonContent(lesson) {
             </div>
         `;
         
-        // Query backend API (server-side proxy keeps credentials secure)
-        const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}/ai-chat`, {
+        // Query backend API
+        const response = await fetch(CONFIG.BACKEND_API, {
             method: 'POST',
             headers: {
+                'Authorization': `Bearer ${CONFIG.BACKEND_KEY}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+                document_id: "",
                 question: `Create a comprehensive lesson summary from the transcript with ID "${lesson.transcript_id}". 
 
 Include:
@@ -384,7 +404,7 @@ Include:
 - Important quotes or memorable moments
 
 Format with clear headers and organized sections. Make it educational and engaging.`,
-                transcript_id: lesson.transcript_id
+                tags: [lesson.transcript_id, `season${lesson.season_number}`]
             })
         });
         
@@ -502,15 +522,17 @@ async function loadTranscript(transcriptId) {
     try {
         console.log(`📄 Loading transcript: ${transcriptId}`);
         
-        // Query backend for transcript (server-side proxy keeps credentials secure)
-        const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}/ai-chat`, {
+        // Query backend for transcript
+        const response = await fetch(CONFIG.BACKEND_API, {
             method: 'POST',
             headers: {
+                'Authorization': `Bearer ${CONFIG.BACKEND_KEY}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+                document_id: "",
                 question: `Return the FULL TRANSCRIPT for transcript ID "${transcriptId}". Return ONLY the transcript text, no summaries or explanations.`,
-                transcript_id: transcriptId
+                tags: [transcriptId]
             })
         });
         
@@ -662,15 +684,19 @@ async function sendMessage() {
         const lessonContext = state.lessonData?.lesson ? 
             `This question is about the lesson: "${state.lessonData.lesson.lesson_title}" (Season ${state.lessonData.lesson.season_number}).` : '';
         
-        // Query backend (server-side proxy keeps credentials secure)
-        const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}/ai-chat`, {
+        // Query backend
+        const response = await fetch(CONFIG.BACKEND_API, {
             method: 'POST',
             headers: {
+                'Authorization': `Bearer ${CONFIG.BACKEND_KEY}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+                document_id: "",
                 question: `${lessonContext}\n\nUser question: ${message}`,
-                transcript_id: state.lessonData?.lesson?.transcript_id || ''
+                tags: state.lessonData?.lesson ? 
+                    [state.lessonData.lesson.transcript_id, `season${state.lessonData.lesson.season_number}`] : 
+                    []
             })
         });
         
@@ -894,3 +920,231 @@ function showError(message) {
 // ==============================================================================
 // END PHASE 7.3 JAVASCRIPT
 // ==============================================================================
+```
+
+---
+
+## ✅ STEP 6: COMPLETE TESTING CHECKLIST
+
+### 6.1 Database Tests
+
+```sql
+-- Check lesson_chats table exists
+\d lesson_chats
+
+-- Verify indexes
+\di lesson_chats*
+
+-- Test insert
+INSERT INTO lesson_chats (lesson_id, messages)
+VALUES (4, '[{"role":"user","content":"test","timestamp":"2025-11-14T10:00:00"}]'::jsonb);
+
+-- Test select
+SELECT * FROM lesson_chats WHERE lesson_id = 4;
+
+-- Clean up test
+DELETE FROM lesson_chats WHERE lesson_id = 4;
+```
+
+### 6.2 Backend API Tests
+
+```bash
+# Test lesson data endpoint
+curl http://localhost:5000/api/lesson/4 | jq '.'
+# Expected: JSON with lesson, progress, navigation, season_lessons
+
+# Test chat history (empty)
+curl http://localhost:5000/api/lesson/4/chat | jq '.'
+# Expected: {"messages": []}
+
+# Test save chat message
+curl -X POST http://localhost:5000/api/lesson/4/chat \
+  -H "Content-Type: application/json" \
+  -d '{"role":"user","content":"test","timestamp":"2025-11-14T10:00:00"}' | jq '.'
+# Expected: {"success": true}
+
+# Test mark complete
+curl -X POST http://localhost:5000/api/lesson/4/complete | jq '.'
+# Expected: {"success": true, "completed": true}
+```
+
+### 6.3 Frontend Tests - Desktop
+
+**Open:** `http://localhost:5000/lesson/4`
+
+- [ ] Page loads without errors
+- [ ] Lesson title displays correctly
+- [ ] Breadcrumb shows: Dashboard > Module > Season
+- [ ] Video embeds (if youtube_url exists)
+  - [ ] OR Skool message shows (if no video)
+- [ ] Sidebar shows all season lessons
+  - [ ] Current lesson highlighted with ▶
+  - [ ] Completed lessons show ✓
+  - [ ] Click lesson → navigates correctly
+- [ ] AI lesson content generates
+  - [ ] Shows loading spinner initially
+  - [ ] Content appears after generation
+  - [ ] OR "Coming soon" fallback if transcript missing
+- [ ] Transcript toggle works
+  - [ ] Button disabled if no transcript
+  - [ ] Click → expands/collapses
+  - [ ] Content loads correctly
+- [ ] Chat interface functional
+  - [ ] Can type message
+  - [ ] Enter key sends message
+  - [ ] User message appears (blue, right-aligned)
+  - [ ] Typing indicator shows
+  - [ ] AI response streams in
+  - [ ] AI message appears (gray, left-aligned)
+  - [ ] Messages persist on page reload
+- [ ] Mark complete button
+  - [ ] Appears after lesson loads
+  - [ ] Click → marks lesson complete
+  - [ ] Button changes to "Completed" (disabled)
+  - [ ] Sidebar updates (✓ appears)
+- [ ] Navigation buttons
+  - [ ] Previous button (disabled if first lesson)
+  - [ ] Next button (disabled if last lesson)
+  - [ ] Click → navigates to prev/next lesson
+- [ ] Theme toggle
+  - [ ] Click → switches dark/light
+  - [ ] Persists across page loads
+- [ ] Back to Season link works
+
+### 6.4 Frontend Tests - Mobile
+
+**Open on mobile or DevTools mobile view:**
+
+- [ ] Hamburger menu visible (top-left)
+- [ ] Click hamburger → sidebar slides in
+- [ ] Backdrop darkens
+- [ ] Click outside sidebar → closes
+- [ ] Sidebar shows all lessons
+- [ ] Layout stacks vertically
+- [ ] Video responsive (16:9 ratio)
+- [ ] Touch targets large enough
+- [ ] Chat input expands on focus
+- [ ] All buttons tappable
+- [ ] Smooth scrolling
+
+### 6.5 Edge Case Tests
+
+1. **First lesson in season:**
+   - [ ] Previous button disabled
+   - [ ] Next button enabled
+
+2. **Last lesson in season:**
+   - [ ] Previous button enabled
+   - [ ] Next button disabled
+
+3. **Lesson with no video:**
+   - [ ] Skool message displays
+   - [ ] Link to Skool works
+
+4. **Empty chat history:**
+   - [ ] Shows "No messages yet" placeholder
+   - [ ] Can send first message
+
+5. **Very long AI response:**
+   - [ ] Streams correctly
+   - [ ] All text appears
+
+6. **Network error during chat:**
+   - [ ] Shows error message
+   - [ ] Can retry
+
+7. **Missing transcript:**
+   - [ ] Transcript toggle disabled
+   - [ ] "Coming soon" fallback for lesson content
+
+8. **Already completed lesson:**
+   - [ ] Mark complete button shows "Completed"
+   - [ ] Button disabled
+   - [ ] Sidebar shows ✓
+
+9. **Invalid lesson ID:**
+   - [ ] Shows "Lesson not found" error
+   - [ ] Link back to dashboard
+
+---
+
+## 🎉 PHASE 7.3 COMPLETE!
+
+**Phase 7.3 is DONE when ALL of the following are true:**
+
+1. ✅ Database table created and tested
+2. ✅ 4 backend routes working and verified
+3. ✅ Lesson page renders with all components
+4. ✅ Video OR Skool message displays correctly
+5. ✅ AI lesson content generates (or shows fallback)
+6. ✅ Transcript loads and toggles (when available)
+7. ✅ Chat interface functional with persistence
+8. ✅ Chat history loads on page reload
+9. ✅ Mark complete updates database and UI
+10. ✅ Navigation (prev/next/sidebar) works perfectly
+11. ✅ Mobile experience smooth and beautiful
+12. ✅ All desktop tests pass
+13. ✅ All mobile tests pass
+14. ✅ All edge cases handled gracefully
+15. ✅ No console errors
+16. ✅ Theme toggle works
+17. ✅ Performance is good (<2s page load)
+
+**User can now:**
+- Navigate from Dashboard → Season → Lesson ✅
+- Watch videos OR see Skool links ✅
+- Read AI-generated lesson summaries ✅
+- View transcripts (when available) ✅
+- Chat with AI tutor about the lesson ✅
+- Mark lessons complete ✅
+- Navigate between lessons easily ✅
+- Use on mobile devices ✅
+
+---
+
+## 📋 POST-IMPLEMENTATION CHECKLIST
+
+After Replit Agent completes implementation:
+
+### Verification Steps
+
+1. **Database:**
+   ```sql
+   SELECT COUNT(*) FROM lesson_chats;
+   ```
+
+2. **Backend:**
+   ```bash
+   curl http://localhost:5000/api/lesson/4 | jq '.lesson.lesson_title'
+   ```
+
+3. **Frontend:**
+   - Open `http://localhost:5000/lesson/4`
+   - Check browser console (no errors)
+   - Test one feature from each category above
+
+4. **Mobile:**
+   - Open DevTools responsive mode
+   - Set to iPhone 12 (390x844)
+   - Test hamburger menu
+   - Test chat interface
+
+### Bug Fixes
+
+If you encounter issues:
+
+1. **Console errors:** Check browser console, fix JavaScript errors
+2. **API errors:** Check server logs, verify routes are registered
+3. **Styling issues:** Verify CSS file is loaded, check data-theme attribute
+4. **Database errors:** Verify table exists, check foreign keys
+
+### Performance Optimization
+
+- [ ] Check page load time (<2s)
+- [ ] Test with slow 3G network
+- [ ] Verify no memory leaks
+- [ ] Check streaming performance
+
+---
+
+**End of Part 3 - PHASE 7.3 COMPLETE! 🎉**
