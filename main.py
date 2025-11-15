@@ -4139,6 +4139,158 @@ async def get_curriculum_stats() -> Dict[str, Any]:
 # END PHASE 7.1 ROUTES
 # ==============================================================================
 
+# ==============================================================================
+# PHASE 7.2: SEASON VIEW ROUTES
+# ==============================================================================
+
+@app.get("/season/{season_number}")
+async def serve_season_view(season_number: str):
+    """
+    Serve the season view page for a specific season
+    
+    Args:
+        season_number: Season number (e.g., "1", "16", "2")
+    
+    Returns:
+        HTML page showing all lessons in the season
+    """
+    return FileResponse("static/season_view.html")
+
+
+@app.get("/api/season/{season_number}")
+async def get_season_data(season_number: str) -> Dict[str, Any]:
+    """
+    Get all lessons and metadata for a specific season
+    
+    Args:
+        season_number: Season number (e.g., "1", "16", "2")
+    
+    Returns:
+        {
+          "season_info": {
+            "season_number": "1",
+            "season_name": "Jungian Cognitive Functions",
+            "module_number": 2,
+            "module_name": "Building Foundation",
+            "total_lessons": 16,
+            "completed_lessons": 2,
+            "progress_percent": 12.5
+          },
+          "lessons": [
+            {
+              "lesson_id": 4,
+              "lesson_number": 1,
+              "lesson_title": "Introduction to Cognitive Functions",
+              "duration": "15:22",
+              "has_video": true,
+              "completed": true,
+              "last_accessed": "2025-11-14T10:30:00",
+              "order_index": 4
+            },
+            ...
+          ]
+        }
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get season info
+        cursor.execute("""
+            SELECT 
+                season_number,
+                season_name,
+                module_number,
+                module_name,
+                COUNT(lesson_id) as total_lessons
+            FROM curriculum
+            WHERE season_number = %s
+            GROUP BY season_number, season_name, module_number, module_name
+        """, (season_number,))
+        
+        season_row = cursor.fetchone()
+        
+        if not season_row:
+            raise HTTPException(status_code=404, detail=f"Season {season_number} not found")
+        
+        season_info = {
+            "season_number": str(season_row[0]),
+            "season_name": str(season_row[1]),
+            "module_number": int(season_row[2]),
+            "module_name": str(season_row[3]),
+            "total_lessons": int(season_row[4])
+        }
+        
+        # Get completion count for this season
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM curriculum c
+            JOIN progress p ON c.lesson_id = p.lesson_id
+            WHERE c.season_number = %s AND p.completed = TRUE
+        """, (season_number,))
+        
+        completed_count = cursor.fetchone()[0] or 0
+        season_info["completed_lessons"] = int(completed_count)
+        season_info["progress_percent"] = round(
+            (completed_count / season_info["total_lessons"] * 100), 1
+        ) if season_info["total_lessons"] > 0 else 0.0
+        
+        # Get all lessons in this season with progress
+        cursor.execute("""
+            SELECT 
+                c.lesson_id,
+                c.lesson_number,
+                c.lesson_title,
+                c.duration,
+                c.has_video,
+                c.order_index,
+                c.description,
+                COALESCE(p.completed, FALSE) as completed,
+                p.last_accessed
+            FROM curriculum c
+            LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+            WHERE c.season_number = %s
+            ORDER BY c.lesson_number ASC
+        """, (season_number,))
+        
+        lessons_data = cursor.fetchall()
+        lessons = []
+        
+        for row in lessons_data:
+            lessons.append({
+                "lesson_id": int(row[0]),
+                "lesson_number": int(row[1]),
+                "lesson_title": str(row[2]),
+                "duration": str(row[3]) if row[3] else None,
+                "has_video": bool(row[4]),
+                "order_index": int(row[5]),
+                "description": str(row[6]) if row[6] else None,
+                "completed": bool(row[7]),
+                "last_accessed": row[8].isoformat() if row[8] else None
+            })
+        
+        return {
+            "season_info": season_info,
+            "lessons": lessons
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching season data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+# ==============================================================================
+# END PHASE 7.2 ROUTES
+# ==============================================================================
+
 
 # === Batch Re-Tagging System ===
 @app.post("/api/batch-retag")

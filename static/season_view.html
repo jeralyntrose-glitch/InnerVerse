@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Season View - CS Joseph University</title>
+    <link rel="stylesheet" href="/static/season_view.css">
+</head>
+<body data-theme="dark">
+    <!-- Header -->
+    <header class="season-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="/" class="back-button">
+                    <span class="back-icon">←</span>
+                    <span class="back-text">Back to Dashboard</span>
+                </a>
+            </div>
+            
+            <div class="header-actions">
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="season-main">
+        <div class="container">
+            
+            <!-- Season Header -->
+            <section class="season-hero" id="seasonHero">
+                <!-- Will be populated by JavaScript -->
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Loading season...</p>
+                </div>
+            </section>
+
+            <!-- Lessons List -->
+            <section class="lessons-section">
+                <div id="lessonsContainer" class="lessons-list">
+                    <!-- Lessons will be dynamically inserted here -->
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="season-footer">
+        <p>&copy; 2025 InnerVerse - CS Joseph University</p>
+    </footer>
+
+    <script src="/static/season_view.js"></script>
+</body>
+</html>
