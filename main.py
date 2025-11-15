@@ -4633,18 +4633,21 @@ async def mark_lesson_complete_route(lesson_id: int, request: Dict[str, Any]):
 @app.post("/api/lesson/{lesson_id}/ai-chat")
 async def lesson_ai_chat(lesson_id: int, request: dict):
     """
-    Server-side proxy for AI chat - queries Axis backend with Pinecone document_id
+    Server-side proxy for AI chat with caching
+    
+    PERFORMANCE OPTIMIZATION: Checks cache first to avoid unnecessary API calls
     
     Args:
         lesson_id: Lesson ID
-        request: {"question": "..."}
+        request: {"question": "...", "force_regenerate": false}
     
     Returns:
-        StreamingResponse with AI answer
+        StreamingResponse with AI answer (from cache or freshly generated)
     """
     import httpx
     
     question = request.get("question", "")
+    force_regenerate = request.get("force_regenerate", False)
     
     if not question:
         raise HTTPException(status_code=400, detail="Question is required")
@@ -4655,6 +4658,31 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
     try:
         conn = get_db()
         cursor = conn.cursor()
+        
+        # Check cache FIRST (unless force regenerate)
+        if not force_regenerate:
+            cursor.execute("""
+                SELECT generated_content, generated_at
+                FROM lesson_content_cache
+                WHERE lesson_id = %s
+            """, (lesson_id,))
+            
+            cached_row = cursor.fetchone()
+            
+            if cached_row:
+                cached_content = cached_row[0]
+                cached_at = cached_row[1]
+                
+                logger.info(f"💾 Cache HIT for lesson {lesson_id} (generated at {cached_at})")
+                
+                # Return cached content immediately (no streaming needed)
+                async def return_cached():
+                    yield cached_content.encode('utf-8')
+                
+                return StreamingResponse(return_cached(), media_type="text/plain")
+        
+        # Cache MISS or force regenerate - fetch lesson data and generate fresh
+        logger.info(f"🔄 Cache MISS for lesson {lesson_id} - generating fresh content")
         
         cursor.execute("""
             SELECT document_id, lesson_title
@@ -4682,7 +4710,10 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
         if not backend_key:
             raise HTTPException(status_code=500, detail="Backend API key not configured")
         
-        async def generate():
+        async def generate_and_cache():
+            """Generate fresh content, stream it, AND save to cache"""
+            full_response = ""
+            
             try:
                 async with httpx.AsyncClient(timeout=60.0) as client:
                     async with client.stream(
@@ -4699,17 +4730,49 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
                         }
                     ) as response:
                         if response.status_code != 200:
-                            yield f"Error: Backend API returned {response.status_code}\n"
+                            error_msg = f"Error: Backend API returned {response.status_code}\n"
+                            yield error_msg.encode('utf-8')
                             return
                         
+                        # Stream chunks to client AND collect for caching
                         async for chunk in response.aiter_bytes():
+                            full_response += chunk.decode('utf-8', errors='ignore')
                             yield chunk
+                
+                # After streaming completes, save to cache
+                if full_response and len(full_response) > 50:  # Only cache if meaningful content
+                    cache_conn = None
+                    cache_cursor = None
+                    try:
+                        cache_conn = get_db()
+                        cache_cursor = cache_conn.cursor()
+                        
+                        # Upsert to cache
+                        cache_cursor.execute("""
+                            INSERT INTO lesson_content_cache (lesson_id, generated_content, generated_at)
+                            VALUES (%s, %s, CURRENT_TIMESTAMP)
+                            ON CONFLICT (lesson_id) 
+                            DO UPDATE SET 
+                                generated_content = EXCLUDED.generated_content,
+                                generated_at = CURRENT_TIMESTAMP
+                        """, (lesson_id, full_response))
+                        
+                        cache_conn.commit()
+                        logger.info(f"💾 Cached {len(full_response)} chars for lesson {lesson_id}")
+                        
+                    except Exception as cache_error:
+                        logger.error(f"Failed to cache content: {cache_error}")
+                    finally:
+                        if cache_cursor:
+                            cache_cursor.close()
+                        if cache_conn:
+                            cache_conn.close()
             
             except Exception as e:
                 logger.error(f"Error in AI chat: {e}")
-                yield f"Error: {str(e)}\n"
+                yield f"Error: {str(e)}\n".encode('utf-8')
         
-        return StreamingResponse(generate(), media_type="text/plain")
+        return StreamingResponse(generate_and_cache(), media_type="text/plain")
         
     except HTTPException:
         raise
