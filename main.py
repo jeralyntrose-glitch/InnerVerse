@@ -4780,7 +4780,9 @@ async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
             }
         
         # Query for raw transcript content using document_id with VERY explicit instructions
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        logger.info(f"📜 Fetching transcript for lesson {lesson_id}: {lesson_title}")
+        
+        async with httpx.AsyncClient(timeout=90.0) as client:
             response = await client.post(
                 backend_api,
                 headers={
@@ -4797,16 +4799,18 @@ CRITICAL INSTRUCTIONS:
 - Do NOT summarize, shorten, or truncate
 - Do NOT add analysis or commentary
 - Do NOT skip any sections
+- Do NOT stop early due to length limits
 - Just return the raw transcript text exactly as it appears
 - Include all timestamps if present
+- If the document is split into multiple chunks, return ALL chunks concatenated together
 
-This is for a student who needs to read the full transcript.''',
+This is for a student who needs to read the full transcript verbatim.''',
                     "tags": []
                 }
             )
             
             if response.status_code != 200:
-                logger.error(f"Backend API error: {response.status_code}")
+                logger.error(f"❌ Backend API error: {response.status_code}")
                 return {
                     "transcript": None,
                     "transcript_id": transcript_id,
@@ -4818,8 +4822,18 @@ This is for a student who needs to read the full transcript.''',
             data = response.json()
             transcript_text = data.get('answer', '')
             
+            # Detailed logging for debugging
+            char_count = len(transcript_text)
+            logger.info(f"📊 Transcript received: {char_count:,} characters")
+            
+            if transcript_text:
+                preview_length = min(200, len(transcript_text))
+                logger.info(f"📝 First 200 chars: {transcript_text[:preview_length]}")
+                logger.info(f"📝 Last 200 chars: {transcript_text[-preview_length:]}")
+            
             # Check if we got actual content (be more lenient)
             if not transcript_text:
+                logger.warning(f"⚠️ No transcript text returned for lesson {lesson_id}")
                 return {
                     "transcript": None,
                     "transcript_id": transcript_id,
@@ -4828,22 +4842,25 @@ This is for a student who needs to read the full transcript.''',
                 }
             
             # Warn if suspiciously short (but still return it)
-            if len(transcript_text) < 500:
-                logger.warning(f"Transcript for lesson {lesson_id} is unusually short: {len(transcript_text)} characters")
+            if char_count < 1000:
+                logger.warning(f"⚠️ Transcript for lesson {lesson_id} may be incomplete - only {char_count} characters")
+            else:
+                logger.info(f"✅ Transcript looks complete ({char_count:,} chars)")
             
             return {
                 "transcript": transcript_text,
                 "transcript_id": transcript_id,
-                "available": True
+                "available": True,
+                "char_count": char_count
             }
         
     except httpx.TimeoutException:
-        logger.error("Transcript fetch timeout")
+        logger.error("❌ Transcript fetch timeout (90s exceeded) - transcript may be very long")
         return {
             "transcript": None,
             "transcript_id": transcript_id if 'transcript_id' in locals() else None,
             "available": False,
-            "error": "Request timeout"
+            "error": "Request timeout (90s) - transcript may be very long"
         }
     except HTTPException:
         raise
