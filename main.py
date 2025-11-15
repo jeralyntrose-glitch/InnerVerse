@@ -4659,8 +4659,12 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
         conn = get_db()
         cursor = conn.cursor()
         
-        # Check cache FIRST (unless force regenerate)
-        if not force_regenerate:
+        # Only cache lesson content generation, NOT chat questions
+        # Lesson content starts with "Create a comprehensive lesson summary"
+        is_lesson_content_generation = question.startswith("Create a comprehensive lesson summary")
+        
+        # Check cache FIRST (only for lesson content, unless force regenerate)
+        if is_lesson_content_generation and not force_regenerate:
             cursor.execute("""
                 SELECT generated_content, generated_at
                 FROM lesson_content_cache
@@ -4739,8 +4743,8 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
                             full_response += chunk.decode('utf-8', errors='ignore')
                             yield chunk
                 
-                # After streaming completes, save to cache
-                if full_response and len(full_response) > 50:  # Only cache if meaningful content
+                # After streaming completes, save to cache (ONLY for lesson content, not chat)
+                if is_lesson_content_generation and full_response and len(full_response) > 50:
                     cache_conn = None
                     cache_cursor = None
                     try:
@@ -4767,6 +4771,8 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
                             cache_cursor.close()
                         if cache_conn:
                             cache_conn.close()
+                elif not is_lesson_content_generation:
+                    logger.info(f"💬 Chat question - not caching (conversational)")
             
             except Exception as e:
                 logger.error(f"Error in AI chat: {e}")
