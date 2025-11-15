@@ -1,0 +1,312 @@
+# PHASE 7.3.1: PINECONE DOCUMENT_ID FIX
+
+**Issue:** AI Lesson content showing "No relevant information found"  
+**Root Cause:** Database uses `transcript_id` (e.g., "season01_01") but Pinecone uses `document_id` (UUIDs)  
+**Solution:** Update database to use actual Pinecone document_ids  
+**Time:** 30 minutes  
+
+---
+
+## 🎯 THE PROBLEM
+
+**What's happening:**
+```
+Database curriculum table has:
+  transcript_id: "season01_01"
+
+Backend queries Pinecone with:
+  tags: ["season01_01"]
+
+Pinecone responds:
+  "No relevant information found" ❌
+
+Why? Pinecone uses document_id (UUID), not transcript_id!
+```
+
+**What Pinecone actually has:**
+```csv
+document_id: f8f82fe0-8e1c-448a-a4c7-988ca9256b5a
+title: [1] Cognitive Functions - Optimistic vs Pessimistic - Foundation
+```
+
+---
+
+## 🔧 THE FIX
+
+### Step 1: Update Database Schema
+
+**Add `document_id` column to curriculum table:**
+
+```sql
+-- Add new column
+ALTER TABLE curriculum 
+ADD COLUMN document_id UUID;
+
+-- Create index for performance
+CREATE INDEX idx_curriculum_document_id ON curriculum(document_id);
+```
+
+### Step 2: Map Pinecone Documents to Lessons
+
+**Use the uploaded CSV to create a mapping:**
+
+From `document_report.csv`, we can see the pattern:
+- `[1]` = Season 1
+- `[2]` = Season 2  
+- `[3]` = Season 3
+- etc.
+
+**Create a mapping script to update the database:**
+
+```python
+# mapping_script.py
+import csv
+import psycopg2
+
+# Read the Pinecone document report
+pinecone_docs = {}
+with open('document_report.csv', 'r') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        doc_id = row['document_id']
+        title = row['title']
+        
+        # Extract season number from title (e.g., "[1]" -> "1")
+        if title.startswith('['):
+            season = title.split(']')[0][1:]
+            pinecone_docs[title] = {
+                'document_id': doc_id,
+                'season': season,
+                'title': title
+            }
+
+# Connect to database
+conn = psycopg2.connect(
+    host="localhost",
+    database="your_db",
+    user="your_user",
+    password="your_password"
+)
+cursor = conn.cursor()
+
+# Get all lessons from curriculum
+cursor.execute("""
+    SELECT lesson_id, lesson_title, season_number
+    FROM curriculum
+    ORDER BY season_number, lesson_number
+""")
+
+lessons = cursor.fetchall()
+
+# Match lessons to Pinecone documents
+for lesson_id, lesson_title, season_number in lessons:
+    # Try to find matching document in Pinecone
+    # Look for documents that start with [season_number] and match title keywords
+    
+    for pinecone_title, doc_info in pinecone_docs.items():
+        if doc_info['season'] == str(season_number):
+            # Check if lesson title keywords match Pinecone title
+            # (This is a simple match - you may need to refine this)
+            if any(word.lower() in pinecone_title.lower() 
+                   for word in lesson_title.split() 
+                   if len(word) > 3):  # Match words longer than 3 chars
+                
+                # Update database with document_id
+                cursor.execute("""
+                    UPDATE curriculum
+                    SET document_id = %s
+                    WHERE lesson_id = %s
+                """, (doc_info['document_id'], lesson_id))
+                
+                print(f"Matched: Lesson {lesson_id} '{lesson_title}' -> {pinecone_title}")
+                break
+
+conn.commit()
+cursor.close()
+conn.close()
+```
+
+### Step 3: Manual Mapping (Simpler Approach)
+
+**Since you only have 30 sample lessons, manually map them:**
+
+Based on your CSV, here are Season 1 documents:
+
+```sql
+-- Season 1: Jungian Cognitive Functions (16 lessons)
+UPDATE curriculum SET document_id = 'f8f82fe0-8e1c-448a-a4c7-988ca9256b5a' 
+WHERE season_number = '1' AND lesson_number = 1;  
+-- [1] Cognitive Functions - Optimistic vs Pessimistic
+
+UPDATE curriculum SET document_id = '7c27e2e7-ad22-4c29-a25b-c511cbde51dd' 
+WHERE season_number = '1' AND lesson_number = 2;  
+-- [1] Jungian Personality Types - Introduction
+
+UPDATE curriculum SET document_id = '48634aad-f696-41c1-95e8-c6729f8c1524' 
+WHERE season_number = '1' AND lesson_number = 3;  
+-- [1] Cognitive Functions - How They Work
+
+-- Continue for all 16 Season 1 lessons...
+```
+
+### Step 4: Update Backend API Route
+
+**Modify `/api/lesson/{lesson_id}/ai-chat` to use `document_id`:**
+
+```python
+@app.post("/api/lesson/{lesson_id}/ai-chat")
+async def ai_chat_proxy(lesson_id: int, request: Dict[str, Any]):
+    """
+    Secure proxy for AI chat - queries Axis backend with document_id
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get lesson's document_id from database
+        cursor.execute("""
+            SELECT document_id, lesson_title
+            FROM curriculum
+            WHERE lesson_id = %s
+        """, (lesson_id,))
+        
+        row = cursor.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+        
+        document_id = row[0]
+        lesson_title = row[1]
+        
+        # If no document_id, return graceful fallback
+        if not document_id:
+            return {
+                "answer": "This lesson's content is not yet available in the knowledge base. The video is available to watch above!",
+                "sources": []
+            }
+        
+        # Get API key from environment
+        api_key = os.getenv("AXIS_BACKEND_KEY")
+        
+        if not api_key:
+            raise HTTPException(status_code=500, detail="API key not configured")
+        
+        # Query Axis backend with DOCUMENT_ID instead of transcript_id
+        axis_response = requests.post(
+            "https://axis-of-mind.replit.app/query",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "document_id": str(document_id),  # ← USE DOCUMENT_ID!
+                "question": request.get("question", ""),
+                "tags": []  # No tags needed - using document_id
+            },
+            timeout=30
+        )
+        
+        if axis_response.status_code != 200:
+            logger.error(f"Axis backend error: {axis_response.status_code}")
+            return {
+                "answer": "Unable to generate response at this time. Please try again.",
+                "sources": []
+            }
+        
+        return axis_response.json()
+        
+    except requests.exceptions.Timeout:
+        return {
+            "answer": "Request timed out. Please try again.",
+            "sources": []
+        }
+    except Exception as e:
+        logger.error(f"AI chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+```
+
+---
+
+## 📋 IMPLEMENTATION STEPS
+
+### Step 1: Add Column to Database
+```sql
+ALTER TABLE curriculum ADD COLUMN document_id UUID;
+CREATE INDEX idx_curriculum_document_id ON curriculum(document_id);
+```
+
+### Step 2: Upload CSV Mapping
+You'll need to provide the complete mapping of:
+- Lesson ID → Pinecone document_id
+
+**For now, manually map the 30 sample lessons:**
+
+```sql
+-- Season 1 mappings (based on your CSV)
+UPDATE curriculum SET document_id = 'f8f82fe0-8e1c-448a-a4c7-988ca9256b5a' WHERE lesson_id = 4;  -- Lesson 1
+UPDATE curriculum SET document_id = '7c27e2e7-ad22-4c29-a25b-c511cbde51dd' WHERE lesson_id = 5;  -- Lesson 2
+-- ... continue for all lessons
+```
+
+### Step 3: Update Backend Route
+Replace the `/api/lesson/{lesson_id}/ai-chat` route in `main.py` with the code above.
+
+### Step 4: Test
+```bash
+# Test AI chat with updated document_id
+curl -X POST http://localhost:5000/api/lesson/4/ai-chat \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Summarize this lesson"}'
+
+# Should now return actual content instead of "No relevant information found"
+```
+
+---
+
+## ✅ VERIFICATION CHECKLIST
+
+- [ ] `document_id` column added to curriculum table
+- [ ] Index created on `document_id`
+- [ ] At least one lesson mapped (Lesson 4 → actual document_id)
+- [ ] Backend route updated to use `document_id`
+- [ ] Test: AI chat returns actual lesson content
+- [ ] Test: AI chat handles missing `document_id` gracefully
+- [ ] All 30 sample lessons mapped (optional - can do incrementally)
+
+---
+
+## 🎯 EXPECTED RESULT
+
+**Before:**
+```json
+{"answer": "*No relevant information found in your documents."}
+```
+
+**After:**
+```json
+{
+  "answer": "This lesson covers the eight cognitive functions...",
+  "sources": [...]
+}
+```
+
+---
+
+## 📌 FUTURE: FULL IMPORT (PHASE 7.6)
+
+When you do Phase 7.6 (YouTube URL matching), you'll:
+1. Parse all 742 videos from YouTube files
+2. Match each video title to Pinecone document title
+3. Bulk update all `document_id` fields
+4. Then EVERYTHING will work automatically!
+
+For now, just map the 30 sample lessons manually.
+
+---
+
+**Ready to implement!** This will fix the AI lesson generation! 🚀
