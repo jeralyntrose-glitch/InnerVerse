@@ -4625,11 +4625,11 @@ async def mark_lesson_complete_route(lesson_id: int):
 @app.post("/api/lesson/{lesson_id}/ai-chat")
 async def lesson_ai_chat(lesson_id: int, request: dict):
     """
-    Server-side proxy for AI chat - keeps credentials secure
+    Server-side proxy for AI chat - queries Axis backend with Pinecone document_id
     
     Args:
         lesson_id: Lesson ID
-        request: {"question": "...", "transcript_id": "..."}
+        request: {"question": "..."}
     
     Returns:
         StreamingResponse with AI answer
@@ -4637,46 +4637,82 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
     import httpx
     
     question = request.get("question", "")
-    transcript_id = request.get("transcript_id", "")
     
     if not question:
         raise HTTPException(status_code=400, detail="Question is required")
     
-    # Get backend credentials from environment (server-side only!)
-    backend_api = os.getenv("AXIS_BACKEND_API", "https://axis-of-mind.replit.app/query")
-    backend_key = os.getenv("AXIS_BACKEND_KEY", "")
+    conn = None
+    cursor = None
     
-    if not backend_key:
-        raise HTTPException(status_code=500, detail="Backend API key not configured")
-    
-    async def generate():
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                async with client.stream(
-                    "POST",
-                    backend_api,
-                    headers={
-                        "Authorization": f"Bearer {backend_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "document_id": "",
-                        "question": question,
-                        "tags": [transcript_id] if transcript_id else []
-                    }
-                ) as response:
-                    if response.status_code != 200:
-                        yield f"Error: Backend API returned {response.status_code}\n"
-                        return
-                    
-                    async for chunk in response.aiter_bytes():
-                        yield chunk
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
         
-        except Exception as e:
-            logger.error(f"Error in AI chat: {e}")
-            yield f"Error: {str(e)}\n"
-    
-    return StreamingResponse(generate(), media_type="text/plain")
+        cursor.execute("""
+            SELECT document_id, lesson_title
+            FROM curriculum
+            WHERE lesson_id = %s
+        """, (lesson_id,))
+        
+        row = cursor.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+        
+        document_id = row[0]
+        lesson_title = row[1]
+        
+        if not document_id:
+            async def no_content_fallback():
+                yield "This lesson's content is not yet available in the knowledge base. The video is available to watch above!"
+            
+            return StreamingResponse(no_content_fallback(), media_type="text/plain")
+        
+        backend_api = os.getenv("AXIS_BACKEND_API", "https://axis-of-mind.replit.app/query")
+        backend_key = os.getenv("AXIS_BACKEND_KEY", "")
+        
+        if not backend_key:
+            raise HTTPException(status_code=500, detail="Backend API key not configured")
+        
+        async def generate():
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    async with client.stream(
+                        "POST",
+                        backend_api,
+                        headers={
+                            "Authorization": f"Bearer {backend_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "document_id": str(document_id),
+                            "question": question,
+                            "tags": []
+                        }
+                    ) as response:
+                        if response.status_code != 200:
+                            yield f"Error: Backend API returned {response.status_code}\n"
+                            return
+                        
+                        async for chunk in response.aiter_bytes():
+                            yield chunk
+            
+            except Exception as e:
+                logger.error(f"Error in AI chat: {e}")
+                yield f"Error: {str(e)}\n"
+        
+        return StreamingResponse(generate(), media_type="text/plain")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Database error in AI chat: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # ==============================================================================
 # END PHASE 7.3 ROUTES
