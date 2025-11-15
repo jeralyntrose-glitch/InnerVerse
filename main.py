@@ -4833,17 +4833,18 @@ async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
         logger.info(f"🔍 Document ID: {document_id}")
         
         # Initialize Pinecone index
-        index = get_pinecone_index()
+        index = get_pinecone_client()
         
         # Create a dummy query vector (we'll filter by metadata only)
         dummy_vector = [0.0] * 3072
         
         # Query with metadata filter to get ALL chunks for this document_id
         # Using top_k=10000 to ensure we get all chunks
+        # NOTE: Pinecone uses 'doc_id' not 'document_id' in metadata
         results = index.query(
             vector=dummy_vector,
             filter={
-                "document_id": str(document_id)
+                "doc_id": str(document_id)
             },
             top_k=10000,  # High limit to get all chunks
             include_metadata=True
