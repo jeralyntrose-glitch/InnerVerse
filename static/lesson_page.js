@@ -158,6 +158,11 @@ function setupEventListeners() {
 
 async function loadLessonData() {
     try {
+        // RESET STATE for new lesson (Fix #4)
+        state.isGeneratingLesson = false;
+        state.isGeneratingChat = false;
+        state.transcriptLoaded = false;
+        
         const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}`);
         
         if (!response.ok) {
@@ -746,9 +751,14 @@ function renderChatHistory() {
     chatMessages.innerHTML = state.chatHistory.map(msg => {
         const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
         
+        // Format AI messages, escape user messages
+        const formattedContent = msg.role === 'assistant' 
+            ? formatAIChatMessage(msg.content)
+            : escapeHtml(msg.content);
+        
         return `
             <div class="message ${msg.role}-message">
-                <div class="message-content">${escapeHtml(msg.content)}</div>
+                <div class="message-content">${formattedContent}</div>
                 ${time ? `<div class="message-time">${time}</div>` : ''}
             </div>
         `;
@@ -932,9 +942,39 @@ function updateAIMessage(messageId, content) {
     
     const contentEl = messageEl.querySelector('.message-content');
     if (contentEl) {
-        contentEl.textContent = content;
+        // Format the content before displaying
+        const formatted = formatAIChatMessage(content);
+        contentEl.innerHTML = formatted;
         scrollChatToBottom();
     }
+}
+
+function formatAIChatMessage(text) {
+    if (!text) return '';
+    
+    let formatted = text;
+    
+    // Convert literal \n to actual line breaks
+    formatted = formatted.replace(/\\n/g, '\n');
+    
+    // Convert newlines to <br> tags
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    // Bold text: **text** or __text__
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    
+    // Italic text: *text* or _text_ (avoid conflicts with bold)
+    formatted = formatted.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    formatted = formatted.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
+    
+    // Inline code: `text`
+    formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Bullet points: - or *
+    formatted = formatted.replace(/^[\-\*] (.+)$/gm, '• $1');
+    
+    return formatted;
 }
 
 async function saveChatMessage(message) {
@@ -966,35 +1006,43 @@ async function markLessonComplete() {
     const btn = document.getElementById('markCompleteBtn');
     if (!btn) return;
     
-    if (btn.classList.contains('completed')) {
-        return;
-    }
+    // Check current state and toggle it
+    const isCompleted = btn.classList.contains('completed');
+    const newState = !isCompleted;
     
     try {
+        // Update backend with new state
         const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}/complete`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                completed: newState
+            })
         });
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
         
-        console.log('✅ Lesson marked complete');
+        console.log(`✅ Lesson marked ${newState ? 'complete' : 'incomplete'}`);
         
-        updateMarkCompleteButton(true);
+        // Update UI
+        updateMarkCompleteButton(newState);
         
         // Update sidebar
         if (state.lessonData) {
             const lessonInSidebar = state.lessonData.season_lessons.find(l => l.lesson_id === state.lessonId);
             if (lessonInSidebar) {
-                lessonInSidebar.completed = true;
+                lessonInSidebar.completed = newState;
                 renderSidebar(state.lessonData.season_lessons, state.lessonId);
             }
         }
         
     } catch (error) {
-        console.error('❌ Error marking lesson complete:', error);
-        alert('Failed to mark lesson complete. Please try again.');
+        console.error('❌ Error toggling lesson completion:', error);
+        alert('Failed to update lesson status. Please try again.');
     }
 }
 
@@ -1004,13 +1052,16 @@ function updateMarkCompleteButton(completed) {
     
     if (completed) {
         btn.classList.add('completed');
-        btn.querySelector('.btn-text').textContent = 'Completed';
-        btn.disabled = true;
+        btn.querySelector('.btn-text').textContent = 'Completed ✓';
+        btn.title = 'Click to mark as incomplete';
     } else {
         btn.classList.remove('completed');
         btn.querySelector('.btn-text').textContent = 'Mark as Complete';
-        btn.disabled = false;
+        btn.title = 'Click to mark this lesson as complete';
     }
+    
+    // ALWAYS keep it clickable (never disable)
+    btn.disabled = false;
 }
 
 // ==============================================================================

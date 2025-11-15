@@ -1,0 +1,552 @@
+# PHASE 7.3.3: BUG FIXES (AI Chat, Complete Button, Transcript)
+
+**Priority:** HIGH  
+**Time:** 15-20 minutes  
+**Goal:** Fix remaining issues with chat display, completion toggling, and transcript loading
+
+---
+
+## 🐛 ISSUES TO FIX:
+
+1. **AI Chat text formatting** - Still showing poorly formatted responses
+2. **Complete button not clickable** - Can't toggle back to incomplete
+3. **Transcript incomplete** - Only shows portion, not full transcript
+4. **Navigation state bug** - Next lesson shows "completed" incorrectly
+
+---
+
+## 🔧 FIX #1: AI CHAT TEXT FORMATTING
+
+### Problem:
+Chat messages still look messy with poor line breaks and formatting.
+
+### Solution:
+
+**File:** `static/lesson_page.js`
+
+**Find the `updateAIMessage()` function** (around line 800):
+
+```javascript
+function updateAIMessage(messageId, content) {
+    const messageEl = document.getElementById(messageId);
+    if (!messageEl) return;
+    
+    const contentEl = messageEl.querySelector('.message-content');
+    if (contentEl) {
+        contentEl.textContent = content;
+        scrollChatToBottom();
+    }
+}
+```
+
+**Replace with:**
+
+```javascript
+function updateAIMessage(messageId, content) {
+    const messageEl = document.getElementById(messageId);
+    if (!messageEl) return;
+    
+    const contentEl = messageEl.querySelector('.message-content');
+    if (contentEl) {
+        // Format the content before displaying
+        const formatted = formatAIChatMessage(content);
+        contentEl.innerHTML = formatted;
+        scrollChatToBottom();
+    }
+}
+```
+
+**Add this NEW function** (after `updateAIMessage()`):
+
+```javascript
+function formatAIChatMessage(text) {
+    if (!text) return '';
+    
+    let formatted = text;
+    
+    // Convert literal \n to actual line breaks
+    formatted = formatted.replace(/\\n/g, '\n');
+    
+    // Convert newlines to <br> tags
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    // Bold text: **text** or __text__
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    
+    // Italic text: *text* or _text_ (avoid conflicts with bold)
+    formatted = formatted.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    formatted = formatted.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
+    
+    // Inline code: `text`
+    formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Bullet points: - or *
+    formatted = formatted.replace(/^[\-\*] (.+)$/gm, '• $1');
+    
+    return formatted;
+}
+```
+
+---
+
+## 🔧 FIX #2: COMPLETE BUTTON - MAKE IT TOGGLEABLE
+
+### Problem:
+Once marked complete, button is disabled and can't be unmarked.
+
+### Solution:
+
+**File:** `static/lesson_page.js`
+
+**Find the `markLessonComplete()` function** (around line 830):
+
+```javascript
+async function markLessonComplete() {
+    const btn = document.getElementById('markCompleteBtn');
+    if (!btn) return;
+    
+    if (btn.classList.contains('completed')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}/complete`, {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        console.log('✅ Lesson marked complete');
+        
+        updateMarkCompleteButton(true);
+        
+        // Update sidebar
+        if (state.lessonData) {
+            const lessonInSidebar = state.lessonData.season_lessons.find(l => l.lesson_id === state.lessonId);
+            if (lessonInSidebar) {
+                lessonInSidebar.completed = true;
+                renderSidebar(state.lessonData.season_lessons, state.lessonId);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error marking lesson complete:', error);
+        alert('Failed to mark lesson complete. Please try again.');
+    }
+}
+```
+
+**Replace with TOGGLEABLE version:**
+
+```javascript
+async function markLessonComplete() {
+    const btn = document.getElementById('markCompleteBtn');
+    if (!btn) return;
+    
+    // Check current state
+    const isCompleted = btn.classList.contains('completed');
+    const newState = !isCompleted; // Toggle
+    
+    try {
+        // Update backend
+        const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                completed: newState
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        console.log(`✅ Lesson marked ${newState ? 'complete' : 'incomplete'}`);
+        
+        // Update UI
+        updateMarkCompleteButton(newState);
+        
+        // Update sidebar
+        if (state.lessonData) {
+            const lessonInSidebar = state.lessonData.season_lessons.find(l => l.lesson_id === state.lessonId);
+            if (lessonInSidebar) {
+                lessonInSidebar.completed = newState;
+                renderSidebar(state.lessonData.season_lessons, state.lessonId);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error toggling lesson completion:', error);
+        alert('Failed to update lesson status. Please try again.');
+    }
+}
+```
+
+**Update the `updateMarkCompleteButton()` function:**
+
+```javascript
+function updateMarkCompleteButton(completed) {
+    const btn = document.getElementById('markCompleteBtn');
+    if (!btn) return;
+    
+    if (completed) {
+        btn.classList.add('completed');
+        btn.querySelector('.btn-text').textContent = 'Completed ✓';
+        btn.title = 'Click to mark as incomplete';
+    } else {
+        btn.classList.remove('completed');
+        btn.querySelector('.btn-text').textContent = 'Mark as Complete';
+        btn.title = 'Click to mark this lesson as complete';
+    }
+    
+    // ALWAYS keep it clickable (never disable)
+    btn.disabled = false;
+}
+```
+
+---
+
+### Backend Update for Toggle:
+
+**File:** `main.py`
+
+**Find the `/api/lesson/{lesson_id}/complete` route:**
+
+```python
+@app.post("/api/lesson/{lesson_id}/complete")
+async def mark_lesson_complete(lesson_id: int):
+    """
+    Mark a lesson as complete
+    
+    Returns:
+        {"success": true, "completed": true}
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Update or insert progress
+        cursor.execute("""
+            INSERT INTO progress (lesson_id, completed, last_accessed)
+            VALUES (%s, TRUE, CURRENT_TIMESTAMP)
+            ON CONFLICT (lesson_id)
+            DO UPDATE SET 
+                completed = TRUE,
+                last_accessed = CURRENT_TIMESTAMP
+        """, (lesson_id,))
+        
+        conn.commit()
+        
+        return {"success": True, "completed": True}
+```
+
+**Replace with:**
+
+```python
+@app.post("/api/lesson/{lesson_id}/complete")
+async def mark_lesson_complete(lesson_id: int, request: Dict[str, Any]):
+    """
+    Toggle lesson completion status
+    
+    Args:
+        request: {"completed": true/false}
+    
+    Returns:
+        {"success": true, "completed": true/false}
+    """
+    try:
+        # Get completion status from request (default to true for backward compatibility)
+        completed = request.get('completed', True)
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Update or insert progress with the specified completion state
+        cursor.execute("""
+            INSERT INTO progress (lesson_id, completed, last_accessed)
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (lesson_id)
+            DO UPDATE SET 
+                completed = %s,
+                last_accessed = CURRENT_TIMESTAMP
+        """, (lesson_id, completed, completed))
+        
+        conn.commit()
+        
+        return {"success": True, "completed": completed}
+```
+
+---
+
+## 🔧 FIX #3: FULL TRANSCRIPT LOADING
+
+### Problem:
+Backend is truncating the transcript or only returning a summary.
+
+### Solution:
+
+**File:** `main.py`
+
+**Find the `/api/lesson/{lesson_id}/transcript` route** (around line 4665):
+
+Look for this section in the route:
+
+```python
+# Query for raw transcript content
+response = requests.post(
+    backend_url,
+    headers={
+        'Authorization': f'Bearer {backend_key}',
+        'Content-Type': 'application/json'
+    },
+    json={
+        "document_id": "",
+        "question": f'Return the COMPLETE TRANSCRIPT for "{lesson_title}". Return ONLY the raw transcript text with NO summaries, NO analysis, NO explanations. Just the verbatim transcript.',
+        "tags": [transcript_id]
+    },
+    timeout=30
+)
+```
+
+**Replace the question with MORE EXPLICIT instructions:**
+
+```python
+# Query for raw transcript content with VERY explicit instructions
+response = requests.post(
+    backend_url,
+    headers={
+        'Authorization': f'Bearer {backend_key}',
+        'Content-Type': 'application/json'
+    },
+    json={
+        "document_id": "",
+        "question": f'''RETURN THE ENTIRE VERBATIM TRANSCRIPT for "{lesson_title}".
+
+CRITICAL INSTRUCTIONS:
+- Return the COMPLETE, FULL, UNABRIDGED transcript
+- Include EVERY SINGLE WORD from the original transcript
+- Do NOT summarize, shorten, or truncate
+- Do NOT add analysis or commentary
+- Do NOT skip any sections
+- Just return the raw transcript text exactly as it appears
+- Include all timestamps if present
+
+This is for a student who needs to read the full transcript.''',
+        "tags": [transcript_id]
+    },
+    timeout=60  # Increase timeout for long transcripts
+)
+```
+
+**Also update the validation** (further down in the same route):
+
+```python
+# Check if we got actual content
+if not transcript_text or len(transcript_text) < 100:
+    return {
+        "transcript": None,
+        "transcript_id": transcript_id,
+        "available": False,
+        "error": "Transcript not found or too short"
+    }
+```
+
+**Replace with:**
+
+```python
+# Check if we got actual content (be more lenient)
+if not transcript_text:
+    return {
+        "transcript": None,
+        "transcript_id": transcript_id,
+        "available": False,
+        "error": "No transcript text returned"
+    }
+
+# Warn if suspiciously short (but still return it)
+if len(transcript_text) < 500:
+    logger.warning(f"Transcript for lesson {lesson_id} is unusually short: {len(transcript_text)} characters")
+```
+
+---
+
+## 🔧 FIX #4: NAVIGATION STATE BUG
+
+### Problem:
+When navigating to next lesson, the complete button incorrectly shows "completed" even for new lessons.
+
+### Root Cause:
+State not being reset between page loads.
+
+### Solution:
+
+**File:** `static/lesson_page.js`
+
+**Find the `loadLessonData()` function** (around line 100):
+
+**Add state reset at the VERY BEGINNING:**
+
+```javascript
+async function loadLessonData() {
+    try {
+        // RESET STATE for new lesson
+        state.isGeneratingLesson = false;
+        state.isGeneratingChat = false;
+        state.transcriptLoaded = false;
+        
+        const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}`);
+        
+        // ... rest of function
+```
+
+**Also ensure the mark complete button gets set correctly:**
+
+**Find where `updateMarkCompleteButton()` is called** (around line 150):
+
+```javascript
+// Update mark complete button
+updateMarkCompleteButton(data.progress.completed);
+```
+
+**Make sure this happens AFTER the lesson content section is rendered**, and add explicit button showing:
+
+```javascript
+// Update mark complete button
+const markCompleteBtn = document.getElementById('markCompleteBtn');
+if (markCompleteBtn) {
+    updateMarkCompleteButton(data.progress.completed);
+    markCompleteBtn.style.display = 'inline-flex'; // Ensure visible
+}
+```
+
+---
+
+## 🔧 FIX #5: CHAT MESSAGE DISPLAY
+
+**File:** `static/lesson_page.js`
+
+**Find `renderChatHistory()` function:**
+
+```javascript
+chatMessages.innerHTML = state.chatHistory.map(msg => {
+    const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+    
+    return `
+        <div class="message ${msg.role}-message">
+            <div class="message-content">${escapeHtml(msg.content)}</div>
+            ${time ? `<div class="message-time">${time}</div>` : ''}
+        </div>
+    `;
+}).join('');
+```
+
+**Replace with formatted version:**
+
+```javascript
+chatMessages.innerHTML = state.chatHistory.map(msg => {
+    const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+    
+    // Format AI messages, escape user messages
+    const formattedContent = msg.role === 'assistant' 
+        ? formatAIChatMessage(msg.content)
+        : escapeHtml(msg.content);
+    
+    return `
+        <div class="message ${msg.role}-message">
+            <div class="message-content">${formattedContent}</div>
+            ${time ? `<div class="message-time">${time}</div>` : ''}
+        </div>
+    `;
+}).join('');
+```
+
+---
+
+## ✅ VERIFICATION CHECKLIST
+
+### AI Chat Formatting:
+- [ ] Line breaks display correctly
+- [ ] Bold text renders (`**text**` → **text**)
+- [ ] Bullet points show as •
+- [ ] Code blocks formatted with monospace
+- [ ] No raw `\n` characters visible
+
+### Complete Button:
+- [ ] Green when not completed
+- [ ] Shows "Mark as Complete"
+- [ ] Click → marks complete, shows "Completed ✓"
+- [ ] Click again → marks incomplete, back to "Mark as Complete"
+- [ ] Always clickable (never disabled)
+- [ ] Sidebar updates with ✓ or □ accordingly
+
+### Transcript:
+- [ ] Loads full transcript (check length)
+- [ ] Scrollable if very long
+- [ ] No truncation or summaries
+- [ ] All timestamps included (if present)
+- [ ] Fast loading (< 3 seconds)
+
+### Navigation State:
+- [ ] Navigate to new lesson
+- [ ] Complete button shows correct state (not completed)
+- [ ] Button is clickable
+- [ ] No stale state from previous lesson
+
+---
+
+## 📋 IMPLEMENTATION ORDER
+
+**Give to Replit Agent:**
+
+```
+Apply Phase 7.3.3 bug fixes:
+
+1. AI Chat formatting (lesson_page.js):
+   - Update updateAIMessage() to use formatAIChatMessage()
+   - Add formatAIChatMessage() function
+   - Update renderChatHistory() to format AI messages
+
+2. Complete button toggle (lesson_page.js + main.py):
+   - Update markLessonComplete() to toggle state
+   - Update updateMarkCompleteButton() to always be clickable
+   - Update backend route to accept {"completed": true/false}
+
+3. Full transcript (main.py):
+   - Update /api/lesson/{id}/transcript with explicit instructions
+   - Increase timeout to 60 seconds
+   - Better validation for short transcripts
+
+4. Navigation state (lesson_page.js):
+   - Reset state at start of loadLessonData()
+   - Ensure mark complete button shows correctly
+
+Test each fix thoroughly before moving to next.
+```
+
+---
+
+## 🎯 EXPECTED RESULTS
+
+**After all fixes:**
+
+1. **AI Chat:** Clean, formatted messages with proper line breaks
+2. **Complete Button:** Toggleable, always clickable, updates correctly
+3. **Transcript:** Full text loaded, no truncation
+4. **Navigation:** Fresh state for each lesson, correct completion status
+
+**User experience:**
+- Mark lesson complete when done ✓
+- Un-mark if you want to revisit it later ✓
+- Read full transcripts ✓
+- Chat looks professional ✓
+
+---
+
+**Time to implement: 15-20 minutes**
+
+Hand this to Replit Agent and let's squash these bugs! 🐛💥

@@ -4585,35 +4585,43 @@ async def save_lesson_chat(lesson_id: int, message: Dict[str, str]):
 
 
 @app.post("/api/lesson/{lesson_id}/complete")
-async def mark_lesson_complete_route(lesson_id: int):
+async def mark_lesson_complete_route(lesson_id: int, request: Dict[str, Any]):
     """
-    Mark a lesson as complete
+    Toggle lesson completion status
+    
+    Args:
+        request: {"completed": true/false}
     
     Returns:
-        {"success": true, "completed": true}
+        {"success": true, "completed": true/false}
     """
     conn = None
     cursor = None
     try:
+        # Get completion status from request (default to true for backward compatibility)
+        completed = request.get('completed', True)
+        
         conn = get_db()
         cursor = conn.cursor()
         
-        # Update or insert progress
+        # Update or insert progress with the specified completion state
         cursor.execute("""
             INSERT INTO progress (lesson_id, completed, last_accessed)
-            VALUES (%s, TRUE, CURRENT_TIMESTAMP)
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
             ON CONFLICT (lesson_id)
             DO UPDATE SET 
-                completed = TRUE,
+                completed = %s,
                 last_accessed = CURRENT_TIMESTAMP
-        """, (lesson_id,))
+        """, (lesson_id, completed, completed))
         
         conn.commit()
         
-        return {"success": True, "completed": True}
+        logger.info(f"Lesson {lesson_id} marked {'complete' if completed else 'incomplete'}")
+        
+        return {"success": True, "completed": completed}
         
     except Exception as e:
-        logger.error(f"Error marking lesson complete: {e}")
+        logger.error(f"Error toggling lesson completion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if cursor:
@@ -4771,8 +4779,8 @@ async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
                 "error": "No document ID mapped for this lesson"
             }
         
-        # Query for raw transcript content using document_id
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # Query for raw transcript content using document_id with VERY explicit instructions
+        async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
                 backend_api,
                 headers={
@@ -4781,7 +4789,18 @@ async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
                 },
                 json={
                     "document_id": str(document_id),
-                    "question": f'Return the COMPLETE TRANSCRIPT for "{lesson_title}". Return ONLY the raw transcript text with NO summaries, NO analysis, NO explanations. Just the verbatim transcript.',
+                    "question": f'''RETURN THE ENTIRE VERBATIM TRANSCRIPT for "{lesson_title}".
+
+CRITICAL INSTRUCTIONS:
+- Return the COMPLETE, FULL, UNABRIDGED transcript
+- Include EVERY SINGLE WORD from the original transcript
+- Do NOT summarize, shorten, or truncate
+- Do NOT add analysis or commentary
+- Do NOT skip any sections
+- Just return the raw transcript text exactly as it appears
+- Include all timestamps if present
+
+This is for a student who needs to read the full transcript.''',
                     "tags": []
                 }
             )
@@ -4799,14 +4818,18 @@ async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
             data = response.json()
             transcript_text = data.get('answer', '')
             
-            # Check if we got actual content
-            if not transcript_text or len(transcript_text) < 100:
+            # Check if we got actual content (be more lenient)
+            if not transcript_text:
                 return {
                     "transcript": None,
                     "transcript_id": transcript_id,
                     "available": False,
-                    "error": "Transcript not found or too short"
+                    "error": "No transcript text returned"
                 }
+            
+            # Warn if suspiciously short (but still return it)
+            if len(transcript_text) < 500:
+                logger.warning(f"Transcript for lesson {lesson_id} is unusually short: {len(transcript_text)} characters")
             
             return {
                 "transcript": transcript_text,
