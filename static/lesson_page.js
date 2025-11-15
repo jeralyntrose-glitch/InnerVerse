@@ -360,11 +360,16 @@ async function generateLessonContent(lesson) {
     try {
         console.log('🤖 Generating AI lesson content...');
         
-        // Show loading state
+        // Show loading state with better messaging
         contentEl.innerHTML = `
             <div class="loading-state">
                 <div class="spinner"></div>
-                <p>Generating lesson content from transcript...</p>
+                <p style="margin-top: 16px; font-size: 16px; color: var(--text-secondary);">
+                    🤖 Generating lesson content from transcript...
+                </p>
+                <p style="margin-top: 8px; font-size: 14px; color: var(--text-muted);">
+                    This may take 10-20 seconds
+                </p>
             </div>
         `;
         
@@ -397,7 +402,9 @@ Format with clear headers and organized sections. Make it educational and engagi
         const decoder = new TextDecoder();
         let fullResponse = '';
         
-        contentEl.innerHTML = '';  // Clear loading state
+        // Clear loading state and create streaming container
+        contentEl.innerHTML = '<div class="streaming-content"></div>';
+        const streamContainer = contentEl.querySelector('.streaming-content');
         
         while (true) {
             const { done, value } = await reader.read();
@@ -407,9 +414,15 @@ Format with clear headers and organized sections. Make it educational and engagi
             const chunk = decoder.decode(value, { stream: true });
             fullResponse += chunk;
             
-            // Update UI with accumulated response (formatted as markdown)
-            contentEl.innerHTML = formatMarkdown(fullResponse);
+            // Update UI in real-time with formatted markdown
+            streamContainer.innerHTML = formatMarkdown(fullResponse);
+            
+            // Auto-scroll to bottom as content streams in
+            contentEl.scrollTop = contentEl.scrollHeight;
         }
+        
+        // Keep the streaming container, just do final format
+        streamContainer.innerHTML = formatMarkdown(fullResponse);
         
         // Check if we got a valid response
         if (!fullResponse.trim()) {
@@ -456,37 +469,120 @@ Format with clear headers and organized sections. Make it educational and engagi
 function formatMarkdown(text) {
     if (!text) return '';
     
-    let html = text;
+    // Convert literal \n to actual newlines
+    text = text.replace(/\\n/g, '\n');
     
-    // Headers
-    html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>');
-    html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>');
-    html = html.replace(/^# (.*$)/gim, '<h3>$1</h3>');
+    // HTML escape function (CRITICAL for XSS prevention)
+    function escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
     
-    // Bold
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+    // Process inline formatting (after HTML escaping)
+    function processInline(line) {
+        line = escapeHtml(line);  // ALWAYS escape first!
+        // Bold
+        line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        line = line.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        // Italic
+        line = line.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+        line = line.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
+        // Inline code
+        line = line.replace(/`([^`]+)`/g, '<code>$1</code>');
+        return line;
+    }
     
-    // Italic
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+    // Split into blocks by double newlines
+    const blocks = text.split(/\n\n+/);
+    const htmlBlocks = [];
     
-    // Code
-    html = html.replace(/`(.*?)`/g, '<code>$1</code>');
-    
-    // Lists
-    html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
-    html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
-    
-    // Paragraphs
-    html = html.split('\n\n').map(para => {
-        if (para.startsWith('<h') || para.startsWith('<li')) {
-            return para;
+    for (let block of blocks) {
+        block = block.trim();
+        if (!block) continue;
+        
+        const lines = block.split('\n');
+        
+        // Check for code block (triple backticks)
+        if (block.startsWith('```') && block.endsWith('```')) {
+            const code = escapeHtml(block.slice(3, -3).trim());
+            htmlBlocks.push(`<pre><code>${code}</code></pre>`);
+            continue;
         }
-        return para.trim() ? `<p>${para}</p>` : '';
-    }).join('\n');
+        
+        // Check for header
+        if (lines[0].startsWith('#')) {
+            const headerMatch = lines[0].match(/^(#{1,3})\s+(.+)$/);
+            if (headerMatch) {
+                const level = headerMatch[1].length;
+                const content = processInline(headerMatch[2]);
+                const tag = level === 1 ? 'h3' : (level === 2 ? 'h3' : 'h4');
+                htmlBlocks.push(`<${tag}>${content}</${tag}>`);
+                continue;
+            }
+        }
+        
+        // Check for list (ANY line starts with list marker)
+        const hasUnorderedMarker = lines.some(line => line.match(/^[\*\-]\s+/));
+        const hasOrderedMarker = lines.some(line => line.match(/^\d+\.\s+/));
+        
+        if (hasUnorderedMarker || hasOrderedMarker) {
+            const listItems = [];
+            let currentItem = null;
+            // Determine primary list type from FIRST marker (not whole block)
+            const firstMarkerLine = lines.find(line => 
+                line.match(/^[\*\-]\s+/) || line.match(/^\d+\.\s+/)
+            );
+            const isOrdered = firstMarkerLine && firstMarkerLine.match(/^\d+\.\s+/) !== null;
+            
+            for (const line of lines) {
+                // Match primary marker type OR indented sub-bullets
+                const orderedMatch = line.match(/^\d+\.\s+(.+)$/);
+                const unorderedMatch = line.match(/^[\*\-]\s+(.+)$/);
+                const indentedMatch = line.match(/^\s{2,}[\*\-]\s+(.+)$/);  // Indented bullets
+                
+                if (isOrdered && orderedMatch) {
+                    // Top-level numbered item
+                    if (currentItem) {
+                        listItems.push(`<li>${currentItem}</li>`);
+                    }
+                    currentItem = processInline(orderedMatch[1]);
+                } else if (!isOrdered && unorderedMatch) {
+                    // Top-level bullet item
+                    if (currentItem) {
+                        listItems.push(`<li>${currentItem}</li>`);
+                    }
+                    currentItem = processInline(unorderedMatch[1]);
+                } else if (indentedMatch && currentItem !== null) {
+                    // Indented sub-bullet (treat as continuation with bullet)
+                    currentItem += '<br>&nbsp;&nbsp;• ' + processInline(indentedMatch[1]);
+                } else if (currentItem !== null && line.trim()) {
+                    // Regular continuation line
+                    currentItem += '<br>' + processInline(line.trim());
+                }
+            }
+            
+            // Add final item
+            if (currentItem) {
+                listItems.push(`<li>${currentItem}</li>`);
+            }
+            
+            if (listItems.length > 0) {
+                const tag = isOrdered ? 'ol' : 'ul';
+                htmlBlocks.push(`<${tag}>${listItems.join('')}</${tag}>`);
+                continue;
+            }
+        }
+        
+        // Regular paragraph - join lines and process inline
+        const paragraph = lines.map(processInline).join('<br>');
+        htmlBlocks.push(`<p>${paragraph}</p>`);
+    }
     
-    return html;
+    return htmlBlocks.join('\n');
 }
 
 // ==============================================================================

@@ -1,0 +1,370 @@
+# PHASE 7.3.1: AI CONTENT FORMATTING FIX
+
+**Issue:** AI content generates but shows raw \n and unformatted markdown  
+**Goal:** Proper formatting with loading states  
+**Time:** 5-10 minutes
+
+---
+
+## 🎯 WHAT TO FIX:
+
+**Current State:**
+- ✅ AI content generating successfully!
+- ❌ Raw `\n` characters showing instead of line breaks
+- ❌ Markdown not rendering (`**bold**`, `##headers`, etc.)
+- ❌ No loading spinner while generating
+
+**Target State:**
+- ✅ Loading spinner with "Generating..." text
+- ✅ `\n` converts to actual line breaks
+- ✅ Markdown renders: bold, headers, lists, code blocks
+- ✅ Clean, readable formatted content
+
+---
+
+## 🔧 THE FIX:
+
+### Step 1: Improve the Markdown Formatter
+
+**File:** `static/lesson_page.js`
+
+**Find this function** (around line 430):
+
+```javascript
+function formatMarkdown(text) {
+    if (!text) return '';
+    
+    let html = text;
+    
+    // Headers
+    html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+    html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+    html = html.replace(/^# (.*$)/gim, '<h3>$1</h3>');
+    
+    // Bold
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+    
+    // Italic
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+    
+    // Code
+    html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+    
+    // Lists
+    html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
+    html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+    
+    // Paragraphs
+    html = html.split('\n\n').map(para => {
+        if (para.startsWith('<h') || para.startsWith('<li')) {
+            return para;
+        }
+        return para.trim() ? `<p>${para}</p>` : '';
+    }).join('\n');
+    
+    return html;
+}
+```
+
+**Replace with this IMPROVED version:**
+
+```javascript
+function formatMarkdown(text) {
+    if (!text) return '';
+    
+    let html = text;
+    
+    // CRITICAL: Convert literal \n to actual newlines first
+    html = html.replace(/\\n/g, '\n');
+    
+    // Headers (must be at start of line)
+    html = html.replace(/^### (.+)$/gim, '<h4>$1</h4>');
+    html = html.replace(/^## (.+)$/gim, '<h3>$1</h3>');
+    html = html.replace(/^# (.+)$/gim, '<h3>$1</h3>');
+    
+    // Bold (non-greedy match)
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    
+    // Italic (non-greedy match, avoid conflicts with bold)
+    html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    html = html.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
+    
+    // Code blocks (triple backticks)
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    
+    // Inline code (single backticks)
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Unordered lists (bullet points)
+    html = html.replace(/^[\*\-] (.+)$/gim, '<li>$1</li>');
+    
+    // Ordered lists (numbers)
+    html = html.replace(/^\d+\. (.+)$/gim, '<li>$1</li>');
+    
+    // Wrap consecutive <li> tags in <ul>
+    html = html.replace(/(<li>.*?<\/li>\n?)+/g, function(match) {
+        return '<ul>' + match + '</ul>';
+    });
+    
+    // Convert remaining single newlines to <br>
+    html = html.replace(/\n/g, '<br>');
+    
+    // Paragraphs (split by double line breaks)
+    html = html.split('<br><br>').map(para => {
+        para = para.trim();
+        // Don't wrap if already has block-level tags
+        if (!para || para.startsWith('<h') || para.startsWith('<ul') || 
+            para.startsWith('<pre') || para.startsWith('<li>')) {
+            return para;
+        }
+        return `<p>${para}</p>`;
+    }).join('\n');
+    
+    return html;
+}
+```
+
+---
+
+### Step 2: Add Better Loading State
+
+**Find this section** (around line 360 in `generateLessonContent` function):
+
+```javascript
+// Show loading state
+contentEl.innerHTML = `
+    <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Generating lesson content...</p>
+    </div>
+`;
+```
+
+**Replace with:**
+
+```javascript
+// Show loading state with better messaging
+contentEl.innerHTML = `
+    <div class="loading-state">
+        <div class="spinner"></div>
+        <p style="margin-top: 16px; font-size: 16px; color: var(--text-secondary);">
+            🤖 Generating lesson content from transcript...
+        </p>
+        <p style="margin-top: 8px; font-size: 14px; color: var(--text-muted);">
+            This may take 10-20 seconds
+        </p>
+    </div>
+`;
+```
+
+---
+
+### Step 3: Stream Updates During Generation
+
+**Find this section** (around line 385):
+
+```javascript
+while (true) {
+    const { done, value } = await reader.read();
+    
+    if (done) break;
+    
+    const chunk = decoder.decode(value, { stream: true });
+    fullResponse += chunk;
+    
+    // Update UI with accumulated response (formatted as markdown)
+    contentEl.innerHTML = formatMarkdown(fullResponse);
+}
+```
+
+**Replace with:**
+
+```javascript
+// Clear loading state before streaming
+contentEl.innerHTML = '<div class="streaming-content"></div>';
+const streamContainer = contentEl.querySelector('.streaming-content');
+
+while (true) {
+    const { done, value } = await reader.read();
+    
+    if (done) break;
+    
+    const chunk = decoder.decode(value, { stream: true });
+    fullResponse += chunk;
+    
+    // Update UI in real-time with formatted markdown
+    streamContainer.innerHTML = formatMarkdown(fullResponse);
+    
+    // Auto-scroll to bottom as content streams in
+    contentEl.scrollTop = contentEl.scrollHeight;
+}
+
+// Final formatting pass after streaming complete
+contentEl.innerHTML = formatMarkdown(fullResponse);
+```
+
+---
+
+### Step 4: Add CSS for Streaming Content
+
+**File:** `static/lesson_page.css`
+
+**Add this CSS** (after the `.lesson-content` section, around line 350):
+
+```css
+/* Streaming content styles */
+.streaming-content {
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+
+.streaming-content h3,
+.streaming-content h4 {
+    color: var(--text-primary);
+    margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+}
+
+.streaming-content p {
+    margin-bottom: var(--spacing-md);
+}
+
+.streaming-content ul {
+    margin: var(--spacing-md) 0;
+    padding-left: var(--spacing-xl);
+}
+
+.streaming-content li {
+    margin-bottom: var(--spacing-sm);
+}
+
+.streaming-content code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+}
+
+.streaming-content pre {
+    background: var(--bg-tertiary);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: var(--spacing-md) 0;
+}
+
+.streaming-content pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.streaming-content strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.streaming-content em {
+    font-style: italic;
+    color: var(--text-secondary);
+}
+```
+
+---
+
+## ✅ VERIFICATION STEPS:
+
+After implementing:
+
+1. **Test AI Generation:**
+   - Go to any lesson page
+   - Wait for content to generate
+   - Should see: "🤖 Generating..." with spinner
+   - Content should stream in real-time
+   - Final content should be fully formatted
+
+2. **Check Formatting:**
+   - **Headers:** Should be bold, larger text
+   - **Bold text:** `**example**` → **example**
+   - **Line breaks:** Proper paragraphs, not `\n`
+   - **Lists:** Proper bullet points
+   - **Code:** Formatted in monospace with background
+
+3. **Verify No Errors:**
+   - Check browser console (no JavaScript errors)
+   - Content should be readable
+   - No raw markdown characters visible
+
+---
+
+## 🐛 BUG CHECKS:
+
+**Edge Cases to Handle:**
+
+1. **Empty response:**
+   - If AI returns nothing, show "Coming soon" fallback (already handled)
+
+2. **Malformed markdown:**
+   - Formatter should gracefully handle incomplete markdown
+   - Non-greedy regex prevents over-matching
+
+3. **Very long content:**
+   - Auto-scroll keeps user at bottom during streaming
+   - Scrollable after generation complete
+
+4. **Special characters:**
+   - HTML escaping handled by browser
+   - Code blocks preserve formatting
+
+---
+
+## 🚀 IMPLEMENTATION:
+
+**Give this to Replit Agent with these instructions:**
+
+```
+Implement Phase 7.3.1 formatting fix for AI lesson content.
+
+Changes needed in static/lesson_page.js:
+1. Replace formatMarkdown() function (line ~430)
+2. Update loading state HTML (line ~360)  
+3. Add streaming updates (line ~385)
+
+Changes needed in static/lesson_page.css:
+4. Add .streaming-content styles (after line ~350)
+
+Test by loading a lesson page and verifying:
+- Loading spinner shows
+- Content streams in real-time
+- Markdown renders (bold, headers, lists)
+- No \n characters visible
+- Clean, readable output
+```
+
+---
+
+## 📊 EXPECTED RESULT:
+
+**Before:**
+```
+Introduction to Cognitive Functions\n\n**Key Concepts:**\n- Hero function\n- Parent function\n\nThis is important.
+```
+
+**After:**
+```
+Introduction to Cognitive Functions
+
+Key Concepts:
+• Hero function
+• Parent function
+
+This is important.
+```
+
+With proper headers, bold text, bullet points, and line breaks! ✨
+
+---
+
+**Ready to implement!** Hand this to Replit Agent and watch the magic happen! 🎯
