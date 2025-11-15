@@ -1,0 +1,439 @@
+/* ==============================================================================
+   PHASE 7.1: CURRICULUM DASHBOARD STYLES
+   ============================================================================== */
+
+/* CSS Variables for Theming */
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --accent-primary: #0066cc;
+    --accent-secondary: #004499;
+    --border-color: #dee2e6;
+    --success-color: #28a745;
+    --progress-bg: #e9ecef;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #3d3d3d;
+    --text-primary: #e9ecef;
+    --text-secondary: #adb5bd;
+    --accent-primary: #4d9fff;
+    --accent-secondary: #3380ff;
+    --border-color: #495057;
+    --success-color: #51cf66;
+    --progress-bg: #495057;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.dashboard-header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+}
+
+.header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-icon {
+    font-size: 32px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.theme-toggle {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.2s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--accent-primary);
+    transform: scale(1.05);
+}
+
+.dashboard-main {
+    padding: 40px 0;
+    min-height: calc(100vh - 200px);
+}
+
+.progress-overview {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow);
+}
+
+.progress-stats {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 24px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 12px;
+    background: var(--progress-bg);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    border-radius: 6px;
+    transition: width 0.5s ease;
+}
+
+.continue-learning {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow);
+    color: white;
+}
+
+.continue-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+}
+
+.continue-text h2 {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.continue-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.continue-meta {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.continue-btn {
+    background: white;
+    color: var(--accent-primary);
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.continue-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.modules-section {
+    margin-bottom: 40px;
+}
+
+.modules-grid {
+    display: grid;
+    gap: 32px;
+}
+
+.module-card {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+}
+
+.module-card:hover {
+    box-shadow: var(--shadow-hover);
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.module-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.module-number {
+    color: var(--accent-primary);
+}
+
+.module-progress {
+    text-align: right;
+}
+
+.module-progress-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--success-color);
+    margin-bottom: 4px;
+}
+
+.module-progress-meta {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.seasons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.season-card {
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.season-card:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+}
+
+.season-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.season-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.season-number {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.season-progress-badge {
+    background: var(--success-color);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.season-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.season-lesson-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.season-last-accessed {
+    font-size: 12px;
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: var(--text-secondary);
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--progress-bg);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.dashboard-footer {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    padding: 24px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 16px;
+    }
+
+    .header-content {
+        padding: 0 16px;
+    }
+
+    .logo {
+        font-size: 20px;
+    }
+
+    .logo-icon {
+        font-size: 24px;
+    }
+
+    .progress-stats {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .continue-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .continue-btn {
+        width: 100%;
+    }
+
+    .module-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .module-progress {
+        text-align: left;
+    }
+
+    .seasons-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-value {
+        font-size: 24px;
+    }
+
+    .module-title {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-main {
+        padding: 24px 0;
+    }
+
+    .progress-overview,
+    .continue-learning,
+    .module-card {
+        padding: 20px;
+        border-radius: 12px;
+    }
+
+    .continue-text h2 {
+        font-size: 20px;
+    }
+
+    .continue-title {
+        font-size: 16px;
+    }
+}

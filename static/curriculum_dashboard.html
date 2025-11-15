@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS Joseph University - Curriculum</title>
+    <link rel="stylesheet" href="/static/curriculum_dashboard.css">
+</head>
+<body data-theme="dark">
+    <header class="dashboard-header">
+        <div class="header-content">
+            <h1 class="logo">
+                <span class="logo-icon">🧠</span>
+                CS Joseph University
+            </h1>
+            
+            <div class="header-actions">
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+        <div class="container">
+            
+            <section class="progress-overview">
+                <div class="progress-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Progress</span>
+                        <span class="stat-value" id="overallProgress">0 of 0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Completion</span>
+                        <span class="stat-value" id="completionPercent">0%</span>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+            </section>
+
+            <section class="continue-learning" id="continueLearning" style="display: none;">
+                <div class="continue-content">
+                    <div class="continue-text">
+                        <h2>Continue Learning</h2>
+                        <p class="continue-title" id="continueTitle">Loading...</p>
+                        <p class="continue-meta" id="continueMeta"></p>
+                    </div>
+                    <button class="continue-btn" id="continueBtn">
+                        Resume Lesson →
+                    </button>
+                </div>
+            </section>
+
+            <section class="modules-section">
+                <div id="modulesContainer" class="modules-grid">
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Loading curriculum...</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <footer class="dashboard-footer">
+        <p>&copy; 2025 InnerVerse - CS Joseph University</p>
+    </footer>
+
+    <script src="/static/curriculum_dashboard.js"></script>
+</body>
+</html>

@@ -12,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 from collections import deque
 from contextlib import asynccontextmanager
 from urllib.parse import quote
+from typing import Dict, Any
 from fastapi import FastAPI, UploadFile, File, Request, Response, Header, HTTPException, BackgroundTasks, Cookie, Depends
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -115,6 +116,10 @@ def get_db_connection():
         print("⚠️ DATABASE_URL not set - cost tracking will not work")
         return None
     return psycopg2.connect(DATABASE_URL)
+
+def get_db():
+    """Alias for get_db_connection() - used by curriculum routes"""
+    return get_db_connection()
 
 def init_database():
     """Initialize database tables for API usage tracking with robust error handling"""
@@ -242,35 +247,36 @@ def init_database():
             """)
             
             # Create lesson_documents join table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS lesson_documents (
-                    id SERIAL PRIMARY KEY,
-                    lesson_id VARCHAR(36) NOT NULL,
-                    document_id UUID NOT NULL,
-                    relationship_type VARCHAR(50) DEFAULT 'primary_resource',
-                    display_order INTEGER DEFAULT 0,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    UNIQUE(lesson_id, document_id),
-                    FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE,
-                    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
-                )
-            """)
+            # ⚠️ DISABLED FOR PHASE 7.1: References old "lessons" table which was replaced by "curriculum" table
+            # cursor.execute("""
+            #     CREATE TABLE IF NOT EXISTS lesson_documents (
+            #         id SERIAL PRIMARY KEY,
+            #         lesson_id VARCHAR(36) NOT NULL,
+            #         document_id UUID NOT NULL,
+            #         relationship_type VARCHAR(50) DEFAULT 'primary_resource',
+            #         display_order INTEGER DEFAULT 0,
+            #         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            #         UNIQUE(lesson_id, document_id),
+            #         FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE,
+            #         FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+            #     )
+            # """)
             
-            # Create indexes for lesson_documents
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_lesson_documents_lesson 
-                ON lesson_documents(lesson_id)
-            """)
+            # # Create indexes for lesson_documents
+            # cursor.execute("""
+            #     CREATE INDEX IF NOT EXISTS idx_lesson_documents_lesson 
+            #     ON lesson_documents(lesson_id)
+            # """)
             
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_lesson_documents_document 
-                ON lesson_documents(document_id)
-            """)
+            # cursor.execute("""
+            #     CREATE INDEX IF NOT EXISTS idx_lesson_documents_document 
+            #     ON lesson_documents(document_id)
+            # """)
             
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_lesson_documents_order 
-                ON lesson_documents(lesson_id, display_order)
-            """)
+            # cursor.execute("""
+            #     CREATE INDEX IF NOT EXISTS idx_lesson_documents_order 
+            #     ON lesson_documents(lesson_id, display_order)
+            # """)
             
             # Create pending_youtube_videos table
             cursor.execute("""
@@ -3843,6 +3849,295 @@ Return ONLY the cleaned transcript with proper formatting, nothing else."""
         return JSONResponse(status_code=500, content={
             "error": f"Smart transcription failed: {str(e)}"
         })
+
+
+# ==============================================================================
+# PHASE 7.1: CURRICULUM DASHBOARD ROUTES
+# ==============================================================================
+
+import logging
+logger = logging.getLogger(__name__)
+
+@app.get("/")
+async def serve_curriculum_dashboard():
+    """Serve the main curriculum dashboard page"""
+    return FileResponse("static/curriculum_dashboard.html")
+
+@app.get("/api/curriculum/summary")
+async def get_curriculum_summary() -> Dict[str, Any]:
+    """
+    Get curriculum structure for dashboard display
+    
+    Returns:
+        {
+          "modules": [
+            {
+              "module_number": 1,
+              "module_name": "Getting Started",
+              "total_lessons": 3,
+              "completed_lessons": 2,
+              "seasons": [
+                {
+                  "season_number": "0",
+                  "season_name": "Orientation",
+                  "lesson_count": 3,
+                  "completed_count": 2,
+                  "last_accessed": "2025-11-14T10:30:00"
+                }
+              ]
+            },
+            ...
+          ],
+          "total_lessons": 742,
+          "total_completed": 47
+        }
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get module summary
+        cursor.execute("""
+            SELECT 
+                c.module_number,
+                c.module_name,
+                COUNT(c.lesson_id) as total_lessons,
+                COUNT(CASE WHEN p.completed = TRUE THEN 1 END) as completed_lessons,
+                MAX(p.last_accessed) as last_accessed
+            FROM curriculum c
+            LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+            GROUP BY c.module_number, c.module_name
+            ORDER BY c.module_number
+        """)
+        
+        modules_data = cursor.fetchall()
+        modules = []
+        
+        for module_row in modules_data:
+            module_number = int(module_row[0])
+            module_name = str(module_row[1])
+            total_lessons = int(module_row[2])
+            completed_lessons = int(module_row[3] or 0)
+            
+            # Get seasons for this module
+            cursor.execute("""
+                SELECT 
+                    c.season_number,
+                    c.season_name,
+                    COUNT(c.lesson_id) as lesson_count,
+                    COUNT(CASE WHEN p.completed = TRUE THEN 1 END) as completed_count,
+                    MAX(p.last_accessed) as last_accessed
+                FROM curriculum c
+                LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+                WHERE c.module_number = %s
+                GROUP BY c.season_number, c.season_name
+                ORDER BY MIN(c.order_index)
+            """, (module_number,))
+            
+            seasons_data = cursor.fetchall()
+            seasons = []
+            
+            for season_row in seasons_data:
+                seasons.append({
+                    "season_number": str(season_row[0]),
+                    "season_name": str(season_row[1]),
+                    "lesson_count": int(season_row[2]),
+                    "completed_count": int(season_row[3] or 0),
+                    "last_accessed": season_row[4].isoformat() if season_row[4] else None
+                })
+            
+            modules.append({
+                "module_number": module_number,
+                "module_name": module_name,
+                "total_lessons": total_lessons,
+                "completed_lessons": completed_lessons,
+                "seasons": seasons
+            })
+        
+        # Get overall stats
+        cursor.execute("SELECT COUNT(*) FROM curriculum")
+        total_lessons = int(cursor.fetchone()[0])
+        
+        cursor.execute("SELECT COUNT(*) FROM progress WHERE completed = TRUE")
+        total_completed = int(cursor.fetchone()[0])
+        
+        return {
+            "modules": modules,
+            "total_lessons": total_lessons,
+            "total_completed": total_completed
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching curriculum summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.get("/api/progress/continue")
+async def get_continue_learning() -> Dict[str, Any]:
+    """
+    Get the lesson to continue learning from
+    
+    Returns last accessed incomplete lesson, or first incomplete lesson if none accessed
+    
+    Returns:
+        {
+          "lesson_id": 6,
+          "lesson_title": "Hero Function Deep Dive",
+          "module_name": "Building Foundation",
+          "season_name": "Jungian Cognitive Functions",
+          "season_number": "1",
+          "lesson_number": 3,
+          "last_accessed": "2025-11-14T10:30:00",
+          "progress_percent": 6.4
+        }
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Find last accessed incomplete lesson
+        cursor.execute("""
+            SELECT 
+                c.lesson_id,
+                c.lesson_title,
+                c.module_name,
+                c.season_name,
+                c.season_number,
+                c.lesson_number,
+                p.last_accessed
+            FROM curriculum c
+            LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+            WHERE p.completed = FALSE OR p.completed IS NULL
+            ORDER BY p.last_accessed DESC NULLS LAST, c.order_index ASC
+            LIMIT 1
+        """)
+        
+        row = cursor.fetchone()
+        
+        if not row:
+            # All lessons complete! Return first lesson
+            cursor.execute("""
+                SELECT 
+                    c.lesson_id,
+                    c.lesson_title,
+                    c.module_name,
+                    c.season_name,
+                    c.season_number,
+                    c.lesson_number,
+                    p.last_accessed
+                FROM curriculum c
+                LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+                ORDER BY c.order_index ASC
+                LIMIT 1
+            """)
+            row = cursor.fetchone()
+        
+        # Calculate overall progress
+        cursor.execute("SELECT COUNT(*) FROM curriculum")
+        total = int(cursor.fetchone()[0])
+        
+        cursor.execute("SELECT COUNT(*) FROM progress WHERE completed = TRUE")
+        completed = int(cursor.fetchone()[0])
+        
+        progress_percent = round((completed / total * 100), 1) if total > 0 else 0.0
+        
+        return {
+            "lesson_id": int(row[0]),
+            "lesson_title": str(row[1]),
+            "module_name": str(row[2]),
+            "season_name": str(row[3]),
+            "season_number": str(row[4]),
+            "lesson_number": int(row[5]),
+            "last_accessed": row[6].isoformat() if row[6] else None,
+            "progress_percent": float(progress_percent)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching continue learning: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@app.get("/api/curriculum/stats")
+async def get_curriculum_stats() -> Dict[str, Any]:
+    """
+    Get overall curriculum statistics
+    
+    Returns:
+        {
+          "total_lessons": 742,
+          "completed_lessons": 47,
+          "progress_percent": 6.3,
+          "total_duration": "385h 22m",
+          "completed_duration": "24h 15m",
+          "modules_count": 5,
+          "seasons_count": 32
+        }
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Total lessons
+        cursor.execute("SELECT COUNT(*) FROM curriculum")
+        total_lessons = int(cursor.fetchone()[0])
+        
+        # Completed lessons
+        cursor.execute("SELECT COUNT(*) FROM progress WHERE completed = TRUE")
+        completed_lessons = int(cursor.fetchone()[0])
+        
+        # Progress percent
+        progress_percent = round((completed_lessons / total_lessons * 100), 1) if total_lessons > 0 else 0.0
+        
+        # Unique modules
+        cursor.execute("SELECT COUNT(DISTINCT module_number) FROM curriculum")
+        modules_count = int(cursor.fetchone()[0])
+        
+        # Unique seasons
+        cursor.execute("SELECT COUNT(DISTINCT season_number) FROM curriculum")
+        seasons_count = int(cursor.fetchone()[0])
+        
+        # TODO: Calculate duration when we have actual duration data
+        total_duration = "TBD"
+        completed_duration = "TBD"
+        
+        return {
+            "total_lessons": total_lessons,
+            "completed_lessons": completed_lessons,
+            "progress_percent": float(progress_percent),
+            "total_duration": total_duration,
+            "completed_duration": completed_duration,
+            "modules_count": modules_count,
+            "seasons_count": seasons_count
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching curriculum stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+# ==============================================================================
+# END PHASE 7.1 ROUTES
+# ==============================================================================
 
 
 # === Batch Re-Tagging System ===
