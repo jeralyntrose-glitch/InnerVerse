@@ -641,59 +641,48 @@ function formatMarkdown(text) {
 // ==============================================================================
 
 async function loadTranscript(transcriptId) {
-    if (!transcriptId) {
-        console.log('⚠️ No transcript ID provided');
+    if (!state.lessonId) {
+        console.log('⚠️ No lesson ID available');
         return;
     }
     
     try {
-        console.log(`📄 Loading transcript: ${transcriptId}`);
+        console.log(`📄 Loading transcript for lesson ${state.lessonId}...`);
         
-        // Query backend for transcript (server-side proxy keeps credentials secure)
-        const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}/ai-chat`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                question: `Return the FULL TRANSCRIPT for transcript ID "${transcriptId}". Return ONLY the transcript text, no summaries or explanations.`,
-                transcript_id: transcriptId
-            })
-        });
+        // Use new direct transcript endpoint
+        const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}/transcript`);
         
         if (!response.ok) {
-            throw new Error(`Backend API error: ${response.status}`);
+            throw new Error(`HTTP ${response.status}`);
         }
         
-        // Read streamed response
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let fullTranscript = '';
+        const data = await response.json();
         
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            fullTranscript += decoder.decode(value, { stream: true });
+        if (!data.available || !data.transcript) {
+            console.log('⚠️ Transcript not available:', data.error || 'Unknown reason');
+            // Keep button disabled
+            return;
         }
         
-        if (fullTranscript.trim()) {
-            const transcriptText = document.getElementById('transcriptText');
-            const transcriptToggle = document.getElementById('transcriptToggle');
-            
-            if (transcriptText) {
-                transcriptText.textContent = fullTranscript;
-                state.transcriptLoaded = true;
-            }
-            
-            if (transcriptToggle) {
-                transcriptToggle.disabled = false;
-            }
-            
-            console.log('✅ Transcript loaded successfully');
+        // Success! Display transcript
+        const transcriptText = document.getElementById('transcriptText');
+        const transcriptToggle = document.getElementById('transcriptToggle');
+        
+        if (transcriptText) {
+            transcriptText.textContent = data.transcript;
+            state.transcriptLoaded = true;
         }
+        
+        if (transcriptToggle) {
+            transcriptToggle.disabled = false;
+        }
+        
+        console.log('✅ Transcript loaded successfully');
         
     } catch (error) {
         console.error('❌ Error loading transcript:', error);
+        // Transcript is optional, so just log the error
+        // Button stays disabled
     }
 }
 
@@ -828,6 +817,7 @@ async function sendMessage() {
         // Stream AI response
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let rawResponse = '';
         let aiResponse = '';
         
         // Remove typing indicator
@@ -836,17 +826,28 @@ async function sendMessage() {
         // Create AI message container
         const aiMessageId = createAIMessageContainer();
         
+        // Collect full response first
         while (true) {
             const { done, value } = await reader.read();
             
             if (done) break;
             
             const chunk = decoder.decode(value, { stream: true });
-            aiResponse += chunk;
-            
-            // Update AI message in real-time
-            updateAIMessage(aiMessageId, aiResponse);
+            rawResponse += chunk;
         }
+        
+        // Parse the JSON response to extract just the answer
+        try {
+            const parsed = JSON.parse(rawResponse);
+            aiResponse = parsed.answer || rawResponse;
+        } catch (e) {
+            // If parsing fails, use raw response (backward compatibility)
+            console.warn('Failed to parse AI response as JSON:', e);
+            aiResponse = rawResponse;
+        }
+        
+        // Update with clean text (no JSON wrapper)
+        updateAIMessage(aiMessageId, aiResponse);
         
         // Save AI response
         const aiMessage = {

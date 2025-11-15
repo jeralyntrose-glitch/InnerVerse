@@ -4714,6 +4714,125 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
         if conn:
             conn.close()
 
+@app.get("/api/lesson/{lesson_id}/transcript")
+async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
+    """
+    Get raw transcript text for a lesson (no AI processing)
+    
+    Returns:
+        {
+          "transcript": "Full transcript text...",
+          "transcript_id": "season01_01",
+          "available": true
+        }
+    """
+    import httpx
+    
+    conn = None
+    cursor = None
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get lesson's transcript_id and document_id
+        cursor.execute("""
+            SELECT transcript_id, lesson_title, document_id
+            FROM curriculum
+            WHERE lesson_id = %s
+        """, (lesson_id,))
+        
+        row = cursor.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+        
+        transcript_id = row[0]
+        lesson_title = row[1]
+        document_id = row[2]
+        
+        backend_api = os.getenv("AXIS_BACKEND_API", "https://axis-of-mind.replit.app/query")
+        backend_key = os.getenv("AXIS_BACKEND_KEY", "")
+        
+        if not backend_key:
+            logger.warning("AXIS_BACKEND_KEY not set - transcript unavailable")
+            return {
+                "transcript": None,
+                "transcript_id": transcript_id,
+                "available": False,
+                "error": "Backend API key not configured"
+            }
+        
+        if not document_id:
+            return {
+                "transcript": None,
+                "transcript_id": transcript_id,
+                "available": False,
+                "error": "No document ID mapped for this lesson"
+            }
+        
+        # Query for raw transcript content using document_id
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                backend_api,
+                headers={
+                    'Authorization': f'Bearer {backend_key}',
+                    'Content-Type': 'application/json'
+                },
+                json={
+                    "document_id": str(document_id),
+                    "question": f'Return the COMPLETE TRANSCRIPT for "{lesson_title}". Return ONLY the raw transcript text with NO summaries, NO analysis, NO explanations. Just the verbatim transcript.',
+                    "tags": []
+                }
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Backend API error: {response.status_code}")
+                return {
+                    "transcript": None,
+                    "transcript_id": transcript_id,
+                    "available": False,
+                    "error": f"Backend returned {response.status_code}"
+                }
+            
+            # Parse response
+            data = response.json()
+            transcript_text = data.get('answer', '')
+            
+            # Check if we got actual content
+            if not transcript_text or len(transcript_text) < 100:
+                return {
+                    "transcript": None,
+                    "transcript_id": transcript_id,
+                    "available": False,
+                    "error": "Transcript not found or too short"
+                }
+            
+            return {
+                "transcript": transcript_text,
+                "transcript_id": transcript_id,
+                "available": True
+            }
+        
+    except httpx.TimeoutException:
+        logger.error("Transcript fetch timeout")
+        return {
+            "transcript": None,
+            "transcript_id": transcript_id if 'transcript_id' in locals() else None,
+            "available": False,
+            "error": "Request timeout"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching transcript: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 # ==============================================================================
 # END PHASE 7.3 ROUTES
 # ==============================================================================

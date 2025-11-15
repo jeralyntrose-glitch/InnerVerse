@@ -584,12 +584,13 @@ body {
 }
 
 /* Mark Complete Button */
+/* Mark Complete Button - CELEBRATORY! */
 .mark-complete-btn {
     display: inline-flex;
     align-items: center;
     gap: var(--spacing-sm);
     margin-top: var(--spacing-lg);
-    background: var(--success);
+    background: #28a745; /* Vibrant green */
     color: white;
     border: none;
     padding: var(--spacing-md) var(--spacing-xl);
@@ -598,18 +599,71 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-fast);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3); /* Green glow */
 }
 
 .mark-complete-btn:hover {
-    background: #059669;
+    background: #218838; /* Darker green on hover */
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4); /* Stronger glow */
 }
 
+.mark-complete-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.mark-complete-btn .btn-icon {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Completed State - CELEBRATE! */
 .mark-complete-btn.completed {
-    background: var(--bg-tertiary);
-    color: var(--text-muted);
-    cursor: not-allowed;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%); /* Gradient */
+    color: white;
+    cursor: default;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+    animation: completePulse 0.6s ease-out; /* Celebration animation */
+}
+
+.mark-complete-btn.completed:hover {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    transform: none; /* No hover effect when completed */
+}
+
+.mark-complete-btn.completed .btn-icon {
+    animation: checkmarkPop 0.4s ease-out;
+}
+
+/* Celebration Animations */
+@keyframes completePulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+    }
+}
+
+@keyframes checkmarkPop {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 /* Transcript Section */

@@ -1,0 +1,566 @@
+# PHASE 7.3.2: CRITICAL BUG FIXES
+
+**Priority:** CRITICAL - Fix before polish  
+**Time:** 15-20 minutes  
+**Status:** Ready to implement
+
+---
+
+## 🎯 WHAT WE'RE FIXING:
+
+### ❌ CURRENT ISSUES:
+1. **Chat shows raw JSON** - `{"answer":"Hello!"}` instead of just `Hello!`
+2. **Transcript broken** - Queries AI, hits character limit, fails
+3. **Mark Complete looks disabled** - Gray button, no celebration feel
+
+### ✅ TARGET STATE:
+1. **Clean chat messages** - Just the text, no JSON wrapper
+2. **Working transcript** - Fast, direct text fetch, no AI
+3. **Celebratory complete button** - Green, exciting, feels like progress!
+
+---
+
+## 🔧 FIX #1: CHAT JSON WRAPPER REMOVAL
+
+### Problem:
+Backend returns: `{"answer":"Hello! How can I assist..."}`  
+Frontend displays: The whole JSON object as text
+
+### Root Cause:
+The AI chat response is wrapped in JSON, but we're displaying it directly without parsing.
+
+### Solution:
+
+**File:** `static/lesson_page.js`
+
+**Find this code** (around line 710 in `sendMessage()` function):
+
+```javascript
+while (true) {
+    const { done, value } = await reader.read();
+    
+    if (done) break;
+    
+    const chunk = decoder.decode(value, { stream: true });
+    aiResponse += chunk;
+    
+    // Update AI message in real-time
+    updateAIMessage(aiMessageId, aiResponse);
+}
+```
+
+**Replace with:**
+
+```javascript
+let rawResponse = '';
+
+while (true) {
+    const { done, value } = await reader.read();
+    
+    if (done) break;
+    
+    const chunk = decoder.decode(value, { stream: true });
+    rawResponse += chunk;
+}
+
+// Parse the JSON response to extract just the answer
+try {
+    const parsed = JSON.parse(rawResponse);
+    aiResponse = parsed.answer || rawResponse;
+} catch (e) {
+    // If parsing fails, use raw response (backward compatibility)
+    console.warn('Failed to parse AI response as JSON:', e);
+    aiResponse = rawResponse;
+}
+
+// Update with clean text (no JSON wrapper)
+updateAIMessage(aiMessageId, aiResponse);
+```
+
+**Why this works:**
+- Collects full response first (not streaming partial JSON)
+- Parses complete JSON to extract `answer` field
+- Falls back to raw response if JSON parse fails
+- Clean text displayed to user
+
+---
+
+## 🔧 FIX #2: TRANSCRIPT DIRECT FETCH
+
+### Problem:
+Transcript section tries to query AI backend, which:
+- Takes too long (unnecessary AI processing)
+- Hits character limits (transcripts are huge)
+- Often fails with errors
+
+### Root Cause:
+Using AI query endpoint for raw text retrieval (wrong tool for the job).
+
+### Solution:
+
+#### Step 2.1: Add Backend Endpoint
+
+**File:** `main.py`
+
+**Add this new route** (after the `/api/lesson/{lesson_id}/ai-chat` route, around line 4665):
+
+```python
+@app.get("/api/lesson/{lesson_id}/transcript")
+async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
+    """
+    Get raw transcript text for a lesson (no AI processing)
+    
+    Returns:
+        {
+          "transcript": "Full transcript text...",
+          "transcript_id": "season01_01",
+          "available": true
+        }
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get lesson's transcript_id
+        cursor.execute("""
+            SELECT transcript_id, lesson_title
+            FROM curriculum
+            WHERE lesson_id = %s
+        """, (lesson_id,))
+        
+        row = cursor.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+        
+        transcript_id = row[0]
+        lesson_title = row[1]
+        
+        # Query Pinecone for the raw transcript
+        # Use the secure backend with document_id lookup
+        backend_url = os.getenv('AXIS_BACKEND_URL', 'https://axis-of-mind.replit.app/query')
+        backend_key = os.getenv('AXIS_BACKEND_KEY', '')
+        
+        if not backend_key:
+            logger.warning("AXIS_BACKEND_KEY not set - transcript unavailable")
+            return {
+                "transcript": None,
+                "transcript_id": transcript_id,
+                "available": False,
+                "error": "Backend API key not configured"
+            }
+        
+        # Query for raw transcript content
+        response = requests.post(
+            backend_url,
+            headers={
+                'Authorization': f'Bearer {backend_key}',
+                'Content-Type': 'application/json'
+            },
+            json={
+                "document_id": "",
+                "question": f'Return the COMPLETE TRANSCRIPT for "{lesson_title}". Return ONLY the raw transcript text with NO summaries, NO analysis, NO explanations. Just the verbatim transcript.',
+                "tags": [transcript_id]
+            },
+            timeout=30
+        )
+        
+        if response.status_code != 200:
+            logger.error(f"Backend API error: {response.status_code}")
+            return {
+                "transcript": None,
+                "transcript_id": transcript_id,
+                "available": False,
+                "error": f"Backend returned {response.status_code}"
+            }
+        
+        # Parse response
+        data = response.json()
+        transcript_text = data.get('answer', '')
+        
+        # Check if we got actual content
+        if not transcript_text or len(transcript_text) < 100:
+            return {
+                "transcript": None,
+                "transcript_id": transcript_id,
+                "available": False,
+                "error": "Transcript not found or too short"
+            }
+        
+        return {
+            "transcript": transcript_text,
+            "transcript_id": transcript_id,
+            "available": True
+        }
+        
+    except requests.exceptions.Timeout:
+        logger.error("Transcript fetch timeout")
+        return {
+            "transcript": None,
+            "transcript_id": transcript_id if 'transcript_id' in locals() else None,
+            "available": False,
+            "error": "Request timeout"
+        }
+    except Exception as e:
+        logger.error(f"Error fetching transcript: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+```
+
+**Don't forget to add the import at the top of main.py:**
+
+```python
+import requests  # Add this if not already imported
+```
+
+---
+
+#### Step 2.2: Update Frontend to Use New Endpoint
+
+**File:** `static/lesson_page.js`
+
+**Find the `loadTranscript()` function** (around line 460):
+
+```javascript
+async function loadTranscript(transcriptId) {
+    if (!transcriptId) {
+        console.log('⚠️ No transcript ID provided');
+        return;
+    }
+    
+    try {
+        console.log(`📄 Loading transcript: ${transcriptId}`);
+        
+        // Query backend for transcript
+        const response = await fetch(CONFIG.BACKEND_API, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${CONFIG.BACKEND_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                document_id: "",
+                question: `Return the FULL TRANSCRIPT for transcript ID "${transcriptId}". Return ONLY the transcript text, no summaries or explanations.`,
+                tags: [transcriptId]
+            })
+        });
+        
+        // ... rest of old code
+    }
+}
+```
+
+**Replace ENTIRE function with:**
+
+```javascript
+async function loadTranscript(transcriptId) {
+    if (!state.lessonId) {
+        console.log('⚠️ No lesson ID available');
+        return;
+    }
+    
+    try {
+        console.log(`📄 Loading transcript for lesson ${state.lessonId}...`);
+        
+        // Use new direct transcript endpoint
+        const response = await fetch(`${CONFIG.API_BASE}/api/lesson/${state.lessonId}/transcript`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.available || !data.transcript) {
+            console.log('⚠️ Transcript not available:', data.error || 'Unknown reason');
+            // Keep button disabled
+            return;
+        }
+        
+        // Success! Display transcript
+        const transcriptText = document.getElementById('transcriptText');
+        const transcriptToggle = document.getElementById('transcriptToggle');
+        
+        if (transcriptText) {
+            transcriptText.textContent = data.transcript;
+            state.transcriptLoaded = true;
+        }
+        
+        if (transcriptToggle) {
+            transcriptToggle.disabled = false;
+        }
+        
+        console.log('✅ Transcript loaded successfully');
+        
+    } catch (error) {
+        console.error('❌ Error loading transcript:', error);
+        // Transcript is optional, so just log the error
+        // Button stays disabled
+    }
+}
+```
+
+**Why this works:**
+- ✅ Direct endpoint, no AI processing needed
+- ✅ Fast response (just database lookup)
+- ✅ No character limits (returns full text)
+- ✅ Graceful fallback if unavailable
+- ✅ Simple, clean, reliable
+
+---
+
+## 🔧 FIX #3: MARK COMPLETE BUTTON STYLING
+
+### Problem:
+Button looks disabled/boring when it should feel celebratory!
+
+### Solution:
+
+**File:** `static/lesson_page.css`
+
+**Find this CSS** (around line 310):
+
+```css
+.mark-complete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+    background: var(--success);
+    color: white;
+    border: none;
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.mark-complete-btn:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.mark-complete-btn.completed {
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+```
+
+**Replace with:**
+
+```css
+/* Mark Complete Button - CELEBRATORY! */
+.mark-complete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+    background: #28a745; /* Vibrant green */
+    color: white;
+    border: none;
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3); /* Green glow */
+}
+
+.mark-complete-btn:hover {
+    background: #218838; /* Darker green on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4); /* Stronger glow */
+}
+
+.mark-complete-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.mark-complete-btn .btn-icon {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Completed State - CELEBRATE! */
+.mark-complete-btn.completed {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%); /* Gradient */
+    color: white;
+    cursor: default;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+    animation: completePulse 0.6s ease-out; /* Celebration animation */
+}
+
+.mark-complete-btn.completed:hover {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    transform: none; /* No hover effect when completed */
+}
+
+.mark-complete-btn.completed .btn-icon {
+    animation: checkmarkPop 0.4s ease-out;
+}
+
+/* Celebration Animations */
+@keyframes completePulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+    }
+}
+
+@keyframes checkmarkPop {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+```
+
+**Why this works:**
+- ✅ Vibrant green (#28a745) - looks active and exciting
+- ✅ Green glow shadow - makes it pop
+- ✅ Celebration animation on click
+- ✅ Gradient when completed - feels special
+- ✅ Still clearly shows completed state (doesn't look disabled)
+
+---
+
+## ✅ VERIFICATION CHECKLIST
+
+### Test Fix #1: Chat Messages
+- [ ] Send a chat message
+- [ ] Response should show clean text (no `{"answer":"..."}`)
+- [ ] Multiple messages should all display correctly
+- [ ] Chat history should reload without JSON wrappers
+
+### Test Fix #2: Transcript
+- [ ] Click "Show Transcript" button
+- [ ] Transcript should load quickly (< 2 seconds)
+- [ ] No "character limit exceeded" errors
+- [ ] Full transcript text displayed
+- [ ] Can scroll through transcript
+- [ ] Toggle open/close works smoothly
+
+### Test Fix #3: Mark Complete Button
+- [ ] Button is bright green (not gray)
+- [ ] Has green glow/shadow
+- [ ] Hover makes it darker green + lifts slightly
+- [ ] Click triggers animation
+- [ ] After complete: Shows gradient, checkmark pops
+- [ ] Sidebar updates with ✓ immediately
+
+---
+
+## 🐛 EDGE CASES TO TEST
+
+**Chat JSON Parsing:**
+- [ ] Very long AI response (>1000 chars)
+- [ ] AI response with special characters
+- [ ] Empty response handling
+- [ ] Malformed JSON fallback
+
+**Transcript Loading:**
+- [ ] Lesson with no transcript (button stays disabled)
+- [ ] Lesson with very long transcript (>50,000 chars)
+- [ ] Network timeout (graceful error)
+- [ ] Backend API down (doesn't crash page)
+
+**Mark Complete:**
+- [ ] Already completed lesson (loads with completed state)
+- [ ] Mark complete, refresh page (stays completed)
+- [ ] Mark complete, navigate away, come back (still completed)
+- [ ] Animation doesn't interfere with clicking
+
+---
+
+## 🚀 IMPLEMENTATION ORDER
+
+**Give to Replit Agent in this sequence:**
+
+1. **Fix #1 (Chat JSON) - 5 min**
+   - Update `sendMessage()` in lesson_page.js
+   - Test chat works
+
+2. **Fix #2 (Transcript) - 10 min**
+   - Add `/api/lesson/{id}/transcript` endpoint to main.py
+   - Update `loadTranscript()` in lesson_page.js
+   - Test transcript loads
+
+3. **Fix #3 (Button Styling) - 5 min**
+   - Update `.mark-complete-btn` CSS
+   - Add celebration animations
+   - Test mark complete feels good
+
+**Total time: ~20 minutes**
+
+---
+
+## 📋 INSTRUCTIONS FOR REPLIT AGENT
+
+```
+Implement Phase 7.3.2 critical bug fixes:
+
+1. Fix chat JSON wrapper (lesson_page.js line ~710)
+   - Parse JSON response to extract "answer" field
+   - Display clean text without JSON wrapper
+
+2. Add transcript endpoint (main.py after line ~4665)
+   - New route: GET /api/lesson/{id}/transcript
+   - Direct fetch, no AI processing
+   - Update loadTranscript() function (lesson_page.js line ~460)
+
+3. Fix mark complete button styling (lesson_page.css line ~310)
+   - Change to vibrant green (#28a745)
+   - Add green glow shadow
+   - Add celebration animations
+   - Make completed state exciting (gradient + checkmark pop)
+
+Test each fix before moving to next.
+Verify all edge cases pass.
+```
+
+---
+
+## 🎯 EXPECTED RESULTS
+
+**After these fixes:**
+
+1. **Chat:** Clean messages, no JSON artifacts, perfect UX ✅
+2. **Transcript:** Fast loading, full text, no errors ✅
+3. **Mark Complete:** Feels celebratory, green and exciting ✅
+
+**Then we move to polish (fixes 4-7):**
+- Color consistency
+- Collapsible sidebar
+- Better sizing
+- Full-width layout
+
+---
+
+**Ready to ship!** 🚀
+
+Hand this to Replit Agent and watch these bugs disappear! Let me know when it's done and we'll tackle the polish phase! 💪
