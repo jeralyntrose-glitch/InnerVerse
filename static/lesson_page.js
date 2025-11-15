@@ -401,10 +401,8 @@ Format with clear headers and organized sections. Make it educational and engagi
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullResponse = '';
-        
-        // Clear loading state and create streaming container
-        contentEl.innerHTML = '<div class="streaming-content"></div>';
-        const streamContainer = contentEl.querySelector('.streaming-content');
+        let streamContainer = null;
+        let hasStartedStreaming = false;
         
         while (true) {
             const { done, value } = await reader.read();
@@ -414,15 +412,29 @@ Format with clear headers and organized sections. Make it educational and engagi
             const chunk = decoder.decode(value, { stream: true });
             fullResponse += chunk;
             
-            // Update UI in real-time with formatted markdown
-            streamContainer.innerHTML = formatMarkdown(fullResponse);
+            // Clear loading state ONLY when first chunk arrives
+            if (!hasStartedStreaming) {
+                contentEl.innerHTML = '<div class="streaming-content"></div>';
+                streamContainer = contentEl.querySelector('.streaming-content');
+                hasStartedStreaming = true;
+            }
             
-            // Auto-scroll to bottom as content streams in
-            contentEl.scrollTop = contentEl.scrollHeight;
+            // Update UI in real-time with formatted markdown
+            if (streamContainer) {
+                streamContainer.innerHTML = formatMarkdown(fullResponse);
+                
+                // Auto-scroll to bottom as content streams in
+                contentEl.scrollTop = contentEl.scrollHeight;
+            }
         }
         
-        // Keep the streaming container, just do final format
-        streamContainer.innerHTML = formatMarkdown(fullResponse);
+        // Parse and clean the final response
+        fullResponse = parseAndCleanResponse(fullResponse);
+        
+        // Final format with cleaned response
+        if (streamContainer) {
+            streamContainer.innerHTML = formatMarkdown(fullResponse);
+        }
         
         // Check if we got a valid response
         if (!fullResponse.trim()) {
@@ -463,13 +475,46 @@ Format with clear headers and organized sections. Make it educational and engagi
 }
 
 // ==============================================================================
+// RESPONSE PARSING AND CLEANING
+// ==============================================================================
+
+function parseAndCleanResponse(text) {
+    if (!text) return '';
+    
+    // Try to parse JSON wrapper if present: {"answer":"..."}
+    try {
+        // Check if response starts with JSON object
+        if (text.trim().startsWith('{')) {
+            const parsed = JSON.parse(text);
+            if (parsed.answer) {
+                text = parsed.answer;
+            }
+        }
+    } catch (e) {
+        // Not JSON, use as-is
+        console.log('Response is not JSON, using raw text');
+    }
+    
+    // Unescape JSON string escapes (\", \\, etc)
+    text = text
+        .replace(/\\"/g, '"')      // \" → "
+        .replace(/\\'/g, "'")      // \' → '
+        .replace(/\\\\/g, '\\')    // \\ → \
+        .replace(/\\n/g, '\n')     // \n → newline
+        .replace(/\\t/g, '\t');    // \t → tab
+    
+    return text;
+}
+
+// ==============================================================================
 // MARKDOWN FORMATTING
 // ==============================================================================
 
 function formatMarkdown(text) {
     if (!text) return '';
     
-    // Convert literal \n to actual newlines
+    // Text is already cleaned by parseAndCleanResponse
+    // Just convert any remaining literal \n to actual newlines
     text = text.replace(/\\n/g, '\n');
     
     // HTML escape function (CRITICAL for XSS prevention)
@@ -505,6 +550,12 @@ function formatMarkdown(text) {
         if (!block) continue;
         
         const lines = block.split('\n');
+        
+        // Check for horizontal rule (---, ***, ___)
+        if (block.match(/^[\-\*_]{3,}$/)) {
+            htmlBlocks.push('<hr>');
+            continue;
+        }
         
         // Check for code block (triple backticks)
         if (block.startsWith('```') && block.endsWith('```')) {
