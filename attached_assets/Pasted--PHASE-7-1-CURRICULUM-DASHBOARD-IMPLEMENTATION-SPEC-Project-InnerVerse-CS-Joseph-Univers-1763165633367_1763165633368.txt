@@ -1,0 +1,1705 @@
+# PHASE 7.1: CURRICULUM DASHBOARD - IMPLEMENTATION SPEC
+
+**Project:** InnerVerse - CS Joseph University  
+**Phase:** 7.1 of 7  
+**Goal:** Build curriculum dashboard homepage (Netflix-style module/season cards)  
+**Time Estimate:** 4-6 hours  
+**Status:** Ready to implement
+
+-----
+
+## ⚠️ CRITICAL INSTRUCTIONS FOR REPLIT AGENT
+
+**READ THIS FIRST:**
+
+1. **DO NOT PROCEED TO PHASE 7.2 until user explicitly approves**
+1. **Follow these instructions EXACTLY - no improvisation**
+1. **Test each step before moving to next**
+1. **If you encounter ANY errors, STOP and report them**
+1. **Do not modify any files not listed in this spec**
+1. **After completion, provide verification checklist results**
+
+-----
+
+## 🎯 WHAT WE’RE BUILDING
+
+**Single Page: Curriculum Dashboard** (`/` or `/curriculum`)
+
+**Features:**
+
+- Card-based module display (5 modules)
+- Card-based season display (expandable per module)
+- “Continue Learning” banner showing last accessed lesson
+- Overall progress tracking (X of 742 lessons)
+- Dark/light mode toggle
+- Mobile responsive
+- Clean, professional design
+
+**What We’re NOT Building Yet:**
+
+- ❌ Season view page (Phase 7.2)
+- ❌ Lesson page (Phase 7.3)
+- ❌ AI tutor integration (Phase 7.4)
+
+-----
+
+## 📊 CURRENT STATE ANALYSIS
+
+### What Exists Now:
+
+```
+DATABASE (PostgreSQL):
+- documents (0 rows) - UNUSED
+- lessons (620 rows) - AUTO-GENERATED, NO SEASON STRUCTURE
+- courses (10 rows) - RANDOM AI COURSES
+- pending_youtube_videos (12 rows) - CSV IMPORT STAGING
+
+FRONTEND:
+- static/learning_paths.html - TREE VIEW (TO BE REPLACED)
+- static/learning_paths_v2.js - COURSE GENERATION (TO BE REMOVED)
+- static/lesson_page.html - LESSON VIEW (TO BE UPDATED IN PHASE 7.3)
+
+BACKEND (main.py):
+- Lines 3034-3241: YouTube matching logic (KEEP)
+- Various routes for course generation (TO BE REMOVED)
+```
+
+### What We’re Changing:
+
+1. **DROP** old `courses` and `lessons` tables
+1. **CREATE** new `curriculum` table with proper structure
+1. **REPLACE** learning_paths.html with curriculum_dashboard.html
+1. **ADD** new API routes for dashboard data
+1. **REMOVE** course generation routes
+
+-----
+
+## 💾 STEP 1: DATABASE MIGRATION
+
+### 1.1 Backup Current Data
+
+**BEFORE MAKING ANY CHANGES**, run this to backup:
+
+```sql
+-- Save to backup file (PostgreSQL)
+COPY lessons TO '/tmp/lessons_backup.csv' DELIMITER ',' CSV HEADER;
+COPY courses TO '/tmp/courses_backup.csv' DELIMITER ',' CSV HEADER;
+```
+
+**Verification:** Check that `/tmp/lessons_backup.csv` and `/tmp/courses_backup.csv` exist and have data.
+
+### 1.2 Drop Old Tables
+
+```sql
+-- Drop in this order (respects foreign keys)
+DROP TABLE IF EXISTS lesson_documents CASCADE;
+DROP TABLE IF EXISTS lessons CASCADE;
+DROP TABLE IF EXISTS courses CASCADE;
+```
+
+**Verification:** Run `\dt` in psql - these tables should NOT appear.
+
+### 1.3 Create New Curriculum Table
+
+```sql
+CREATE TABLE curriculum (
+  lesson_id SERIAL PRIMARY KEY,
+  module_number INTEGER NOT NULL,
+  module_name VARCHAR(255) NOT NULL,
+  season_number VARCHAR(10) NOT NULL,
+  season_name VARCHAR(255) NOT NULL,
+  lesson_number INTEGER NOT NULL,
+  lesson_title VARCHAR(500) NOT NULL,
+  youtube_url TEXT NULL,
+  transcript_id VARCHAR(100) NOT NULL,
+  order_index INTEGER NOT NULL UNIQUE,
+  has_video BOOLEAN DEFAULT TRUE,
+  duration VARCHAR(10) NULL,
+  description TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_curriculum_order ON curriculum(order_index);
+CREATE INDEX idx_curriculum_module ON curriculum(module_number);
+CREATE INDEX idx_curriculum_season ON curriculum(season_number);
+CREATE INDEX idx_curriculum_transcript ON curriculum(transcript_id);
+
+-- Add constraints
+ALTER TABLE curriculum ADD CONSTRAINT unique_order_index UNIQUE (order_index);
+ALTER TABLE curriculum ADD CONSTRAINT check_module_number CHECK (module_number BETWEEN 1 AND 6);
+```
+
+**Verification:** Run `\d curriculum` - should show all columns and indexes.
+
+### 1.4 Create Progress Table
+
+```sql
+CREATE TABLE progress (
+  lesson_id INTEGER PRIMARY KEY REFERENCES curriculum(lesson_id) ON DELETE CASCADE,
+  completed BOOLEAN DEFAULT FALSE,
+  last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  time_spent INTEGER DEFAULT 0,
+  notes TEXT NULL
+);
+
+CREATE INDEX idx_progress_completed ON progress(completed);
+CREATE INDEX idx_progress_last_accessed ON progress(last_accessed DESC);
+```
+
+**Verification:** Run `\d progress` - should show foreign key to curriculum.
+
+### 1.5 Populate Curriculum with Sample Data
+
+**For testing Phase 7.1, we’ll add a small subset (50 lessons) to verify the UI works.**
+
+```sql
+-- Module 1: Getting Started (3 lessons)
+INSERT INTO curriculum (module_number, module_name, season_number, season_name, lesson_number, lesson_title, youtube_url, transcript_id, order_index, has_video, duration) VALUES
+(1, 'Getting Started', '0', 'Orientation', 1, 'Welcome to CS Joseph University', 'https://youtube.com/watch?v=SAMPLE1', 'orientation_01', 1, TRUE, '12:45'),
+(1, 'Getting Started', '0', 'Orientation', 2, 'How to Use This Platform', 'https://youtube.com/watch?v=SAMPLE2', 'orientation_02', 2, TRUE, '8:30'),
+(1, 'Getting Started', '0', 'Orientation', 3, 'Your Learning Path', 'https://youtube.com/watch?v=SAMPLE3', 'orientation_03', 3, TRUE, '10:15');
+
+-- Module 2: Building Foundation - Season 1 (16 lessons)
+INSERT INTO curriculum (module_number, module_name, season_number, season_name, lesson_number, lesson_title, youtube_url, transcript_id, order_index, has_video, duration) VALUES
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 1, 'Introduction to Cognitive Functions', 'https://youtube.com/watch?v=SAMPLE4', 'season01_01', 4, TRUE, '15:22'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 2, 'Parent vs Child Functions', 'https://youtube.com/watch?v=SAMPLE5', 'season01_02', 5, TRUE, '18:45'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 3, 'Hero Function Deep Dive', 'https://youtube.com/watch?v=SAMPLE6', 'season01_03', 6, TRUE, '22:10'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 4, 'Child Function Explained', NULL, 'season01_04', 7, FALSE, '16:30'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 5, 'Parent Function Mechanics', 'https://youtube.com/watch?v=SAMPLE8', 'season01_05', 8, TRUE, '19:15'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 6, 'Inferior Function', 'https://youtube.com/watch?v=SAMPLE9', 'season01_06', 9, TRUE, '21:40'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 7, 'Nemesis Function', 'https://youtube.com/watch?v=SAMPLE10', 'season01_07', 10, TRUE, '17:55'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 8, 'Critic Function', 'https://youtube.com/watch?v=SAMPLE11', 'season01_08', 11, TRUE, '20:30'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 9, 'Trickster Function', 'https://youtube.com/watch?v=SAMPLE12', 'season01_09', 12, TRUE, '18:25'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 10, 'Demon Function', 'https://youtube.com/watch?v=SAMPLE13', 'season01_10', 13, TRUE, '23:50'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 11, 'Ti vs Te: Introverted vs Extraverted Thinking', 'https://youtube.com/watch?v=SAMPLE14', 'season01_11', 14, TRUE, '25:15'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 12, 'Fi vs Fe: Introverted vs Extraverted Feeling', 'https://youtube.com/watch?v=SAMPLE15', 'season01_12', 15, TRUE, '24:40'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 13, 'Si vs Se: Introverted vs Extraverted Sensing', 'https://youtube.com/watch?v=SAMPLE16', 'season01_13', 16, TRUE, '22:35'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 14, 'Ni vs Ne: Introverted vs Extraverted Intuition', 'https://youtube.com/watch?v=SAMPLE17', 'season01_14', 17, TRUE, '26:20'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 15, 'Function Axes: How Functions Work Together', 'https://youtube.com/watch?v=SAMPLE18', 'season01_15', 18, TRUE, '20:10'),
+(2, 'Building Foundation', '1', 'Jungian Cognitive Functions', 16, 'Cognitive Function Stack Summary', 'https://youtube.com/watch?v=SAMPLE19', 'season01_16', 19, TRUE, '15:45');
+
+-- Module 2: Season 16 (8 lessons)
+INSERT INTO curriculum (module_number, module_name, season_number, season_name, lesson_number, lesson_title, youtube_url, transcript_id, order_index, has_video, duration) VALUES
+(2, 'Building Foundation', '16', 'Cognitive Attitudes', 1, 'Introduction to Cognitive Attitudes', 'https://youtube.com/watch?v=SAMPLE20', 'season16_01', 20, TRUE, '14:20'),
+(2, 'Building Foundation', '16', 'Cognitive Attitudes', 2, 'Optimistic vs Pessimistic', 'https://youtube.com/watch?v=SAMPLE21', 'season16_02', 21, TRUE, '16:35'),
+(2, 'Building Foundation', '16', 'Cognitive Attitudes', 3, 'Affiliative vs Pragmatic', 'https://youtube.com/watch?v=SAMPLE22', 'season16_03', 22, TRUE, '17:40'),
+(2, 'Building Foundation', '16', 'Cognitive Attitudes', 4, 'Systematic vs Interest', 'https://youtube.com/watch?v=SAMPLE23', 'season16_04', 23, TRUE, '15:55'),
+(2, 'Building Foundation', '16', 'Cognitive Attitudes', 5, 'Direct vs Informative', 'https://youtube.com/watch?v=SAMPLE24', 'season16_05', 24, TRUE, '18:10'),
+(2, 'Building Foundation', '16', 'Cognitive Attitudes', 6, 'Initiating vs Responding', 'https://youtube.com/watch?v=SAMPLE25', 'season16_06', 25, TRUE, '16:25'),
+(2, 'Building Foundation', '16', 'Cognitive Attitudes', 7, 'Outcome vs Movement', 'https://youtube.com/watch?v=SAMPLE26', 'season16_07', 26, TRUE, '17:30'),
+(2, 'Building Foundation', '16', 'Cognitive Attitudes', 8, 'Cognitive Attitudes Summary', 'https://youtube.com/watch?v=SAMPLE27', 'season16_08', 27, TRUE, '13:45');
+
+-- Module 3: Sample lessons (just a few for testing)
+INSERT INTO curriculum (module_number, module_name, season_number, season_name, lesson_number, lesson_title, youtube_url, transcript_id, order_index, has_video, duration) VALUES
+(3, 'Deepening Knowledge', '2', 'How to Type Yourself and Others', 1, 'Introduction to Typing', 'https://youtube.com/watch?v=SAMPLE28', 'season02_01', 28, TRUE, '19:20'),
+(3, 'Deepening Knowledge', '2', 'How to Type Yourself and Others', 2, 'Temperaments Explained', 'https://youtube.com/watch?v=SAMPLE29', 'season02_02', 29, TRUE, '22:15'),
+(3, 'Deepening Knowledge', '3', '16 Personality Archetypes', 1, 'INTJ - The Mastermind', 'https://youtube.com/watch?v=SAMPLE30', 'season03_01', 30, TRUE, '28:45');
+
+-- Add some progress data for testing
+INSERT INTO progress (lesson_id, completed, last_accessed, time_spent) VALUES
+(1, TRUE, CURRENT_TIMESTAMP - INTERVAL '3 days', 765),
+(2, TRUE, CURRENT_TIMESTAMP - INTERVAL '2 days', 510),
+(3, FALSE, CURRENT_TIMESTAMP - INTERVAL '1 day', 245),
+(4, TRUE, CURRENT_TIMESTAMP - INTERVAL '2 hours', 922),
+(5, TRUE, CURRENT_TIMESTAMP - INTERVAL '1 hour', 1155),
+(6, FALSE, CURRENT_TIMESTAMP - INTERVAL '30 minutes', 180);
+```
+
+**Verification:**
+
+```sql
+SELECT COUNT(*) FROM curriculum; -- Should return 30
+SELECT COUNT(*) FROM progress; -- Should return 6
+SELECT * FROM curriculum ORDER BY order_index LIMIT 5; -- Should show first 5 lessons
+```
+
+**Bug Check:**
+
+- ✅ All `order_index` values are unique
+- ✅ Foreign key constraint works (try `INSERT INTO progress (lesson_id) VALUES (999);` - should fail)
+- ✅ Module numbers are 1-3
+- ✅ Lesson 4 has `has_video = FALSE` and `youtube_url = NULL` (testing Skool lessons)
+
+-----
+
+## 🔧 STEP 2: BACKEND API ROUTES
+
+### 2.1 Add New Routes to main.py
+
+**Location:** Add these routes AFTER line 3241 (after YouTube routes, before the end of file)
+
+```python
+# ==============================================================================
+# PHASE 7.1: CURRICULUM DASHBOARD ROUTES
+# ==============================================================================
+
+from typing import Dict, List, Any
+from datetime import datetime
+
+@app.get("/")
+async def serve_curriculum_dashboard():
+    """Serve the main curriculum dashboard page"""
+    return FileResponse("static/curriculum_dashboard.html")
+
+@app.get("/api/curriculum/summary")
+async def get_curriculum_summary() -> Dict[str, Any]:
+    """
+    Get curriculum structure for dashboard display
+    
+    Returns:
+        {
+          "modules": [
+            {
+              "module_number": 1,
+              "module_name": "Getting Started",
+              "total_lessons": 3,
+              "completed_lessons": 2,
+              "seasons": [
+                {
+                  "season_number": "0",
+                  "season_name": "Orientation",
+                  "lesson_count": 3,
+                  "completed_count": 2,
+                  "last_accessed": "2025-11-14T10:30:00"
+                }
+              ]
+            },
+            ...
+          ],
+          "total_lessons": 742,
+          "total_completed": 47
+        }
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get module summary
+        cursor.execute("""
+            SELECT 
+                c.module_number,
+                c.module_name,
+                COUNT(c.lesson_id) as total_lessons,
+                COUNT(CASE WHEN p.completed = TRUE THEN 1 END) as completed_lessons,
+                MAX(p.last_accessed) as last_accessed
+            FROM curriculum c
+            LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+            GROUP BY c.module_number, c.module_name
+            ORDER BY c.module_number
+        """)
+        
+        modules_data = cursor.fetchall()
+        modules = []
+        
+        for module_row in modules_data:
+            module_number = module_row[0]
+            module_name = module_row[1]
+            total_lessons = module_row[2]
+            completed_lessons = module_row[3] or 0
+            
+            # Get seasons for this module
+            cursor.execute("""
+                SELECT 
+                    c.season_number,
+                    c.season_name,
+                    COUNT(c.lesson_id) as lesson_count,
+                    COUNT(CASE WHEN p.completed = TRUE THEN 1 END) as completed_count,
+                    MAX(p.last_accessed) as last_accessed
+                FROM curriculum c
+                LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+                WHERE c.module_number = %s
+                GROUP BY c.season_number, c.season_name
+                ORDER BY MIN(c.order_index)
+            """, (module_number,))
+            
+            seasons_data = cursor.fetchall()
+            seasons = []
+            
+            for season_row in seasons_data:
+                seasons.append({
+                    "season_number": season_row[0],
+                    "season_name": season_row[1],
+                    "lesson_count": season_row[2],
+                    "completed_count": season_row[3] or 0,
+                    "last_accessed": season_row[4].isoformat() if season_row[4] else None
+                })
+            
+            modules.append({
+                "module_number": module_number,
+                "module_name": module_name,
+                "total_lessons": total_lessons,
+                "completed_lessons": completed_lessons,
+                "seasons": seasons
+            })
+        
+        # Get overall stats
+        cursor.execute("SELECT COUNT(*) FROM curriculum")
+        total_lessons = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM progress WHERE completed = TRUE")
+        total_completed = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return {
+            "modules": modules,
+            "total_lessons": total_lessons,
+            "total_completed": total_completed
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching curriculum summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/progress/continue")
+async def get_continue_learning() -> Dict[str, Any]:
+    """
+    Get the lesson to continue learning from
+    
+    Returns last accessed incomplete lesson, or first incomplete lesson if none accessed
+    
+    Returns:
+        {
+          "lesson_id": 6,
+          "lesson_title": "Hero Function Deep Dive",
+          "module_name": "Building Foundation",
+          "season_name": "Jungian Cognitive Functions",
+          "season_number": "1",
+          "lesson_number": 3,
+          "last_accessed": "2025-11-14T10:30:00",
+          "progress_percent": 6.4
+        }
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Find last accessed incomplete lesson
+        cursor.execute("""
+            SELECT 
+                c.lesson_id,
+                c.lesson_title,
+                c.module_name,
+                c.season_name,
+                c.season_number,
+                c.lesson_number,
+                p.last_accessed
+            FROM curriculum c
+            LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+            WHERE p.completed = FALSE OR p.completed IS NULL
+            ORDER BY p.last_accessed DESC NULLS LAST, c.order_index ASC
+            LIMIT 1
+        """)
+        
+        row = cursor.fetchone()
+        
+        if not row:
+            # All lessons complete! Return first lesson
+            cursor.execute("""
+                SELECT 
+                    c.lesson_id,
+                    c.lesson_title,
+                    c.module_name,
+                    c.season_name,
+                    c.season_number,
+                    c.lesson_number,
+                    p.last_accessed
+                FROM curriculum c
+                LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+                ORDER BY c.order_index ASC
+                LIMIT 1
+            """)
+            row = cursor.fetchone()
+        
+        # Calculate overall progress
+        cursor.execute("SELECT COUNT(*) FROM curriculum")
+        total = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM progress WHERE completed = TRUE")
+        completed = cursor.fetchone()[0]
+        
+        progress_percent = round((completed / total * 100), 1) if total > 0 else 0
+        
+        conn.close()
+        
+        return {
+            "lesson_id": row[0],
+            "lesson_title": row[1],
+            "module_name": row[2],
+            "season_name": row[3],
+            "season_number": row[4],
+            "lesson_number": row[5],
+            "last_accessed": row[6].isoformat() if row[6] else None,
+            "progress_percent": progress_percent
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching continue learning: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/curriculum/stats")
+async def get_curriculum_stats() -> Dict[str, Any]:
+    """
+    Get overall curriculum statistics
+    
+    Returns:
+        {
+          "total_lessons": 742,
+          "completed_lessons": 47,
+          "progress_percent": 6.3,
+          "total_duration": "385h 22m",
+          "completed_duration": "24h 15m",
+          "modules_count": 5,
+          "seasons_count": 32
+        }
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Total lessons
+        cursor.execute("SELECT COUNT(*) FROM curriculum")
+        total_lessons = cursor.fetchone()[0]
+        
+        # Completed lessons
+        cursor.execute("SELECT COUNT(*) FROM progress WHERE completed = TRUE")
+        completed_lessons = cursor.fetchone()[0]
+        
+        # Progress percent
+        progress_percent = round((completed_lessons / total_lessons * 100), 1) if total_lessons > 0 else 0
+        
+        # Unique modules
+        cursor.execute("SELECT COUNT(DISTINCT module_number) FROM curriculum")
+        modules_count = cursor.fetchone()[0]
+        
+        # Unique seasons
+        cursor.execute("SELECT COUNT(DISTINCT season_number) FROM curriculum")
+        seasons_count = cursor.fetchone()[0]
+        
+        # TODO: Calculate duration when we have actual duration data
+        total_duration = "TBD"
+        completed_duration = "TBD"
+        
+        conn.close()
+        
+        return {
+            "total_lessons": total_lessons,
+            "completed_lessons": completed_lessons,
+            "progress_percent": progress_percent,
+            "total_duration": total_duration,
+            "completed_duration": completed_duration,
+            "modules_count": modules_count,
+            "seasons_count": seasons_count
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching curriculum stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==============================================================================
+# END PHASE 7.1 ROUTES
+# ==============================================================================
+```
+
+**Bug Checks:**
+
+- ✅ SQL queries use proper JOINs (LEFT JOIN to handle lessons with no progress)
+- ✅ NULL handling (`or 0`, `NULLS LAST`)
+- ✅ Division by zero check (`if total_lessons > 0`)
+- ✅ Proper error handling with try/except
+- ✅ Database connection closed in all paths
+- ✅ Returns proper HTTP 500 on errors
+
+**Verification:**
+Test each endpoint:
+
+```bash
+# Test curriculum summary
+curl http://localhost:5000/api/curriculum/summary
+
+# Test continue learning
+curl http://localhost:5000/api/progress/continue
+
+# Test stats
+curl http://localhost:5000/api/curriculum/stats
+```
+
+Expected: All return valid JSON with no errors.
+
+-----
+
+## 🎨 STEP 3: FRONTEND - HTML
+
+### 3.1 Create static/curriculum_dashboard.html
+
+**File:** `static/curriculum_dashboard.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS Joseph University - Curriculum</title>
+    <link rel="stylesheet" href="/static/curriculum_dashboard.css">
+</head>
+<body data-theme="dark">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="header-content">
+            <h1 class="logo">
+                <span class="logo-icon">🧠</span>
+                CS Joseph University
+            </h1>
+            
+            <div class="header-actions">
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <div class="container">
+            
+            <!-- Overall Progress -->
+            <section class="progress-overview">
+                <div class="progress-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Progress</span>
+                        <span class="stat-value" id="overallProgress">0 of 0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Completion</span>
+                        <span class="stat-value" id="completionPercent">0%</span>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+            </section>
+
+            <!-- Continue Learning Banner -->
+            <section class="continue-learning" id="continueLearning" style="display: none;">
+                <div class="continue-content">
+                    <div class="continue-text">
+                        <h2>Continue Learning</h2>
+                        <p class="continue-title" id="continueTitle">Loading...</p>
+                        <p class="continue-meta" id="continueMeta"></p>
+                    </div>
+                    <button class="continue-btn" id="continueBtn">
+                        Resume Lesson →
+                    </button>
+                </div>
+            </section>
+
+            <!-- Modules Grid -->
+            <section class="modules-section">
+                <div id="modulesContainer" class="modules-grid">
+                    <!-- Modules will be dynamically inserted here -->
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Loading curriculum...</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+        <p>&copy; 2025 InnerVerse - CS Joseph University</p>
+    </footer>
+
+    <script src="/static/curriculum_dashboard.js"></script>
+</body>
+</html>
+```
+
+**Bug Checks:**
+
+- ✅ All IDs are unique
+- ✅ Proper semantic HTML (header, main, section, footer)
+- ✅ Accessibility: aria-label on theme toggle
+- ✅ Meta viewport for mobile
+- ✅ data-theme attribute for CSS theming
+
+-----
+
+## 🎨 STEP 4: FRONTEND - CSS
+
+### 4.1 Create static/curriculum_dashboard.css
+
+**File:** `static/curriculum_dashboard.css`
+
+```css
+/* ==============================================================================
+   PHASE 7.1: CURRICULUM DASHBOARD STYLES
+   ============================================================================== */
+
+/* CSS Variables for Theming */
+:root {
+    /* Light Theme */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --accent-primary: #0066cc;
+    --accent-secondary: #004499;
+    --border-color: #dee2e6;
+    --success-color: #28a745;
+    --progress-bg: #e9ecef;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] {
+    /* Dark Theme */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #3d3d3d;
+    --text-primary: #e9ecef;
+    --text-secondary: #adb5bd;
+    --accent-primary: #4d9fff;
+    --accent-secondary: #3380ff;
+    --border-color: #495057;
+    --success-color: #51cf66;
+    --progress-bg: #495057;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Reset & Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Header */
+.dashboard-header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+}
+
+.header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-icon {
+    font-size: 32px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.theme-toggle {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.2s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--accent-primary);
+    transform: scale(1.05);
+}
+
+/* Main Content */
+.dashboard-main {
+    padding: 40px 0;
+    min-height: calc(100vh - 200px);
+}
+
+/* Progress Overview */
+.progress-overview {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow);
+}
+
+.progress-stats {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 24px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 12px;
+    background: var(--progress-bg);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    border-radius: 6px;
+    transition: width 0.5s ease;
+}
+
+/* Continue Learning Banner */
+.continue-learning {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow);
+    color: white;
+}
+
+.continue-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+}
+
+.continue-text h2 {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.continue-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.continue-meta {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.continue-btn {
+    background: white;
+    color: var(--accent-primary);
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.continue-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Modules Grid */
+.modules-section {
+    margin-bottom: 40px;
+}
+
+.modules-grid {
+    display: grid;
+    gap: 32px;
+}
+
+.module-card {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+}
+
+.module-card:hover {
+    box-shadow: var(--shadow-hover);
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.module-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.module-number {
+    color: var(--accent-primary);
+}
+
+.module-progress {
+    text-align: right;
+}
+
+.module-progress-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--success-color);
+    margin-bottom: 4px;
+}
+
+.module-progress-meta {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.seasons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.season-card {
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.season-card:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+}
+
+.season-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.season-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.season-number {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.season-progress-badge {
+    background: var(--success-color);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.season-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.season-lesson-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.season-last-accessed {
+    font-size: 12px;
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: var(--text-secondary);
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--progress-bg);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Footer */
+.dashboard-footer {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    padding: 24px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 16px;
+    }
+
+    .header-content {
+        padding: 0 16px;
+    }
+
+    .logo {
+        font-size: 20px;
+    }
+
+    .logo-icon {
+        font-size: 24px;
+    }
+
+    .progress-stats {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .continue-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .continue-btn {
+        width: 100%;
+    }
+
+    .module-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .module-progress {
+        text-align: left;
+    }
+
+    .seasons-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-value {
+        font-size: 24px;
+    }
+
+    .module-title {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-main {
+        padding: 24px 0;
+    }
+
+    .progress-overview,
+    .continue-learning,
+    .module-card {
+        padding: 20px;
+        border-radius: 12px;
+    }
+
+    .continue-text h2 {
+        font-size: 20px;
+    }
+
+    .continue-title {
+        font-size: 16px;
+    }
+}
+```
+
+**Bug Checks:**
+
+- ✅ CSS variables for easy theming
+- ✅ Proper transitions (0.2s-0.5s)
+- ✅ Responsive breakpoints (768px, 480px)
+- ✅ Hover states with transform
+- ✅ Loading spinner animation
+- ✅ Mobile-first grid (auto-fill, minmax)
+- ✅ Accessibility: proper contrast ratios
+
+-----
+
+## 💻 STEP 5: FRONTEND - JavaScript
+
+### 5.1 Create static/curriculum_dashboard.js
+
+**File:** `static/curriculum_dashboard.js`
+
+```javascript
+// ==============================================================================
+// PHASE 7.1: CURRICULUM DASHBOARD JAVASCRIPT
+// ==============================================================================
+
+class CurriculumDashboard {
+    constructor() {
+        this.curriculumData = null;
+        this.continueData = null;
+        this.theme = localStorage.getItem('theme') || 'dark';
+        
+        this.init();
+    }
+
+    async init() {
+        // Set initial theme
+        this.applyTheme();
+        this.setupEventListeners();
+        
+        // Load data
+        await this.loadAllData();
+    }
+
+    // =========================================================================
+    // THEME MANAGEMENT
+    // =========================================================================
+    
+    applyTheme() {
+        document.body.setAttribute('data-theme', this.theme);
+        const icon = this.theme === 'dark' ? '🌙' : '☀️';
+        const themeIcon = document.querySelector('.theme-icon');
+        if (themeIcon) {
+            themeIcon.textContent = icon;
+        }
+    }
+
+    toggleTheme() {
+        this.theme = this.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('theme', this.theme);
+        this.applyTheme();
+    }
+
+    // =========================================================================
+    // EVENT LISTENERS
+    // =========================================================================
+    
+    setupEventListeners() {
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => this.toggleTheme());
+        }
+
+        const continueBtn = document.getElementById('continueBtn');
+        if (continueBtn) {
+            continueBtn.addEventListener('click', () => this.onContinueLearning());
+        }
+    }
+
+    // =========================================================================
+    // DATA LOADING
+    // =========================================================================
+    
+    async loadAllData() {
+        try {
+            // Load curriculum summary and continue learning data in parallel
+            const [curriculumResponse, continueResponse] = await Promise.all([
+                fetch('/api/curriculum/summary'),
+                fetch('/api/progress/continue')
+            ]);
+
+            if (!curriculumResponse.ok || !continueResponse.ok) {
+                throw new Error('Failed to load curriculum data');
+            }
+
+            this.curriculumData = await curriculumResponse.json();
+            this.continueData = await continueResponse.json();
+
+            // Render everything
+            this.renderProgressOverview();
+            this.renderContinueLearning();
+            this.renderModules();
+
+        } catch (error) {
+            console.error('Error loading curriculum:', error);
+            this.showError('Failed to load curriculum. Please refresh the page.');
+        }
+    }
+
+    // =========================================================================
+    // RENDERING
+    // =========================================================================
+    
+    renderProgressOverview() {
+        const { total_lessons, total_completed } = this.curriculumData;
+        const percentage = total_lessons > 0 
+            ? Math.round((total_completed / total_lessons) * 100) 
+            : 0;
+
+        // Update progress text
+        document.getElementById('overallProgress').textContent = 
+            `${total_completed} of ${total_lessons}`;
+        
+        document.getElementById('completionPercent').textContent = 
+            `${percentage}%`;
+
+        // Update progress bar
+        const progressBar = document.getElementById('progressBar');
+        if (progressBar) {
+            // Animate progress bar
+            setTimeout(() => {
+                progressBar.style.width = `${percentage}%`;
+            }, 100);
+        }
+    }
+
+    renderContinueLearning() {
+        const banner = document.getElementById('continueLearning');
+        if (!banner || !this.continueData) return;
+
+        const { 
+            lesson_title, 
+            module_name, 
+            season_name, 
+            season_number,
+            lesson_number,
+            last_accessed 
+        } = this.continueData;
+
+        // Update banner content
+        document.getElementById('continueTitle').textContent = lesson_title;
+        
+        const meta = `${module_name} • Season ${season_number}: ${season_name} • Lesson ${lesson_number}`;
+        document.getElementById('continueMeta').textContent = meta;
+
+        // Show banner
+        banner.style.display = 'block';
+    }
+
+    renderModules() {
+        const container = document.getElementById('modulesContainer');
+        if (!container || !this.curriculumData) return;
+
+        const { modules } = this.curriculumData;
+
+        // Clear loading state
+        container.innerHTML = '';
+
+        // Render each module
+        modules.forEach(module => {
+            const moduleCard = this.createModuleCard(module);
+            container.appendChild(moduleCard);
+        });
+    }
+
+    createModuleCard(module) {
+        const {
+            module_number,
+            module_name,
+            total_lessons,
+            completed_lessons,
+            seasons
+        } = module;
+
+        const percentage = total_lessons > 0 
+            ? Math.round((completed_lessons / total_lessons) * 100) 
+            : 0;
+
+        const card = document.createElement('div');
+        card.className = 'module-card';
+        card.innerHTML = `
+            <div class="module-header">
+                <h2 class="module-title">
+                    <span class="module-number">Module ${module_number}:</span>
+                    ${module_name}
+                </h2>
+                <div class="module-progress">
+                    <div class="module-progress-text">
+                        ${completed_lessons}/${total_lessons} Complete
+                    </div>
+                    <div class="module-progress-meta">${percentage}%</div>
+                </div>
+            </div>
+            <div class="seasons-grid" id="seasons-module-${module_number}">
+                <!-- Seasons will be inserted here -->
+            </div>
+        `;
+
+        // Add seasons
+        const seasonsContainer = card.querySelector(`#seasons-module-${module_number}`);
+        seasons.forEach(season => {
+            const seasonCard = this.createSeasonCard(season);
+            seasonsContainer.appendChild(seasonCard);
+        });
+
+        return card;
+    }
+
+    createSeasonCard(season) {
+        const {
+            season_number,
+            season_name,
+            lesson_count,
+            completed_count,
+            last_accessed
+        } = season;
+
+        const card = document.createElement('div');
+        card.className = 'season-card';
+        card.dataset.seasonNumber = season_number;
+
+        // Format last accessed date
+        let accessedText = '';
+        if (last_accessed) {
+            const date = new Date(last_accessed);
+            const now = new Date();
+            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                accessedText = 'Today';
+            } else if (diffDays === 1) {
+                accessedText = 'Yesterday';
+            } else if (diffDays < 7) {
+                accessedText = `${diffDays} days ago`;
+            } else {
+                accessedText = date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+            }
+        }
+
+        card.innerHTML = `
+            <div class="season-header">
+                <div>
+                    <div class="season-title">${season_name}</div>
+                    <div class="season-number">Season ${season_number}</div>
+                </div>
+                <div class="season-progress-badge">
+                    ${completed_count}/${lesson_count}
+                </div>
+            </div>
+            <div class="season-meta">
+                <div class="season-lesson-count">
+                    📚 ${lesson_count} lessons
+                </div>
+                ${accessedText ? `<div class="season-last-accessed">${accessedText}</div>` : ''}
+            </div>
+        `;
+
+        // Click handler - navigate to season view (Phase 7.2)
+        card.addEventListener('click', () => {
+            this.onSeasonClick(season_number);
+        });
+
+        return card;
+    }
+
+    // =========================================================================
+    // EVENT HANDLERS
+    // =========================================================================
+    
+    onContinueLearning() {
+        if (!this.continueData) return;
+        
+        const { lesson_id } = this.continueData;
+        
+        // Navigate to lesson page (Phase 7.3)
+        window.location.href = `/lesson/${lesson_id}`;
+    }
+
+    onSeasonClick(seasonNumber) {
+        // Navigate to season view page (Phase 7.2)
+        window.location.href = `/season/${seasonNumber}`;
+    }
+
+    // =========================================================================
+    // ERROR HANDLING
+    // =========================================================================
+    
+    showError(message) {
+        const container = document.getElementById('modulesContainer');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <p style="font-size: 18px; margin-bottom: 16px;">⚠️ ${message}</p>
+                <button onclick="location.reload()" style="
+                    background: var(--accent-primary);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 16px;
+                ">
+                    Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Initialize dashboard when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        new CurriculumDashboard();
+    });
+} else {
+    new CurriculumDashboard();
+}
+```
+
+**Bug Checks:**
+
+- ✅ Handles empty data gracefully (checks `if (!data)`)
+- ✅ Division by zero check (`total_lessons > 0`)
+- ✅ Null checks for DOM elements
+- ✅ Proper async/await error handling
+- ✅ LocalStorage fallback (`|| 'dark'`)
+- ✅ Date formatting handles edge cases (today, yesterday, etc.)
+- ✅ Progressive enhancement (checks `document.readyState`)
+- ✅ No memory leaks (event listeners properly scoped)
+
+**Verification:**
+
+1. Open browser console (F12)
+1. Check for JavaScript errors (should be none)
+1. Test theme toggle (should save to localStorage)
+1. Test season card clicks (should log season number)
+
+-----
+
+## 🧪 STEP 6: TESTING & VERIFICATION
+
+### 6.1 Backend Testing
+
+Run these curl commands to verify API endpoints:
+
+```bash
+# 1. Test curriculum summary
+curl http://localhost:5000/api/curriculum/summary | jq '.'
+# Expected: JSON with modules array, total_lessons, total_completed
+
+# 2. Test continue learning
+curl http://localhost:5000/api/progress/continue | jq '.'
+# Expected: JSON with lesson_id, lesson_title, module_name, etc.
+
+# 3. Test stats
+curl http://localhost:5000/api/curriculum/stats | jq '.'
+# Expected: JSON with total_lessons, completed_lessons, progress_percent
+```
+
+**Expected Results:**
+
+- ✅ All endpoints return 200 OK
+- ✅ JSON is valid (no syntax errors)
+- ✅ Data matches database content
+
+### 6.2 Database Verification
+
+```sql
+-- Verify curriculum data
+SELECT COUNT(*) FROM curriculum; 
+-- Expected: 30 (sample data)
+
+SELECT module_number, COUNT(*) 
+FROM curriculum 
+GROUP BY module_number 
+ORDER BY module_number;
+-- Expected: Module 1: 3, Module 2: 24, Module 3: 3
+
+-- Verify progress data
+SELECT COUNT(*) FROM progress;
+-- Expected: 6 (sample progress)
+
+SELECT 
+    c.lesson_title, 
+    p.completed, 
+    p.last_accessed 
+FROM curriculum c
+LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+ORDER BY c.order_index
+LIMIT 10;
+-- Expected: First 10 lessons with progress info
+```
+
+### 6.3 Frontend Testing
+
+**Manual Test Checklist:**
+
+**Desktop (1920x1080):**
+
+- [ ] Page loads without errors
+- [ ] Overall progress shows correct numbers (6 completed of 30)
+- [ ] Progress bar animates to 20%
+- [ ] Continue Learning banner shows Lesson 6
+- [ ] Module 1 shows (2/3 Complete)
+- [ ] Module 2 shows (4/24 Complete)
+- [ ] Module 3 shows (0/3 Complete)
+- [ ] Season cards show correct lesson counts
+- [ ] Season cards show “3/16” format
+- [ ] Last accessed dates display correctly
+- [ ] Theme toggle switches between dark/light
+- [ ] Theme preference persists on reload
+- [ ] Hovering season cards shows border + lift effect
+- [ ] Clicking season card logs season number in console
+
+**Tablet (768px):**
+
+- [ ] Layout stacks properly
+- [ ] All text readable (no overflow)
+- [ ] Cards responsive (single column below 768px)
+- [ ] Progress stats stack vertically
+- [ ] Continue Learning button full-width
+
+**Mobile (375px):**
+
+- [ ] Header logo readable
+- [ ] Progress cards stack
+- [ ] Season cards full-width
+- [ ] Touch targets minimum 48px
+- [ ] No horizontal scroll
+- [ ] All interactive elements work
+
+### 6.4 Browser Compatibility
+
+Test in:
+
+- [ ] Chrome/Edge (Chromium)
+- [ ] Firefox
+- [ ] Safari (if on Mac)
+- [ ] Mobile Safari (iOS)
+- [ ] Mobile Chrome (Android)
+
+**Expected:** No console errors, all features work.
+
+### 6.5 Performance Testing
+
+```javascript
+// Run in browser console
+console.time('Dashboard Load');
+// Reload page
+// After page loads:
+console.timeEnd('Dashboard Load');
+// Expected: < 1000ms
+```
+
+**Lighthouse Score Goals:**
+
+- Performance: > 90
+- Accessibility: > 95
+- Best Practices: > 90
+
+-----
+
+## 🔄 STEP 7: ROLLBACK PLAN
+
+**If something breaks, here’s how to undo everything:**
+
+### 7.1 Database Rollback
+
+```sql
+-- Restore from backup
+DROP TABLE IF EXISTS curriculum CASCADE;
+DROP TABLE IF EXISTS progress CASCADE;
+
+\copy lessons FROM '/tmp/lessons_backup.csv' DELIMITER ',' CSV HEADER;
+\copy courses FROM '/tmp/courses_backup.csv' DELIMITER ',' CSV HEADER;
+```
+
+### 7.2 Code Rollback
+
+```bash
+# Remove new files
+rm static/curriculum_dashboard.html
+rm static/curriculum_dashboard.js
+rm static/curriculum_dashboard.css
+
+# Restore old routes (if you backed up main.py)
+# cp main.py.backup main.py
+```
+
+### 7.3 Verify Rollback
+
+```bash
+# Check database
+psql -d innerverse -c "SELECT COUNT(*) FROM lessons;"
+# Expected: 620 (old data restored)
+
+# Check files
+ls static/learning_paths.html
+# Expected: File exists (old UI still there)
+```
+
+-----
+
+## ✅ STEP 8: COMPLETION CHECKLIST
+
+**Before marking Phase 7.1 as DONE, verify:**
+
+### Database:
+
+- [ ] `curriculum` table exists with 30 sample lessons
+- [ ] `progress` table exists with 6 sample entries
+- [ ] All indexes created successfully
+- [ ] Foreign key constraints working
+
+### Backend:
+
+- [ ] `/` route serves dashboard HTML
+- [ ] `/api/curriculum/summary` returns valid JSON
+- [ ] `/api/progress/continue` returns valid JSON
+- [ ] `/api/curriculum/stats` returns valid JSON
+- [ ] No Python errors in logs
+
+### Frontend:
+
+- [ ] Dashboard loads without errors
+- [ ] Progress overview displays correctly
+- [ ] Continue Learning banner shows
+- [ ] Modules render with correct data
+- [ ] Seasons render with correct data
+- [ ] Theme toggle works
+- [ ] Mobile responsive
+- [ ] No console errors
+
+### Testing:
+
+- [ ] All curl tests pass
+- [ ] All SQL verification queries pass
+- [ ] Desktop checklist complete
+- [ ] Mobile checklist complete
+- [ ] Browser compatibility verified
+
+-----
+
+## 🚨 CRITICAL REMINDERS
+
+**FOR REPLIT AGENT:**
+
+1. **DO NOT PROCEED TO PHASE 7.2** until user says “approved” or “move to next phase”
+1. **DO NOT modify any files** not listed in this spec
+1. **DO NOT improvise** or add features not specified
+1. **DO TEST** each step before moving to next
+1. **DO REPORT** any errors immediately
+
+**FOR USER:**
+
+After Replit implements this:
+
+1. Test the dashboard thoroughly (use checklists above)
+1. Verify all data loads correctly
+1. Test on mobile device
+1. If everything works: Approve Phase 7.2
+1. If something broken: Report issue, use rollback plan
+
+-----
+
+## 📋 WHAT’S NEXT (PHASE 7.2)
+
+**After this phase is approved, we’ll build:**
+
+**Season View Page** (`/season/:id`)
+
+- List of all lessons in a season
+- Lesson cards with titles, duration, completion status
+- Click to navigate to lesson page
+- Breadcrumb navigation (Home > Module > Season)
+
+**But ONLY after you approve Phase 7.1!** 🛑
+
+-----
+
+## 🎯 SUCCESS CRITERIA
+
+**Phase 7.1 is DONE when:**
+
+- ✅ Dashboard loads and displays all modules/seasons
+- ✅ Progress tracking shows correct percentages
+- ✅ Continue Learning banner works
+- ✅ Theme toggle works (dark/light mode)
+- ✅ Mobile responsive and beautiful
+- ✅ No errors in console or logs
+- ✅ All verification tests pass
+- ✅ User approves and says “move to Phase 7.2”
+
+-----
+
+**END OF PHASE 7.1 SPECIFICATION**
+
+Generated: November 14, 2025  
+For: InnerVerse - CS Joseph University  
+By: Claude (Master Dev Mode)
