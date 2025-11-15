@@ -1,0 +1,1489 @@
+# PHASE 7.2: SEASON VIEW PAGE - IMPLEMENTATION SPEC
+
+**Project:** InnerVerse - CS Joseph University  
+**Phase:** 7.2 of 7  
+**Goal:** Build season view page showing all lessons in a season  
+**Time Estimate:** 3-4 hours  
+**Status:** Ready to implement  
+**Prerequisites:** Phase 7.1 COMPLETE ✅
+
+-----
+
+## ⚠️ CRITICAL INSTRUCTIONS FOR REPLIT AGENT
+
+**READ THIS FIRST:**
+
+1. **DO NOT PROCEED TO PHASE 7.3 until user explicitly approves**
+1. **Follow these instructions EXACTLY - no improvisation**
+1. **Test each step before moving to next**
+1. **If you encounter ANY errors, STOP and report them**
+1. **Do not modify any files not listed in this spec**
+1. **After completion, provide verification checklist results**
+1. **Phase 7.1 must be working before starting this phase**
+
+-----
+
+## 🎯 WHAT WE’RE BUILDING
+
+**Single Page: Season View** (`/season/:season_number`)
+
+**Features:**
+
+- Display all lessons in a specific season
+- Show lesson completion status (✓ complete, ▶ in progress, □ not started)
+- Show lesson metadata (duration, last accessed)
+- Click lesson → navigate to lesson page (Phase 7.3 - will be stub for now)
+- Breadcrumb navigation (Home > Module > Season)
+- Season progress summary
+- Dark/light mode (inherits from dashboard)
+- Mobile responsive
+
+**What We’re NOT Building Yet:**
+
+- ❌ Lesson page (Phase 7.3)
+- ❌ AI tutor integration (Phase 7.4)
+- ❌ Video playback (Phase 7.5)
+
+-----
+
+## 📊 CURRENT STATE ANALYSIS
+
+### What Exists (From Phase 7.1):
+
+```
+DATABASE:
+- curriculum (30 rows) - All lessons with module/season structure
+- progress (6 rows) - Some lessons marked complete
+
+FRONTEND:
+- curriculum_dashboard.html - Homepage ✅
+- curriculum_dashboard.js - Click handler for season cards ✅
+  Line ~202: onSeasonClick(seasonNumber) → window.location.href = `/season/${seasonNumber}`
+
+BACKEND:
+- main.py has get_db() helper
+- 3 API routes for dashboard data
+```
+
+### What We’re Adding:
+
+1. **New backend route:** `@app.get("/season/{season_number}")` - Serve HTML
+1. **New API route:** `@app.get("/api/season/{season_number}")` - Return JSON lesson data
+1. **New HTML file:** `static/season_view.html`
+1. **New CSS file:** `static/season_view.css`
+1. **New JS file:** `static/season_view.js`
+
+-----
+
+## 🔧 STEP 1: BACKEND ROUTES
+
+### 1.1 Add Season View Route to main.py
+
+**Location:** Add AFTER the curriculum dashboard routes (after line ~4160, before any other routes)
+
+```python
+# ==============================================================================
+# PHASE 7.2: SEASON VIEW ROUTES
+# ==============================================================================
+
+@app.get("/season/{season_number}")
+async def serve_season_view(season_number: str):
+    """
+    Serve the season view page for a specific season
+    
+    Args:
+        season_number: Season number (e.g., "1", "16", "2")
+    
+    Returns:
+        HTML page showing all lessons in the season
+    """
+    return FileResponse("static/season_view.html")
+
+
+@app.get("/api/season/{season_number}")
+async def get_season_data(season_number: str) -> Dict[str, Any]:
+    """
+    Get all lessons and metadata for a specific season
+    
+    Args:
+        season_number: Season number (e.g., "1", "16", "2")
+    
+    Returns:
+        {
+          "season_info": {
+            "season_number": "1",
+            "season_name": "Jungian Cognitive Functions",
+            "module_number": 2,
+            "module_name": "Building Foundation",
+            "total_lessons": 16,
+            "completed_lessons": 2,
+            "progress_percent": 12.5
+          },
+          "lessons": [
+            {
+              "lesson_id": 4,
+              "lesson_number": 1,
+              "lesson_title": "Introduction to Cognitive Functions",
+              "duration": "15:22",
+              "has_video": true,
+              "completed": true,
+              "last_accessed": "2025-11-14T10:30:00",
+              "order_index": 4
+            },
+            ...
+          ]
+        }
+    """
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get season info
+        cursor.execute("""
+            SELECT 
+                season_number,
+                season_name,
+                module_number,
+                module_name,
+                COUNT(lesson_id) as total_lessons
+            FROM curriculum
+            WHERE season_number = %s
+            GROUP BY season_number, season_name, module_number, module_name
+        """, (season_number,))
+        
+        season_row = cursor.fetchone()
+        
+        if not season_row:
+            raise HTTPException(status_code=404, detail=f"Season {season_number} not found")
+        
+        season_info = {
+            "season_number": str(season_row[0]),
+            "season_name": str(season_row[1]),
+            "module_number": int(season_row[2]),
+            "module_name": str(season_row[3]),
+            "total_lessons": int(season_row[4])
+        }
+        
+        # Get completion count for this season
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM curriculum c
+            JOIN progress p ON c.lesson_id = p.lesson_id
+            WHERE c.season_number = %s AND p.completed = TRUE
+        """, (season_number,))
+        
+        completed_count = cursor.fetchone()[0] or 0
+        season_info["completed_lessons"] = int(completed_count)
+        season_info["progress_percent"] = round(
+            (completed_count / season_info["total_lessons"] * 100), 1
+        ) if season_info["total_lessons"] > 0 else 0.0
+        
+        # Get all lessons in this season with progress
+        cursor.execute("""
+            SELECT 
+                c.lesson_id,
+                c.lesson_number,
+                c.lesson_title,
+                c.duration,
+                c.has_video,
+                c.order_index,
+                c.description,
+                COALESCE(p.completed, FALSE) as completed,
+                p.last_accessed
+            FROM curriculum c
+            LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+            WHERE c.season_number = %s
+            ORDER BY c.lesson_number ASC
+        """, (season_number,))
+        
+        lessons_data = cursor.fetchall()
+        lessons = []
+        
+        for row in lessons_data:
+            lessons.append({
+                "lesson_id": int(row[0]),
+                "lesson_number": int(row[1]),
+                "lesson_title": str(row[2]),
+                "duration": str(row[3]) if row[3] else None,
+                "has_video": bool(row[4]),
+                "order_index": int(row[5]),
+                "description": str(row[6]) if row[6] else None,
+                "completed": bool(row[7]),
+                "last_accessed": row[8].isoformat() if row[8] else None
+            })
+        
+        return {
+            "season_info": season_info,
+            "lessons": lessons
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching season data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+# ==============================================================================
+# END PHASE 7.2 ROUTES
+# ==============================================================================
+```
+
+**Bug Checks:**
+
+- ✅ Proper type conversion (int(), str(), bool(), float())
+- ✅ NULL handling (COALESCE, `if row[x] else None`)
+- ✅ Division by zero check (`if total_lessons > 0`)
+- ✅ 404 error if season not found
+- ✅ Resource cleanup (cursor and connection closed in finally)
+- ✅ Proper error handling with try/except/finally
+- ✅ SQL injection prevention (parameterized queries with %s)
+
+**Verification:**
+
+```bash
+# Test season view HTML
+curl http://localhost:5000/season/1
+# Expected: HTML content (season_view.html)
+
+# Test season API
+curl http://localhost:5000/api/season/1 | jq '.'
+# Expected: JSON with season_info and lessons array
+
+# Test invalid season
+curl http://localhost:5000/api/season/999
+# Expected: 404 error
+```
+
+-----
+
+## 🎨 STEP 2: FRONTEND - HTML
+
+### 2.1 Create static/season_view.html
+
+**File:** `static/season_view.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Season View - CS Joseph University</title>
+    <link rel="stylesheet" href="/static/season_view.css">
+</head>
+<body data-theme="dark">
+    <!-- Header -->
+    <header class="season-header">
+        <div class="header-content">
+            <div class="header-left">
+                <a href="/" class="back-button">
+                    <span class="back-icon">←</span>
+                    <span class="back-text">Back to Dashboard</span>
+                </a>
+            </div>
+            
+            <div class="header-actions">
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="season-main">
+        <div class="container">
+            
+            <!-- Season Header -->
+            <section class="season-hero" id="seasonHero">
+                <!-- Will be populated by JavaScript -->
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Loading season...</p>
+                </div>
+            </section>
+
+            <!-- Lessons List -->
+            <section class="lessons-section">
+                <div id="lessonsContainer" class="lessons-list">
+                    <!-- Lessons will be dynamically inserted here -->
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="season-footer">
+        <p>&copy; 2025 InnerVerse - CS Joseph University</p>
+    </footer>
+
+    <script src="/static/season_view.js"></script>
+</body>
+</html>
+```
+
+**Bug Checks:**
+
+- ✅ All IDs are unique
+- ✅ Proper semantic HTML
+- ✅ Accessibility: aria-label on theme toggle
+- ✅ Meta viewport for mobile
+- ✅ data-theme attribute for theming
+- ✅ Back button navigates to `/` (dashboard)
+
+-----
+
+## 🎨 STEP 3: FRONTEND - CSS
+
+### 3.1 Create static/season_view.css
+
+**File:** `static/season_view.css`
+
+```css
+/* ==============================================================================
+   PHASE 7.2: SEASON VIEW STYLES
+   ============================================================================== */
+
+/* Import shared theme variables from dashboard */
+:root {
+    /* Light Theme */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --accent-primary: #0066cc;
+    --accent-secondary: #004499;
+    --border-color: #dee2e6;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --progress-bg: #e9ecef;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] {
+    /* Dark Theme */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #3d3d3d;
+    --text-primary: #e9ecef;
+    --text-secondary: #adb5bd;
+    --accent-primary: #4d9fff;
+    --accent-secondary: #3380ff;
+    --border-color: #495057;
+    --success-color: #51cf66;
+    --warning-color: #ffd43b;
+    --progress-bg: #495057;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Reset & Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Header */
+.season-header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+}
+
+.header-content {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.back-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.back-button:hover {
+    background: var(--bg-tertiary);
+    transform: translateX(-2px);
+}
+
+.back-icon {
+    font-size: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.theme-toggle {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.2s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--accent-primary);
+    transform: scale(1.05);
+}
+
+/* Main Content */
+.season-main {
+    padding: 40px 0;
+    min-height: calc(100vh - 200px);
+}
+
+/* Season Hero Section */
+.season-hero {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 40px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow);
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.breadcrumb-link {
+    color: var(--accent-primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-link:hover {
+    color: var(--accent-secondary);
+    text-decoration: underline;
+}
+
+.breadcrumb-separator {
+    color: var(--text-secondary);
+}
+
+.season-title-section {
+    margin-bottom: 24px;
+}
+
+.season-number {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.season-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.module-badge {
+    display: inline-block;
+    background: var(--accent-primary);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.season-stats {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--success-color);
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 10px;
+    background: var(--progress-bg);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success-color), #38d167);
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+
+/* Lessons List */
+.lessons-section {
+    margin-bottom: 40px;
+}
+
+.lessons-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lesson-card {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.lesson-card:hover {
+    border-color: var(--accent-primary);
+    transform: translateX(4px);
+    box-shadow: var(--shadow);
+}
+
+.lesson-status-icon {
+    font-size: 24px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.lesson-status-icon.completed {
+    color: var(--success-color);
+}
+
+.lesson-status-icon.in-progress {
+    color: var(--accent-primary);
+}
+
+.lesson-status-icon.not-started {
+    color: var(--text-secondary);
+}
+
+.lesson-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.lesson-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.lesson-number {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.lesson-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lesson-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.lesson-duration {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lesson-accessed {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.video-badge {
+    background: var(--accent-primary);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--progress-bg);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Footer */
+.season-footer {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    padding: 24px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 16px;
+    }
+
+    .header-content {
+        padding: 0 16px;
+    }
+
+    .season-hero {
+        padding: 24px;
+    }
+
+    .season-title {
+        font-size: 28px;
+    }
+
+    .season-stats {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+    }
+
+    .lesson-card {
+        padding: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .lesson-header {
+        flex-wrap: wrap;
+    }
+
+    .lesson-title {
+        white-space: normal;
+    }
+
+    .lesson-meta {
+        flex-wrap: wrap;
+    }
+
+    .back-text {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .season-main {
+        padding: 24px 0;
+    }
+
+    .season-hero {
+        padding: 20px;
+        border-radius: 12px;
+    }
+
+    .season-title {
+        font-size: 24px;
+    }
+
+    .lesson-card {
+        padding: 14px;
+    }
+
+    .lesson-title {
+        font-size: 16px;
+    }
+}
+```
+
+**Bug Checks:**
+
+- ✅ CSS variables match dashboard (consistency)
+- ✅ Proper transitions (0.2s-0.5s)
+- ✅ Responsive breakpoints (768px, 480px)
+- ✅ Hover states with transform
+- ✅ Loading spinner animation
+- ✅ Mobile: Back text hidden (icon only)
+- ✅ Mobile: Lesson cards stack properly
+- ✅ Accessibility: Proper contrast ratios
+
+-----
+
+## 💻 STEP 4: FRONTEND - JavaScript
+
+### 4.1 Create static/season_view.js
+
+**File:** `static/season_view.js`
+
+```javascript
+// ==============================================================================
+// PHASE 7.2: SEASON VIEW JAVASCRIPT
+// ==============================================================================
+
+class SeasonView {
+    constructor() {
+        this.seasonNumber = null;
+        this.seasonData = null;
+        this.theme = localStorage.getItem('theme') || 'dark';
+        
+        this.init();
+    }
+
+    async init() {
+        // Get season number from URL
+        this.seasonNumber = this.getSeasonNumberFromURL();
+        
+        if (!this.seasonNumber) {
+            this.showError('Invalid season URL');
+            return;
+        }
+
+        // Set initial theme
+        this.applyTheme();
+        this.setupEventListeners();
+        
+        // Load season data
+        await this.loadSeasonData();
+    }
+
+    // =========================================================================
+    // URL PARSING
+    // =========================================================================
+    
+    getSeasonNumberFromURL() {
+        // URL format: /season/1 or /season/16
+        const path = window.location.pathname;
+        const match = path.match(/\/season\/([^\/]+)/);
+        return match ? match[1] : null;
+    }
+
+    // =========================================================================
+    // THEME MANAGEMENT
+    // =========================================================================
+    
+    applyTheme() {
+        document.body.setAttribute('data-theme', this.theme);
+        const icon = this.theme === 'dark' ? '🌙' : '☀️';
+        const themeIcon = document.querySelector('.theme-icon');
+        if (themeIcon) {
+            themeIcon.textContent = icon;
+        }
+    }
+
+    toggleTheme() {
+        this.theme = this.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('theme', this.theme);
+        this.applyTheme();
+    }
+
+    // =========================================================================
+    // EVENT LISTENERS
+    // =========================================================================
+    
+    setupEventListeners() {
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => this.toggleTheme());
+        }
+    }
+
+    // =========================================================================
+    // DATA LOADING
+    // =========================================================================
+    
+    async loadSeasonData() {
+        try {
+            const response = await fetch(`/api/season/${this.seasonNumber}`);
+            
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('Season not found');
+                }
+                throw new Error('Failed to load season data');
+            }
+
+            this.seasonData = await response.json();
+
+            // Render everything
+            this.renderSeasonHero();
+            this.renderLessonsList();
+
+        } catch (error) {
+            console.error('Error loading season:', error);
+            this.showError(error.message || 'Failed to load season. Please try again.');
+        }
+    }
+
+    // =========================================================================
+    // RENDERING
+    // =========================================================================
+    
+    renderSeasonHero() {
+        const heroSection = document.getElementById('seasonHero');
+        if (!heroSection || !this.seasonData) return;
+
+        const season_info = this.seasonData.season_info;
+        const progress_percent = season_info.progress_percent || 0;
+
+        heroSection.innerHTML = `
+            <nav class="breadcrumb">
+                <a href="/" class="breadcrumb-link">Dashboard</a>
+                <span class="breadcrumb-separator">›</span>
+                <span>Module ${season_info.module_number}: ${season_info.module_name}</span>
+                <span class="breadcrumb-separator">›</span>
+                <span>Season ${season_info.season_number}</span>
+            </nav>
+
+            <div class="season-title-section">
+                <div class="season-number">Season ${season_info.season_number}</div>
+                <h1 class="season-title">${season_info.season_name}</h1>
+                <span class="module-badge">
+                    Module ${season_info.module_number}: ${season_info.module_name}
+                </span>
+            </div>
+
+            <div class="season-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Progress</span>
+                    <span class="stat-value">
+                        ${season_info.completed_lessons}/${season_info.total_lessons}
+                    </span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Completion</span>
+                    <span class="stat-value">${progress_percent}%</span>
+                </div>
+            </div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: ${progress_percent}%"></div>
+            </div>
+        `;
+
+        // Animate progress bar
+        setTimeout(() => {
+            const progressBar = heroSection.querySelector('.progress-bar');
+            if (progressBar) {
+                progressBar.style.width = `${progress_percent}%`;
+            }
+        }, 100);
+    }
+
+    renderLessonsList() {
+        const container = document.getElementById('lessonsContainer');
+        if (!container || !this.seasonData) return;
+
+        const lessons = this.seasonData.lessons;
+
+        // Clear loading state
+        container.innerHTML = '';
+
+        if (lessons.length === 0) {
+            container.innerHTML = `
+                <div class="loading-state">
+                    <p>No lessons found in this season.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Render each lesson
+        lessons.forEach(lesson => {
+            const lessonCard = this.createLessonCard(lesson);
+            container.appendChild(lessonCard);
+        });
+    }
+
+    createLessonCard(lesson) {
+        const card = document.createElement('div');
+        card.className = 'lesson-card';
+        card.dataset.lessonId = lesson.lesson_id;
+
+        // Determine status icon
+        let statusIcon = '□'; // Not started
+        let statusClass = 'not-started';
+        
+        if (lesson.completed) {
+            statusIcon = '✓';
+            statusClass = 'completed';
+        } else if (lesson.last_accessed) {
+            statusIcon = '▶';
+            statusClass = 'in-progress';
+        }
+
+        // Format last accessed
+        let accessedText = '';
+        if (lesson.last_accessed) {
+            const date = new Date(lesson.last_accessed);
+            const now = new Date();
+            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                accessedText = 'Today';
+            } else if (diffDays === 1) {
+                accessedText = 'Yesterday';
+            } else if (diffDays < 7) {
+                accessedText = `${diffDays} days ago`;
+            } else {
+                accessedText = date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+            }
+        }
+
+        card.innerHTML = `
+            <div class="lesson-status-icon ${statusClass}">
+                ${statusIcon}
+            </div>
+            
+            <div class="lesson-content">
+                <div class="lesson-header">
+                    <span class="lesson-number">Lesson ${lesson.lesson_number}</span>
+                    <h3 class="lesson-title">${lesson.lesson_title}</h3>
+                    ${lesson.has_video ? '<span class="video-badge">📹 Video</span>' : ''}
+                </div>
+                
+                <div class="lesson-meta">
+                    ${lesson.duration ? `
+                        <div class="lesson-duration">
+                            <span>⏱️</span>
+                            <span>${lesson.duration}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${accessedText ? `
+                        <div class="lesson-accessed">
+                            <span>👁️</span>
+                            <span>${accessedText}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        // Click handler - navigate to lesson page (Phase 7.3)
+        card.addEventListener('click', () => {
+            this.onLessonClick(lesson.lesson_id);
+        });
+
+        return card;
+    }
+
+    // =========================================================================
+    // EVENT HANDLERS
+    // =========================================================================
+    
+    onLessonClick(lessonId) {
+        // Navigate to lesson page (Phase 7.3 - will be built next)
+        // For now, just log and show alert
+        console.log('Navigate to lesson:', lessonId);
+        
+        // TODO: Replace with actual navigation in Phase 7.3
+        alert(`Lesson page not yet implemented (Phase 7.3).\n\nLesson ID: ${lessonId}\n\nThis will navigate to the lesson page with video, AI content, and chat.`);
+        
+        // FUTURE (Phase 7.3):
+        // window.location.href = `/lesson/${lessonId}`;
+    }
+
+    // =========================================================================
+    // ERROR HANDLING
+    // =========================================================================
+    
+    showError(message) {
+        const heroSection = document.getElementById('seasonHero');
+        const lessonsContainer = document.getElementById('lessonsContainer');
+        
+        if (heroSection) {
+            heroSection.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p style="font-size: 18px; margin-bottom: 16px;">⚠️ ${message}</p>
+                    <a href="/" style="
+                        display: inline-block;
+                        background: var(--accent-primary);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        text-decoration: none;
+                        font-size: 16px;
+                        font-weight: 600;
+                    ">
+                        ← Back to Dashboard
+                    </a>
+                </div>
+            `;
+        }
+        
+        if (lessonsContainer) {
+            lessonsContainer.innerHTML = '';
+        }
+    }
+}
+
+// Initialize season view when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        new SeasonView();
+    });
+} else {
+    new SeasonView();
+}
+```
+
+**Bug Checks:**
+
+- ✅ URL parsing handles edge cases (regex match with null check)
+- ✅ 404 handling (season not found)
+- ✅ Empty lessons array handled
+- ✅ Date formatting handles edge cases (today, yesterday, etc.)
+- ✅ Division by zero check (progress_percent calculation in backend)
+- ✅ Null checks for DOM elements
+- ✅ Proper async/await error handling
+- ✅ LocalStorage fallback (`|| 'dark'`)
+- ✅ No memory leaks (event listeners properly scoped)
+- ✅ Progressive enhancement (checks `document.readyState`)
+- ✅ Phase 7.3 stub (alert instead of crash)
+
+-----
+
+## 🧪 STEP 5: TESTING & VERIFICATION
+
+### 5.1 Backend Testing
+
+```bash
+# 1. Test season view HTML route
+curl http://localhost:5000/season/1
+# Expected: HTML content (season_view.html)
+
+# 2. Test season API - Season 1
+curl http://localhost:5000/api/season/1 | jq '.'
+# Expected: JSON with season_info and 16 lessons
+
+# 3. Test season API - Season 16
+curl http://localhost:5000/api/season/16 | jq '.'
+# Expected: JSON with season_info and 8 lessons
+
+# 4. Test invalid season
+curl http://localhost:5000/api/season/999
+# Expected: 404 error with "Season 999 not found"
+
+# 5. Test season with no lessons (if any)
+curl http://localhost:5000/api/season/99 | jq '.'
+# Expected: 404 error (season doesn't exist)
+```
+
+**Expected API Response Structure:**
+
+```json
+{
+  "season_info": {
+    "season_number": "1",
+    "season_name": "Jungian Cognitive Functions",
+    "module_number": 2,
+    "module_name": "Building Foundation",
+    "total_lessons": 16,
+    "completed_lessons": 2,
+    "progress_percent": 12.5
+  },
+  "lessons": [
+    {
+      "lesson_id": 4,
+      "lesson_number": 1,
+      "lesson_title": "Introduction to Cognitive Functions",
+      "duration": "15:22",
+      "has_video": true,
+      "order_index": 4,
+      "description": null,
+      "completed": true,
+      "last_accessed": "2025-11-14T10:30:00"
+    }
+    // ... 15 more lessons
+  ]
+}
+```
+
+### 5.2 Database Verification
+
+```sql
+-- Verify lessons in Season 1
+SELECT season_number, lesson_number, lesson_title, has_video
+FROM curriculum
+WHERE season_number = '1'
+ORDER BY lesson_number;
+-- Expected: 16 rows for Season 1
+
+-- Verify progress tracking
+SELECT 
+    c.season_number,
+    c.lesson_number,
+    c.lesson_title,
+    p.completed,
+    p.last_accessed
+FROM curriculum c
+LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+WHERE c.season_number = '1'
+ORDER BY c.lesson_number;
+-- Expected: Shows completed status for each lesson
+
+-- Verify season completion stats
+SELECT 
+    c.season_number,
+    COUNT(*) as total,
+    SUM(CASE WHEN p.completed = TRUE THEN 1 ELSE 0 END) as completed
+FROM curriculum c
+LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+GROUP BY c.season_number
+ORDER BY c.season_number;
+-- Expected: Shows completion counts per season
+```
+
+### 5.3 Frontend Testing
+
+**Manual Test Checklist:**
+
+**Desktop (1920x1080):**
+
+- [ ] Navigate from dashboard: Click “Season 1” card
+- [ ] Season view page loads without errors
+- [ ] Breadcrumb shows: Dashboard › Module 2 › Season 1
+- [ ] Season title displays: “Jungian Cognitive Functions”
+- [ ] Module badge shows: “Module 2: Building Foundation”
+- [ ] Progress shows correct numbers (2/16)
+- [ ] Progress bar animates to correct percentage
+- [ ] All 16 lessons display in order
+- [ ] Lesson 1 shows ✓ (completed)
+- [ ] Lesson 2 shows ✓ (completed)
+- [ ] Lesson 3 shows ▶ (in progress) if accessed
+- [ ] Lesson 4+ show □ (not started)
+- [ ] Video badges show on lessons with videos
+- [ ] Duration displays (e.g., “15:22”)
+- [ ] Last accessed dates display correctly
+- [ ] Theme toggle switches dark/light
+- [ ] Theme persists on page reload
+- [ ] Hover effects work on lesson cards
+- [ ] Clicking lesson shows Phase 7.3 alert
+- [ ] Back button navigates to dashboard
+
+**Tablet (768px):**
+
+- [ ] Layout remains readable
+- [ ] Stats stack vertically
+- [ ] Lesson cards full-width
+- [ ] All text visible (no overflow)
+
+**Mobile (375px):**
+
+- [ ] Back button shows icon only (no text)
+- [ ] Season title readable (wraps properly)
+- [ ] Lesson cards stack content
+- [ ] Duration and accessed date wrap
+- [ ] Touch targets minimum 48px
+- [ ] No horizontal scroll
+- [ ] All interactive elements work
+
+### 5.4 Navigation Testing
+
+**Flow Test:**
+
+1. [ ] Start at dashboard (/)
+1. [ ] Click “Season 1” card → Season view loads
+1. [ ] URL shows: /season/1
+1. [ ] Click back button → Returns to dashboard
+1. [ ] Click “Season 16” card → Season view loads
+1. [ ] URL shows: /season/16
+1. [ ] Different season data displays
+1. [ ] Click browser back → Returns to dashboard
+
+**Direct URL Test:**
+
+1. [ ] Visit: /season/1 directly → Works
+1. [ ] Visit: /season/16 directly → Works
+1. [ ] Visit: /season/999 → Shows error message
+
+### 5.5 Browser Compatibility
+
+Test in:
+
+- [ ] Chrome/Edge (Chromium)
+- [ ] Firefox
+- [ ] Safari (if on Mac)
+- [ ] Mobile Safari (iOS)
+- [ ] Mobile Chrome (Android)
+
+**Expected:** No console errors, all features work.
+
+### 5.6 Performance Testing
+
+```javascript
+// Run in browser console
+console.time('Season View Load');
+// Navigate to /season/1
+// After page loads:
+console.timeEnd('Season View Load');
+// Expected: < 800ms
+```
+
+**Lighthouse Score Goals:**
+
+- Performance: > 90
+- Accessibility: > 95
+- Best Practices: > 90
+
+-----
+
+## 🔄 STEP 6: ROLLBACK PLAN
+
+**If something breaks, here’s how to undo:**
+
+### 6.1 Code Rollback
+
+```bash
+# Remove new files
+rm static/season_view.html
+rm static/season_view.css
+rm static/season_view.js
+```
+
+### 6.2 Database Rollback
+
+No database changes in this phase - Phase 7.1 tables remain unchanged.
+
+### 6.3 Backend Rollback
+
+In `main.py`, comment out or remove the Phase 7.2 routes:
+
+- Lines added in Step 1.1 (season view routes)
+
+### 6.4 Frontend Rollback
+
+In `static/curriculum_dashboard.js`, modify the `onSeasonClick` method (line ~202):
+
+```javascript
+onSeasonClick(seasonNumber) {
+    // Temporarily disabled - Phase 7.2 not implemented
+    alert(`Season ${seasonNumber} view coming soon!`);
+    // window.location.href = `/season/${seasonNumber}`;
+}
+```
+
+### 6.5 Verify Rollback
+
+```bash
+# Visit dashboard
+curl http://localhost:5000/
+# Expected: Dashboard still works
+
+# Try season route (should fail gracefully)
+curl http://localhost:5000/season/1
+# Expected: 404 or fallback behavior
+```
+
+-----
+
+## ✅ STEP 7: COMPLETION CHECKLIST
+
+**Before marking Phase 7.2 as DONE, verify:**
+
+### Backend:
+
+- [ ] `/season/:season_number` route serves HTML
+- [ ] `/api/season/:season_number` returns valid JSON
+- [ ] 404 handling works for invalid seasons
+- [ ] No Python errors in logs
+- [ ] Resource cleanup (connections closed)
+
+### Frontend:
+
+- [ ] Season view page loads without errors
+- [ ] Breadcrumb navigation displays
+- [ ] Season info displays correctly
+- [ ] Progress tracking accurate
+- [ ] Lessons list renders properly
+- [ ] Status icons correct (✓ ▶ □)
+- [ ] Theme toggle works
+- [ ] Mobile responsive
+- [ ] No console errors
+
+### Navigation:
+
+- [ ] Dashboard → Season view works
+- [ ] Back button → Dashboard works
+- [ ] Direct URL access works
+- [ ] Invalid season shows error
+
+### Testing:
+
+- [ ] All curl tests pass
+- [ ] All SQL verification queries pass
+- [ ] Desktop checklist complete
+- [ ] Mobile checklist complete
+- [ ] Browser compatibility verified
+- [ ] Performance acceptable (<800ms load)
+
+-----
+
+## 🚨 CRITICAL REMINDERS
+
+**FOR REPLIT AGENT:**
+
+1. **DO NOT PROCEED TO PHASE 7.3** until user says “approved” or “move to next phase”
+1. **DO NOT modify Phase 7.1 files** (dashboard works, don’t break it!)
+1. **DO NOT improvise** or add features not specified
+1. **DO TEST** each route before moving to next step
+1. **DO REPORT** any errors immediately
+1. **DO USE** try/except/finally for all database operations
+
+**FOR USER:**
+
+After Replit implements this:
+
+1. Test the season view page thoroughly (use checklists above)
+1. Verify navigation works (dashboard ↔ season view)
+1. Test on mobile device
+1. Check all lesson data displays correctly
+1. If everything works: Approve Phase 7.3
+1. If something broken: Report issue, use rollback plan
+
+-----
+
+## 📋 WHAT’S NEXT (PHASE 7.3)
+
+**After this phase is approved, we’ll build:**
+
+**Lesson Page** (`/lesson/:id`)
+
+- Video player (YouTube embed) or Skool message
+- AI-generated lesson content (from transcript)
+- Toggle-able transcript view
+- AI tutor chat (persistent per lesson)
+- Previous/Next navigation
+- Mini sidebar (current season’s lessons)
+- 40/60 split (lesson content / AI tutor)
+
+**But ONLY after you approve Phase 7.2!** 🛑
+
+-----
+
+## 🎯 SUCCESS CRITERIA
+
+**Phase 7.2 is DONE when:**
+
+- ✅ Can click season card from dashboard
+- ✅ Season view page loads with correct data
+- ✅ All lessons display in order
+- ✅ Status icons accurate (completed/in-progress/not-started)
+- ✅ Progress tracking works
+- ✅ Back navigation returns to dashboard
+- ✅ Mobile responsive and beautiful
+- ✅ No errors in console or logs
+- ✅ All verification tests pass
+- ✅ User approves and says “move to Phase 7.3”
+
+-----
+
+**END OF PHASE 7.2 SPECIFICATION**
+
+Generated: November 14, 2025  
+For: InnerVerse - CS Joseph University  
+By: Claude (Master Dev Mode)  
+Prerequisites: Phase 7.1 Complete ✅
