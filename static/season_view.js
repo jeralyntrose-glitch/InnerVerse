@@ -257,15 +257,8 @@ class SeasonView {
     // =========================================================================
     
     onLessonClick(lessonId) {
-        // Navigate to lesson page (Phase 7.3 - will be built next)
-        // For now, just log and show alert
-        console.log('Navigate to lesson:', lessonId);
-        
-        // TODO: Replace with actual navigation in Phase 7.3
-        alert(`Lesson page not yet implemented (Phase 7.3).\n\nLesson ID: ${lessonId}\n\nThis will navigate to the lesson page with video, AI content, and chat.`);
-        
-        // FUTURE (Phase 7.3):
-        // window.location.href = `/lesson/${lessonId}`;
+        // Navigate to lesson page
+        window.location.href = `/lesson/${lessonId}`;
     }
 
     // =========================================================================
