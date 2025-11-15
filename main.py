@@ -4725,7 +4725,7 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
 @app.get("/api/lesson/{lesson_id}/transcript")
 async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
     """
-    Get raw transcript text for a lesson (no AI processing)
+    Get raw transcript text for a lesson by fetching ALL chunks from Pinecone
     
     Returns:
         {
@@ -4734,8 +4734,6 @@ async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
           "available": true
         }
     """
-    import httpx
-    
     conn = None
     cursor = None
     
@@ -4759,18 +4757,6 @@ async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
         lesson_title = row[1]
         document_id = row[2]
         
-        backend_api = os.getenv("AXIS_BACKEND_API", "https://axis-of-mind.replit.app/query")
-        backend_key = os.getenv("AXIS_BACKEND_KEY", "")
-        
-        if not backend_key:
-            logger.warning("AXIS_BACKEND_KEY not set - transcript unavailable")
-            return {
-                "transcript": None,
-                "transcript_id": transcript_id,
-                "available": False,
-                "error": "Backend API key not configured"
-            }
-        
         if not document_id:
             return {
                 "transcript": None,
@@ -4779,93 +4765,85 @@ async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
                 "error": "No document ID mapped for this lesson"
             }
         
-        # Query for raw transcript content using document_id with VERY explicit instructions
-        logger.info(f"📜 Fetching transcript for lesson {lesson_id}: {lesson_title}")
+        # Query Pinecone DIRECTLY to get ALL chunks for this document
+        logger.info(f"📜 Fetching ALL transcript chunks for lesson {lesson_id}: {lesson_title}")
+        logger.info(f"🔍 Document ID: {document_id}")
         
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            response = await client.post(
-                backend_api,
-                headers={
-                    'Authorization': f'Bearer {backend_key}',
-                    'Content-Type': 'application/json'
-                },
-                json={
-                    "document_id": str(document_id),
-                    "question": f'''RETURN THE ENTIRE VERBATIM TRANSCRIPT for "{lesson_title}".
-
-CRITICAL INSTRUCTIONS:
-- Return the COMPLETE, FULL, UNABRIDGED transcript
-- Include EVERY SINGLE WORD from the original transcript
-- Do NOT summarize, shorten, or truncate
-- Do NOT add analysis or commentary
-- Do NOT skip any sections
-- Do NOT stop early due to length limits
-- Just return the raw transcript text exactly as it appears
-- Include all timestamps if present
-- If the document is split into multiple chunks, return ALL chunks concatenated together
-
-This is for a student who needs to read the full transcript verbatim.''',
-                    "tags": []
-                }
-            )
-            
-            if response.status_code != 200:
-                logger.error(f"❌ Backend API error: {response.status_code}")
-                return {
-                    "transcript": None,
-                    "transcript_id": transcript_id,
-                    "available": False,
-                    "error": f"Backend returned {response.status_code}"
-                }
-            
-            # Parse response
-            data = response.json()
-            transcript_text = data.get('answer', '')
-            
-            # Detailed logging for debugging
-            char_count = len(transcript_text)
-            logger.info(f"📊 Transcript received: {char_count:,} characters")
-            
-            if transcript_text:
-                preview_length = min(200, len(transcript_text))
-                logger.info(f"📝 First 200 chars: {transcript_text[:preview_length]}")
-                logger.info(f"📝 Last 200 chars: {transcript_text[-preview_length:]}")
-            
-            # Check if we got actual content (be more lenient)
-            if not transcript_text:
-                logger.warning(f"⚠️ No transcript text returned for lesson {lesson_id}")
-                return {
-                    "transcript": None,
-                    "transcript_id": transcript_id,
-                    "available": False,
-                    "error": "No transcript text returned"
-                }
-            
-            # Warn if suspiciously short (but still return it)
-            if char_count < 1000:
-                logger.warning(f"⚠️ Transcript for lesson {lesson_id} may be incomplete - only {char_count} characters")
-            else:
-                logger.info(f"✅ Transcript looks complete ({char_count:,} chars)")
-            
+        # Initialize Pinecone index
+        index = get_pinecone_index()
+        
+        # Create a dummy query vector (we'll filter by metadata only)
+        dummy_vector = [0.0] * 3072
+        
+        # Query with metadata filter to get ALL chunks for this document_id
+        # Using top_k=10000 to ensure we get all chunks
+        results = index.query(
+            vector=dummy_vector,
+            filter={
+                "document_id": str(document_id)
+            },
+            top_k=10000,  # High limit to get all chunks
+            include_metadata=True
+        )
+        
+        if not results or not results.get('matches'):
+            logger.warning(f"⚠️ No transcript chunks found for document {document_id}")
             return {
-                "transcript": transcript_text,
+                "transcript": None,
                 "transcript_id": transcript_id,
-                "available": True,
-                "char_count": char_count
+                "available": False,
+                "error": "No transcript chunks found in Pinecone"
             }
         
-    except httpx.TimeoutException:
-        logger.error("❌ Transcript fetch timeout (90s exceeded) - transcript may be very long")
+        matches = results['matches']
+        logger.info(f"📊 Found {len(matches)} chunks for document {document_id}")
+        
+        # Sort chunks by chunk_index to maintain order
+        sorted_chunks = sorted(
+            matches,
+            key=lambda x: int(x.get('metadata', {}).get('chunk_index', 0))
+        )
+        
+        # Extract and concatenate all chunk texts
+        transcript_parts = []
+        for match in sorted_chunks:
+            chunk_text = match.get('metadata', {}).get('text', '')
+            if chunk_text:
+                transcript_parts.append(chunk_text)
+        
+        # Join all chunks with double newline for readability
+        full_transcript = '\n\n'.join(transcript_parts)
+        
+        # Detailed logging
+        char_count = len(full_transcript)
+        logger.info(f"✅ Assembled transcript: {char_count:,} characters from {len(transcript_parts)} chunks")
+        
+        if full_transcript:
+            preview_length = min(200, len(full_transcript))
+            logger.info(f"📝 First 200 chars: {full_transcript[:preview_length]}")
+            logger.info(f"📝 Last 200 chars: {full_transcript[-preview_length:]}")
+        
+        if not full_transcript:
+            logger.warning(f"⚠️ Empty transcript after assembling chunks")
+            return {
+                "transcript": None,
+                "transcript_id": transcript_id,
+                "available": False,
+                "error": "Empty transcript after assembling chunks"
+            }
+        
         return {
-            "transcript": None,
-            "transcript_id": transcript_id if 'transcript_id' in locals() else None,
-            "available": False,
-            "error": "Request timeout (90s) - transcript may be very long"
+            "transcript": full_transcript,
+            "transcript_id": transcript_id,
+            "available": True,
+            "char_count": char_count,
+            "chunk_count": len(transcript_parts)
         }
+        
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching transcript: {e}")
+        logger.error(f"❌ Error fetching transcript: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if cursor:
