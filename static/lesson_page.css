@@ -43,60 +43,70 @@
     --max-content-width: 1400px;
 }
 
-/* Dark Theme (Default) */
+/* Dark Theme (Default) - MATCHES PHASE 7.1/7.2 */
 [data-theme="dark"] {
-    --bg-primary: #0a0e27;
-    --bg-secondary: #1a1f3a;
-    --bg-tertiary: #2a2f4a;
-    --bg-hover: #343a55;
+    /* Backgrounds - Pure black/dark gray (easier on eyes!) */
+    --bg-primary: #1a1a1a;      /* Main background - pure dark gray */
+    --bg-secondary: #2d2d2d;    /* Cards, panels */
+    --bg-tertiary: #3d3d3d;     /* Hover states, highlights */
+    --bg-hover: #4d4d4d;        /* Interactive hover */
     
-    --text-primary: #e8eaf0;
-    --text-secondary: #a0a8c0;
-    --text-muted: #6b7280;
+    /* Text - High contrast for readability */
+    --text-primary: #ffffff;    /* Primary text - pure white */
+    --text-secondary: #b0b0b0;  /* Secondary text - light gray */
+    --text-muted: #808080;      /* Muted text - medium gray */
     
-    --border-color: #2a2f4a;
-    --border-hover: #3a3f5a;
+    /* Borders - Subtle separation */
+    --border-color: #3d3d3d;    /* Default borders */
+    --border-hover: #4d4d4d;    /* Hover borders */
     
-    --accent-primary: #6366f1;
-    --accent-hover: #4f46e5;
-    --accent-light: rgba(99, 102, 241, 0.1);
+    /* Accent - Clean blue */
+    --accent-primary: #4d9fff;  /* Primary accent - clean blue */
+    --accent-hover: #3d8fef;    /* Hover state - darker blue */
+    --accent-light: rgba(77, 159, 255, 0.1); /* Light accent bg */
     
-    --success: #10b981;
-    --success-bg: rgba(16, 185, 129, 0.1);
+    /* Status Colors */
+    --success: #28a745;         /* Green - success/complete */
+    --success-bg: rgba(40, 167, 69, 0.1);
     
-    --warning: #f59e0b;
-    --warning-bg: rgba(245, 158, 11, 0.1);
+    --warning: #ffc107;         /* Yellow - warnings */
+    --warning-bg: rgba(255, 193, 7, 0.1);
     
-    --error: #ef4444;
-    --error-bg: rgba(239, 68, 68, 0.1);
+    --error: #dc3545;           /* Red - errors */
+    --error-bg: rgba(220, 53, 69, 0.1);
 }
 
-/* Light Theme */
+/* Light Theme - MATCHES PHASE 7.1/7.2 */
 [data-theme="light"] {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8f9fa;
-    --bg-tertiary: #e9ecef;
-    --bg-hover: #dee2e6;
+    /* Backgrounds - Clean white/light gray */
+    --bg-primary: #ffffff;      /* Pure white background */
+    --bg-secondary: #f5f5f5;    /* Light gray panels */
+    --bg-tertiary: #e0e0e0;     /* Medium gray highlights */
+    --bg-hover: #d0d0d0;        /* Hover state */
     
-    --text-primary: #1a1a1a;
-    --text-secondary: #4b5563;
-    --text-muted: #9ca3af;
+    /* Text - Dark for contrast */
+    --text-primary: #1a1a1a;    /* Primary text - dark gray */
+    --text-secondary: #4d4d4d;  /* Secondary text - medium gray */
+    --text-muted: #808080;      /* Muted text - light gray */
     
-    --border-color: #e5e7eb;
-    --border-hover: #d1d5db;
+    /* Borders - Subtle separation */
+    --border-color: #d0d0d0;    /* Default borders */
+    --border-hover: #b0b0b0;    /* Hover borders */
     
-    --accent-primary: #6366f1;
-    --accent-hover: #4f46e5;
-    --accent-light: rgba(99, 102, 241, 0.1);
+    /* Accent - Clean blue (same as dark) */
+    --accent-primary: #4d9fff;
+    --accent-hover: #3d8fef;
+    --accent-light: rgba(77, 159, 255, 0.15);
     
-    --success: #10b981;
-    --success-bg: rgba(16, 185, 129, 0.1);
+    /* Status Colors (same as dark theme) */
+    --success: #28a745;
+    --success-bg: rgba(40, 167, 69, 0.1);
     
-    --warning: #f59e0b;
-    --warning-bg: rgba(245, 158, 11, 0.1);
+    --warning: #ffc107;
+    --warning-bg: rgba(255, 193, 7, 0.1);
     
-    --error: #ef4444;
-    --error-bg: rgba(239, 68, 68, 0.1);
+    --error: #dc3545;
+    --error-bg: rgba(220, 53, 69, 0.1);
 }
 
 /* ==============================================================================
