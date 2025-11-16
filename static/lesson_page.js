@@ -792,14 +792,16 @@ async function sendMessage() {
         
         state.chatHistory.push(userMessage);
         
-        // Clear input
+        // Clear input IMMEDIATELY
         input.value = '';
         
-        // Save user message
-        await saveChatMessage(userMessage);
-        
-        // Render immediately
+        // Render IMMEDIATELY (optimistic UI!)
         renderChatHistory();
+        
+        // Save user message in background (don't await)
+        saveChatMessage(userMessage).catch(err => {
+            console.error('Failed to save user message:', err);
+        });
         
         // Show typing indicator
         showTypingIndicator();
@@ -828,9 +830,9 @@ async function sendMessage() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullResponse = '';
+        let firstChunk = true;
         
-        // Remove typing indicator and create AI message container
-        removeTypingIndicator();
+        // Create AI message container (but keep dots visible!)
         const aiMessageId = createAIMessageContainer();
         
         // Stream chunks as they arrive (INSTANT UPDATES!)
@@ -841,6 +843,13 @@ async function sendMessage() {
             
             // Decode chunk and add to response
             const chunk = decoder.decode(value, { stream: true });
+            
+            // Remove typing dots on FIRST chunk (not before!)
+            if (firstChunk && chunk.trim()) {
+                removeTypingIndicator();
+                firstChunk = false;
+            }
+            
             fullResponse += chunk;
             
             // Update message IMMEDIATELY with new text (streaming effect!)
