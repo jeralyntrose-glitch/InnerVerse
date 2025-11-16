@@ -822,6 +822,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
+    scroll-behavior: smooth;
 }
 
 /* Chat Messages */
@@ -830,6 +831,18 @@ body {
     flex-direction: column;
     gap: var(--spacing-xs);
     max-width: 85%;
+    animation: fadeInMessage 0.3s ease-out;
+}
+
+@keyframes fadeInMessage {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .message.user-message {
@@ -877,6 +890,7 @@ body {
     background: var(--bg-tertiary);
     border-radius: var(--radius-md);
     width: fit-content;
+    animation: fadeInMessage 0.2s ease-out;
 }
 
 .typing-dot {

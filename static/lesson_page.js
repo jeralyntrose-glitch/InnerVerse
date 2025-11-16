@@ -824,45 +824,47 @@ async function sendMessage() {
             throw new Error(`Backend API error: ${response.status}`);
         }
         
-        // Stream AI response
+        // Stream AI response WORD-BY-WORD (like ChatGPT!)
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let rawResponse = '';
-        let aiResponse = '';
+        let fullResponse = '';
         
-        // Remove typing indicator
+        // Remove typing indicator and create AI message container
         removeTypingIndicator();
-        
-        // Create AI message container
         const aiMessageId = createAIMessageContainer();
         
-        // Collect full response first
+        // Stream chunks as they arrive (INSTANT UPDATES!)
         while (true) {
             const { done, value } = await reader.read();
             
             if (done) break;
             
+            // Decode chunk and add to response
             const chunk = decoder.decode(value, { stream: true });
-            rawResponse += chunk;
+            fullResponse += chunk;
+            
+            // Update message IMMEDIATELY with new text (streaming effect!)
+            updateAIMessage(aiMessageId, fullResponse);
+            
+            // Auto-scroll to show new content
+            scrollChatToBottom();
         }
         
-        // Parse the JSON response to extract just the answer
+        // Final cleanup - remove any JSON wrapper if present
         try {
-            const parsed = JSON.parse(rawResponse);
-            aiResponse = parsed.answer || rawResponse;
+            const parsed = JSON.parse(fullResponse);
+            if (parsed.answer) {
+                fullResponse = parsed.answer;
+                updateAIMessage(aiMessageId, fullResponse);
+            }
         } catch (e) {
-            // If parsing fails, use raw response (backward compatibility)
-            console.warn('Failed to parse AI response as JSON:', e);
-            aiResponse = rawResponse;
+            // Not JSON, that's fine - use raw text
         }
         
-        // Update with clean text (no JSON wrapper)
-        updateAIMessage(aiMessageId, aiResponse);
-        
-        // Save AI response
+        // Save AI response to history
         const aiMessage = {
             role: 'assistant',
-            content: aiResponse,
+            content: fullResponse,
             timestamp: new Date().toISOString()
         };
         
