@@ -1,0 +1,161 @@
+# 🔒 SURGICAL FIX: REMOVE AXIS BACKEND - ENABLE STREAMING
+
+**CRITICAL: Follow these instructions EXACTLY. Do NOT improvise. Do NOT "improve". Do NOT add features.**
+
+---
+
+## 🎯 OBJECTIVE
+
+Replace AXIS backend call with direct Claude API streaming in lesson chat endpoint.
+Make it work EXACTLY like regular chat (which already streams).
+
+---
+
+## 📋 STEP 1: LOCATE THE BROKEN CODE
+
+**File:** `main.py` (or wherever your Flask routes are)
+
+**Find this endpoint:**
+```python
+@app.route('/api/lesson/<int:lesson_id>/ai-chat', methods=['POST'])
+```
+
+**Show me the ENTIRE function.** I need to see:
+- Line numbers
+- Exact current code
+- What it's calling (AXIS backend URL)
+
+**DO NOT MODIFY YET. Just show me the code first.**
+
+---
+
+## 📋 STEP 2: LOCATE THE WORKING CODE
+
+**Find your regular chat endpoint that DOES stream correctly.**
+
+It should look something like:
+```python
+@app.route('/api/chat', methods=['POST'])
+```
+
+**Show me this ENTIRE function too.** I need to see:
+- How it calls Claude API
+- How it streams responses
+- The exact streaming implementation
+
+**DO NOT MODIFY. Just show me both endpoints side-by-side.**
+
+---
+
+## 📋 STEP 3: WAIT FOR CONFIRMATION
+
+**STOP HERE.**
+
+Do NOT make any changes yet.
+Do NOT "start implementing".
+Do NOT "begin working on this".
+
+Show me both code blocks and WAIT for my next instruction.
+
+I will give you the EXACT replacement code with:
+- Exact lines to delete
+- Exact code to paste
+- No ambiguity
+- No room for interpretation
+
+---
+
+## ⚠️ CRITICAL RULES
+
+**DO:**
+✅ Show me the current code
+✅ Wait for exact instructions
+✅ Follow the replacement exactly
+
+**DO NOT:**
+❌ Start modifying before I give exact code
+❌ "Improve" or "optimize" anything
+❌ Add extra features
+❌ Change variable names
+❌ Modify the personality prompt
+❌ Touch the caching logic
+❌ Add error handling I didn't specify
+❌ Refactor anything
+
+---
+
+## 🧪 VERIFICATION PLAN (After Fix)
+
+Once we make the change, you will test with:
+
+**Test 1: Verify Streaming**
+```bash
+curl -N http://localhost:5000/api/lesson/1/ai-chat \
+  -H "Content-Type: application/json" \
+  -d '{"question":"hi"}' \
+  --no-buffer
+```
+
+**Expected:** Text appears chunk-by-chunk (not all at once)
+
+**Test 2: Verify in Browser**
+1. Navigate to any lesson
+2. Open DevTools Console
+3. Send chat message: "hi"
+4. Watch response build word-by-word
+
+**Expected:** Text streams like ChatGPT
+
+---
+
+## 📊 WHAT WILL CHANGE
+
+**Before:**
+```
+Lesson Chat → Flask → AXIS backend → Claude API
+                       ↑
+                   Buffers here! ❌
+```
+
+**After:**
+```
+Lesson Chat → Flask → Claude API (streaming) ✅
+```
+
+**Result:** Word-by-word streaming responses
+
+---
+
+## 🚫 WHAT WILL NOT CHANGE
+
+- Frontend code (already streams correctly)
+- Personality prompt (stays the same)
+- Caching logic (lesson content still cached, chat not cached)
+- Database queries (stays the same)
+- Any other endpoints (only touch lesson chat endpoint)
+
+---
+
+## 📝 NEXT STEPS
+
+1. **YOU:** Show me the two endpoint functions
+2. **ME:** Give you exact replacement code
+3. **YOU:** Copy/paste EXACTLY as written
+4. **YOU:** Test with curl command
+5. **YOU:** Confirm it works
+
+---
+
+## ⚠️ REMINDER
+
+This is a CRITICAL fix. Streaming is important for UX.
+
+Do NOT rush.
+Do NOT improvise.
+Do NOT break other things.
+
+Just show me the code and wait for exact instructions.
+
+---
+
+**NOW: Show me both endpoint functions (lesson chat + regular chat) and STOP.**
