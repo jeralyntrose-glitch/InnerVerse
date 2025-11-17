@@ -1,0 +1,78 @@
+================================================================================
+🔗 FINAL DOCUMENT_ID MATCHING SCRIPT
+================================================================================
+
+📚 Step 1: Loading data...
+🔍 Querying Pinecone for all lesson documents...
+   Retrieved 6258 vector chunks
+✅ Found 343 unique Pinecone documents
+
+   Total lessons: 571
+   Total Pinecone documents: 343
+
+🔍 Step 2: Matching lessons to documents...
+   ✅ 1. Lesson 159: Who Are The ESTJs (The Judicator)? | ESTJ Cognitiv... → Season 3 + Title (68%)
+   ✅ 2. Lesson 160: Who Are The ESTPs (The Gladiator)? | ESTP Cognitiv... → Season 3 + Title (68%)
+   ✅ 3. Lesson 161: Who Are the ENTJs (The Marshal)? | ENTJ Cognitive ... → Season 3 + Title (66%)
+   ✅ 4. Lesson 163: Who Are The ESFJs (The Cavalier)? | ESFJ Cognitive... → Season 3 + Title (67%)
+   ✅ 5. Lesson 164: Who Are The ESFPs (The Duelist)? | ESFP Cognitive ... → Season 3 + Title (66%)
+   ✅ 6. Lesson 165: Who Are The ENTPs (The Rogue)? | ENTP Cognitive Fu... → Season 3 + Title (65%)
+   ✅ 7. Lesson 167: Who Are The ISTJs (The Archivist)? | ISTJ Cognitiv... → Season 3 + Title (68%)
+   ✅ 8. Lesson 168: Who Are The ISTPs (The Artificer)? | ISTP Cognitiv... → Season 3 + Title (68%)
+   ✅ 9. Lesson 170: Who Are The INFJs? (The Paladin) | INFJ Cognitive ... → Season 3 + Title (66%)
+   ✅ 10. Lesson 176: What Types Are Socially Compatible With ESTJs? | C... → Season 12 + Title (69%)
+   ✅ 11. Lesson 177: What Types Are Socially Compatible With ESTPs? | C... → Season 12 + Title (69%)
+   ✅ 12. Lesson 179: What Types Are Socially Compatible With ENFJs? | C... → Season 12 + Title (69%)
+   ✅ 13. Lesson 183: What Types Are Socially Compatible With ENFPs? | C... → Season 12 + Title (69%)
+   ✅ 14. Lesson 188: What Types Are Socially Compatible With ISFPs? | C... → Season 12 + Title (69%)
+   ✅ 15. Lesson 221: Intro To Interaction Style & Temperament Behaviors... → Season 15 + Title (74%)
+   ✅ 16. Lesson 224: How Does Control Compare To Movement? | Outcome Vs... → Season 15 + Title (66%)
+   ✅ 17. Lesson 305: Optimizing ISFP Social Skills | CS Joseph... → Season 12.2 + Title (68%)
+   ✅ 18. Lesson 317: Optimizing ESTJ Social Skills (and Typing Random P... → Season 12.2 + Title (65%)
+   ✅ 19. Lesson 338: Improve Cognitive Functions Through Cognitive Tran... → Season 18 + Title (69%)
+   ✅ 20. Lesson 346: The 4th Cognitive Orbit Fi & Fe | Season 18 Cognit... → Season 18 + Title (67%)
+   ✅ 21. Lesson 348: Se and Ne Cognitive Reflection | Season 18 Cogniti... → Season 18 + Title (87%)
+
+================================================================================
+📊 MATCHING REPORT
+================================================================================
+
+✅ Total lessons: 571
+   Already matched: 152
+   Newly matched: 21
+   Still missing: 398
+
+🎯 Overall success rate: 30.3%
+
+⚠️  398 lessons still missing document_id
+
+📊 Unmatched lessons by season:
+   Season 3: 7 lessons
+   Season 7.2: 4 lessons
+   Season 8: 8 lessons
+   Season 9: 7 lessons
+   Season 10: 8 lessons
+   Season 11: 8 lessons
+   Season 12: 4 lessons
+   Season 14.2: 1 lessons
+   Season 14.4: 1 lessons
+   Season 15: 2 lessons
+   Season 17.1: 2 lessons
+   Season 18: 16 lessons
+   Season 21: 16 lessons
+   Season 22: 16 lessons
+   Season 23: 17 lessons
+   Season 24: 2 lessons
+   Season 25: 5 lessons
+   Season 27: 16 lessons
+   Season 90: 100 lessons
+   Season 91: 125 lessons
+   Season 92: 33 lessons
+
+💾 Full unmatched list saved to: scripts/unmatched_lessons_final.json
+💾 Matched lessons saved to: scripts/matched_lessons_final.json
+💾 Pinecone documents saved to: scripts/pinecone_documents.json
+
+================================================================================
+✅ MATCHING COMPLETE!
+================================================================================

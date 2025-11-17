@@ -25,3 +25,5 @@ python-dotenv
 fastapi-csrf-protect
 jinja2
 pydantic-settings
+fuzzywuzzy
+python-Levenshtein
