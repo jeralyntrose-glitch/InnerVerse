@@ -41,19 +41,27 @@
                 </div>
             </section>
 
-            <!-- Search Bar Section -->
+            <!-- Search Bar Section - Enhanced Design -->
             <section class="search-section">
                 <div class="search-container">
                     <div class="search-input-wrapper">
-                        <span class="search-icon">🔍</span>
+                        <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                         <input 
                             type="text" 
                             id="global-search"
                             class="search-input" 
-                            placeholder="Search lessons, seasons, or topics..."
+                            placeholder="Search 571 lessons, seasons, or topics..."
                             autocomplete="off"
+                            spellcheck="false"
                         >
-                        <button class="search-clear" id="search-clear" style="display: none;">×</button>
+                        <kbd class="search-shortcut">⌘K</kbd>
+                        <button class="search-clear" id="search-clear" style="display: none;">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
                     </div>
                     
                     <!-- Search Results Dropdown -->
