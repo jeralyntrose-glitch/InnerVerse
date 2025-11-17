@@ -4338,18 +4338,24 @@ async def serve_category_view(request: Request, category_slug: str):
     if not category_name:
         raise HTTPException(status_code=404, detail="Category not found")
     
-    # Get lessons for this category
+    # Get lessons for this category with progress data
     conn = None
     cursor = None
     try:
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT lesson_id, lesson_title, transcript_id
-            FROM curriculum
-            WHERE is_supplementary = 1 
-            AND category = %s
-            ORDER BY lesson_number
+            SELECT 
+                c.lesson_id, 
+                c.lesson_title, 
+                c.transcript_id,
+                COALESCE(p.completed, FALSE) as watched,
+                p.last_accessed
+            FROM curriculum c
+            LEFT JOIN progress p ON c.lesson_id = p.lesson_id
+            WHERE c.is_supplementary = 1 
+            AND c.category = %s
+            ORDER BY c.lesson_number
         """, (category_name,))
         
         lessons = []
@@ -4357,7 +4363,9 @@ async def serve_category_view(request: Request, category_slug: str):
             lessons.append({
                 'lesson_id': row[0],
                 'lesson_title': row[1],
-                'transcript_id': row[2]
+                'transcript_id': row[2],
+                'watched': row[3],
+                'last_accessed': row[4].isoformat() if row[4] else None
             })
         
         return templates.TemplateResponse("category_view.html", {
