@@ -4331,7 +4331,8 @@ async def serve_category_view(request: Request, category_slug: str):
         'livestream-specials': 'Livestream Specials',
         'public-qa': 'Public Q&A',
         'cs-psychic': 'CS Psychic',
-        'analyzing-true-crime': 'Analyzing True Crime'
+        'analyzing-true-crime': 'Analyzing True Crime',
+        'typing-famous-people': 'Typing Famous People'
     }
     
     category_name = category_map.get(category_slug)
