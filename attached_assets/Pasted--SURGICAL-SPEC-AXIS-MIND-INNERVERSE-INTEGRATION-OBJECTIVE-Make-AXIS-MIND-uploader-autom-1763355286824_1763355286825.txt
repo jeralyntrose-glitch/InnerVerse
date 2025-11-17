@@ -1,0 +1,505 @@
+# 🔒 SURGICAL SPEC: AXIS MIND → INNERVERSE INTEGRATION
+
+**OBJECTIVE: Make AXIS MIND uploader automatically add lessons to InnerVerse database when uploading transcripts**
+
+**CRITICAL: This involves TWO separate applications. Follow instructions exactly to avoid breaking either one.**
+
+---
+
+## 🎯 THE GOAL
+
+**Current State:**
+- Upload transcript via AXIS MIND → Goes to Pinecone only
+- InnerVerse dashboard → Doesn't know about new content
+
+**Desired State:**
+- Upload transcript via AXIS MIND → Goes to Pinecone AND InnerVerse database
+- New lesson appears on InnerVerse dashboard immediately
+- One upload = everything done
+
+---
+
+## 📋 IMPLEMENTATION PHASES
+
+### **PHASE 1: Create InnerVerse API Endpoint** (InnerVerse backend)
+### **PHASE 2: Update AXIS MIND Uploader** (AXIS MIND frontend)
+### **PHASE 3: Test Integration**
+
+---
+
+## 🔧 PHASE 1: CREATE INNERVERSE API ENDPOINT
+
+**Application:** InnerVerse (main learning platform)  
+**File:** `main.py`  
+**Action:** Add NEW endpoint for admin lesson creation
+
+---
+
+### **STEP 1.1: ADD NEW ROUTE**
+
+**Location:** After existing `/api/lesson/` routes in `main.py`
+
+**Add this EXACT code:**
+
+```python
+@app.post("/api/admin/add-lesson")
+async def add_lesson_from_uploader(request: dict):
+    """
+    API endpoint for AXIS MIND uploader to add new lessons
+    
+    Accepts lesson data from uploader and creates database entry
+    
+    Expected request body:
+    {
+        "lesson_title": "How Do ESFPs Compare To ENFPs?",
+        "youtube_url": "https://youtube.com/watch?v=ABC123",
+        "youtube_id": "ABC123",
+        "season_number": 11,
+        "episode_number": 4,
+        "document_id": "uuid-from-pinecone",
+        "category": "main_curriculum" or "supplementary",
+        "is_supplementary": 0 or 1
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "lesson_id": 123,
+        "message": "Lesson added successfully"
+    }
+    """
+    try:
+        # Extract data from request
+        lesson_title = request.get("lesson_title")
+        youtube_url = request.get("youtube_url")
+        youtube_id = request.get("youtube_id")
+        season_number = request.get("season_number")
+        episode_number = request.get("episode_number")
+        document_id = request.get("document_id")
+        category = request.get("category", "")
+        is_supplementary = request.get("is_supplementary", 0)
+        
+        # Validate required fields
+        if not lesson_title or not youtube_id or not document_id:
+            raise HTTPException(
+                status_code=400, 
+                detail="Missing required fields: lesson_title, youtube_id, document_id"
+            )
+        
+        # Check if lesson already exists (prevent duplicates)
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT lesson_id FROM curriculum 
+            WHERE youtube_id = %s
+        """, (youtube_id,))
+        
+        existing = cursor.fetchone()
+        
+        if existing:
+            cursor.close()
+            conn.close()
+            return {
+                "success": False,
+                "error": "duplicate",
+                "message": f"Lesson with YouTube ID {youtube_id} already exists",
+                "lesson_id": existing[0]
+            }
+        
+        # Determine module_id and season_id
+        # Main curriculum: module 1-4, supplementary: module 99
+        if is_supplementary:
+            module_id = 99
+            season_id = 90 + (season_number or 0)  # Supplementary seasons
+        else:
+            # Map season to module (simplified - adjust as needed)
+            if season_number <= 10:
+                module_id = 1
+            elif season_number <= 20:
+                module_id = 2
+            elif season_number <= 30:
+                module_id = 3
+            else:
+                module_id = 4
+            season_id = season_number
+        
+        # Get next lesson_id
+        cursor.execute("SELECT MAX(lesson_id) FROM curriculum")
+        max_id = cursor.fetchone()[0]
+        new_lesson_id = (max_id or 1000) + 1
+        
+        # Get next order_index for this season
+        cursor.execute("""
+            SELECT MAX(order_index) FROM curriculum 
+            WHERE season_id = %s
+        """, (season_id,))
+        max_order = cursor.fetchone()[0]
+        order_index = (max_order or 0) + 1
+        
+        # Insert new lesson
+        cursor.execute("""
+            INSERT INTO curriculum (
+                module_id, season_id, lesson_id, lesson_number,
+                lesson_title, youtube_url, youtube_id, document_id,
+                category, is_supplementary, order_index
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+        """, (
+            module_id, season_id, new_lesson_id, episode_number or order_index,
+            lesson_title, youtube_url, youtube_id, document_id,
+            category, is_supplementary, order_index
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"✅ Added new lesson: {lesson_title} (ID: {new_lesson_id})")
+        
+        return {
+            "success": True,
+            "lesson_id": new_lesson_id,
+            "message": f"Lesson '{lesson_title}' added successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding lesson: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+---
+
+### **STEP 1.2: VERIFY IMPORTS**
+
+**Check top of `main.py` has:**
+
+```python
+from fastapi import HTTPException
+import logging
+
+logger = logging.getLogger(__name__)
+```
+
+**If missing, add them.**
+
+---
+
+### **STEP 1.3: TEST ENDPOINT**
+
+**After adding the endpoint, test it:**
+
+```bash
+curl -X POST http://localhost:5000/api/admin/add-lesson \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lesson_title": "Test Lesson",
+    "youtube_url": "https://youtube.com/watch?v=TEST123",
+    "youtube_id": "TEST123",
+    "season_number": 99,
+    "document_id": "test-doc-id",
+    "is_supplementary": 1
+  }'
+```
+
+**Expected response:**
+```json
+{
+  "success": true,
+  "lesson_id": 1234,
+  "message": "Lesson 'Test Lesson' added successfully"
+}
+```
+
+---
+
+## 🔧 PHASE 2: UPDATE AXIS MIND UPLOADER
+
+**Application:** AXIS MIND (uploader tool)  
+**File:** Uploader page JavaScript/Python (wherever upload logic is)  
+**Action:** Call InnerVerse API after successful Pinecone upload
+
+---
+
+### **STEP 2.1: LOCATE UPLOAD SUCCESS HANDLER**
+
+**Find the code that runs AFTER Pinecone upload succeeds.**
+
+**It probably looks like:**
+
+```python
+# After successful Pinecone upload
+pinecone_upload_success()
+show_success_message("Document uploaded to Pinecone!")
+```
+
+---
+
+### **STEP 2.2: ADD INNERVERSE API CALL**
+
+**After Pinecone upload succeeds, add this:**
+
+```python
+import requests
+import re
+
+def add_to_innerverse(document_id, metadata):
+    """
+    Call InnerVerse API to add lesson to database
+    
+    Args:
+        document_id: Pinecone document ID
+        metadata: Document metadata (contains title, YouTube URL, etc.)
+    """
+    try:
+        # Extract YouTube ID from URL
+        youtube_url = metadata.get('youtube_url', '')
+        youtube_id = extract_youtube_id(youtube_url)
+        
+        if not youtube_id:
+            print("⚠️  No YouTube URL - skipping InnerVerse sync")
+            return
+        
+        # Prepare lesson data
+        lesson_data = {
+            "lesson_title": metadata.get('title', 'Untitled'),
+            "youtube_url": youtube_url,
+            "youtube_id": youtube_id,
+            "season_number": metadata.get('season') or metadata.get('season_number'),
+            "episode_number": metadata.get('episode') or metadata.get('episode_number'),
+            "document_id": document_id,
+            "category": metadata.get('category', ''),
+            "is_supplementary": 1 if metadata.get('is_supplementary') else 0
+        }
+        
+        # Call InnerVerse API
+        # REPLACE WITH YOUR ACTUAL INNERVERSE URL
+        innerverse_url = "https://YOUR-INNERVERSE-URL.replit.dev/api/admin/add-lesson"
+        
+        response = requests.post(
+            innerverse_url,
+            json=lesson_data,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('success'):
+                print(f"✅ Added to InnerVerse: {result.get('message')}")
+                print(f"   Lesson ID: {result.get('lesson_id')}")
+            elif result.get('error') == 'duplicate':
+                print(f"ℹ️  Already in InnerVerse: {result.get('message')}")
+            else:
+                print(f"⚠️  InnerVerse error: {result.get('message')}")
+        else:
+            print(f"❌ InnerVerse API error: {response.status_code}")
+            
+    except requests.exceptions.Timeout:
+        print("⚠️  InnerVerse API timeout - lesson may not be added")
+    except Exception as e:
+        print(f"⚠️  Failed to add to InnerVerse: {e}")
+        # Don't fail the whole upload if InnerVerse sync fails
+
+def extract_youtube_id(url):
+    """Extract YouTube video ID from URL"""
+    if not url:
+        return None
+        
+    patterns = [
+        r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',
+        r'(?:embed\/)([0-9A-Za-z_-]{11})',
+        r'^([0-9A-Za-z_-]{11})$'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
+```
+
+---
+
+### **STEP 2.3: INTEGRATE WITH UPLOAD FLOW**
+
+**Modify your upload success handler:**
+
+```python
+# BEFORE (current):
+def handle_upload_success(document_id, metadata):
+    show_success_message("Document uploaded to Pinecone!")
+
+# AFTER (enhanced):
+def handle_upload_success(document_id, metadata):
+    show_success_message("Document uploaded to Pinecone!")
+    
+    # NEW: Also add to InnerVerse
+    add_to_innerverse(document_id, metadata)
+```
+
+---
+
+### **STEP 2.4: UPDATE INNERVERSE URL**
+
+**CRITICAL: Replace placeholder URL with your actual InnerVerse URL**
+
+```python
+# Find this line in the add_to_innerverse function:
+innerverse_url = "https://YOUR-INNERVERSE-URL.replit.dev/api/admin/add-lesson"
+
+# Replace with actual URL:
+innerverse_url = "https://[your-actual-replit-url]/api/admin/add-lesson"
+```
+
+---
+
+## 🧪 PHASE 3: TESTING
+
+### **TEST 1: End-to-End Upload**
+
+**Steps:**
+1. Go to AXIS MIND uploader
+2. Upload a test transcript with:
+   - Title
+   - YouTube URL
+   - Season/episode metadata
+3. Watch console output
+
+**Expected output:**
+```
+✅ Document uploaded to Pinecone: doc-id-123
+✅ Added to InnerVerse: Lesson 'Test Video' added successfully
+   Lesson ID: 1235
+```
+
+**Verify:**
+- Check Pinecone: Document exists ✅
+- Check InnerVerse dashboard: Lesson appears ✅
+- Check database: Lesson entry created ✅
+
+---
+
+### **TEST 2: Duplicate Upload**
+
+**Steps:**
+1. Upload same transcript again
+
+**Expected output:**
+```
+✅ Document uploaded to Pinecone: doc-id-123
+ℹ️  Already in InnerVerse: Lesson with YouTube ID ABC123 already exists
+```
+
+**Verify:**
+- No duplicate lesson created ✅
+- Original lesson unchanged ✅
+
+---
+
+### **TEST 3: Upload Without YouTube URL**
+
+**Steps:**
+1. Upload transcript without YouTube URL in metadata
+
+**Expected output:**
+```
+✅ Document uploaded to Pinecone: doc-id-456
+⚠️  No YouTube URL - skipping InnerVerse sync
+```
+
+**Verify:**
+- Document in Pinecone ✅
+- No InnerVerse lesson created ✅
+- No errors thrown ✅
+
+---
+
+## 🚫 CRITICAL RULES
+
+**DO:**
+✅ Add new endpoint to InnerVerse (Phase 1)
+✅ Call endpoint from AXIS MIND after upload (Phase 2)
+✅ Handle errors gracefully (don't break upload on API failure)
+✅ Check for duplicates before creating lessons
+✅ Test thoroughly
+
+**DO NOT:**
+❌ Modify existing InnerVerse routes
+❌ Change database schema
+❌ Break existing AXIS MIND upload functionality
+❌ Auto-retry on failure (user can re-upload if needed)
+❌ Create duplicates
+
+---
+
+## 📊 EXPECTED BEHAVIOR
+
+**Scenario 1: New Lesson Upload**
+```
+User uploads transcript with YouTube URL
+→ Pinecone upload: ✅ Success
+→ InnerVerse sync: ✅ Lesson created
+→ Result: Lesson appears on dashboard immediately
+```
+
+**Scenario 2: Duplicate Upload**
+```
+User uploads same transcript again
+→ Pinecone upload: ✅ Success (new version/chunks)
+→ InnerVerse sync: ℹ️  Already exists (no duplicate)
+→ Result: No duplicate lessons created
+```
+
+**Scenario 3: Upload Without YouTube URL**
+```
+User uploads plain transcript (no metadata)
+→ Pinecone upload: ✅ Success
+→ InnerVerse sync: ⚠️  Skipped (no YouTube URL)
+→ Result: Document in Pinecone, no lesson entry
+```
+
+**Scenario 4: InnerVerse API Down**
+```
+User uploads transcript
+→ Pinecone upload: ✅ Success
+→ InnerVerse sync: ❌ Timeout/Error
+→ Result: Document in Pinecone, warning shown, can retry later
+```
+
+---
+
+## ✅ DEFINITION OF DONE
+
+Integration is complete when:
+
+1. ✅ InnerVerse API endpoint created and tested
+2. ✅ AXIS MIND uploader calls InnerVerse after upload
+3. ✅ Test upload creates lesson in both systems
+4. ✅ Duplicate detection works
+5. ✅ Error handling graceful (doesn't break upload)
+6. ✅ Lesson appears on InnerVerse dashboard
+7. ✅ No existing functionality broken
+
+---
+
+## 🎯 SUMMARY
+
+**What we're building:**
+- InnerVerse API endpoint to accept lesson data
+- AXIS MIND enhancement to call that endpoint
+- One upload updates both Pinecone AND InnerVerse database
+
+**Benefits:**
+- ✅ No separate sync script needed
+- ✅ New lessons appear immediately
+- ✅ Single upload workflow
+- ✅ Automatic matching (no fuzzy logic)
+
+**Risk level:** LOW (new endpoint + enhanced uploader, no changes to existing code)
+
+---
+
+**FOLLOW THIS SPEC EXACTLY. TWO APPLICATIONS, TWO PHASES, ONE INTEGRATION.**
