@@ -1,0 +1,71 @@
+REMOVE AXIS BACKEND FROM LESSON CHAT - STREAM DIRECTLY
+
+PROBLEM:
+Lesson tutor chat goes through AXIS backend which buffers responses.
+We don't need AXIS - let's call Claude API directly like regular chat does!
+
+TASK:
+Update /api/lesson/<lesson_id>/ai-chat endpoint to stream directly 
+from Claude API instead of calling AXIS backend.
+
+COPY THE APPROACH FROM REGULAR CHAT:
+Show me how the regular chat endpoint streams from Claude API,
+then apply the SAME approach to lesson chat.
+
+The only differences for lesson chat should be:
+1. Get lesson context from database (lesson title, content)
+2. Include enhanced personality prompt
+3. Stream response from Claude API
+
+NO AXIS BACKEND NEEDED!
+
+EXPECTED CODE:
+@app.route('/api/lesson/<int:lesson_id>/ai-chat', methods=['POST'])
+def lesson_chat(lesson_id):
+    question = request.json['question']
+    
+    # Get lesson context from database
+    lesson = db.execute("SELECT * FROM curriculum WHERE lesson_id = ?", 
+                       (lesson_id,)).fetchone()
+    
+    # Build enhanced prompt with personality
+    prompt = f"""[Enhanced personality system prompt]
+    
+    Current lesson: {lesson['lesson_title']}
+    Student question: {question}
+    """
+    
+    # Stream from Claude API (like regular chat does!)
+    def generate():
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        with client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}]
+        ) as stream:
+            for text in stream.text_stream:
+                yield f"data: {text}\n\n"
+    
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+
+Just copy what regular chat does and adapt it for lesson context!
+
+This will make lesson chat stream word-by-word like ChatGPT! 🚀
+
+✅ WHAT THIS FIXES:
+Before (with AXIS):
+User → Flask → AXIS → Claude → AXIS → Flask → User
+                 ↑              ↓
+           Buffers here!    Returns all at once
+After (direct):
+User → Flask → Claude → streams → User
+                  ↑
+            Streams directly! ✅
+Result: Word-by-word streaming like ChatGPT! 🎉
