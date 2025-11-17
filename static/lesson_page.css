@@ -872,6 +872,82 @@ body {
     border-bottom-left-radius: var(--radius-sm);
 }
 
+/* Markdown formatting for AI chat messages */
+.ai-message .message-content h3,
+.ai-message .message-content h4 {
+    color: var(--text-primary);
+    margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+    font-weight: 600;
+}
+
+.ai-message .message-content h3 {
+    font-size: 1.1em;
+}
+
+.ai-message .message-content h4 {
+    font-size: 1.05em;
+}
+
+.ai-message .message-content p {
+    margin-bottom: var(--spacing-md);
+}
+
+.ai-message .message-content ul,
+.ai-message .message-content ol {
+    margin: var(--spacing-md) 0;
+    padding-left: var(--spacing-xl);
+}
+
+.ai-message .message-content li {
+    margin-bottom: var(--spacing-sm);
+}
+
+.ai-message .message-content code {
+    background: var(--bg-secondary);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.ai-message .message-content pre {
+    background: var(--bg-secondary);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: var(--spacing-md) 0;
+}
+
+.ai-message .message-content pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.ai-message .message-content strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.ai-message .message-content em {
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+.ai-message .message-content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: var(--spacing-lg) 0;
+}
+
+/* Remove extra spacing from first/last elements */
+.ai-message .message-content > *:first-child {
+    margin-top: 0;
+}
+
+.ai-message .message-content > *:last-child {
+    margin-bottom: 0;
+}
+
 .message-time {
     font-size: 12px;
     color: var(--text-muted);

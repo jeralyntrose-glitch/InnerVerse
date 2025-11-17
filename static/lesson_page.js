@@ -1008,29 +1008,8 @@ function updateAIMessage(messageId, content) {
 function formatAIChatMessage(text) {
     if (!text) return '';
     
-    let formatted = text;
-    
-    // Convert literal \n to actual line breaks
-    formatted = formatted.replace(/\\n/g, '\n');
-    
-    // Convert newlines to <br> tags
-    formatted = formatted.replace(/\n/g, '<br>');
-    
-    // Bold text: **text** or __text__
-    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
-    
-    // Italic text: *text* or _text_ (avoid conflicts with bold)
-    formatted = formatted.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
-    formatted = formatted.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
-    
-    // Inline code: `text`
-    formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
-    
-    // Bullet points: - or *
-    formatted = formatted.replace(/^[\-\*] (.+)$/gm, '• $1');
-    
-    return formatted;
+    // Use the comprehensive formatMarkdown function for proper headers, lists, paragraphs
+    return formatMarkdown(text);
 }
 
 async function saveChatMessage(message) {
