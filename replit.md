@@ -13,7 +13,7 @@ Preferred communication style: Simple, everyday language with a decent amount of
 - **Typography**: Inter font for general text, Outfit font for "InnerVerse" branding.
 - **Color Scheme**: Teal accent colors.
 - **Key UI Components**:
-    - **Smart Search Bar**: Hybrid search positioned below progress bar on dashboard. Supports season search ("Season 18"), title search ("ENFP"), category search ("CS Joseph Responds"), and keyword search. Features debounced input, dropdown results with thumbnails, keyboard shortcuts (ESC to close), and mobile-responsive design.
+    - **Smart Search Bar**: Hybrid search with glassmorphism design positioned below progress bar on dashboard. Features frosted glass effects, gradient borders, SVG icons, keyboard shortcut badge (⌘K), smooth animations, and backdrop blur. Supports season search ("Season 18"), title search ("ENFP"), category search ("CS Joseph Responds"), and keyword search. Features 300ms debounced input, dropdown results with thumbnails, keyboard shortcuts (ESC to close), and mobile-responsive design.
     - **Learning Paths Canvas**: 2D interactive course visualization with Tree View (D3.js) and Grid View. Supports AI generation UI, search/filter, and responsive design.
     - **Lesson Page**: Split-screen interface featuring content and an AI tutor chat pane (Claude Sonnet 4) that is context-aware and tracks progress.
     - **Chat Interface**: Claude.ai/ChatGPT-inspired with collapsible sidebar, search, history, real-time streaming, multi-image upload (Claude Sonnet 4 Vision), Markdown rendering (`marked.js`), XSS protection (DOMPurify), and dark/light mode.
