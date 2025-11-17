@@ -17,6 +17,7 @@ from fastapi import FastAPI, UploadFile, File, Request, Response, Header, HTTPEx
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -689,6 +690,9 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)
+
+# Configure Jinja2 templates
+templates = Jinja2Templates(directory="static")
 
 # Add CORS middleware
 app.add_middleware(
@@ -4308,6 +4312,70 @@ async def serve_lesson_page(lesson_id: int):
         HTML page with video, AI content, transcript, chat
     """
     return FileResponse("static/lesson_page.html")
+
+
+@app.get("/category/{category_slug}")
+async def serve_category_view(request: Request, category_slug: str):
+    """
+    Serve category view page for supplementary library
+    
+    Args:
+        category_slug: URL-friendly category name
+    
+    Returns:
+        HTML page with lesson grid for category
+    """
+    # Map slug to category name
+    category_map = {
+        'cs-joseph-responds': 'CS Joseph Responds',
+        'livestream-specials': 'Livestream Specials',
+        'public-qa': 'Public Q&A',
+        'cs-psychic': 'CS Psychic',
+        'analyzing-true-crime': 'Analyzing True Crime'
+    }
+    
+    category_name = category_map.get(category_slug)
+    if not category_name:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    # Get lessons for this category
+    conn = None
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT lesson_id, lesson_title, transcript_id
+            FROM curriculum
+            WHERE is_supplementary = 1 
+            AND category = %s
+            ORDER BY lesson_number
+        """, (category_name,))
+        
+        lessons = []
+        for row in cursor.fetchall():
+            lessons.append({
+                'lesson_id': row[0],
+                'lesson_title': row[1],
+                'transcript_id': row[2]
+            })
+        
+        return templates.TemplateResponse("category_view.html", {
+            "request": request,
+            "category_name": category_name,
+            "lesson_count": len(lessons),
+            "lessons": lessons
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading category {category_slug}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 @app.get("/api/lesson/{lesson_id}")

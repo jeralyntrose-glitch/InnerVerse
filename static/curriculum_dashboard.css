@@ -437,3 +437,103 @@ body {
         font-size: 16px;
     }
 }
+
+/* ==============================================================================
+   SUPPLEMENTARY LIBRARY SECTION
+   ============================================================================== */
+
+.supplementary-library {
+    margin-top: 60px;
+    padding: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+}
+
+.supplementary-library h2 {
+    color: white;
+    font-size: 2em;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.supplementary-library .subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 30px;
+    text-align: center;
+    font-size: 1.1em;
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.category-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    text-decoration: none;
+    color: #333;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.category-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.category-icon {
+    font-size: 3em;
+    margin-bottom: 15px;
+}
+
+.category-card h3 {
+    font-size: 1.3em;
+    margin-bottom: 10px;
+    color: #667eea;
+}
+
+.lesson-count {
+    font-weight: bold;
+    color: #764ba2;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.description {
+    font-size: 0.9em;
+    color: #666;
+    line-height: 1.4;
+}
+
+/* Dark theme adjustments for supplementary library */
+[data-theme="dark"] .category-card {
+    background: #2d2d2d;
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .category-card h3 {
+    color: #8b9fff;
+}
+
+[data-theme="dark"] .description {
+    color: var(--text-secondary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .supplementary-library {
+        padding: 30px 20px;
+        margin-top: 40px;
+    }
+    
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+}
