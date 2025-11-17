@@ -859,31 +859,45 @@ async function sendMessage() {
         // Stream chunks as they arrive (INSTANT UPDATES!)
         // Parse SSE format: "data: {text}\n\n"
         let buffer = '';
+        console.log('🔥 Starting SSE stream reading...');
         while (true) {
             const { done, value } = await reader.read();
             
-            if (done) break;
+            if (done) {
+                console.log('✅ SSE stream complete. Total response length:', fullResponse.length);
+                break;
+            }
             
             // Decode chunk and add to buffer
             const chunk = decoder.decode(value, { stream: true });
+            console.log('📦 Raw chunk received:', JSON.stringify(chunk));
             buffer += chunk;
             
             // Parse SSE events (split on double newlines)
             const events = buffer.split('\n\n');
+            console.log(`🔄 Parsed ${events.length} events from buffer`);
             
             // Keep last incomplete event in buffer
             buffer = events.pop() || '';
             
             // Process complete events
             for (const event of events) {
+                // Skip empty events
+                if (!event.trim()) continue;
+                
+                console.log('🎯 Processing event:', JSON.stringify(event));
+                
                 // Extract data from SSE format
                 const lines = event.split('\n');
                 for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const text = line.substring(6); // Remove "data: " prefix
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.startsWith('data: ')) {
+                        const text = trimmedLine.substring(6); // Remove "data: " prefix
+                        console.log('💬 Extracted text:', JSON.stringify(text));
                         
-                        // Remove typing dots on FIRST non-empty chunk
-                        if (firstChunk && text.trim()) {
+                        // Remove typing dots on FIRST chunk (even if empty!)
+                        if (firstChunk) {
+                            console.log('🎬 First chunk - removing typing indicator');
                             removeTypingIndicator();
                             firstChunk = false;
                         }
