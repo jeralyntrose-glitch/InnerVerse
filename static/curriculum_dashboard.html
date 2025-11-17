@@ -41,6 +41,30 @@
                 </div>
             </section>
 
+            <!-- Search Bar Section -->
+            <section class="search-section">
+                <div class="search-container">
+                    <div class="search-input-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input 
+                            type="text" 
+                            id="global-search"
+                            class="search-input" 
+                            placeholder="Search lessons, seasons, or topics..."
+                            autocomplete="off"
+                        >
+                        <button class="search-clear" id="search-clear" style="display: none;">×</button>
+                    </div>
+                    
+                    <!-- Search Results Dropdown -->
+                    <div id="search-results" class="search-results" style="display: none;">
+                        <div class="search-results-content">
+                            <!-- Results populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section class="continue-learning" id="continueLearning" style="display: none;">
                 <div class="continue-content">
                     <div class="continue-text">

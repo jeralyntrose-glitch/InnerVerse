@@ -1,0 +1,803 @@
+# 🔒 SURGICAL SPEC: SMART HYBRID SEARCH BAR
+
+**OBJECTIVE: Add intelligent search bar to InnerVerse dashboard that handles exact queries (seasons, lessons) AND semantic search (concepts, questions)**
+
+**LOCATION: Below progress bar on dashboard**
+
+---
+
+## 🎯 SEARCH CAPABILITIES
+
+**Hybrid Search combines THREE search methods:**
+
+1. **Exact Match** - "Season 18", "Lesson 42", "CS Joseph Responds"
+2. **Title Search** - "ENFP", "cognitive functions", "relationships"
+3. **Semantic Search** - "how do introverts recharge", "improve my Ti"
+
+**Smart detection automatically chooses the right method!**
+
+---
+
+## 📋 PHASE 1: FRONTEND - SEARCH BAR UI
+
+### **STEP 1.1: ADD SEARCH BAR TO DASHBOARD**
+
+**File:** `static/curriculum_dashboard.html`
+
+**Location:** After the progress bar section, before "Continue Learning"
+
+**Insert this EXACT HTML:**
+
+```html
+<!-- Search Bar Section -->
+<section class="search-section">
+    <div class="search-container">
+        <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input 
+                type="text" 
+                id="global-search"
+                class="search-input" 
+                placeholder="Search lessons, seasons, or topics..."
+                autocomplete="off"
+            >
+            <button class="search-clear" id="search-clear" style="display: none;">×</button>
+        </div>
+        
+        <!-- Search Results Dropdown -->
+        <div id="search-results" class="search-results" style="display: none;">
+            <div class="search-results-content">
+                <!-- Results populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+</section>
+```
+
+---
+
+### **STEP 1.2: ADD SEARCH BAR CSS**
+
+**File:** `static/curriculum_dashboard.css`
+
+**Add at the end of the file:**
+
+```css
+/* ============================================================================
+   SEARCH BAR SECTION
+   ============================================================================ */
+
+.search-section {
+    margin: 30px 0 40px 0;
+    padding: 0 20px;
+}
+
+.search-container {
+    position: relative;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 0 15px;
+    transition: all 0.3s ease;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.search-icon {
+    font-size: 1.2em;
+    margin-right: 10px;
+    opacity: 0.6;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 15px 0;
+    font-size: 1em;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.search-clear {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0 5px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.search-clear:hover {
+    opacity: 1;
+}
+
+/* Search Results Dropdown */
+.search-results {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    max-height: 500px;
+    overflow-y: auto;
+    z-index: 1000;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.search-results-content {
+    padding: 10px;
+}
+
+.search-result-group {
+    margin-bottom: 20px;
+}
+
+.search-result-group:last-child {
+    margin-bottom: 10px;
+}
+
+.search-group-header {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 15px 5px 15px;
+    margin-bottom: 5px;
+}
+
+.search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.search-result-item:hover {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.search-result-thumbnail {
+    width: 80px;
+    height: 45px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.search-result-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-result-title {
+    font-weight: 600;
+    font-size: 0.95em;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.search-result-meta {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.search-no-results {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.search-no-results-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+.search-view-all {
+    display: block;
+    text-align: center;
+    padding: 15px;
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+    border-top: 1px solid var(--border);
+    transition: background 0.2s;
+}
+
+.search-view-all:hover {
+    background: rgba(99, 102, 241, 0.05);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .search-input-wrapper {
+    background: #1a1a1a;
+}
+
+[data-theme="dark"] .search-results {
+    background: #1a1a1a;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .search-section {
+        padding: 0 15px;
+    }
+    
+    .search-results {
+        max-height: 400px;
+    }
+    
+    .search-result-thumbnail {
+        width: 60px;
+        height: 34px;
+    }
+}
+```
+
+---
+
+### **STEP 1.3: ADD SEARCH JAVASCRIPT**
+
+**File:** Create new file `static/search.js`
+
+**Full code:**
+
+```javascript
+/**
+ * InnerVerse Smart Hybrid Search
+ * Handles exact queries (seasons, lessons) + semantic search
+ */
+
+class SmartSearch {
+    constructor() {
+        this.searchInput = document.getElementById('global-search');
+        this.searchResults = document.getElementById('search-results');
+        this.searchClear = document.getElementById('search-clear');
+        this.debounceTimer = null;
+        this.currentResults = [];
+        
+        this.init();
+    }
+    
+    init() {
+        // Search input event
+        this.searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            
+            // Show/hide clear button
+            this.searchClear.style.display = query ? 'block' : 'none';
+            
+            // Debounce search
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = setTimeout(() => {
+                this.performSearch(query);
+            }, 300);
+        });
+        
+        // Clear button
+        this.searchClear.addEventListener('click', () => {
+            this.searchInput.value = '';
+            this.searchClear.style.display = 'none';
+            this.hideResults();
+            this.searchInput.focus();
+        });
+        
+        // Keyboard shortcuts
+        this.searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.hideResults();
+                this.searchInput.blur();
+            }
+        });
+        
+        // Click outside to close
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                this.hideResults();
+            }
+        });
+    }
+    
+    async performSearch(query) {
+        if (!query) {
+            this.hideResults();
+            return;
+        }
+        
+        try {
+            // Call backend search API
+            const response = await fetch('/api/search', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({query})
+            });
+            
+            if (!response.ok) {
+                throw new Error('Search failed');
+            }
+            
+            const results = await response.json();
+            this.currentResults = results;
+            this.displayResults(results, query);
+            
+        } catch (error) {
+            console.error('Search error:', error);
+            this.showError();
+        }
+    }
+    
+    displayResults(results, query) {
+        if (!results || results.length === 0) {
+            this.showNoResults(query);
+            return;
+        }
+        
+        // Group results by type
+        const grouped = this.groupResults(results);
+        
+        let html = '';
+        
+        // Seasons
+        if (grouped.seasons && grouped.seasons.length > 0) {
+            html += this.renderGroup('Seasons', grouped.seasons);
+        }
+        
+        // Lessons
+        if (grouped.lessons && grouped.lessons.length > 0) {
+            html += this.renderGroup('Lessons', grouped.lessons.slice(0, 5));
+        }
+        
+        // Show "View All" if more results
+        if (results.length > 5) {
+            html += `
+                <a href="/search?q=${encodeURIComponent(query)}" class="search-view-all">
+                    👁️ View all ${results.length} results →
+                </a>
+            `;
+        }
+        
+        this.searchResults.querySelector('.search-results-content').innerHTML = html;
+        this.showResults();
+    }
+    
+    groupResults(results) {
+        const grouped = {
+            seasons: [],
+            lessons: []
+        };
+        
+        results.forEach(result => {
+            if (result.type === 'season') {
+                grouped.seasons.push(result);
+            } else {
+                grouped.lessons.push(result);
+            }
+        });
+        
+        return grouped;
+    }
+    
+    renderGroup(title, items) {
+        let html = `<div class="search-result-group">`;
+        html += `<div class="search-group-header">${title}</div>`;
+        
+        items.forEach(item => {
+            const thumbnail = item.youtube_id 
+                ? `https://img.youtube.com/vi/${item.youtube_id}/mqdefault.jpg`
+                : '/static/images/placeholder.jpg';
+            
+            const url = item.type === 'season' 
+                ? `/season/${item.season_id}`
+                : `/lesson/${item.lesson_id}`;
+            
+            html += `
+                <a href="${url}" class="search-result-item">
+                    <img src="${thumbnail}" alt="${item.title}" class="search-result-thumbnail">
+                    <div class="search-result-info">
+                        <div class="search-result-title">${this.highlightQuery(item.title)}</div>
+                        <div class="search-result-meta">${item.meta}</div>
+                    </div>
+                </a>
+            `;
+        });
+        
+        html += `</div>`;
+        return html;
+    }
+    
+    highlightQuery(text) {
+        // TODO: Highlight search terms in results
+        return text;
+    }
+    
+    showNoResults(query) {
+        this.searchResults.querySelector('.search-results-content').innerHTML = `
+            <div class="search-no-results">
+                <div class="search-no-results-icon">🔍</div>
+                <p>No results found for "<strong>${query}</strong>"</p>
+                <p style="font-size: 0.9em; margin-top: 10px;">
+                    Try searching for a season number, lesson title, or topic
+                </p>
+            </div>
+        `;
+        this.showResults();
+    }
+    
+    showError() {
+        this.searchResults.querySelector('.search-results-content').innerHTML = `
+            <div class="search-no-results">
+                <div class="search-no-results-icon">⚠️</div>
+                <p>Search temporarily unavailable</p>
+            </div>
+        `;
+        this.showResults();
+    }
+    
+    showResults() {
+        this.searchResults.style.display = 'block';
+    }
+    
+    hideResults() {
+        this.searchResults.style.display = 'none';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    new SmartSearch();
+});
+```
+
+---
+
+### **STEP 1.4: INCLUDE SEARCH JAVASCRIPT**
+
+**File:** `static/curriculum_dashboard.html`
+
+**Add before closing `</body>` tag:**
+
+```html
+<!-- Search functionality -->
+<script src="/static/search.js"></script>
+```
+
+---
+
+## 📋 PHASE 2: BACKEND - SEARCH API
+
+### **STEP 2.1: CREATE SEARCH ENDPOINT**
+
+**File:** `main.py`
+
+**Add this new route:**
+
+```python
+@app.post("/api/search")
+async def search_lessons(request: dict):
+    """
+    Smart hybrid search endpoint
+    
+    Detects query type and routes to appropriate search method:
+    - Exact match: "Season 18", "Lesson 42"
+    - Title search: "ENFP", "cognitive functions"
+    - Semantic search: "how do introverts recharge"
+    
+    Returns:
+    [
+        {
+            "type": "lesson" or "season",
+            "lesson_id": 123,
+            "title": "...",
+            "youtube_id": "...",
+            "meta": "Season 11 • Lesson 4",
+            "score": 0.95
+        }
+    ]
+    """
+    import re
+    
+    query = request.get("query", "").strip()
+    
+    if not query:
+        return []
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        results = []
+        
+        # DETECTION 1: Season query (e.g., "Season 18", "s18")
+        season_match = re.search(r'season\s*(\d+)', query, re.IGNORECASE)
+        if season_match:
+            season_num = int(season_match.group(1))
+            results = search_by_season(cursor, season_num)
+            cursor.close()
+            conn.close()
+            return results
+        
+        # DETECTION 2: Lesson query (e.g., "Lesson 42")
+        lesson_match = re.search(r'lesson\s*(\d+)', query, re.IGNORECASE)
+        if lesson_match:
+            lesson_num = int(lesson_match.group(1))
+            results = search_by_lesson_number(cursor, lesson_num)
+            cursor.close()
+            conn.close()
+            return results
+        
+        # DETECTION 3: Category query (exact match)
+        category_results = search_by_category(cursor, query)
+        if category_results:
+            results.extend(category_results)
+        
+        # DETECTION 4: Title search (fuzzy match)
+        title_results = search_by_title(cursor, query)
+        results.extend(title_results)
+        
+        # DETECTION 5: Semantic search (if Pinecone available)
+        # TODO: Add semantic search via Pinecone
+        
+        cursor.close()
+        conn.close()
+        
+        # Remove duplicates and sort by relevance
+        seen = set()
+        unique_results = []
+        for r in results:
+            key = f"{r['type']}_{r.get('lesson_id', r.get('season_id'))}"
+            if key not in seen:
+                seen.add(key)
+                unique_results.append(r)
+        
+        return unique_results[:20]  # Max 20 results
+        
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def search_by_season(cursor, season_number):
+    """Find all lessons in a specific season"""
+    cursor.execute("""
+        SELECT 
+            'lesson' as type,
+            lesson_id,
+            lesson_title as title,
+            youtube_id,
+            season_id,
+            CONCAT('Season ', season_id, ' • Lesson ', lesson_number) as meta,
+            1.0 as score
+        FROM curriculum
+        WHERE season_id = %s
+        ORDER BY lesson_number
+        LIMIT 50
+    """, (season_number,))
+    
+    return [dict(zip([col[0] for col in cursor.description], row)) 
+            for row in cursor.fetchall()]
+
+
+def search_by_lesson_number(cursor, lesson_id):
+    """Find specific lesson by ID"""
+    cursor.execute("""
+        SELECT 
+            'lesson' as type,
+            lesson_id,
+            lesson_title as title,
+            youtube_id,
+            season_id,
+            CONCAT('Season ', season_id, ' • Lesson ', lesson_number) as meta,
+            1.0 as score
+        FROM curriculum
+        WHERE lesson_id = %s
+    """, (lesson_id,))
+    
+    results = cursor.fetchall()
+    return [dict(zip([col[0] for col in cursor.description], row)) 
+            for row in results]
+
+
+def search_by_category(cursor, query):
+    """Search by exact category match"""
+    cursor.execute("""
+        SELECT 
+            'lesson' as type,
+            lesson_id,
+            lesson_title as title,
+            youtube_id,
+            season_id,
+            CONCAT(category, ' • Lesson ', lesson_number) as meta,
+            1.0 as score
+        FROM curriculum
+        WHERE LOWER(category) = LOWER(%s)
+        ORDER BY lesson_number
+        LIMIT 20
+    """, (query,))
+    
+    results = cursor.fetchall()
+    return [dict(zip([col[0] for col in cursor.description], row)) 
+            for row in results]
+
+
+def search_by_title(cursor, query):
+    """Fuzzy search in lesson titles"""
+    # Use PostgreSQL ILIKE for case-insensitive search
+    search_term = f"%{query}%"
+    
+    cursor.execute("""
+        SELECT 
+            'lesson' as type,
+            lesson_id,
+            lesson_title as title,
+            youtube_id,
+            season_id,
+            CONCAT('Season ', season_id, ' • Lesson ', lesson_number) as meta,
+            0.8 as score
+        FROM curriculum
+        WHERE lesson_title ILIKE %s
+        ORDER BY lesson_number
+        LIMIT 15
+    """, (search_term,))
+    
+    results = cursor.fetchall()
+    return [dict(zip([col[0] for col in cursor.description], row)) 
+            for row in results]
+```
+
+---
+
+## 🧪 PHASE 3: TESTING
+
+### **TEST 1: Season Search**
+
+**Action:** Type "Season 18" in search bar
+
+**Expected:**
+```
+SEASONS
+📺 Season 18: [Season Name] (X lessons)
+
+LESSONS
+🎬 [Lesson Title 1]
+   Season 18 • Lesson 1
+🎬 [Lesson Title 2]
+   Season 18 • Lesson 2
+...
+```
+
+---
+
+### **TEST 2: Type Search**
+
+**Action:** Type "ENFP"
+
+**Expected:**
+```
+LESSONS
+🎬 How Do ENFPs Compare To ENFPs?
+   Season 11 • Lesson 4
+🎬 ENFP Shadow Functions
+   Season 18 • Lesson 2
+...
+```
+
+---
+
+### **TEST 3: Category Search**
+
+**Action:** Type "CS Joseph Responds"
+
+**Expected:**
+```
+LESSONS
+🎬 How does an ENFJ act towards a crush?
+   CS Joseph Responds • Lesson 1
+🎬 How do INFPs express their anger?
+   CS Joseph Responds • Lesson 2
+...
+```
+
+---
+
+### **TEST 4: No Results**
+
+**Action:** Type "xyz123abc"
+
+**Expected:**
+```
+🔍
+No results found for "xyz123abc"
+
+Try searching for a season number, lesson title, or topic
+```
+
+---
+
+## 🚫 CRITICAL RULES
+
+**DO:**
+✅ Add search bar below progress section
+✅ Implement hybrid search (exact + title)
+✅ Show results in dropdown
+✅ Handle keyboard (ESC to close)
+✅ Click outside to close
+✅ Mobile responsive
+
+**DO NOT:**
+❌ Break existing dashboard layout
+❌ Modify existing routes
+❌ Change database schema
+❌ Auto-navigate on search (user must click result)
+
+---
+
+## ✅ DEFINITION OF DONE
+
+Search is complete when:
+
+1. ✅ Search bar visible below progress
+2. ✅ Type query → Results appear in dropdown
+3. ✅ "Season 18" → Shows Season 18 lessons
+4. ✅ "ENFP" → Shows ENFP lessons
+5. ✅ Click result → Navigates to lesson
+6. ✅ ESC key closes results
+7. ✅ Click outside closes results
+8. ✅ Works on mobile
+9. ✅ No console errors
+
+---
+
+## 🎯 FUTURE ENHANCEMENTS (Optional)
+
+**Phase 2:**
+- Add semantic search via Pinecone
+- Search history (recent searches)
+- Search suggestions (autocomplete)
+- Advanced filters (by type, difficulty)
+
+**Not needed now - keep it simple!**
+
+---
+
+**FOLLOW THIS SPEC EXACTLY. CREATE BEAUTIFUL, FUNCTIONAL SEARCH.**
