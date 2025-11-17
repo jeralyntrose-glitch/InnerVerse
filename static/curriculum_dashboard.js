@@ -132,6 +132,9 @@ class CurriculumDashboard {
         container.innerHTML = '';
 
         modules.forEach(module => {
+            // Skip Module 99 (Supplementary Library - shown in separate section below)
+            if (module.module_number === 99) return;
+            
             const moduleCard = this.createModuleCard(module);
             container.appendChild(moduleCard);
         });
