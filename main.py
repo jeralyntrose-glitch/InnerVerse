@@ -5229,6 +5229,190 @@ async def add_lesson_from_uploader(request: AddLessonRequest):
 # ==============================================================================
 
 
+# ==============================================================================
+# SEARCH API
+# ==============================================================================
+
+@app.post("/api/search")
+async def search_lessons(request: dict):
+    """
+    Smart hybrid search endpoint
+    
+    Detects query type and routes to appropriate search method:
+    - Exact match: "Season 18", "Lesson 42"
+    - Title search: "ENFP", "cognitive functions"
+    - Semantic search: "how do introverts recharge"
+    
+    Returns:
+    [
+        {
+            "type": "lesson" or "season",
+            "lesson_id": 123,
+            "title": "...",
+            "youtube_id": "...",
+            "meta": "Season 11 • Lesson 4",
+            "score": 0.95
+        }
+    ]
+    """
+    import re
+    
+    query = request.get("query", "").strip()
+    
+    if not query:
+        return []
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        results = []
+        
+        # DETECTION 1: Season query (e.g., "Season 18", "s18")
+        season_match = re.search(r'season\s*(\d+)', query, re.IGNORECASE)
+        if season_match:
+            season_num = int(season_match.group(1))
+            results = search_by_season(cursor, season_num)
+            cursor.close()
+            conn.close()
+            return results
+        
+        # DETECTION 2: Lesson query (e.g., "Lesson 42")
+        lesson_match = re.search(r'lesson\s*(\d+)', query, re.IGNORECASE)
+        if lesson_match:
+            lesson_num = int(lesson_match.group(1))
+            results = search_by_lesson_number(cursor, lesson_num)
+            cursor.close()
+            conn.close()
+            return results
+        
+        # DETECTION 3: Category query (exact match)
+        category_results = search_by_category(cursor, query)
+        if category_results:
+            results.extend(category_results)
+        
+        # DETECTION 4: Title search (fuzzy match)
+        title_results = search_by_title(cursor, query)
+        results.extend(title_results)
+        
+        # DETECTION 5: Semantic search (if Pinecone available)
+        # TODO: Add semantic search via Pinecone
+        
+        cursor.close()
+        conn.close()
+        
+        # Remove duplicates and sort by relevance
+        seen = set()
+        unique_results = []
+        for r in results:
+            key = f"{r['type']}_{r.get('lesson_id', r.get('season_id'))}"
+            if key not in seen:
+                seen.add(key)
+                unique_results.append(r)
+        
+        return unique_results[:20]  # Max 20 results
+        
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error while searching. Check server logs for details."
+        )
+
+
+def search_by_season(cursor, season_number):
+    """Find all lessons in a specific season"""
+    cursor.execute("""
+        SELECT 
+            'lesson' as type,
+            lesson_id,
+            lesson_title as title,
+            transcript_id as youtube_id,
+            season_number as season_id,
+            CONCAT('Season ', season_number, ' • Lesson ', lesson_number) as meta,
+            1.0 as score
+        FROM curriculum
+        WHERE season_number = %s
+        ORDER BY lesson_number
+        LIMIT 50
+    """, (str(season_number),))
+    
+    return [dict(zip([col[0] for col in cursor.description], row)) 
+            for row in cursor.fetchall()]
+
+
+def search_by_lesson_number(cursor, lesson_id):
+    """Find specific lesson by ID"""
+    cursor.execute("""
+        SELECT 
+            'lesson' as type,
+            lesson_id,
+            lesson_title as title,
+            transcript_id as youtube_id,
+            season_number as season_id,
+            CONCAT('Season ', season_number, ' • Lesson ', lesson_number) as meta,
+            1.0 as score
+        FROM curriculum
+        WHERE lesson_id = %s
+    """, (lesson_id,))
+    
+    results = cursor.fetchall()
+    return [dict(zip([col[0] for col in cursor.description], row)) 
+            for row in results]
+
+
+def search_by_category(cursor, query):
+    """Search by exact category match"""
+    cursor.execute("""
+        SELECT 
+            'lesson' as type,
+            lesson_id,
+            lesson_title as title,
+            transcript_id as youtube_id,
+            season_number as season_id,
+            CONCAT(category, ' • Lesson ', lesson_number) as meta,
+            1.0 as score
+        FROM curriculum
+        WHERE LOWER(category) = LOWER(%s)
+        ORDER BY lesson_number
+        LIMIT 20
+    """, (query,))
+    
+    results = cursor.fetchall()
+    return [dict(zip([col[0] for col in cursor.description], row)) 
+            for row in results]
+
+
+def search_by_title(cursor, query):
+    """Fuzzy search in lesson titles"""
+    # Use PostgreSQL ILIKE for case-insensitive search
+    search_term = f"%{query}%"
+    
+    cursor.execute("""
+        SELECT 
+            'lesson' as type,
+            lesson_id,
+            lesson_title as title,
+            transcript_id as youtube_id,
+            season_number as season_id,
+            CONCAT('Season ', season_number, ' • Lesson ', lesson_number) as meta,
+            0.8 as score
+        FROM curriculum
+        WHERE lesson_title ILIKE %s
+        ORDER BY lesson_number
+        LIMIT 15
+    """, (search_term,))
+    
+    results = cursor.fetchall()
+    return [dict(zip([col[0] for col in cursor.description], row)) 
+            for row in results]
+
+# ==============================================================================
+# END SEARCH API
+# ==============================================================================
+
+
 # === Batch Re-Tagging System ===
 @app.post("/api/batch-retag")
 async def batch_retag_documents():
