@@ -1,0 +1,235 @@
+# 🔒 EXACT REPLACEMENT CODE - REMOVE AXIS, ADD STREAMING
+
+**CRITICAL: Copy/paste EXACTLY. Change NOTHING else.**
+
+---
+
+## 📋 STEP 1: DELETE THESE LINES
+
+**File:** `main.py`  
+**Action:** DELETE lines 4711-4768 (the AXIS backend call section)
+
+**Lines to DELETE:**
+```python
+4711          backend_api = os.getenv("AXIS_BACKEND_API", "https://axis-of-mind.replit.app/query")  # ❌ DELETE THIS
+4712          backend_key = os.getenv("AXIS_BACKEND_KEY", "")  # ❌ DELETE THIS
+4713          
+4714          if not backend_key:  # ❌ DELETE THIS
+4715              raise HTTPException(status_code=500, detail="Backend API key not configured")  # ❌ DELETE THIS
+4716          
+4717          # Add personality and context to chat questions (not lesson content generation)  # ❌ DELETE THIS
+4718          enhanced_question = question  # ❌ DELETE THIS
+4719          if not is_lesson_content_generation:  # ❌ DELETE THIS
+4720-4739      [entire personality prompt block]  # ❌ DELETE ALL OF THIS
+4740          
+4741          async def generate_and_cache():  # ❌ DELETE THIS
+4742              """Generate fresh content, stream it, AND save to cache"""  # ❌ DELETE THIS
+4743              full_response = ""  # ❌ DELETE THIS
+4744              
+4745              try:  # ❌ DELETE THIS
+4746                  async with httpx.AsyncClient(timeout=60.0) as client:  # ❌ DELETE THIS
+4747                      async with client.stream(  # ❌ DELETE THIS
+4748                          "POST",  # ❌ DELETE THIS
+4749                          backend_api,  # ❌ DELETE THIS
+4750-4768      [entire httpx streaming block]  # ❌ DELETE ALL OF THIS
+```
+
+**DELETE everything from line 4711 to line 4768 (inclusive).**
+
+---
+
+## 📋 STEP 2: ADD THIS EXACT CODE
+
+**File:** `main.py`  
+**Action:** INSERT at line 4711 (where you just deleted)
+
+**PASTE THIS EXACTLY:**
+
+```python
+          # Direct Claude API streaming (no AXIS backend)
+          anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+          
+          if not anthropic_api_key:
+              raise HTTPException(status_code=500, detail="Anthropic API key not configured")
+          
+          # Add personality and context to chat questions (not lesson content generation)
+          enhanced_question = question
+          if not is_lesson_content_generation:
+              enhanced_question = f"""You are an enthusiastic MBTI and Jungian typology expert teaching CS Joseph's curriculum. You're passionate about cognitive functions and love helping people understand how their minds work.
+
+YOUR PERSONALITY:
+- Warm, engaging, and encouraging (like a great teacher, not a robot)
+- Genuinely excited about typology concepts
+- Patient but direct - you explain clearly without fluff
+- Use CS Joseph's teaching style: concrete examples, real scenarios, practical applications
+
+CRITICAL RULES:
+- NEVER say "I'm just an AI" or "I don't have emotions" or "As an AI assistant"
+- NEVER break character as a typology teacher
+- STAY in character as a knowledgeable, enthusiastic human tutor
+- BE conversational and natural - talk like a real person
+- NO robotic disclaimers or corporate-speak
+
+This is about the lesson: "{lesson_title}"
+
+Student question: {question}
+
+Answer naturally as an enthusiastic typology expert, NOT as a generic AI assistant."""
+          
+          async def generate_and_cache():
+              """Generate fresh content using Claude API, stream it, AND save to cache"""
+              import anthropic
+              import json
+              
+              full_response = ""
+              
+              try:
+                  client = anthropic.Anthropic(api_key=anthropic_api_key)
+                  
+                  # Stream directly from Claude API
+                  with client.messages.stream(
+                      model="claude-sonnet-4-20250514",
+                      max_tokens=1500,
+                      messages=[{"role": "user", "content": enhanced_question}]
+                  ) as stream:
+                      for text in stream.text_stream:
+                          # Stream each chunk immediately
+                          full_response += text
+                          yield f"data: {text}\n\n".encode('utf-8')
+                  
+                  # After streaming completes, save to cache (ONLY for lesson content, not chat)
+                  if is_lesson_content_generation and full_response and len(full_response) > 50:
+                      cache_conn = None
+                      cache_cursor = None
+                      try:
+                          cache_conn = get_db()
+                          cache_cursor = cache_conn.cursor()
+                          
+                          # Upsert to cache
+                          cache_cursor.execute("""
+                              INSERT INTO lesson_content_cache (lesson_id, generated_content, generated_at)
+                              VALUES (%s, %s, CURRENT_TIMESTAMP)
+                              ON CONFLICT (lesson_id) 
+                              DO UPDATE SET 
+                                  generated_content = EXCLUDED.generated_content,
+                                  generated_at = CURRENT_TIMESTAMP
+                          """, (lesson_id, full_response))
+                          
+                          cache_conn.commit()
+                          logger.info(f"💾 Cached {len(full_response)} chars for lesson {lesson_id}")
+                          
+                      except Exception as cache_error:
+                          logger.error(f"Failed to cache content: {cache_error}")
+                      finally:
+                          if cache_cursor:
+                              cache_cursor.close()
+                          if cache_conn:
+                              cache_conn.close()
+                  elif not is_lesson_content_generation:
+                      logger.info(f"💬 Chat question - not caching (conversational)")
+              
+              except Exception as e:
+                  logger.error(f"Error in AI chat: {e}")
+                  yield f"data: Error: {str(e)}\n\n".encode('utf-8')
+```
+
+---
+
+## 📋 STEP 3: VERIFY IMPORTS
+
+**File:** `main.py`  
+**Action:** Check the top of the file
+
+**Make sure these imports exist:**
+```python
+import anthropic
+import os
+from fastapi.responses import StreamingResponse
+```
+
+**If `import anthropic` is missing, add it at the top with other imports.**
+
+---
+
+## 📋 STEP 4: UPDATE RESPONSE TYPE
+
+**File:** `main.py`  
+**Line:** 4805 (after your changes)
+
+**The return statement should now be:**
+```python
+          return StreamingResponse(
+              generate_and_cache(), 
+              media_type="text/event-stream",
+              headers={
+                  "Cache-Control": "no-cache",
+                  "X-Accel-Buffering": "no"
+              }
+          )
+```
+
+**Change `media_type="text/plain"` to `media_type="text/event-stream"`**
+
+---
+
+## 🧪 STEP 5: TEST
+
+**Terminal test:**
+```bash
+curl -N http://localhost:5000/api/lesson/1/ai-chat \
+  -H "Content-Type: application/json" \
+  -d '{"question":"hi"}' \
+  --no-buffer
+```
+
+**Expected output:**
+```
+data: Hey
+data: !
+data:  Ready
+data:  to
+data:  dive
+data:  into
+...
+```
+
+**Text should appear chunk-by-chunk, NOT all at once!**
+
+---
+
+## 🎯 WHAT THIS DOES
+
+**Before:**
+```
+Flask → AXIS backend → Claude → AXIS buffers → returns all at once
+```
+
+**After:**
+```
+Flask → Claude API → streams directly → word-by-word!
+```
+
+---
+
+## ⚠️ CRITICAL NOTES
+
+1. **Keep caching logic** - It's already correct
+2. **Keep personality prompt** - It's already correct  
+3. **Only change the API call** - AXIS → Claude direct
+4. **Use Server-Sent Events format** - `data: {text}\n\n`
+5. **Change media type** - `text/event-stream` (not `text/plain`)
+
+---
+
+## ✅ DEFINITION OF DONE
+
+- [ ] Lines 4711-4768 deleted
+- [ ] New code pasted at line 4711
+- [ ] `import anthropic` exists at top
+- [ ] Media type is `text/event-stream`
+- [ ] curl test shows chunks streaming
+- [ ] Browser chat streams word-by-word
+
+---
+
+**NO OTHER CHANGES. Just these exact edits.**

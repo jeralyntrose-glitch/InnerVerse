@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import openai
+import anthropic
 from pinecone import Pinecone
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -4679,11 +4680,22 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
                 
                 logger.info(f"💾 Cache HIT for lesson {lesson_id} (generated at {cached_at})")
                 
-                # Return cached content immediately (no streaming needed)
+                # Return cached content in SSE format for consistency
                 async def return_cached():
-                    yield cached_content.encode('utf-8')
+                    # Split into chunks to simulate streaming (better UX)
+                    chunk_size = 100
+                    for i in range(0, len(cached_content), chunk_size):
+                        chunk = cached_content[i:i + chunk_size]
+                        yield f"data: {chunk}\n\n".encode('utf-8')
                 
-                return StreamingResponse(return_cached(), media_type="text/plain")
+                return StreamingResponse(
+                    return_cached(), 
+                    media_type="text/event-stream",
+                    headers={
+                        "Cache-Control": "no-cache",
+                        "X-Accel-Buffering": "no"
+                    }
+                )
         
         # Cache MISS or force regenerate - fetch lesson data and generate fresh
         logger.info(f"🔄 Cache MISS for lesson {lesson_id} - generating fresh content")
@@ -4704,15 +4716,23 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
         
         if not document_id:
             async def no_content_fallback():
-                yield "This lesson's content is not yet available in the knowledge base. The video is available to watch above!"
+                message = "This lesson's content is not yet available in the knowledge base. The video is available to watch above!"
+                yield f"data: {message}\n\n".encode('utf-8')
             
-            return StreamingResponse(no_content_fallback(), media_type="text/plain")
+            return StreamingResponse(
+                no_content_fallback(), 
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no"
+                }
+            )
         
-        backend_api = os.getenv("AXIS_BACKEND_API", "https://axis-of-mind.replit.app/query")
-        backend_key = os.getenv("AXIS_BACKEND_KEY", "")
+        # Direct Claude API streaming (no AXIS backend)
+        anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
         
-        if not backend_key:
-            raise HTTPException(status_code=500, detail="Backend API key not configured")
+        if not anthropic_api_key:
+            raise HTTPException(status_code=500, detail="Anthropic API key not configured")
         
         # Add personality and context to chat questions (not lesson content generation)
         enhanced_question = question
@@ -4739,33 +4759,25 @@ Student question: {question}
 Answer naturally as an enthusiastic typology expert, NOT as a generic AI assistant."""
         
         async def generate_and_cache():
-            """Generate fresh content, stream it, AND save to cache"""
+            """Generate fresh content using Claude API, stream it, AND save to cache"""
+            import anthropic
+            import json
+            
             full_response = ""
             
             try:
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    async with client.stream(
-                        "POST",
-                        backend_api,
-                        headers={
-                            "Authorization": f"Bearer {backend_key}",
-                            "Content-Type": "application/json"
-                        },
-                        json={
-                            "document_id": str(document_id),
-                            "question": enhanced_question,
-                            "tags": []
-                        }
-                    ) as response:
-                        if response.status_code != 200:
-                            error_msg = f"Error: Backend API returned {response.status_code}\n"
-                            yield error_msg.encode('utf-8')
-                            return
-                        
-                        # Stream chunks to client AND collect for caching
-                        async for chunk in response.aiter_bytes():
-                            full_response += chunk.decode('utf-8', errors='ignore')
-                            yield chunk
+                client = anthropic.AsyncAnthropic(api_key=anthropic_api_key)
+                
+                # Stream directly from Claude API (ASYNC!)
+                async with client.messages.stream(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1500,
+                    messages=[{"role": "user", "content": enhanced_question}]
+                ) as stream:
+                    async for text in stream.text_stream:
+                        # Stream each chunk immediately
+                        full_response += text
+                        yield f"data: {text}\n\n".encode('utf-8')
                 
                 # After streaming completes, save to cache (ONLY for lesson content, not chat)
                 if is_lesson_content_generation and full_response and len(full_response) > 50:
@@ -4800,9 +4812,16 @@ Answer naturally as an enthusiastic typology expert, NOT as a generic AI assista
             
             except Exception as e:
                 logger.error(f"Error in AI chat: {e}")
-                yield f"Error: {str(e)}\n".encode('utf-8')
+                yield f"data: Error: {str(e)}\n\n".encode('utf-8')
         
-        return StreamingResponse(generate_and_cache(), media_type="text/plain")
+        return StreamingResponse(
+            generate_and_cache(), 
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no"
+            }
+        )
         
     except HTTPException:
         raise

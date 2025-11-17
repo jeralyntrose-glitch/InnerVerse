@@ -409,27 +409,48 @@ Format with clear headers and organized sections. Make it educational and engagi
         let streamContainer = null;
         let hasStartedStreaming = false;
         
+        // Parse SSE format: "data: {text}\n\n"
+        let buffer = '';
         while (true) {
             const { done, value } = await reader.read();
             
             if (done) break;
             
+            // Decode chunk and add to buffer
             const chunk = decoder.decode(value, { stream: true });
-            fullResponse += chunk;
+            buffer += chunk;
             
-            // Clear loading state ONLY when first chunk arrives
-            if (!hasStartedStreaming) {
-                contentEl.innerHTML = '<div class="streaming-content"></div>';
-                streamContainer = contentEl.querySelector('.streaming-content');
-                hasStartedStreaming = true;
-            }
+            // Parse SSE events (split on double newlines)
+            const events = buffer.split('\n\n');
             
-            // Update UI in real-time with formatted markdown
-            if (streamContainer) {
-                streamContainer.innerHTML = formatMarkdown(fullResponse);
-                
-                // Auto-scroll to bottom as content streams in
-                contentEl.scrollTop = contentEl.scrollHeight;
+            // Keep last incomplete event in buffer
+            buffer = events.pop() || '';
+            
+            // Process complete events
+            for (const event of events) {
+                // Extract data from SSE format
+                const lines = event.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const text = line.substring(6); // Remove "data: " prefix
+                        fullResponse += text;
+                        
+                        // Clear loading state ONLY when first chunk arrives
+                        if (!hasStartedStreaming) {
+                            contentEl.innerHTML = '<div class="streaming-content"></div>';
+                            streamContainer = contentEl.querySelector('.streaming-content');
+                            hasStartedStreaming = true;
+                        }
+                        
+                        // Update UI in real-time with formatted markdown
+                        if (streamContainer) {
+                            streamContainer.innerHTML = formatMarkdown(fullResponse);
+                            
+                            // Auto-scroll to bottom as content streams in
+                            contentEl.scrollTop = contentEl.scrollHeight;
+                        }
+                    }
+                }
             }
         }
         
@@ -836,27 +857,47 @@ async function sendMessage() {
         const aiMessageId = createAIMessageContainer();
         
         // Stream chunks as they arrive (INSTANT UPDATES!)
+        // Parse SSE format: "data: {text}\n\n"
+        let buffer = '';
         while (true) {
             const { done, value } = await reader.read();
             
             if (done) break;
             
-            // Decode chunk and add to response
+            // Decode chunk and add to buffer
             const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
             
-            // Remove typing dots on FIRST chunk (not before!)
-            if (firstChunk && chunk.trim()) {
-                removeTypingIndicator();
-                firstChunk = false;
+            // Parse SSE events (split on double newlines)
+            const events = buffer.split('\n\n');
+            
+            // Keep last incomplete event in buffer
+            buffer = events.pop() || '';
+            
+            // Process complete events
+            for (const event of events) {
+                // Extract data from SSE format
+                const lines = event.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const text = line.substring(6); // Remove "data: " prefix
+                        
+                        // Remove typing dots on FIRST non-empty chunk
+                        if (firstChunk && text.trim()) {
+                            removeTypingIndicator();
+                            firstChunk = false;
+                        }
+                        
+                        fullResponse += text;
+                        
+                        // Update message IMMEDIATELY with new text (streaming effect!)
+                        updateAIMessage(aiMessageId, fullResponse);
+                        
+                        // Auto-scroll to show new content
+                        scrollChatToBottom();
+                    }
+                }
             }
-            
-            fullResponse += chunk;
-            
-            // Update message IMMEDIATELY with new text (streaming effect!)
-            updateAIMessage(aiMessageId, fullResponse);
-            
-            // Auto-scroll to show new content
-            scrollChatToBottom();
         }
         
         // Final cleanup - remove any JSON wrapper if present
