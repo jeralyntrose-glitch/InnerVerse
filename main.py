@@ -4805,6 +4805,55 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
                 }
             )
         
+        # Query Pinecone for transcript chunks
+        logger.info(f"📜 Fetching transcript from Pinecone for document_id: {document_id}")
+        
+        try:
+            index = get_pinecone_client()
+            
+            # Query with dummy vector to get chunks by metadata filter
+            dummy_vector = [0.0] * 3072  # text-embedding-3-large dimension
+            results = index.query(
+                vector=dummy_vector,
+                filter={"doc_id": document_id},
+                top_k=200,  # Get all chunks (most lessons have <200 chunks)
+                include_metadata=True
+            )
+            
+            # Combine chunks into full transcript, sorted by chunk_index
+            chunks_with_index = []
+            for match in results.matches:
+                metadata = match.metadata
+                if 'text' in metadata:
+                    chunk_index = metadata.get('chunk_index', 0)
+                    chunks_with_index.append((chunk_index, metadata['text']))
+            
+            # Sort by chunk_index to maintain proper order
+            chunks_with_index.sort(key=lambda x: x[0])
+            transcript_chunks = [text for _, text in chunks_with_index]
+            transcript_text = "\n\n".join(transcript_chunks)
+            
+            logger.info(f"✅ Retrieved {len(transcript_chunks)} transcript chunks ({len(transcript_text)} chars)")
+            
+        except Exception as e:
+            logger.error(f"❌ Error fetching transcript from Pinecone: {e}")
+            transcript_text = ""
+        
+        # If no transcript found, return fallback
+        if not transcript_text or len(transcript_text) < 100:
+            async def no_transcript_fallback():
+                message = "This lesson's transcript is not yet available. The video is available to watch above!"
+                yield f"data: {message}\n\n".encode('utf-8')
+            
+            return StreamingResponse(
+                no_transcript_fallback(), 
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no"
+                }
+            )
+        
         # Direct Claude API streaming (no AXIS backend)
         anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
         
@@ -4812,8 +4861,17 @@ async def lesson_ai_chat(lesson_id: int, request: dict):
             raise HTTPException(status_code=500, detail="Anthropic API key not configured")
         
         # Add personality and context to chat questions (not lesson content generation)
+        # IMPORTANT: Add transcript context for BOTH lesson content generation AND chat questions
         enhanced_question = question
-        if not is_lesson_content_generation:
+        
+        if is_lesson_content_generation:
+            # For lesson content generation, provide full transcript
+            enhanced_question = f"""{question}
+
+LESSON TRANSCRIPT:
+{transcript_text}"""
+        else:
+            # For chat questions, add personality + transcript context
             enhanced_question = f"""You are an enthusiastic MBTI and Jungian typology expert teaching CS Joseph's curriculum. You're passionate about cognitive functions and love helping people understand how their minds work.
 
 YOUR PERSONALITY:
@@ -4831,9 +4889,12 @@ CRITICAL RULES:
 
 This is about the lesson: "{lesson_title}"
 
+LESSON TRANSCRIPT:
+{transcript_text}
+
 Student question: {question}
 
-Answer naturally as an enthusiastic typology expert, NOT as a generic AI assistant."""
+Answer naturally as an enthusiastic typology expert based on the transcript content, NOT as a generic AI assistant."""
         
         async def generate_and_cache():
             """Generate fresh content using Claude API, stream it, AND save to cache"""

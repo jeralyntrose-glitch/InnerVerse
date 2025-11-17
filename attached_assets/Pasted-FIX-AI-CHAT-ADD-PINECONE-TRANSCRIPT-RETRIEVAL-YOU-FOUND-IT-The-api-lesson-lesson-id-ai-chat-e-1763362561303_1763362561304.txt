@@ -1,0 +1,72 @@
+FIX AI CHAT - ADD PINECONE TRANSCRIPT RETRIEVAL
+
+YOU FOUND IT! The /api/lesson/{lesson_id}/ai-chat endpoint 
+fetches document_id but never queries Pinecone for the actual 
+transcript chunks!
+
+CURRENT FLOW (BROKEN):
+1. Get document_id from database ✅
+2. Send question to Claude ❌ (without transcript!)
+3. Claude gets "summarize this transcript" but has NO transcript ❌
+
+CORRECT FLOW (NEEDED):
+1. Get document_id from database ✅
+2. Query Pinecone for all chunks with that document_id ✅
+3. Combine chunks into full transcript text ✅
+4. Send question + transcript to Claude ✅
+5. Claude can actually answer with context! ✅
+
+FIX NEEDED in main.py:
+
+Location: /api/lesson/{lesson_id}/ai-chat endpoint
+Around line 4791 (after getting document_id)
+
+Add this code:
+```python
+# After getting document_id
+if document_id:
+    # Query Pinecone for transcript chunks
+    pc = get_pinecone_client()
+    index = pc.Index('mbti-knowledge-v2')
+    
+    # Get all chunks for this document
+    # Query with dummy vector to get chunks by metadata
+    dummy_vector = [0.0] * 1536
+    results = index.query(
+        vector=dummy_vector,
+        filter={"document_id": document_id},
+        top_k=100,  # Get all chunks
+        include_metadata=True
+    )
+    
+    # Combine chunks into full transcript
+    chunks = []
+    for match in results.matches:
+        if 'text' in match.metadata:
+            chunks.append(match.metadata['text'])
+    
+    transcript_text = "\n\n".join(chunks)
+    
+    # Add transcript to question context
+    enhanced_question = f"""
+Based on this lesson transcript, please answer the following question:
+
+QUESTION: {question}
+
+TRANSCRIPT:
+{transcript_text}
+"""
+    
+    # Use enhanced_question instead of raw question
+    # when calling Claude API
+```
+
+VERIFICATION:
+After fix, test Season 20 lesson:
+1. Ask "What is this lesson about?"
+2. Should get accurate answer based on transcript
+3. Not generic "I can't access transcripts" error
+
+This will fix ALL lessons (main curriculum + Season 20)!
+
+Please implement this fix!

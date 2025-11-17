@@ -50,7 +50,7 @@ Preferred communication style: Simple, everyday language with a decent amount of
 - **Core APIs**: Upload (PDF, audio, base64), querying, text-to-PDF conversion, re-processing.
 - **Document Management**: CRUD for documents and chat commands.
 - **Claude Chat API**: Manage project categories, conversations, messages.
-- **Lesson Chat API**: AI tutor interaction, history retrieval, history clearing.
+- **Lesson Chat API**: AI tutor interaction with Pinecone transcript retrieval, history retrieval, history clearing. **Critical Fix (Nov 2025)**: Fixed `/api/lesson/{lesson_id}/ai-chat` to query Pinecone for transcript chunks before calling Claude, enabling context-aware lesson summaries and chat responses.
 - **OpenAI-Compatible API**: `/v1/models` and `/v1/chat/completions` for LibreChat integration (wrapping Claude and Pinecone).
 - **System APIs**: Migration and usage monitoring.
 - **Configuration**: Environment variables (Replit Secrets) for API keys, lazy initialization for API clients.
