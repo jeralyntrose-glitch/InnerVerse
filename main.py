@@ -5044,6 +5044,190 @@ async def get_lesson_transcript(lesson_id: int) -> Dict[str, Any]:
 # END PHASE 7.3 ROUTES
 # ==============================================================================
 
+# ==============================================================================
+# ADMIN API: AXIS MIND INTEGRATION
+# ==============================================================================
+
+class AddLessonRequest(BaseModel):
+    """Request model for adding lessons from AXIS MIND uploader"""
+    lesson_title: str
+    youtube_url: str
+    youtube_id: str  # YouTube video ID (becomes transcript_id)
+    document_id: str  # UUID from Pinecone
+    season_number: str | None = None
+    episode_number: int | None = None
+    category: str = ""
+    is_supplementary: int = 0
+    admin_token: str | None = None  # TODO: Implement proper authentication
+
+@app.post("/api/admin/add-lesson")
+async def add_lesson_from_uploader(request: AddLessonRequest):
+    """
+    API endpoint for AXIS MIND uploader to add new lessons
+    
+    Accepts lesson data from uploader and creates database entry
+    
+    Expected request body:
+    {
+        "lesson_title": "How Do ESFPs Compare To ENFPs?",
+        "youtube_url": "https://youtube.com/watch?v=ABC123",
+        "youtube_id": "ABC123",
+        "season_number": "11",
+        "episode_number": 4,
+        "document_id": "uuid-from-pinecone",
+        "category": "main_curriculum" or "supplementary",
+        "is_supplementary": 0 or 1
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "lesson_id": 123,
+        "message": "Lesson added successfully"
+    }
+    """
+    # WARNING: This endpoint currently has NO AUTHENTICATION
+    # TODO: Add proper authentication before deploying to production
+    # Recommended: Add admin_token validation or integrate with existing auth system
+    
+    conn = None
+    cursor = None
+    
+    try:
+        # Validate UUID format for document_id
+        try:
+            uuid.UUID(request.document_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid document_id format. Must be a valid UUID."
+            )
+        
+        # Extract and validate data from request model
+        lesson_title = request.lesson_title
+        youtube_url = request.youtube_url
+        youtube_id = request.youtube_id  # This is the transcript_id
+        season_number = request.season_number
+        episode_number = request.episode_number
+        document_id = request.document_id
+        category = request.category
+        is_supplementary = request.is_supplementary
+        
+        # Check if lesson already exists (prevent duplicates)
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT lesson_id FROM curriculum 
+            WHERE transcript_id = %s
+        """, (youtube_id,))
+        
+        existing = cursor.fetchone()
+        
+        if existing:
+            cursor.close()
+            conn.close()
+            return {
+                "success": False,
+                "error": "duplicate",
+                "message": f"Lesson with YouTube ID {youtube_id} already exists",
+                "lesson_id": existing[0]
+            }
+        
+        # Determine module and season info
+        if is_supplementary:
+            module_number = 99
+            module_name = "Supplementary Content"
+            season_name = category or "Supplementary"
+            season_num_str = str(season_number) if season_number else "S99"
+        else:
+            # Main curriculum - map season to module
+            season_num = int(season_number) if season_number else 1
+            if season_num <= 10:
+                module_number = 1
+                module_name = "Module 1: Foundations"
+            elif season_num <= 20:
+                module_number = 2
+                module_name = "Module 2: Development"
+            elif season_num <= 30:
+                module_number = 3
+                module_name = "Module 3: Mastery"
+            else:
+                module_number = 4
+                module_name = "Module 4: Advanced"
+            
+            season_num_str = str(season_number)
+            season_name = f"Season {season_number}"
+        
+        # Get next order_index (must be globally unique)
+        cursor.execute("SELECT MAX(order_index) FROM curriculum")
+        max_order = cursor.fetchone()[0]
+        order_index = (max_order or 0) + 1
+        
+        # Determine lesson number
+        lesson_number = int(episode_number) if episode_number else order_index
+        
+        # Insert new lesson
+        cursor.execute("""
+            INSERT INTO curriculum (
+                module_number, module_name, season_number, season_name,
+                lesson_number, lesson_title, youtube_url, transcript_id,
+                document_id, category, is_supplementary, order_index,
+                has_video, content_type
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            RETURNING lesson_id
+        """, (
+            module_number, module_name, season_num_str, season_name,
+            lesson_number, lesson_title, youtube_url, youtube_id,
+            document_id, category, is_supplementary, order_index,
+            True, 'main' if not is_supplementary else 'supplementary'
+        ))
+        
+        new_lesson_id = cursor.fetchone()[0]
+        
+        conn.commit()
+        
+        logger.info(f"✅ Added new lesson: {lesson_title} (ID: {new_lesson_id})")
+        
+        return {
+            "success": True,
+            "lesson_id": new_lesson_id,
+            "message": f"Lesson '{lesson_title}' added successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding lesson: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+        # Don't leak database details to external callers
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error while adding lesson. Check server logs for details."
+        )
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except:
+                pass
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
+
+# ==============================================================================
+# END ADMIN API
+# ==============================================================================
+
 
 # === Batch Re-Tagging System ===
 @app.post("/api/batch-retag")
