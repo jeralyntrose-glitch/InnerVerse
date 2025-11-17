@@ -47,7 +47,7 @@ def get_existing_youtube_ids():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT youtube_id FROM curriculum WHERE youtube_id IS NOT NULL")
+    cursor.execute("SELECT transcript_id FROM curriculum WHERE transcript_id IS NOT NULL")
     existing = {row[0] for row in cursor.fetchall()}
     
     cursor.close()
