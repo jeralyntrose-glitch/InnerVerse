@@ -1,0 +1,265 @@
+# 🔒 SURGICAL SPEC: IMPORT SEASON 20 - TYPING FAMOUS PEOPLE
+
+**OBJECTIVE: Import all 64 Season 20 videos with proper YouTube data to Supplementary Library**
+
+**PARSED & READY: season_20_import.csv (64 lessons with YouTube URLs)**
+
+---
+
+## 📊 WHAT WE HAVE
+
+**File:** `/home/claude/season_20_import.csv`  
+**Lessons:** 64 videos  
+**YouTube Data:** All have youtube_url and youtube_id ✅  
+**Category:** "Typing Famous People"  
+**Module:** 99 (Supplementary Library)
+
+**Preview:**
+1. How To Type: Donald J Trump Edition | CS Joseph
+2. How To Type: Elon Musk Edition | CS Joseph
+3. How To Type: Alex Jones Edition
+4. How To Type Taylor Swift | Taylor Swift MBTI personality type
+5. How To Type: Kanye West Edition
+... and 59 more!
+
+---
+
+## 🐛 CURRENT PROBLEM
+
+**Database has broken Season 20 data:**
+- 31 lessons exist but missing youtube_url and youtube_id
+- Thumbnails show gray placeholders
+- Lesson pages say "Go to Skool to watch"
+- But videos ARE on YouTube!
+
+**Fix:** Delete broken data, import clean data!
+
+---
+
+## 📋 STEP 1: DELETE BROKEN SEASON 20 DATA
+
+**CRITICAL: Backup first, then delete!**
+
+```sql
+-- Backup existing Season 20 (just in case)
+CREATE TABLE curriculum_season20_backup AS
+SELECT * FROM curriculum WHERE season_id = 20;
+
+-- Delete broken Season 20 lessons
+DELETE FROM curriculum WHERE season_id = 20;
+
+-- Verify deletion
+SELECT COUNT(*) FROM curriculum WHERE season_id = 20;
+-- Should return: 0
+```
+
+---
+
+## 📋 STEP 2: IMPORT SEASON 20 FROM CSV
+
+**File location:** `/home/claude/season_20_import.csv`
+
+**Import command (PostgreSQL):**
+
+```sql
+COPY curriculum (
+    module_id, season_id, lesson_id, lesson_number,
+    lesson_title, youtube_url, youtube_id, category,
+    is_supplementary, document_id, order_index
+)
+FROM '/home/claude/season_20_import.csv'
+DELIMITER ','
+CSV HEADER;
+```
+
+**OR use Python import:**
+
+```python
+import csv
+import psycopg2
+import os
+
+conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+cursor = conn.cursor()
+
+with open('/home/claude/season_20_import.csv', 'r', encoding='utf-8') as f:
+    reader = csv.DictReader(f)
+    
+    for row in reader:
+        cursor.execute("""
+            INSERT INTO curriculum (
+                module_id, season_id, lesson_id, lesson_number,
+                lesson_title, youtube_url, youtube_id, category,
+                is_supplementary, document_id, order_index
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            row['module_id'], row['season_id'], row['lesson_id'], 
+            row['lesson_number'], row['lesson_title'], row['youtube_url'],
+            row['youtube_id'], row['category'], row['is_supplementary'],
+            row['document_id'] or None, row['order_index']
+        ))
+
+conn.commit()
+cursor.close()
+conn.close()
+
+print("✅ Imported 64 Season 20 lessons!")
+```
+
+---
+
+## 📋 STEP 3: ADD CATEGORY CARD TO DASHBOARD
+
+**File:** `static/curriculum_dashboard.html`
+
+**Location:** In the Supplementary Library section, add this card:
+
+```html
+<!-- Typing Famous People -->
+<a href="/category/typing-famous-people" class="category-card">
+    <div class="category-icon">⭐</div>
+    <h3>Typing Famous People</h3>
+    <p class="lesson-count">64 lessons</p>
+    <p class="description">Celebrity and public figure type analysis</p>
+</a>
+```
+
+**Insert after:** The "Analyzing True Crime" card  
+**Before:** Closing `</div>` of category-grid
+
+---
+
+## 📋 STEP 4: ADD CATEGORY ROUTE MAPPING
+
+**File:** `main.py`
+
+**Find the `category_map` dictionary in the `/category/{category_slug}` route:**
+
+```python
+category_map = {
+    'cs-joseph-responds': 'CS Joseph Responds',
+    'livestream-specials': 'Livestream Specials',
+    'public-qa': 'Public Q&A',
+    'cs-psychic': 'CS Psychic',
+    'analyzing-true-crime': 'Analyzing True Crime',
+    # ADD THIS LINE:
+    'typing-famous-people': 'Typing Famous People'
+}
+```
+
+---
+
+## 🧪 STEP 5: VERIFY IMPORT
+
+**Run these checks:**
+
+```sql
+-- Check Season 20 count
+SELECT COUNT(*) FROM curriculum WHERE season_id = 20;
+-- Should return: 64
+
+-- Check YouTube data is populated
+SELECT lesson_title, youtube_id, youtube_url
+FROM curriculum
+WHERE season_id = 20
+LIMIT 5;
+-- All should have youtube_id and youtube_url
+
+-- Check category assignment
+SELECT DISTINCT category, is_supplementary
+FROM curriculum
+WHERE season_id = 20;
+-- Should return: "Typing Famous People", 1
+```
+
+---
+
+## 🧪 STEP 6: TEST IN BROWSER
+
+**After import:**
+
+1. **Go to dashboard**
+   - Should see "Typing Famous People" card (64 lessons)
+
+2. **Click "Typing Famous People" card**
+   - Should see category page with 64 videos
+   - Thumbnails should load from YouTube (not gray!)
+
+3. **Click any video (e.g., "Donald Trump")**
+   - Should open lesson page
+   - Should show YouTube video player (NOT "Go to Skool")
+   - Video should play correctly
+
+4. **Test search**
+   - Search "donald trump" → Should find lesson
+   - Search "typing famous" → Should find all 64 lessons
+
+---
+
+## ✅ EXPECTED RESULTS
+
+**Before Fix:**
+- ❌ 31 broken lessons (no YouTube data)
+- ❌ Gray placeholder thumbnails
+- ❌ "Go to Skool" message on lesson pages
+- ❌ Not in Supplementary Library
+
+**After Fix:**
+- ✅ 64 complete lessons with YouTube data
+- ✅ Real YouTube thumbnails
+- ✅ Embedded video players on lesson pages
+- ✅ Shows in Supplementary Library
+- ✅ Searchable
+- ✅ Fully functional!
+
+---
+
+## 🎯 SUPPLEMENTARY LIBRARY (After Import)
+
+**Will have 6 categories:**
+1. CS Joseph Responds (100 lessons)
+2. Livestream Specials (91 lessons)
+3. Public Q&A (34 lessons)
+4. CS Psychic (29 lessons)
+5. Analyzing True Crime (4 lessons)
+6. **Typing Famous People (64 lessons)** ← NEW!
+
+**Total Supplementary:** 322 lessons  
+**Total Platform:** 635 lessons (313 main + 322 supplementary)
+
+---
+
+## 🚫 CRITICAL RULES
+
+**DO:**
+✅ Backup existing Season 20 before deleting
+✅ Import from season_20_import.csv exactly
+✅ Add category card to dashboard
+✅ Add route mapping
+✅ Verify all 64 lessons imported
+✅ Test thumbnails and video players
+
+**DO NOT:**
+❌ Manually edit CSV (it's perfect as-is)
+❌ Skip the backup step
+❌ Import without deleting old data first
+❌ Change lesson_id values (they're sequential)
+❌ Modify YouTube URLs or IDs
+
+---
+
+## ✅ DEFINITION OF DONE
+
+Season 20 import is complete when:
+
+1. ✅ Database has 64 Season 20 lessons
+2. ✅ All lessons have youtube_url and youtube_id
+3. ✅ Dashboard shows "Typing Famous People" card
+4. ✅ Category page shows 64 videos with thumbnails
+5. ✅ Clicking video opens lesson page with player
+6. ✅ Search finds Season 20 lessons
+7. ✅ No broken thumbnails or "Go to Skool" messages
+
+---
+
+**FOLLOW THIS SPEC EXACTLY. CSV IS READY. JUST IMPORT IT!**
