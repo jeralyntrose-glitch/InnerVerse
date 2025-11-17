@@ -23,3 +23,5 @@ anthropic
 gunicorn
 python-dotenv
 fastapi-csrf-protect
+jinja2
+pydantic-settings
