@@ -148,15 +148,65 @@
             pointer-events: none;
         }
 
+        /* Desktop sidebar toggle */
+        .sidebar-toggle-desktop {
+            position: fixed;
+            left: 260px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 56px;
+            background: var(--color-button-bg);
+            border: 1px solid var(--color-border);
+            border-left: none;
+            border-radius: 0 6px 6px 0;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-secondary);
+            font-size: 12px;
+            transition: all 0.3s ease;
+            z-index: 999;
+        }
+
+        .sidebar-toggle-desktop:hover {
+            background: var(--color-button-hover);
+            color: var(--color-accent);
+            border-color: var(--color-accent);
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s ease;
+            display: block;
+        }
+
+        /* Adjust position when sidebar is closed */
+        .sidebar.closed ~ .main-content .sidebar-toggle-desktop {
+            left: 0;
+        }
+
+        .sidebar.closed ~ .main-content .sidebar-toggle-desktop .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Main content adjustment when sidebar closed */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            transition: all 0.3s ease;
+        }
+
         /* Sidebar */
         .sidebar {
-            width: 280px;
+            width: 260px;
             background: var(--color-sidebar-bg);
             border-right: 1px solid var(--color-border);
             display: flex;
             flex-direction: column;
             transition: transform 0.3s ease;
             z-index: 1000;
+            flex-shrink: 0;
         }
 
         .sidebar.closed {
@@ -375,6 +425,27 @@
 
         .conversation-item.active {
             background: var(--color-conversation-active);
+        }
+
+        .conversation-item.loading {
+            opacity: 0.6;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .conversation-item.loading::after {
+            content: '⏳';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         .conversation-title {
@@ -734,10 +805,12 @@
             overflow-y: auto;
             overflow-x: hidden;
             padding: 0;
+            padding-bottom: 180px;
             display: flex;
             flex-direction: column;
             gap: 0;
             background: var(--color-main-bg);
+            scroll-behavior: smooth;
         }
         
         /* ALL message containers must be transparent - only bubbles have color */
@@ -809,6 +882,23 @@
             color: var(--color-text-primary);
             line-height: 1.6;
             max-width: 100%;
+        }
+
+        /* Remove duplicate teal/cyan question boxes */
+        .message.assistant .message-content p:last-child {
+            color: var(--color-text-primary) !important;
+        }
+
+        .message.assistant .message-content [style*="color: #10a37f"],
+        .message.assistant .message-content [style*="color: #0ea47a"],
+        .message.assistant .message-content [style*="color: rgb(16, 163, 127)"],
+        .message.assistant .message-content [style*="color: cyan"],
+        .message.assistant .message-content [style*="color: teal"],
+        .message.assistant .message-content [style*="background: #10a37f"],
+        .message.assistant .message-content [style*="background: #0ea47a"],
+        .message.assistant .message-content [style*="background: rgba(16, 163, 127"] {
+            color: var(--color-text-primary) !important;
+            background: transparent !important;
         }
 
         /* No avatars - minimalist design */
@@ -1152,15 +1242,19 @@
         }
 
         .input-container {
-            padding: 4px 16px;
-            background: transparent;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 16px;
+            background: var(--color-page-bg);
+            border-top: 1px solid var(--color-border);
+            z-index: 100;
             display: flex;
             align-items: center;
-            gap: 6px;
-            box-shadow: none;
-            max-width: 1200px; /* Wider for desktop - full-width with breathing room */
-            margin: 0 auto;
-            width: 100%; /* Ensure it stretches to max-width */
+            gap: 8px;
+            max-width: 100%;
+            margin: 0;
         }
         
         /* Upload button */
@@ -1508,9 +1602,29 @@
                 left: 0;
                 top: 0;
                 bottom: 0;
-                width: 100%;
+                width: 80%;
                 z-index: 1000;
+                box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
                 overscroll-behavior: contain; /* Prevent scroll chaining to body on mobile */
+            }
+            
+            /* Tap chat area to close sidebar */
+            .main-content::after {
+                content: '';
+                position: fixed;
+                right: 0;
+                top: 0;
+                width: 20%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.3);
+                z-index: 999;
+                display: none;
+                pointer-events: none;
+            }
+            
+            .sidebar:not(.closed) ~ .main-content::after {
+                display: block;
+                pointer-events: auto;
             }
 
             .sidebar-header {
@@ -1603,15 +1717,17 @@
 
             .input-container {
                 position: fixed;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); /* Raised 24px above safe area */
+                bottom: env(safe-area-inset-bottom, 0px);
                 left: 0;
                 right: 0;
-                padding: 8px 12px; /* Consistent padding */
+                padding: 10px 12px;
                 background: var(--color-page-bg);
-                z-index: 1100; /* Above sidebar (1000) and other overlays */
+                z-index: 1100;
                 max-width: 100%;
-                margin-bottom: 0; /* Bottom margin via calc above */
-                transition: background 0.2s ease, padding 0.2s ease;
+            }
+            
+            .message-input {
+                font-size: 16px;
             }
             
             /* When input is focused (keyboard open), compact but with proper background */
@@ -1649,9 +1765,19 @@
             .burger-menu {
                 display: none;
             }
+            
+            .sidebar-toggle-desktop {
+                display: flex;
+            }
 
             .main-content {
                 margin-left: 0;
+            }
+            
+            .input-container {
+                max-width: 1200px;
+                left: 50%;
+                transform: translateX(-50%);
             }
             
             /* Desktop: Narrow AI messages for better readability */
@@ -1674,6 +1800,11 @@
     <div class="app-container">
         <!-- Burger Menu -->
         <button class="burger-menu" id="burgerMenu">☰</button>
+
+        <!-- Desktop Sidebar Toggle -->
+        <button class="sidebar-toggle-desktop" id="sidebarToggleDesktop" title="Toggle sidebar">
+            <span class="toggle-icon">◀</span>
+        </button>
 
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">

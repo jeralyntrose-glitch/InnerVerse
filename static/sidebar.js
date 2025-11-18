@@ -11,6 +11,7 @@ let currentMenu = null;
 let searchTerm = '';
 let searchDebounceTimer = null;
 let isBackendSearch = false; // Flag to track if we're using backend search results
+let currentLoadToken = 0; // Track current load request to prevent race conditions
 
 // Folder Configuration
 const FOLDERS = [
@@ -639,6 +640,19 @@ function toggleFolder(folderId) {
 
 // === Select Conversation ===
 async function selectConversation(id) {
+    // Skip if already selected and not loading
+    if (conversationId === id && !messagesDiv.querySelector('.loading-indicator')) {
+        console.log('⏭️ Conversation already loaded', id);
+        // Just close sidebar on mobile
+        if (window.innerWidth <= 768) {
+            sidebar.classList.add('closed');
+            burgerMenu.classList.remove('sidebar-open');
+            document.body.style.overflow = '';
+        }
+        return;
+    }
+    
+    // Just trigger load - let loadConversation handle all state
     await loadConversation(id);
     
     // Close sidebar on mobile
@@ -705,15 +719,56 @@ async function createNewConversation(folderId = 'brain-dump') {
 
 // === Load Conversation ===
 async function loadConversation(id) {
+    // Skip if already loading this conversation
+    if (conversationId === id && messagesDiv.querySelector('.loading-indicator')) {
+        console.log('⏭️ Already loading conversation', id);
+        return;
+    }
+    
+    // Generate unique load token for this request
+    const loadToken = ++currentLoadToken;
+    console.log(`🔄 Loading conversation ${id} (token: ${loadToken})`);
+    
+    // Show loading indicator IMMEDIATELY (before fetch)
+    messagesDiv.innerHTML = '<div class="loading-indicator">Loading conversation...</div>';
+    
+    // Add loading class to sidebar item IMMEDIATELY (before fetch)
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.classList.remove('loading');
+    });
+    const selectedItem = document.querySelector(`.conversation-item[data-id="${id}"]`);
+    if (selectedItem) {
+        selectedItem.classList.add('loading');
+    }
+    
     try {
-        const response = await fetch(`/claude/conversations/detail/${id}`);
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(`/claude/conversations/detail/${id}`, {
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
         if (!response.ok) throw new Error('Failed to load conversation');
 
         const data = await response.json();
+        
+        // CRITICAL: Only update ANY state if this is still the current request
+        if (loadToken !== currentLoadToken) {
+            console.log(`⏭️ Skipping stale response for conversation ${id} (token: ${loadToken}, current: ${currentLoadToken})`);
+            return;
+        }
+        
+        // === All state mutations happen here, guarded by load token ===
+        
+        // Update conversationId
         conversationId = id;
         
         // Clear and display messages
-        messagesDiv.innerHTML = '';
+        messagesDiv.innerHTML = ''; // Clear loading indicator
         if (data.messages && data.messages.length > 0) {
             data.messages.forEach(msg => {
                 addMessage(msg.role, msg.content, null, msg.follow_up_question);
@@ -730,11 +785,27 @@ async function loadConversation(id) {
             item.classList.toggle('active', parseInt(item.dataset.id) === id);
         });
         
+        // Remove loading class from sidebar items
+        document.querySelectorAll('.conversation-item').forEach(item => {
+            item.classList.remove('loading');
+        });
+        
         console.log(`✅ Loaded conversation ${id} with ${data.messages?.length || 0} messages`);
     } catch (error) {
-        console.error('❌ Error loading conversation:', error);
-        messagesDiv.innerHTML = '';
-        showError('Failed to load conversation.');
+        // Only handle error if this is still the current request
+        if (loadToken === currentLoadToken) {
+            console.error('❌ Error loading conversation:', error);
+            messagesDiv.innerHTML = ''; // Clear loading
+            // Don't update conversationId on error
+            showError(error.name === 'AbortError' 
+                ? 'Loading timed out. Please try again.' 
+                : 'Failed to load conversation.');
+            
+            // Remove loading class
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('loading');
+            });
+        }
     }
 }
 
@@ -1355,6 +1426,28 @@ function showError(message) {
     }
 }
 
+// === Auto-generate Chat Title ===
+function generateChatTitle(firstMessage) {
+    if (!firstMessage) return 'New Chat';
+    
+    // Take first 50 characters, stop at sentence end
+    let title = firstMessage.trim();
+    
+    // Remove line breaks and extra spaces
+    title = title.replace(/\n+/g, ' ').replace(/\s+/g, ' ');
+    
+    if (title.length > 50) {
+        title = title.substring(0, 50);
+        const lastSpace = title.lastIndexOf(' ');
+        if (lastSpace > 20) {
+            title = title.substring(0, lastSpace);
+        }
+        title += '...';
+    }
+    
+    return title;
+}
+
 // === Send Message ===
 async function sendMessage() {
     console.log('🚀 sendMessage CALLED');
@@ -1553,6 +1646,27 @@ async function sendMessage() {
             console.log('✅ Follow-up question button added successfully');
         }
         
+        // Auto-generate title from first user message
+        const allMessages = messagesDiv.querySelectorAll('.message');
+        const isFirstMessage = allMessages.length <= 2; // User + AI = 2 messages
+        
+        if (isFirstMessage && message.trim()) {
+            const newTitle = generateChatTitle(message);
+            
+            try {
+                await fetch(`/claude/conversations/${conversationId}/rename`, {
+                    method: 'PATCH', // IMPORTANT: Use PATCH not POST
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newTitle })
+                });
+                
+                console.log('✅ Auto-generated title:', newTitle);
+            } catch (error) {
+                console.error('Failed to update title:', error);
+                // Don't show error to user, it's not critical
+            }
+        }
+        
         // Reload sidebar to update conversation timestamp
         await loadAllConversations();
     } catch (error) {
@@ -1656,6 +1770,40 @@ if (themeToggle) {
 // Check if sidebar should be closed on mobile by default
 if (window.innerWidth <= 768) {
     sidebar.classList.add('closed');
+}
+
+// === Desktop sidebar toggle ===
+const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
+
+if (sidebarToggleDesktop) {
+    sidebarToggleDesktop.addEventListener('click', () => {
+        sidebar.classList.toggle('closed');
+        // Save state
+        localStorage.setItem('sidebarClosed', sidebar.classList.contains('closed'));
+    });
+}
+
+// Restore sidebar state on load (desktop only)
+if (window.innerWidth > 768) {
+    const wasClosed = localStorage.getItem('sidebarClosed') === 'true';
+    if (wasClosed) {
+        sidebar.classList.add('closed');
+    }
+}
+
+// === Tap chat area to close sidebar (mobile) ===
+if (window.innerWidth <= 768) {
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        mainContent.addEventListener('click', (e) => {
+            if (!sidebar.classList.contains('closed') && 
+                e.target.closest('.main-content') && 
+                !e.target.closest('.input-container')) {
+                sidebar.classList.add('closed');
+                burgerMenu.classList.remove('sidebar-open');
+            }
+        });
+    }
 }
 
 // Load conversations on startup
