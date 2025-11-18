@@ -640,23 +640,11 @@ function toggleFolder(folderId) {
 
 // === Select Conversation ===
 async function selectConversation(id) {
-    // Skip if already selected and not loading
-    if (conversationId === id && !messagesDiv.querySelector('.loading-indicator')) {
-        console.log('⏭️ Conversation already loaded', id);
-        // Just close sidebar on mobile
-        if (window.innerWidth <= 768) {
-            sidebar.classList.add('closed');
-            burgerMenu.classList.remove('sidebar-open');
-            document.body.style.overflow = '';
-        }
-        return;
-    }
-    
     // Just trigger load - let loadConversation handle all state
     await loadConversation(id);
     
-    // Close sidebar on mobile
-    if (window.innerWidth <= 768) {
+    // Close sidebar on mobile (only if this request succeeded)
+    if (window.innerWidth <= 768 && conversationId === id) {
         sidebar.classList.add('closed');
         burgerMenu.classList.remove('sidebar-open');
         document.body.style.overflow = ''; // Restore body scroll
@@ -719,20 +707,15 @@ async function createNewConversation(folderId = 'brain-dump') {
 
 // === Load Conversation ===
 async function loadConversation(id) {
-    // Skip if already loading this conversation
-    if (conversationId === id && messagesDiv.querySelector('.loading-indicator')) {
-        console.log('⏭️ Already loading conversation', id);
-        return;
-    }
-    
     // Generate unique load token for this request
     const loadToken = ++currentLoadToken;
     console.log(`🔄 Loading conversation ${id} (token: ${loadToken})`);
     
-    // Show loading indicator IMMEDIATELY (before fetch)
+    // === Immediate UI feedback (before fetch) ===
+    // Show loading indicator immediately
     messagesDiv.innerHTML = '<div class="loading-indicator">Loading conversation...</div>';
     
-    // Add loading class to sidebar item IMMEDIATELY (before fetch)
+    // Add loading class to sidebar item immediately
     document.querySelectorAll('.conversation-item').forEach(item => {
         item.classList.remove('loading');
     });
@@ -756,13 +739,13 @@ async function loadConversation(id) {
 
         const data = await response.json();
         
-        // CRITICAL: Only update ANY state if this is still the current request
+        // CRITICAL: Only update FINAL state if this is still the current request
         if (loadToken !== currentLoadToken) {
             console.log(`⏭️ Skipping stale response for conversation ${id} (token: ${loadToken}, current: ${currentLoadToken})`);
             return;
         }
         
-        // === All state mutations happen here, guarded by load token ===
+        // === Final state mutations (guarded by load token) ===
         
         // Update conversationId
         conversationId = id;
