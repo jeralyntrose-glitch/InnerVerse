@@ -1507,7 +1507,7 @@
 
         .message-input {
             flex: 1;
-            padding: 12px 16px;
+            padding: 14px 18px;
             border: 1px solid #D1D1D6;
             border-radius: 24px;
             font-size: 15px;
@@ -1518,7 +1518,7 @@
             transition: all 0.15s ease;
             resize: none;
             overflow-y: auto;
-            min-height: 44px;
+            min-height: 52px;
             max-height: 150px;
             line-height: 1.5;
         }
@@ -1724,25 +1724,7 @@
             
             .message-input {
                 font-size: 16px; /* Prevents iOS zoom on focus */
-            }
-            
-            /* When input is focused (keyboard open), compact but with proper background */
-            .input-container:focus-within {
-                background: var(--color-page-bg) !important; /* Proper background, not transparent */
-                padding: 6px 8px !important; /* Minimal padding - just enough */
-            }
-            
-            .message-input {
-                font-size: 16px; /* Prevents zoom on iOS */
-            }
-            
-            /* When keyboard is open (textarea focused), keep white background with compact sizing */
-            .message-input:focus {
-                padding: 8px 12px !important; /* Reduced padding */
-                min-height: 36px !important; /* Compact height */
-                background: var(--color-input-bg) !important; /* Keep white background */
-                border: 1px solid #D1D1D6 !important; /* Normal border */
-                border-radius: 20px !important;
+                min-height: 50px; /* Taller, easier to type */
             }
             
             /* Mobile adjustments for assistant messages */
