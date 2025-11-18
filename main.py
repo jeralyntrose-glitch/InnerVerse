@@ -3864,8 +3864,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 @app.get("/")
+async def serve_mbti_chat():
+    """Serve the main MBTI chat interface"""
+    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+@app.get("/dashboard")
 async def serve_curriculum_dashboard():
-    """Serve the main curriculum dashboard page"""
+    """Serve the CS Joseph University curriculum dashboard"""
     return FileResponse("static/curriculum_dashboard.html")
 
 @app.get("/api/curriculum/summary")
@@ -7667,10 +7672,6 @@ def health_check():
     """Health check endpoint for deployments"""
     return {"status": "healthy", "app": "InnerVerse"}
 
-@app.get("/", include_in_schema=False)
-def serve_frontend():
-    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
-
 @app.get("/uploader", include_in_schema=False)
 def serve_uploader(csrf_protect: CsrfProtect = Depends()):
     """Serve uploader page with CSRF token"""
@@ -7697,10 +7698,6 @@ def serve_uploader(csrf_protect: CsrfProtect = Depends()):
 @app.get("/privacy", include_in_schema=False)
 def serve_privacy():
     return FileResponse("privacy.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
-
-@app.get("/claude", include_in_schema=False)
-def serve_claude():
-    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/claude-app.js", include_in_schema=False)
 def serve_claude_js():
@@ -7777,10 +7774,6 @@ def serve_content_atlas():
 @app.get("/knowledge-graph", include_in_schema=False)
 def serve_knowledge_graph():
     return FileResponse("knowledge-graph.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
-
-@app.get("/chat", include_in_schema=False)
-def serve_chat_ui():
-    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/learning-paths", include_in_schema=False)
 def serve_learning_paths():
