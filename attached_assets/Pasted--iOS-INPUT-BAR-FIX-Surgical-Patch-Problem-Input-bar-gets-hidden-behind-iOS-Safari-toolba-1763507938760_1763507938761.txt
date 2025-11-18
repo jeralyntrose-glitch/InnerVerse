@@ -1,0 +1,97 @@
+# 🔧 iOS INPUT BAR FIX - Surgical Patch
+
+## Problem:
+
+Input bar gets hidden behind iOS Safari toolbar on iPhone. Can’t type properly.
+
+## Solution:
+
+Add iOS safe-area padding so input bar sits above the browser UI.
+
+-----
+
+## 📝 CHANGES NEEDED (2 edits)
+
+### EDIT #1: Update Viewport Meta Tag
+
+**File:** `templates/innerverse.html`
+
+**Find this line (around line 5):**
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+```
+
+**Replace with:**
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+```
+
+**What changed:** Added `, viewport-fit=cover` at the end
+
+-----
+
+### EDIT #2: Add iOS Safe-Area Padding
+
+**File:** `templates/innerverse.html`
+
+**Find this CSS block (around line 580-588):**
+
+```css
+/* ===== INPUT AREA ===== */
+.input-container {
+    padding: 16px;
+    border-top: 1px solid var(--border-main);
+    background: var(--bg-main);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+```
+
+**Replace with:**
+
+```css
+/* ===== INPUT AREA ===== */
+.input-container {
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border-main);
+    background: var(--bg-main);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+```
+
+**What changed:** Added `padding-bottom: calc(16px + env(safe-area-inset-bottom));` as the second line
+
+-----
+
+## ✅ THAT’S IT!
+
+**Two small changes. No other modifications needed.**
+
+After these edits:
+
+- Desktop: No change (looks same)
+- Android: No change (looks same)
+- iOS: Input bar sits perfectly above home indicator
+
+-----
+
+## 🧪 TESTING
+
+After Replit Agent makes the changes:
+
+1. Refresh the page on iPhone
+1. Input bar should now be fully visible
+1. Upload button, text input, and send button all accessible
+1. No buttons hidden behind iOS toolbar
+
+**Expected result:** Input bar sits RIGHT above the iOS home indicator bar with perfect spacing.
+
+-----
+
+**SURGICAL. PRECISE. NO COWBOY MODE.** 🎯
