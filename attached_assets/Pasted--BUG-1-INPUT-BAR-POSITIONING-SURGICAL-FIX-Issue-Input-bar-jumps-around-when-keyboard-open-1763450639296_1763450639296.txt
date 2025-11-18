@@ -1,0 +1,303 @@
+# BUG #1: INPUT BAR POSITIONING - SURGICAL FIX
+
+**Issue:** Input bar jumps around when keyboard opens/closes, text appears cut off at bottom, creates gaps above input.
+
+**Goal:** Input bar stays fixed at comfortable position, no jumping, text fully visible, proper spacing on mobile and desktop.
+
+-----
+
+## 🎯 STEP-BY-STEP INSTRUCTIONS
+
+### STEP 1: Locate the File
+
+**File to modify:** `index.html`
+**Location:** Root directory of your project
+
+-----
+
+### STEP 2: Find the Input Container CSS
+
+**Search for this exact text in index.html:**
+
+```css
+.input-container {
+```
+
+**You should find it around line 820-830.**
+
+**Current code looks like:**
+
+```css
+.input-container {
+    padding: 4px 16px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+```
+
+-----
+
+### STEP 3: Replace Input Container CSS
+
+**DELETE the entire `.input-container` block (from opening `{` to closing `}`).**
+
+**REPLACE with this EXACT code:**
+
+```css
+.input-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 20px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: var(--color-page-bg);
+    border-top: 1px solid var(--color-border);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+    margin: 0;
+    box-shadow: 0 -2px 8px var(--color-shadow);
+}
+```
+
+**CRITICAL CHANGES:**
+
+- Added `position: fixed` - keeps input bar fixed at bottom
+- Added `bottom: 0` - flush to bottom (no gap)
+- Added `padding-bottom: calc(16px + env(safe-area-inset-bottom))` - respects iPhone notch/home indicator
+- Added `border-top` and `box-shadow` - visual separation from chat
+- Changed padding to `16px 20px` - more comfortable spacing
+
+-----
+
+### STEP 4: Update Messages Padding
+
+**Search for this exact text:**
+
+```css
+.messages {
+```
+
+**You should find it around line 730-750.**
+
+**Find this line inside the `.messages` block:**
+
+```css
+padding-bottom: 100px;
+```
+
+**CHANGE IT TO:**
+
+```css
+padding-bottom: 200px;
+```
+
+**Why:** Input bar is now fixed at bottom, so messages need more clearance to avoid being hidden behind it.
+
+-----
+
+### STEP 5: Update Mobile Styles
+
+**Search for this exact text:**
+
+```css
+@media (max-width: 768px) {
+```
+
+**You should find a section that mentions `.input-container` inside this media query (around line 1050-1070).**
+
+**Find the mobile `.input-container` block:**
+
+```css
+@media (max-width: 768px) {
+    .input-container {
+        position: fixed;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+        /* ... other styles ... */
+    }
+}
+```
+
+**REPLACE the entire mobile `.input-container` block with:**
+
+```css
+@media (max-width: 768px) {
+    .input-container {
+        padding: 12px 16px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+    
+    .message-input {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+    }
+}
+```
+
+**Why:** Mobile needs slightly less padding, and 16px font prevents iOS auto-zoom when tapping input.
+
+-----
+
+### STEP 6: Add Desktop Centering
+
+**Search for this exact text:**
+
+```css
+@media (min-width: 769px) {
+```
+
+**If you DON’T find it, ADD this entire block AFTER the mobile media query:**
+
+```css
+@media (min-width: 769px) {
+    .input-container {
+        max-width: 1200px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+    }
+    
+    .message.assistant {
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .message.user {
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+```
+
+**If you DO find an existing `@media (min-width: 769px)` block:**
+
+- Look for `.input-container` inside it
+- REPLACE or ADD the `.input-container` styles above
+- ADD the `.message.assistant` and `.message.user` styles if they don’t exist
+
+**Why:** Centers input bar on desktop for better aesthetics, prevents it from stretching full width on large screens.
+
+-----
+
+## ✅ VERIFICATION CHECKLIST
+
+After making changes, test on mobile:
+
+### Test 1: Input Bar Position
+
+1. Open chat on iPhone
+1. Input bar should be flush at very bottom of screen
+1. No gap between input and bottom edge
+1. Input bar stays in same position when scrolling chat
+
+**Expected:** Input bar fixed at bottom, no gaps ✅
+
+-----
+
+### Test 2: Keyboard Interaction
+
+1. Tap the message input
+1. Keyboard opens
+1. Input bar should move UP with keyboard
+1. Type something
+1. Dismiss keyboard (tap outside or “Done”)
+1. Input bar returns to bottom position
+1. **CRITICAL:** Input bar should NOT jump or create huge gap
+
+**Expected:** Smooth keyboard interaction, no jumping ✅
+
+-----
+
+### Test 3: Text Visibility
+
+1. Tap input bar
+1. Type a long message (multiple lines)
+1. Text should be fully visible (not cut off at bottom)
+1. All text should be readable
+
+**Expected:** All text visible, nothing cut off ✅
+
+-----
+
+### Test 4: Safe Area (iPhone with Notch)
+
+1. If you have iPhone with notch/Dynamic Island
+1. Input bar should respect home indicator area
+1. Text should not be hidden behind home indicator
+1. Comfortable padding at bottom
+
+**Expected:** Respects iPhone safe areas ✅
+
+-----
+
+### Test 5: Desktop View
+
+1. Open on laptop/desktop browser
+1. Input bar should be centered (max 1200px wide)
+1. Should not stretch full screen width
+1. Looks professional and balanced
+
+**Expected:** Centered on desktop, looks good ✅
+
+-----
+
+## 🚨 CRITICAL NOTES FOR REPLIT AGENT
+
+**DO:**
+
+- ✅ Copy/paste the code blocks EXACTLY as written
+- ✅ Replace entire blocks, don’t try to merge
+- ✅ Keep all the `env(safe-area-inset-bottom)` calculations (they’re critical for iPhone)
+- ✅ Test on mobile BEFORE saying you’re done
+- ✅ Save file and restart server after changes
+
+**DO NOT:**
+
+- ❌ Add extra styles not in this spec
+- ❌ Remove the `calc()` functions (they’re needed)
+- ❌ Change the `z-index: 100` value
+- ❌ Modify any other CSS not mentioned here
+- ❌ Skip the verification tests
+
+-----
+
+## 📋 SUMMARY OF CHANGES
+
+**Files Modified:** 1 file (`index.html`)
+
+**Changes Made:**
+
+1. `.input-container` - Made fixed position at bottom with safe area support
+1. `.messages` - Increased padding-bottom to 200px for clearance
+1. Mobile styles - Adjusted padding and font size
+1. Desktop styles - Added centering (max-width 1200px)
+
+**Lines Modified:** ~4 CSS blocks (approximately 40 lines total)
+
+-----
+
+## 🎯 SUCCESS CRITERIA
+
+**Bug #1 is FIXED when:**
+
+- ✅ Input bar stays at bottom (no gaps)
+- ✅ No jumping when keyboard opens/closes
+- ✅ Text fully visible (not cut off)
+- ✅ Works on iPhone (safe areas respected)
+- ✅ Looks good on desktop (centered)
+- ✅ All 5 verification tests pass
+
+**Once verified working, move to Bug #2.**
+
+-----
+
+**END OF BUG #1 SURGICAL FIX**
