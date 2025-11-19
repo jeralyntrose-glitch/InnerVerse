@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>InnerVerse - MBTI AI Chat</title>
     
     <!-- External Dependencies -->
@@ -622,14 +620,12 @@
         /* ===== INPUT AREA ===== */
         .input-container {
             padding: 16px;
-            padding-bottom: calc(16px + env(safe-area-inset-bottom, 34px)) !important;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
             border-top: 1px solid var(--border-main);
             background: var(--bg-main);
             display: flex;
             gap: 8px;
             align-items: flex-end;
-            position: relative;
-            z-index: 100;
         }
 
         .upload-btn {
@@ -1197,10 +1193,6 @@
                 const data = await response.json();
                 conversationId = data.id;
                 messages.innerHTML = '';
-                
-                // Show welcome message immediately for new empty chat
-                showWelcomeMessage();
-                
                 await loadAllConversations();
                 
                 // Auto-focus input after creating new chat
@@ -1564,34 +1556,8 @@
         }
 
         // ===== INITIALIZE =====
-        console.log('🚀 InnerVerse Chat - Phase 1 Loading...');
+        loadAllConversations();
         
-        // iOS Safe-Area Fallback (ensures input bar always visible)
-        function ensureInputBarVisible() {
-            const inputContainer = document.querySelector('.input-container');
-            if (inputContainer) {
-                // Check if we're on iOS
-                const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-                if (isIOS) {
-                    // Force minimum bottom padding for iOS
-                    const currentPadding = window.getComputedStyle(inputContainer).paddingBottom;
-                    const minPadding = 50; // Minimum 50px for iOS (16px base + 34px safe-area)
-                    
-                    // If padding is less than minimum, force it
-                    if (parseInt(currentPadding) < minPadding) {
-                        inputContainer.style.paddingBottom = minPadding + 'px';
-                        console.log('📱 iOS: Forced input bar padding to ' + minPadding + 'px');
-                    }
-                }
-            }
-        }
-        
-        // Run immediately and after a short delay (ensures CSS is loaded)
-        ensureInputBarVisible();
-        setTimeout(ensureInputBarVisible, 100);
-        setTimeout(ensureInputBarVisible, 500);
-        
-        await loadAllConversations();
         console.log('✅ InnerVerse Chat - Phase 1 Ready');
     </script>
 </body>
