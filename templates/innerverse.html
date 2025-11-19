@@ -794,7 +794,8 @@
 
             .input-container {
                 padding: 12px;
-                padding-bottom: 50px;
+                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+                transition: padding-bottom 0.2s ease;
             }
 
             .messages {
@@ -1577,8 +1578,57 @@
             }
         }
 
+        // iOS Dynamic Input Bar Positioning (visualViewport API)
+        function setupIOSInputBar() {
+            const inputContainer = document.querySelector('.input-container');
+            if (!inputContainer) return;
+            
+            // Check if we're on iOS
+            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+            if (!isIOS) return;
+            
+            // Check if visualViewport is supported
+            if (!window.visualViewport) {
+                // Fallback: use fixed safe padding
+                inputContainer.style.paddingBottom = '46px';
+                console.log('📱 iOS: Using fallback padding (46px)');
+                return;
+            }
+            
+            // Function to update padding based on viewport
+            function updateInputPadding() {
+                // Get the visual viewport height
+                const visualHeight = window.visualViewport.height;
+                const windowHeight = window.innerHeight;
+                
+                // Calculate how much toolbar is showing
+                const toolbarHeight = windowHeight - visualHeight;
+                
+                // Base padding + toolbar offset
+                const basePadding = 12;
+                const safeArea = Math.max(toolbarHeight, 34); // Minimum 34px for home indicator
+                const totalPadding = basePadding + safeArea;
+                
+                inputContainer.style.paddingBottom = totalPadding + 'px';
+                
+                console.log('📱 iOS: Adjusted padding to ' + totalPadding + 'px (toolbar: ' + toolbarHeight + 'px)');
+            }
+            
+            // Update on viewport resize (toolbar collapse/expand)
+            window.visualViewport.addEventListener('resize', updateInputPadding);
+            window.visualViewport.addEventListener('scroll', updateInputPadding);
+            
+            // Initial update
+            updateInputPadding();
+            
+            // Also update after short delay (ensures everything is loaded)
+            setTimeout(updateInputPadding, 100);
+            setTimeout(updateInputPadding, 500);
+        }
+
         // ===== INITIALIZE =====
         loadAllConversations();
+        setupIOSInputBar();
         
         console.log('✅ InnerVerse Chat - Phase 1 Ready');
     </script>
