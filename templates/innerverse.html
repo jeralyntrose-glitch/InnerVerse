@@ -401,7 +401,7 @@
             overscroll-behavior-y: contain;
             touch-action: pan-y;
             padding: 20px;
-            padding-bottom: 200px;
+            padding-bottom: 240px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -1175,11 +1175,15 @@
                 }
                 
                 renderSidebar();
-                scrollToBottom();
                 
                 // Save this conversation as last viewed
                 localStorage.setItem('lastConversationId', convId);
                 console.log('💾 Saved last conversation:', convId);
+                
+                // Auto-scroll to bottom to show latest messages
+                setTimeout(() => {
+                    scrollToBottom();
+                }, 100);
             } catch (error) {
                 console.error('Load conversation error:', error);
                 showError('Failed to load conversation. Please try again.');
@@ -1348,6 +1352,11 @@
             // Add user message to UI
             addUserMessage(text, hasImages ? Array.from(selectedImages) : null);
             
+            // Scroll to show user's message
+            setTimeout(() => {
+                scrollToBottom(true);
+            }, 50);
+            
             // Clear images
             if (hasImages) {
                 selectedImages = [];
@@ -1358,7 +1367,11 @@
 
             // Show typing indicator
             typingIndicator.classList.add('visible');
-            scrollToBottom();
+            
+            // Scroll to show typing indicator
+            setTimeout(() => {
+                scrollToBottom(true);
+            }, 50);
 
             let assistantDiv = null;
             let fullResponse = '';
@@ -1391,6 +1404,12 @@
                                     // Hide typing, create message div if needed
                                     if (!assistantDiv) {
                                         typingIndicator.classList.remove('visible');
+                                        
+                                        // Final scroll to show complete response
+                                        setTimeout(() => {
+                                            scrollToBottom(true);
+                                        }, 100);
+                                        
                                         assistantDiv = addMessage('assistant', '');
                                     }
                                     
@@ -1587,8 +1606,12 @@
             messages.appendChild(welcomeDiv);
         }
 
-        function scrollToBottom() {
-            messages.scrollTop = messages.scrollHeight;
+        function scrollToBottom(smooth = false) {
+            messages.scrollTo({
+                top: messages.scrollHeight,
+                behavior: smooth ? 'smooth' : 'auto'
+            });
+            console.log('📜 Scrolled to bottom');
         }
 
         function scrollToBottomIfNearBottom() {
