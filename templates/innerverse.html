@@ -346,48 +346,27 @@
             background: var(--bg-main);
         }
 
-        .header {
-            padding: 12px 20px;
-            background: var(--bg-header);
-            border-bottom: 1px solid var(--border-main);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            min-height: 56px;
-        }
-
-        .header-title {
-            font-size: 16px;
-            font-weight: 300;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: var(--text-primary);
-        }
-
         .theme-toggle {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 36px;
-            height: 36px;
-            background: transparent;
-            border: none;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            background: var(--bg-button);
+            border: 1px solid var(--border-input);
+            border-radius: 8px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
             transition: all 0.2s;
         }
 
         .theme-toggle:hover {
             background: var(--bg-button-hover);
+            border-color: var(--accent);
         }
 
         .theme-toggle:active {
-            transform: translateY(-50%) scale(0.95);
+            transform: scale(0.95);
         }
 
         .theme-icon {
@@ -842,10 +821,17 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <button class="new-chat-btn" id="newChatBtn">
-                    <span>+</span>
-                    <span>New Chat</span>
-                </button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <button class="new-chat-btn" id="newChatBtn" style="flex: 1; margin-right: 8px;">
+                        <span>+</span>
+                        <span>New Chat</span>
+                    </button>
+                    
+                    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                        <span class="theme-icon moon-icon">🌙</span>
+                        <span class="theme-icon sun-icon">☀️</span>
+                    </button>
+                </div>
                 
                 <div class="search-container">
                     <span class="search-icon">🔍</span>
@@ -867,15 +853,6 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <header class="header">
-                <h1 class="header-title">InnerVerse</h1>
-                
-                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-                    <span class="theme-icon moon-icon">🌙</span>
-                    <span class="theme-icon sun-icon">☀️</span>
-                </button>
-            </header>
-
             <div class="chat-container">
                 <div class="messages" id="messages"></div>
                 
@@ -1003,6 +980,11 @@
         });
 
         // ===== SEARCH =====
+        // Auto-focus search input when clicked
+        searchInput.addEventListener('click', () => {
+            searchInput.focus();
+        });
+
         searchInput.addEventListener('input', (e) => {
             const value = e.target.value.trim();
             searchClear.classList.toggle('visible', value.length > 0);
@@ -1177,6 +1159,11 @@
                 conversationId = data.id;
                 messages.innerHTML = '';
                 await loadAllConversations();
+                
+                // Auto-focus input after creating new chat
+                setTimeout(() => {
+                    messageInput.focus();
+                }, 100);
             } catch (error) {
                 console.error('Create conversation error:', error);
                 showError('Failed to create new chat. Please try again.');
