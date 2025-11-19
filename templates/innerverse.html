@@ -1176,6 +1176,10 @@
                 
                 renderSidebar();
                 scrollToBottom();
+                
+                // Save this conversation as last viewed
+                localStorage.setItem('lastConversationId', convId);
+                console.log('💾 Saved last conversation:', convId);
             } catch (error) {
                 console.error('Load conversation error:', error);
                 showError('Failed to load conversation. Please try again.');
@@ -1211,6 +1215,9 @@
                 messages.innerHTML = '';
                 showWelcomeMessage();
                 await loadAllConversations();
+                
+                // Save new conversation as last viewed
+                localStorage.setItem('lastConversationId', data.id);
                 
                 // Auto-focus input after creating new chat
                 setTimeout(() => {
@@ -1651,10 +1658,31 @@
         }
 
         // ===== INITIALIZE =====
-        loadAllConversations();
-        setupIOSInputBar();
-        
-        console.log('✅ InnerVerse Chat - Phase 1 Ready');
+        (async function() {
+            console.log('🚀 InnerVerse Chat - Phase 1 Loading...');
+            
+            // Load all conversations first
+            await loadAllConversations();
+            
+            // Check if there's a last viewed conversation
+            const lastConvId = localStorage.getItem('lastConversationId');
+            if (lastConvId) {
+                console.log('📂 Loading last conversation:', lastConvId);
+                try {
+                    await loadConversation(parseInt(lastConvId));
+                } catch (error) {
+                    console.log('⚠️ Could not load last conversation, showing new chat');
+                    // If last conversation failed to load, clear it
+                    localStorage.removeItem('lastConversationId');
+                }
+            } else {
+                console.log('📝 No last conversation, starting fresh');
+            }
+            
+            setupIOSInputBar();
+            
+            console.log('✅ InnerVerse Chat - Phase 1 Ready');
+        })();
     </script>
 </body>
 </html>

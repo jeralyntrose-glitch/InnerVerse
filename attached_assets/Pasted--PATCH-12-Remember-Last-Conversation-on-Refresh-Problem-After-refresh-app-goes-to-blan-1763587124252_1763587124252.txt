@@ -1,0 +1,117 @@
+# 🔧 PATCH 12: Remember Last Conversation on Refresh
+
+## Problem:
+After refresh, app goes to blank/new chat. Should load the last conversation you were viewing.
+
+## Solution:
+Use localStorage to save current conversation ID, then auto-load it on page refresh.
+
+---
+
+## 📝 CHANGE #1: Save Conversation ID When Loading
+
+**File:** `templates/innerverse.html`
+
+**Find the loadConversation function (around line 1130-1175):**
+
+**At the END of the function, RIGHT BEFORE the closing `}`, add this:**
+
+```javascript
+        // Save this conversation as last viewed
+        localStorage.setItem('lastConversationId', id);
+        console.log('💾 Saved last conversation:', id);
+    } catch (error) {
+```
+
+**Insert the localStorage line BEFORE the existing `} catch (error) {`**
+
+---
+
+## 📝 CHANGE #2: Auto-Load Last Conversation on Page Load
+
+**File:** `templates/innerverse.html`
+
+**Find the initialization code (around line 1560-1570):**
+
+```javascript
+// ===== INITIALIZE =====
+console.log('🚀 InnerVerse Chat - Phase 1 Loading...');
+await loadAllConversations();
+console.log('✅ InnerVerse Chat - Phase 1 Ready');
+```
+
+**Replace with:**
+
+```javascript
+// ===== INITIALIZE =====
+console.log('🚀 InnerVerse Chat - Phase 1 Loading...');
+
+// Load all conversations first
+await loadAllConversations();
+
+// Check if there's a last viewed conversation
+const lastConvId = localStorage.getItem('lastConversationId');
+if (lastConvId) {
+    console.log('📂 Loading last conversation:', lastConvId);
+    try {
+        await loadConversation(lastConvId);
+    } catch (error) {
+        console.log('⚠️ Could not load last conversation, showing new chat');
+        // If last conversation failed to load, clear it
+        localStorage.removeItem('lastConversationId');
+    }
+} else {
+    console.log('📝 No last conversation, starting fresh');
+}
+
+console.log('✅ InnerVerse Chat - Phase 1 Ready');
+```
+
+---
+
+## 📝 CHANGE #3: Clear Last Conversation on New Chat (Optional)
+
+**File:** `templates/innerverse.html`
+
+**Find createNewConversation function (around line 1190-1210):**
+
+**At the END of the function, BEFORE the closing `}`, add:**
+
+```javascript
+        // Save new conversation as last viewed
+        localStorage.setItem('lastConversationId', data.id);
+        
+        // Auto-focus input after creating new chat
+```
+
+**Insert BEFORE the existing auto-focus code**
+
+---
+
+## ✅ VERIFICATION:
+
+**Test sequence:**
+1. **Load app** → Goes to last conversation you were in
+2. **Scrolls to bottom** (shows last message)
+3. **Switch conversation** → That becomes new "last viewed"
+4. **Refresh page** → Loads that conversation
+5. **Create new chat** → Becomes last viewed
+6. **Refresh** → Loads that new chat
+
+**Console should show:**
+- `💾 Saved last conversation: [id]`
+- `📂 Loading last conversation: [id]`
+
+---
+
+## 🎯 SUCCESS CRITERIA:
+
+✅ Refresh → Loads last conversation  
+✅ Shows last message you were reading  
+✅ Persists across refreshes  
+✅ Works with new chats  
+✅ Falls back gracefully if conversation deleted  
+
+---
+
+**SIMPLE. USES LOCALSTORAGE. JUST WORKS.** 🎯
