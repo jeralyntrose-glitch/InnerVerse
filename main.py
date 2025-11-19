@@ -3878,7 +3878,14 @@ async def innerverse_chat():
     """
     Phase 1: New chat interface (clean rebuild, no Chatscope)
     """
-    return FileResponse("templates/innerverse.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse(
+        "templates/innerverse.html", 
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 @app.get("/api/curriculum/summary")
 async def get_curriculum_summary() -> Dict[str, Any]:
