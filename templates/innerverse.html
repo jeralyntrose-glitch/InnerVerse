@@ -794,6 +794,7 @@
 
             .input-container {
                 padding: 12px;
+                padding-bottom: 50px;
             }
 
             .messages {
@@ -1193,6 +1194,7 @@
                 const data = await response.json();
                 conversationId = data.id;
                 messages.innerHTML = '';
+                showWelcomeMessage();
                 await loadAllConversations();
                 
                 // Auto-focus input after creating new chat

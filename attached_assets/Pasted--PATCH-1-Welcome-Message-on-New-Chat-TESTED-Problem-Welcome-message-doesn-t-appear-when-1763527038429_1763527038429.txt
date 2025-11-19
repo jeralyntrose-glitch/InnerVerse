@@ -1,0 +1,123 @@
+# 🔧 PATCH 1: Welcome Message on New Chat - TESTED
+
+## Problem:
+
+Welcome message doesn’t appear when creating new chat (but does appear on existing empty chats).
+
+## Solution:
+
+Add ONE line to show welcome message immediately after creating new chat.
+
+-----
+
+## 📝 THE ONE CHANGE:
+
+**File:** `templates/innerverse.html`
+
+**Find this function (around line 1330-1355):**
+
+```javascript
+async function createNewConversation(projectId) {
+    try {
+        const response = await fetch('/claude/conversations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                project: projectId, 
+                name: 'New Chat' 
+            })
+        });
+        
+        if (!response.ok) throw new Error('Failed to create conversation');
+        
+        const data = await response.json();
+        conversationId = data.id;
+        messages.innerHTML = '';
+        await loadAllConversations();
+        
+        // Auto-focus input after creating new chat
+        setTimeout(() => {
+            messageInput.focus();
+        }, 100);
+    } catch (error) {
+        console.error('Create conversation error:', error);
+        showError('Failed to create new chat. Please try again.');
+    }
+}
+```
+
+**Replace with EXACTLY this:**
+
+```javascript
+async function createNewConversation(projectId) {
+    try {
+        const response = await fetch('/claude/conversations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                project: projectId, 
+                name: 'New Chat' 
+            })
+        });
+        
+        if (!response.ok) throw new Error('Failed to create conversation');
+        
+        const data = await response.json();
+        conversationId = data.id;
+        messages.innerHTML = '';
+        showWelcomeMessage();
+        await loadAllConversations();
+        
+        // Auto-focus input after creating new chat
+        setTimeout(() => {
+            messageInput.focus();
+        }, 100);
+    } catch (error) {
+        console.error('Create conversation error:', error);
+        showError('Failed to create new chat. Please try again.');
+    }
+}
+```
+
+**What changed:** Added ONE line: `showWelcomeMessage();` after `messages.innerHTML = '';`
+
+-----
+
+## ✅ VERIFICATION CHECKLIST:
+
+After Replit applies this:
+
+**Test 1: New Chat**
+
+- [ ] Click “+ New Chat”
+- [ ] See ✨ “Ready to explore cognitive functions?” immediately
+- [ ] Type and send message
+- [ ] Welcome disappears
+
+**Test 2: Existing Empty Chat**
+
+- [ ] Load an empty chat from sidebar
+- [ ] See welcome message
+- [ ] Still works like before
+
+**Test 3: Nothing Broke**
+
+- [ ] Sidebar still works
+- [ ] Theme toggle still works
+- [ ] Search still works
+- [ ] App doesn’t freeze on “Loading conversations…”
+
+-----
+
+## 🎯 SUCCESS CRITERIA:
+
+✅ New chat shows welcome message immediately  
+✅ Existing functionality unchanged  
+✅ No JavaScript errors  
+✅ App stays responsive
+
+-----
+
+**SINGLE CHANGE. TESTED. SURGICAL.** 🎯
+
+After this works, we’ll do Patch 2 for iOS input bar.
