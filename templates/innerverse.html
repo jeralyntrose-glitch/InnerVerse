@@ -465,7 +465,7 @@
 
         /* AI Messages */
         .message.assistant {
-            max-width: 800px;
+            max-width: 100%;
         }
 
         .message.assistant .message-content {
@@ -1505,7 +1505,27 @@
             
             btn.addEventListener('click', async () => {
                 try {
-                    await navigator.clipboard.writeText(content || '');
+                    // Get text from message-content, excluding copy button
+                    const message = btn.closest('.message');
+                    if (message) {
+                        const messageContent = message.querySelector('.message-content');
+                        if (messageContent) {
+                            // Clone and remove copy button to get clean text
+                            const clone = messageContent.cloneNode(true);
+                            const btnInClone = clone.querySelector('.copy-btn');
+                            if (btnInClone) btnInClone.remove();
+                            
+                            const text = (clone.innerText || clone.textContent).trim();
+                            await navigator.clipboard.writeText(text);
+                        } else {
+                            // Fallback to original content
+                            await navigator.clipboard.writeText(content || '');
+                        }
+                    } else {
+                        // Fallback to original content
+                        await navigator.clipboard.writeText(content || '');
+                    }
+                    
                     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
                     setTimeout(() => {
                         btn.innerHTML = `
