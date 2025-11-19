@@ -396,6 +396,36 @@
             gap: 16px;
         }
 
+        .empty-chat-welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: var(--text-tertiary);
+            padding: 40px 20px;
+            gap: 12px;
+        }
+
+        .empty-chat-welcome .emoji {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+
+        .empty-chat-welcome .title {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .empty-chat-welcome .subtitle {
+            font-size: 15px;
+            font-weight: 300;
+            line-height: 1.6;
+        }
+
         .message {
             animation: fadeIn 0.2s ease;
             position: relative;
@@ -1119,9 +1149,14 @@
                 const data = await response.json();
                 messages.innerHTML = '';
                 
-                data.messages.forEach(msg => {
-                    addMessage(msg.role, msg.content);
-                });
+                // Show welcome message if chat is empty
+                if (data.messages.length === 0) {
+                    showWelcomeMessage();
+                } else {
+                    data.messages.forEach(msg => {
+                        addMessage(msg.role, msg.content);
+                    });
+                }
                 
                 renderSidebar();
                 scrollToBottom();
@@ -1278,6 +1313,12 @@
                     sendBtn.disabled = false;
                     return;
                 }
+            }
+
+            // Clear welcome message if it exists
+            const welcomeMsg = messages.querySelector('.empty-chat-welcome');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
             }
 
             // Add user message to UI
@@ -1489,6 +1530,17 @@
             `;
             messages.appendChild(errorDiv);
             scrollToBottom();
+        }
+
+        function showWelcomeMessage() {
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'empty-chat-welcome';
+            welcomeDiv.innerHTML = `
+                <div class="emoji">✨</div>
+                <div class="title">Ready to explore cognitive functions?</div>
+                <div class="subtitle">Ask me anything about MBTI, typology,<br>or dive deep into Jungian psychology...</div>
+            `;
+            messages.appendChild(welcomeDiv);
         }
 
         function scrollToBottom() {
