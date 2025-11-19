@@ -793,9 +793,7 @@
             }
 
             .input-container {
-                padding: 12px;
-                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-                transition: padding-bottom 0.2s ease;
+                padding: 12px !important;
             }
 
             .messages {
@@ -1581,49 +1579,59 @@
         // iOS Dynamic Input Bar Positioning (visualViewport API)
         function setupIOSInputBar() {
             const inputContainer = document.querySelector('.input-container');
-            if (!inputContainer) return;
-            
-            // Check if we're on iOS
-            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-            if (!isIOS) return;
-            
-            // Check if visualViewport is supported
-            if (!window.visualViewport) {
-                // Fallback: use fixed safe padding
-                inputContainer.style.paddingBottom = '46px';
-                console.log('📱 iOS: Using fallback padding (46px)');
+            if (!inputContainer) {
+                console.log('⚠️ Input container not found');
                 return;
             }
             
-            // Function to update padding based on viewport
-            function updateInputPadding() {
-                // Get the visual viewport height
-                const visualHeight = window.visualViewport.height;
-                const windowHeight = window.innerHeight;
-                
-                // Calculate how much toolbar is showing
-                const toolbarHeight = windowHeight - visualHeight;
-                
-                // Base padding + toolbar offset
-                const basePadding = 12;
-                const safeArea = Math.max(toolbarHeight, 34); // Minimum 34px for home indicator
-                const totalPadding = basePadding + safeArea;
-                
-                inputContainer.style.paddingBottom = totalPadding + 'px';
-                
-                console.log('📱 iOS: Adjusted padding to ' + totalPadding + 'px (toolbar: ' + toolbarHeight + 'px)');
+            // Check if we're on iOS
+            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+            if (!isIOS) {
+                console.log('ℹ️ Not iOS device, skipping input bar adjustments');
+                return;
             }
             
-            // Update on viewport resize (toolbar collapse/expand)
-            window.visualViewport.addEventListener('resize', updateInputPadding);
-            window.visualViewport.addEventListener('scroll', updateInputPadding);
+            console.log('📱 iOS device detected, setting up input bar...');
+            
+            // Function to update padding based on viewport
+            function updateInputPadding() {
+                // Base padding for all sides
+                inputContainer.style.paddingLeft = '12px';
+                inputContainer.style.paddingRight = '12px';
+                inputContainer.style.paddingTop = '12px';
+                
+                // Calculate bottom padding based on safe area
+                let bottomPadding = 12; // Base padding
+                
+                // Try to get safe area inset
+                const computedStyle = window.getComputedStyle(inputContainer);
+                const currentBottom = computedStyle.paddingBottom;
+                
+                // Check if env(safe-area-inset-bottom) is working
+                if (currentBottom && parseInt(currentBottom) > 12) {
+                    // CSS env() is working, use it
+                    bottomPadding = parseInt(currentBottom);
+                    console.log('✅ Using CSS safe-area:', bottomPadding + 'px');
+                } else {
+                    // Fallback: use fixed safe area for iOS
+                    bottomPadding = 46; // 12px base + 34px for home indicator
+                    inputContainer.style.paddingBottom = bottomPadding + 'px';
+                    console.log('📱 iOS: Applied fallback padding:', bottomPadding + 'px');
+                }
+            }
             
             // Initial update
             updateInputPadding();
             
-            // Also update after short delay (ensures everything is loaded)
+            // Update after delays to catch late-loading CSS
             setTimeout(updateInputPadding, 100);
+            setTimeout(updateInputPadding, 300);
             setTimeout(updateInputPadding, 500);
+            
+            // Listen for window resize (orientation change, keyboard)
+            window.addEventListener('resize', updateInputPadding);
+            
+            console.log('✅ iOS input bar setup complete');
         }
 
         // ===== INITIALIZE =====
