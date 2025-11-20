@@ -601,28 +601,46 @@
                 stroke: var(--accent);
             }
 
-            /* Typing Indicator */
+            /* Typing Indicator - FIXED POSITION (iOS-safe) */
             .typing-indicator {
                 display: none;
-                padding: 8px 12px;
+                position: fixed;
+                bottom: 85px; /* Above input bar (input ~70px + padding) */
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 10px 16px;
                 background: var(--bg-user-bubble);
-                border-radius: 16px;
-                width: fit-content;
-                margin-bottom: 16px;
+                border-radius: 20px;
+                box-shadow: 0 2px 8px var(--shadow);
+                z-index: 999; /* Below input (1000) but above messages */
+                pointer-events: none; /* Don't block clicks */
             }
 
             .typing-indicator.visible {
                 display: block;
+                animation: fadeInUp 0.3s ease;
+            }
+
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateX(-50%) translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(-50%) translateY(0);
+                }
             }
 
             .typing-dots {
                 display: flex;
                 gap: 4px;
+                align-items: center;
             }
 
             .typing-dots span {
-                width: 6px;
-                height: 6px;
+                width: 8px;
+                height: 8px;
                 background: var(--text-tertiary);
                 border-radius: 50%;
                 animation: typingDot 1.4s infinite ease-in-out;
@@ -645,6 +663,13 @@
                 30% {
                     opacity: 1;
                     transform: scale(1.2);
+                }
+            }
+
+            /* iOS safe-area adjustment for typing indicator */
+            @supports (padding: max(0px)) {
+                .typing-indicator {
+                    bottom: calc(85px + env(safe-area-inset-bottom));
                 }
             }
 
@@ -971,12 +996,15 @@
             <main class="main-content">
                 <div class="chat-container">
                     <div class="messages" id="messages">
-                        <div class="typing-indicator" id="typingIndicator">
-                            <div class="typing-dots">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
+                        <!-- Messages appear here -->
+                    </div>
+
+                    <!-- Fixed Position Typing Indicator (iOS-safe) -->
+                    <div class="typing-indicator" id="typingIndicator">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
                         </div>
                     </div>
 
@@ -1173,24 +1201,9 @@
 
             // ===== HELPER: CLEAR MESSAGES (PRESERVE TYPING INDICATOR) =====
             function clearMessages() {
-                // Get typing indicator element and remove it from DOM temporarily
-                const typingIndicatorElem =
-                    document.getElementById("typingIndicator");
-
-                // Temporarily remove indicator from messages container
-                if (typingIndicatorElem && typingIndicatorElem.parentNode) {
-                    typingIndicatorElem.parentNode.removeChild(
-                        typingIndicatorElem,
-                    );
-                }
-
-                // Clear all messages
+                // Typing indicator is now fixed position outside messages container
+                // Just clear messages directly
                 messages.innerHTML = "";
-
-                // Re-append the SAME indicator element (preserves references and listeners)
-                if (typingIndicatorElem) {
-                    messages.appendChild(typingIndicatorElem);
-                }
             }
 
             // ===== LOAD CONVERSATIONS =====
@@ -1578,8 +1591,6 @@
                 // Show typing indicator and force scroll to bottom
                 isUserPinnedToBottom = true; // Reset pin state when sending message
                 typingIndicator.classList.add("visible");
-                console.log('✅ TYPING DOTS SHOWN');
-                updateMessagesPadding(); // Trigger debug logging
                 scrollToBottom(true);
 
                 let assistantDiv = null;
@@ -1618,7 +1629,6 @@
                                             typingIndicator.classList.remove(
                                                 "visible",
                                             );
-                                            console.log('❌ TYPING DOTS HIDDEN');
                                             assistantDiv = addMessage(
                                                 "assistant",
                                                 "",
@@ -2091,56 +2101,17 @@
                 const rect = inputContainer.getBoundingClientRect();
                 const inputHeight = rect.height;
 
-                // Remove broken safe-area calculation (env() can't be read by JS)
-                // Just use input height + buffer
-                const buffer = 100; // Increased buffer for comfort
+                // Use input height + buffer for bottom padding
+                const buffer = 100;
                 const totalPadding = inputHeight + buffer;
 
                 messages.style.paddingBottom = totalPadding + "px";
-                
-                // 🔍 DEBUG LOGGING
-                console.log('═══════════════════════════════════════');
-                console.log('🔍 PADDING DEBUG');
-                console.log('═══════════════════════════════════════');
-                console.log('Input Container:');
-                console.log('  - Height:', rect.height + 'px');
-                console.log('  - Top:', rect.top + 'px');
-                console.log('  - Bottom:', rect.bottom + 'px');
-                console.log('  - Width:', rect.width + 'px');
-                console.log('Buffer:', buffer + 'px');
-                console.log('Total Padding:', totalPadding + 'px');
-                console.log('Messages Container:');
-                console.log('  - scrollHeight:', messages.scrollHeight + 'px');
-                console.log('  - clientHeight:', messages.clientHeight + 'px');
-                console.log('  - scrollTop:', messages.scrollTop + 'px');
-                console.log('  - paddingBottom:', messages.style.paddingBottom);
-                
-                // Typing dots info
-                const typingDots = document.getElementById('typingIndicator');
-                if (typingDots) {
-                    const dotsRect = typingDots.getBoundingClientRect();
-                    console.log('Typing Dots:');
-                    console.log('  - Visible:', typingDots.classList.contains('visible'));
-                    console.log('  - Top:', dotsRect.top + 'px');
-                    console.log('  - Bottom:', dotsRect.bottom + 'px');
-                    console.log('  - Height:', dotsRect.height + 'px');
-                    console.log('  - Distance from input bar:', (rect.top - dotsRect.bottom) + 'px');
-                }
-                
-                // Visual viewport info (iOS)
-                if (window.visualViewport) {
-                    console.log('Visual Viewport (iOS):');
-                    console.log('  - Height:', window.visualViewport.height + 'px');
-                    console.log('  - Width:', window.visualViewport.width + 'px');
-                    console.log('  - Scale:', window.visualViewport.scale);
-                    console.log('  - offsetTop:', window.visualViewport.offsetTop + 'px');
-                }
-                
-                // Window dimensions
-                console.log('Window:');
-                console.log('  - innerHeight:', window.innerHeight + 'px');
-                console.log('  - innerWidth:', window.innerWidth + 'px');
-                console.log('═══════════════════════════════════════');
+                console.log(
+                    "📏 Updated padding:",
+                    totalPadding + "px",
+                    "(input:",
+                    inputHeight + "px)",
+                );
             }
 
             // iOS Dynamic Input Bar Positioning (visualViewport API)
