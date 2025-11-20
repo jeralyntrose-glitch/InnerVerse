@@ -2067,13 +2067,10 @@
             }
 
             function scrollToBottomIfNearBottom() {
-                const threshold = 5; // PATCH 19: Reduced from 30px to 5px (industry standard)
-                const isNearBottom =
-                    messages.scrollHeight -
-                        messages.scrollTop -
-                        messages.clientHeight <
-                    threshold;
-                if (isNearBottom) {
+                // PATCH 21: Trust the intent tracking flag, don't recalculate
+                // User scroll intent is already tracked by updateScrollPinState()
+                // No need to second-guess it by recalculating position
+                if (isUserPinnedToBottom) {
                     scrollToBottom();
                 }
             }
