@@ -2092,8 +2092,17 @@
                     inputResizeObserver.disconnect();
                 }
 
-                // Listen to manual scrolling to update pin state
-                messages.addEventListener("scroll", updateScrollPinState);
+                // PATCH 19: Debounced scroll listener with intent tracking (50ms)
+                messages.addEventListener("scroll", () => {
+                    // Ignore synthetic scroll events from our own code
+                    if (suppressScrollEvents) return;
+                    
+                    // Debounce scroll handling to prevent excessive updates
+                    clearTimeout(scrollDebounceTimer);
+                    scrollDebounceTimer = setTimeout(() => {
+                        updateScrollPinState();
+                    }, 50); // 50ms debounce for mobile momentum scrolling
+                });
 
                 // MutationObserver to detect DOM changes in messages
                 messageObserver = new MutationObserver((mutations) => {
