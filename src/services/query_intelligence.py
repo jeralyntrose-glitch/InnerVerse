@@ -305,15 +305,27 @@ class FilterBuilder:
             filters.append({"season": {"$eq": season}})
         
         # Type filters - PINECONE ARRAY SYNTAX: use $in to check if value is in array
+        # ARCHITECT FIX: Only filter if types exist (avoids filtering out all docs when field missing)
         types = entities.get("types", [])
         if types:
-            # Pinecone array syntax: field_name: {$in: [values to match]}
-            filters.append({"types_discussed": {"$in": types}})
+            # Use $or to allow docs with missing field OR matching types
+            filters.append({
+                "$or": [
+                    {"types_discussed": {"$in": types}},
+                    {"types_discussed": {"$exists": False}}  # Include docs without this field
+                ]
+            })
         
         # Function filters - PINECONE ARRAY SYNTAX: use $in to check if value is in array
+        # ARCHITECT FIX: Only filter if functions exist
         functions = entities.get("functions", [])
         if functions:
-            filters.append({"functions_covered": {"$in": functions}})
+            filters.append({
+                "$or": [
+                    {"functions_covered": {"$in": functions}},
+                    {"functions_covered": {"$exists": False}}
+                ]
+            })
         
         # Relationship type filter
         # VERIFIED: Only 4 values exist: golden_pair, pedagogue_pair, bronze_pair, none
@@ -425,6 +437,10 @@ class ResultRanker:
             
             original_score = score
             
+            # ARCHITECT FIX: Clamp score to minimum epsilon to prevent zero-score issues
+            MIN_SCORE = 0.01  # Small epsilon to maintain ordering
+            score = max(score, MIN_SCORE)
+            
             # BOOST 1: Title/filename contains query keywords
             filename = metadata.get('filename', '').lower()
             title_words = set(filename.replace('_', ' ').replace('-', ' ').split())
@@ -518,16 +534,20 @@ class QueryIntelligence:
         # Build filter (with confidence check)
         pinecone_filter = self.filter_builder.build(intent, entities, confidence)
         
-        # Determine top_k based on query complexity
-        # Note: Index has 7,890 vectors total
+        # ARCHITECT FIX: Adaptive top_k to prevent rate limiting
+        # Use higher top_k only when we have filters to narrow results
+        # Otherwise stick to conservative values to avoid Pinecone rate limits
+        has_filters = bool(pinecone_filter)
+        
         if entities.get("season") or (entities.get("types") and entities.get("relationships")):
-            # Very specific query - fewer results needed
+            # Very specific query with strong filters - moderate top_k
             recommended_top_k = 30
-        elif intent in ["compatibility", "four_sides"]:
-            # Broad queries - need more results
-            recommended_top_k = 50
+        elif has_filters:
+            # Has metadata filters - can use higher top_k safely
+            recommended_top_k = 40
         else:
-            recommended_top_k = QueryConfig.DEFAULT_TOP_K
+            # No filters (general query) - use conservative top_k to avoid rate limits
+            recommended_top_k = 20
         
         return {
             "intent": intent,
