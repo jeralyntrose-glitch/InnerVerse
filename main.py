@@ -60,6 +60,9 @@ from src.routes.learning_paths_routes import router as learning_paths_ui_router
 # Chat Router
 from src.routes.chat_routes import router as chat_router
 
+# Query Intelligence (2025-11-20)
+from src.services.query_intelligence import analyze_and_filter, rerank_results, QueryConfig
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -1580,19 +1583,40 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
         embed_cost = (embed_tokens / 1000) * PRICING["text-embedding-3-large"]
         log_api_usage("query_embedding", "text-embedding-3-large", input_tokens=embed_tokens, cost=embed_cost)
 
-        # Build Pinecone filter based on document_id and tags
+        # ============================================================================
+        # INTELLIGENT QUERY ANALYSIS (NEW - 2025-11-20)
+        # ============================================================================
+        # Analyze query for intent, entities, and smart filtering
+        import time
+        query_start = time.time()
+        
+        analysis = analyze_and_filter(question)
+        
+        query_analysis_time = time.time() - query_start
+        print(f"\n🧠 Query Intelligence:")
+        print(f"   Intent: {analysis['intent']} (confidence: {analysis['confidence']:.2f})")
+        print(f"   Entities: {analysis['entities']}")
+        print(f"   Smart filters: {analysis['use_smart_filters']}")
+        print(f"   ⏱️ Analysis took {query_analysis_time:.3f}s")
+        if analysis['pinecone_filter']:
+            print(f"   Filter: {analysis['pinecone_filter']}")
+        
+        # Build Pinecone filter combining OLD (doc_id) + NEW (smart filters)
         filter_conditions = []
+        
+        # Preserve existing doc_id filtering (backward compatibility)
         if document_id and document_id.strip():
             filter_conditions.append({"doc_id": document_id})
-        if filter_tags and len(filter_tags) > 0:
-            # Filter for documents that contain ANY of the specified tags
-            filter_conditions.append({"tags": {"$in": filter_tags}})
+        
+        # Add smart metadata filters if confidence is high enough
+        if analysis['use_smart_filters'] and analysis['pinecone_filter']:
+            filter_conditions.append(analysis['pinecone_filter'])
         
         # Build final filter and query with timeout protection
         from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
         
-        # Increase top_k when smart filter is applied to ensure we get Four Sides matches
-        search_top_k = 30 if smart_filter_applied else 5
+        # Use intelligent top_k (30-50 based on query complexity vs old 5)
+        search_top_k = analysis['recommended_top_k']
         
         try:
             with ThreadPoolExecutor() as executor:
@@ -1644,25 +1668,38 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
         except AttributeError:
             matches = query_response.get("matches", [])  # type: ignore
         
-        # Apply smart filtering if "Four Sides" pattern detected
-        if smart_filter_applied:
-            original_count = len(matches)
-            matches = [
-                m for m in matches
-                if "metadata" in m and "filename" in m["metadata"] and 
-                "four sides" in m["metadata"]["filename"].lower()
-            ]
-            print(f"🧠 Smart filter applied: {original_count} matches → {len(matches)} Four Sides matches")
-        
-        contexts = []
-        source_docs = set()
-        
-        for m in matches:
-            if "metadata" in m and "text" in m["metadata"]:
-                contexts.append(m["metadata"]["text"])
-                # Track which documents the answer came from
-                if "filename" in m["metadata"]:
-                    source_docs.add(m["metadata"]["filename"])
+        # ============================================================================
+        # RE-RANK RESULTS USING METADATA INTELLIGENCE (NEW)
+        # ============================================================================
+        # Re-rank matches based on metadata relevance if smart filters were used
+        if analysis['use_smart_filters']:
+            print(f"🔄 Re-ranking {len(matches)} results using metadata intelligence...")
+            ranked_results = rerank_results(matches, question, analysis)
+            print(f"✅ Top {len(ranked_results)} results after re-ranking")
+            
+            # Use re-ranked results
+            contexts = [r['text'] for r in ranked_results if r['text']]
+            source_docs = {r['metadata'].get('filename', 'Unknown') for r in ranked_results}
+        else:
+            # Use original Pinecone ranking (backward compatibility)
+            # Apply smart filtering if "Four Sides" pattern detected (legacy support)
+            if smart_filter_applied:
+                original_count = len(matches)
+                matches = [
+                    m for m in matches
+                    if "metadata" in m and "filename" in m["metadata"] and 
+                    "four sides" in m["metadata"]["filename"].lower()
+                ]
+                print(f"🧠 Legacy smart filter applied: {original_count} matches → {len(matches)} Four Sides matches")
+            
+            contexts = []
+            source_docs = set()
+            
+            for m in matches:
+                if "metadata" in m and "text" in m["metadata"]:
+                    contexts.append(m["metadata"]["text"])
+                    if "filename" in m["metadata"]:
+                        source_docs.add(m["metadata"]["filename"])
         
         if not contexts:
             return {"answer": "No relevant information found in your documents."}
