@@ -1394,6 +1394,9 @@
                     // Save this conversation as last viewed
                     localStorage.setItem("lastConversationId", convId);
                     console.log("💾 Saved last conversation:", convId);
+                    
+                    // Update typing indicator position after loading conversation (mobile)
+                    updateTypingIndicatorPosition();
                 } catch (error) {
                     console.error("Load conversation error:", error);
                     showError("Failed to load conversation. Please try again.");
@@ -1408,6 +1411,7 @@
                 if (window.innerWidth <= 768) {
                     sidebar.classList.add("closed");
                     sidebarOverlay.classList.remove("visible");
+                    updateTypingIndicatorPosition(); // Update position when closing
                 }
             });
 
