@@ -2050,12 +2050,20 @@
                 // Force parameter bypasses user intent check for initial loads/sends
                 if (!force && !isUserPinnedToBottom) return; // Respect user intent
 
+                // PATCH 19: Suppress scroll events during programmatic scroll
+                suppressScrollEvents = true;
+                
                 requestAnimationFrame(() => {
                     messages.scrollTop = messages.scrollHeight;
                     console.log(
                         "📜 Auto-scrolled to bottom" +
                             (force ? " (forced)" : ""),
                     );
+                    
+                    // Clear suppression flag after scroll completes
+                    requestAnimationFrame(() => {
+                        suppressScrollEvents = false;
+                    });
                 });
             }
 
