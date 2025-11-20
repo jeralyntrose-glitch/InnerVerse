@@ -900,13 +900,13 @@
         <!-- Main Content -->
         <main class="main-content">
             <div class="chat-container">
-                <div class="messages" id="messages"></div>
-                
-                <div class="typing-indicator" id="typingIndicator">
-                    <div class="typing-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                <div class="messages" id="messages">
+                    <div class="typing-indicator" id="typingIndicator">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
                     </div>
                 </div>
                 
@@ -1069,6 +1069,25 @@
             }
         }
 
+        // ===== HELPER: CLEAR MESSAGES (PRESERVE TYPING INDICATOR) =====
+        function clearMessages() {
+            // Get typing indicator element and remove it from DOM temporarily
+            const typingIndicatorElem = document.getElementById('typingIndicator');
+            
+            // Temporarily remove indicator from messages container
+            if (typingIndicatorElem && typingIndicatorElem.parentNode) {
+                typingIndicatorElem.parentNode.removeChild(typingIndicatorElem);
+            }
+            
+            // Clear all messages
+            messages.innerHTML = '';
+            
+            // Re-append the SAME indicator element (preserves references and listeners)
+            if (typingIndicatorElem) {
+                messages.appendChild(typingIndicatorElem);
+            }
+        }
+
         // ===== LOAD CONVERSATIONS =====
         async function loadAllConversations() {
             try {
@@ -1083,7 +1102,7 @@
                 if (allConversations.length > 0 && !conversationId) {
                     await loadConversation(allConversations[0].id);
                 } else if (allConversations.length === 0) {
-                    messages.innerHTML = '';
+                    clearMessages();
                 }
             } catch (error) {
                 console.error('Load conversations error:', error);
@@ -1164,7 +1183,7 @@
                 if (!response.ok) throw new Error('Failed to load conversation');
                 
                 const data = await response.json();
-                messages.innerHTML = '';
+                clearMessages();
                 
                 // Show welcome message if chat is empty
                 if (data.messages.length === 0) {
@@ -1227,7 +1246,7 @@
                     }
                     
                     conversationId = data.id;
-                    messages.innerHTML = '';
+                    clearMessages();
                     showWelcomeMessage();
                     await loadAllConversations();
                     
@@ -1799,18 +1818,13 @@
             const rect = inputContainer.getBoundingClientRect();
             const inputHeight = rect.height;
             
-            // Get safe-area inset (iOS home indicator)
-            const rootStyle = getComputedStyle(document.documentElement);
-            const safeAreaBottom = parseInt(
-                rootStyle.getPropertyValue('--safe-area-inset-bottom') || '0'
-            );
-            
-            // Add extra buffer for comfort
-            const buffer = 20;
-            const totalPadding = inputHeight + safeAreaBottom + buffer;
+            // Remove broken safe-area calculation (env() can't be read by JS)
+            // Just use input height + buffer
+            const buffer = 40; // Increased buffer for comfort
+            const totalPadding = inputHeight + buffer;
             
             messages.style.paddingBottom = totalPadding + 'px';
-            console.log('📏 Updated padding:', totalPadding + 'px', '(input:', inputHeight + 'px, safe-area:', safeAreaBottom + 'px)');
+            console.log('📏 Updated padding:', totalPadding + 'px', '(input:', inputHeight + 'px)');
         }
 
         // iOS Dynamic Input Bar Positioning (visualViewport API)

@@ -1,0 +1,64 @@
+🐛 ISSUE #1: Words Cut Off - ROOT CAUSE FOUND
+Line 1809-1812:
+javascriptconst rootStyle = getComputedStyle(document.documentElement);
+const safeAreaBottom = parseInt(
+    rootStyle.getPropertyValue('--safe-area-inset-bottom') || '0'
+);
+THE PROBLEM:
+
+Trying to read CSS custom property --safe-area-inset-bottom
+But this property is NEVER DEFINED in the CSS!
+So safeAreaBottom is always 0
+Padding calculation is wrong!
+
+CSS has:
+csspadding-bottom: calc(12px + env(safe-area-inset-bottom));
+But env() can't be read by JavaScript like that!
+
+🐛 ISSUE #2: Typing Dots Gone - ROOT CAUSE FOUND
+HTML structure (line 905):
+html<div class="messages" id="messages"></div>
+
+<div class="typing-indicator" id="typingIndicator">  ← OUTSIDE messages!
+    <div class="typing-dots">
+THE PROBLEM:
+
+Typing indicator is OUTSIDE the .messages container
+It's a sibling to .input-container (which is fixed at bottom)
+So it's positioned BELOW the fixed input bar
+Completely off-screen!
+
+
+🎯 THE FIXES:
+FIX #1: Dynamic Padding - Remove Safe Area Calculation
+javascriptfunction updateMessagesPadding() {
+    const inputContainer = document.querySelector('.input-container');
+    if (!inputContainer) return;
+    
+    // Measure actual input bar height
+    const rect = inputContainer.getBoundingClientRect();
+    const inputHeight = rect.height;
+    
+    // Remove broken safe-area calculation
+    // Just use input height + buffer
+    const buffer = 40; // Increased buffer
+    const totalPadding = inputHeight + buffer;
+    
+    messages.style.paddingBottom = totalPadding + 'px';
+    console.log('📏 Updated padding:', totalPadding + 'px');
+}
+FIX #2: Move Typing Indicator INSIDE Messages
+Change HTML from:
+html<div class="messages" id="messages"></div>
+
+<div class="typing-indicator" id="typingIndicator">
+To:
+html<div class="messages" id="messages">
+    <div class="typing-indicator" id="typingIndicator">
+        <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </div>
+</div>
