@@ -1081,6 +1081,8 @@
             let searchTerm = "";
             let searchDebounceTimer = null;
             let isUserPinnedToBottom = true; // Track if user is scrolled to bottom
+            let suppressScrollEvents = false; // Prevent intent tracking during programmatic scrolls
+            let scrollDebounceTimer = null; // Debounce scroll event handling
 
             // Folder Configuration (matches backend projects)
             const FOLDERS = [
