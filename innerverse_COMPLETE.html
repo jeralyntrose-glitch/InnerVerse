@@ -1081,6 +1081,8 @@
             let searchTerm = "";
             let searchDebounceTimer = null;
             let isUserPinnedToBottom = true; // Track if user is scrolled to bottom
+            let suppressScrollEvents = false; // Prevent intent tracking during programmatic scrolls
+            let scrollDebounceTimer = null; // Debounce scroll event handling
 
             // Folder Configuration (matches backend projects)
             const FOLDERS = [
@@ -2035,7 +2037,7 @@
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
             function updateScrollPinState() {
-                const threshold = 30;
+                const threshold = 5; // PATCH 19: Reduced from 30px to 5px (industry standard)
                 const isNearBottom =
                     messages.scrollHeight -
                         messages.scrollTop -
@@ -2048,17 +2050,25 @@
                 // Force parameter bypasses user intent check for initial loads/sends
                 if (!force && !isUserPinnedToBottom) return; // Respect user intent
 
+                // PATCH 19: Suppress scroll events during programmatic scroll
+                suppressScrollEvents = true;
+                
                 requestAnimationFrame(() => {
                     messages.scrollTop = messages.scrollHeight;
                     console.log(
                         "📜 Auto-scrolled to bottom" +
                             (force ? " (forced)" : ""),
                     );
+                    
+                    // Clear suppression flag after scroll completes
+                    requestAnimationFrame(() => {
+                        suppressScrollEvents = false;
+                    });
                 });
             }
 
             function scrollToBottomIfNearBottom() {
-                const threshold = 30;
+                const threshold = 5; // PATCH 19: Reduced from 30px to 5px (industry standard)
                 const isNearBottom =
                     messages.scrollHeight -
                         messages.scrollTop -
@@ -2082,8 +2092,17 @@
                     inputResizeObserver.disconnect();
                 }
 
-                // Listen to manual scrolling to update pin state
-                messages.addEventListener("scroll", updateScrollPinState);
+                // PATCH 19: Debounced scroll listener with intent tracking (50ms)
+                messages.addEventListener("scroll", () => {
+                    // Ignore synthetic scroll events from our own code
+                    if (suppressScrollEvents) return;
+                    
+                    // Debounce scroll handling to prevent excessive updates
+                    clearTimeout(scrollDebounceTimer);
+                    scrollDebounceTimer = setTimeout(() => {
+                        updateScrollPinState();
+                    }, 50); // 50ms debounce for mobile momentum scrolling
+                });
 
                 // MutationObserver to detect DOM changes in messages
                 messageObserver = new MutationObserver((mutations) => {
