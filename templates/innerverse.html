@@ -2091,16 +2091,14 @@
                     inputResizeObserver.disconnect();
                 }
 
-                // PATCH 19: Debounced scroll listener with intent tracking (50ms)
+                // PATCH 20: IMMEDIATE scroll detection (no debounce - fixes race condition)
                 messages.addEventListener("scroll", () => {
                     // Ignore synthetic scroll events from our own code
                     if (suppressScrollEvents) return;
                     
-                    // Debounce scroll handling to prevent excessive updates
-                    clearTimeout(scrollDebounceTimer);
-                    scrollDebounceTimer = setTimeout(() => {
-                        updateScrollPinState();
-                    }, 50); // 50ms debounce for mobile momentum scrolling
+                    // Update pin state IMMEDIATELY when user scrolls
+                    // No debounce - must detect intent before next AI chunk arrives (~10-20ms)
+                    updateScrollPinState();
                 });
 
                 // MutationObserver to detect DOM changes in messages
