@@ -534,19 +534,33 @@ class QueryIntelligence:
         # Build filter (with confidence check)
         pinecone_filter = self.filter_builder.build(intent, entities, confidence)
         
-        # ARCHITECT FIX: Adaptive top_k to prevent rate limiting
-        # Use higher top_k only when we have filters to narrow results
-        # Otherwise stick to conservative values to avoid Pinecone rate limits
-        has_filters = bool(pinecone_filter)
+        # ARCHITECT FIX v2: Adaptive top_k based on filter SELECTIVITY
+        # Count high-selectivity filters (specific) vs low-selectivity (broad category filters)
+        high_selectivity_count = 0
         
-        if entities.get("season") or (entities.get("types") and entities.get("relationships")):
-            # Very specific query with strong filters - moderate top_k
-            recommended_top_k = 30
-        elif has_filters:
-            # Has metadata filters - can use higher top_k safely
+        # High-selectivity filters narrow results significantly
+        if entities.get("season"):
+            high_selectivity_count += 1
+        if entities.get("types"):
+            high_selectivity_count += 1
+        if entities.get("functions"):
+            high_selectivity_count += 1
+        if entities.get("relationships"):
+            high_selectivity_count += 1
+        if entities.get("quadra"):
+            high_selectivity_count += 1
+        if entities.get("temple"):
+            high_selectivity_count += 1
+        
+        # Adaptive top_k based on filter strength to prevent rate limiting
+        if high_selectivity_count >= 2:
+            # Multiple specific filters - can use higher top_k
             recommended_top_k = 40
+        elif high_selectivity_count == 1:
+            # Single specific filter - moderate top_k
+            recommended_top_k = 30
         else:
-            # No filters (general query) - use conservative top_k to avoid rate limits
+            # No specific filters (only broad category filters or none) - conservative
             recommended_top_k = 20
         
         return {

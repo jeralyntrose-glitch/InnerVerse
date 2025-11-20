@@ -1597,6 +1597,7 @@ async def query_pdf(request: QueryRequest, authorization: str = Header(None)):
         print(f"   Intent: {analysis['intent']} (confidence: {analysis['confidence']:.2f})")
         print(f"   Entities: {analysis['entities']}")
         print(f"   Smart filters: {analysis['use_smart_filters']}")
+        print(f"   📊 Adaptive top_k: {analysis['recommended_top_k']}")
         print(f"   ⏱️ Analysis took {query_analysis_time:.3f}s")
         if analysis['pinecone_filter']:
             print(f"   Filter: {analysis['pinecone_filter']}")
