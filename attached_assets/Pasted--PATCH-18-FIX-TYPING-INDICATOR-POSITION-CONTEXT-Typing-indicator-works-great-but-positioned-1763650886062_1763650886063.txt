@@ -1,0 +1,163 @@
+# PATCH 18: FIX TYPING INDICATOR POSITION
+
+## CONTEXT
+
+**Typing indicator works great but positioned wrong:**
+
+- Current: Centered (`left: 50%` + `transform: translateX(-50%)`)
+- Desired: Left-aligned with 20px margin from left edge
+
+**This is a CSS positioning fix only.**
+
+-----
+
+## CHANGE: REPOSITION TYPING INDICATOR TO LEFT
+
+**WHY:** Standard chat UX has typing indicators on the left side, not centered. Needs comfortable margin from edge.
+
+**FILE:** `templates/innerverse.html`
+
+**FIND (Lines 679-699):**
+
+```css
+/* Typing Indicator - FIXED POSITION (iOS-safe) */
+.typing-indicator {
+    display: none;
+    position: fixed;
+    bottom: 85px; /* Above input bar (input ~70px + padding) */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 16px;
+    background: var(--bg-user-bubble);
+    border-radius: 20px;
+    box-shadow: 0 2px 8px var(--shadow);
+    z-index: 999; /* Below input (1000) but above messages */
+    pointer-events: none; /* Don't block clicks */
+}
+
+.typing-indicator.visible {
+    display: block;
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+```
+
+**REPLACE WITH:**
+
+```css
+/* Typing Indicator - FIXED POSITION (iOS-safe) */
+.typing-indicator {
+    display: none;
+    position: fixed;
+    bottom: 85px; /* Above input bar (input ~70px + padding) */
+    left: 20px; /* Left-aligned with comfortable margin */
+    padding: 10px 16px;
+    background: var(--bg-user-bubble);
+    border-radius: 20px;
+    box-shadow: 0 2px 8px var(--shadow);
+    z-index: 999; /* Below input (1000) but above messages */
+    pointer-events: none; /* Don't block clicks */
+}
+
+.typing-indicator.visible {
+    display: block;
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+```
+
+**EXACT LINES:** 679-699 (replace typing indicator CSS block)
+
+**CHANGES:**
+
+- `left: 50%` → `left: 20px`
+- Remove `transform: translateX(-50%)` (no longer centering)
+- Update `fadeInUp` animation to remove `translateX()` (only vertical slide now)
+
+-----
+
+## CRITICAL INSTRUCTIONS
+
+⚠️ **CHANGE ONLY THE CSS BLOCK SPECIFIED ABOVE**
+⚠️ **DO NOT modify any JavaScript**
+⚠️ **DO NOT modify any other CSS**
+⚠️ **DO NOT add mobile media queries** (we’ll adjust if needed after testing)
+
+**This is a CSS positioning fix. Change ONLY what is specified.**
+
+-----
+
+## TESTING CHECKLIST
+
+After applying changes, test on iOS Safari:
+
+**Test #1: Position**
+
+- [ ] Send a message to AI
+- [ ] Typing indicator appears on LEFT side
+- [ ] Has comfortable margin from left edge (~20px)
+- [ ] Not touching edge, not centered
+
+**Test #2: Visibility**
+
+- [ ] Clearly visible above input bar
+- [ ] Clean spacing
+- [ ] Professional appearance
+
+**Test #3: Animation**
+
+- [ ] Fades in smoothly (slides up)
+- [ ] No horizontal shift
+- [ ] Clean entrance/exit
+
+-----
+
+## EXPECTED RESULTS
+
+**Before:**
+
+```
+┌──────────────────┐
+│                  │
+│     ● ● ●        │ ← Centered
+├──────────────────┤
+│  [Input]         │
+└──────────────────┘
+```
+
+**After:**
+
+```
+┌──────────────────┐
+│                  │
+│  ● ● ●           │ ← Left-aligned, 20px margin
+├──────────────────┤
+│  [Input]         │
+└──────────────────┘
+```
+
+**Position:** Fixed at `left: 20px`, `bottom: 85px`
+
+-----
+
+**APPLY THIS CSS CHANGE EXACTLY AS SPECIFIED. TEST ON iOS. REPORT RESULTS.**

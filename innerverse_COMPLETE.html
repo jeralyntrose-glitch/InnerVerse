@@ -606,8 +606,7 @@
                 display: none;
                 position: fixed;
                 bottom: 85px; /* Above input bar (input ~70px + padding) */
-                left: 50%;
-                transform: translateX(-50%);
+                left: calc(280px + 20px); /* Sidebar width (280px) + message padding (20px) */
                 padding: 10px 16px;
                 background: var(--bg-user-bubble);
                 border-radius: 20px;
@@ -624,11 +623,11 @@
             @keyframes fadeInUp {
                 from {
                     opacity: 0;
-                    transform: translateX(-50%) translateY(10px);
+                    transform: translateY(10px);
                 }
                 to {
                     opacity: 1;
-                    transform: translateX(-50%) translateY(0);
+                    transform: translateY(0);
                 }
             }
 
@@ -892,6 +891,11 @@
                 .message.user .message-images {
                     max-width: 85%;
                 }
+
+                /* Typing indicator - mobile override (sidebar is overlay, not inline) */
+                .typing-indicator {
+                    left: 12px; /* Match mobile message padding */
+                }
             }
 
             /* ===== SCROLLBAR ===== */
@@ -1127,20 +1131,59 @@
                 localStorage.setItem("innerverse-theme", newTheme);
             });
 
+            // ===== TYPING INDICATOR POSITIONING =====
+            // Dynamically position typing indicator to align with message column
+            function updateTypingIndicatorPosition() {
+                if (window.innerWidth <= 768) {
+                    // Mobile: remove inline style to let media query take effect
+                    typingIndicator.style.removeProperty('left');
+                } else {
+                    // Desktop: calculate based on messages container position
+                    const messagesRect = messages.getBoundingClientRect();
+                    const messagesLeft = messagesRect.left;
+                    const messagePadding = 20; // Desktop message padding
+                    typingIndicator.style.left = `${messagesLeft + messagePadding}px`;
+                }
+            }
+
+            // Update on page load
+            updateTypingIndicatorPosition();
+
+            // Update on window resize
+            window.addEventListener('resize', updateTypingIndicatorPosition);
+
+            // Update when sidebar transition completes
+            sidebar.addEventListener('transitionend', (e) => {
+                // Only update on transform transition (not other properties)
+                if (e.propertyName === 'transform') {
+                    updateTypingIndicatorPosition();
+                }
+            });
+
+            // Observe messages container for layout changes (catches all edge cases)
+            const messagesObserver = new ResizeObserver(() => {
+                updateTypingIndicatorPosition();
+            });
+            messagesObserver.observe(messages);
+
             // ===== MOBILE SIDEBAR =====
             if (window.innerWidth <= 768) {
                 sidebar.classList.add("closed");
+                updateTypingIndicatorPosition(); // Ensure correct position on mobile load
             }
 
             burgerMenu.addEventListener("click", () => {
                 sidebar.classList.toggle("closed");
                 sidebarOverlay.classList.toggle("visible");
+                // Update immediately (transitionend will also fire, but this handles instant feedback)
+                updateTypingIndicatorPosition();
             });
 
             // Close sidebar when clicking overlay
             sidebarOverlay.addEventListener("click", () => {
                 sidebar.classList.add("closed");
                 sidebarOverlay.classList.remove("visible");
+                updateTypingIndicatorPosition(); // Update position when closing
             });
 
             // Close sidebar when clicking conversation on mobile
@@ -1150,6 +1193,7 @@
                     if (convItem) {
                         sidebar.classList.add("closed");
                         sidebarOverlay.classList.remove("visible");
+                        updateTypingIndicatorPosition(); // Update position when closing
                     }
                 }
             });
