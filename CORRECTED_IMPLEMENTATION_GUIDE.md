@@ -365,6 +365,7 @@ class FilterBuilder:
             # Map user terms to actual Pinecone values (ONLY verified ones)
             rel_map = {
                 "golden": "golden_pair",
+                "gold": "golden_pair",      # Common abbreviation users say
                 "pedagogue": "pedagogue_pair",
                 "bronze": "bronze_pair"
             }
@@ -678,12 +679,17 @@ search_top_k = 30 if smart_filter_applied else 5
 # INTELLIGENT QUERY ANALYSIS (NEW - 2025-11-20)
 # ============================================================================
 # Analyze query for intent, entities, and smart filtering
+import time
+query_start = time.time()
+
 analysis = analyze_and_filter(question)
 
+query_analysis_time = time.time() - query_start
 print(f"\n🧠 Query Intelligence:")
 print(f"   Intent: {analysis['intent']} (confidence: {analysis['confidence']:.2f})")
 print(f"   Entities: {analysis['entities']}")
 print(f"   Smart filters: {analysis['use_smart_filters']}")
+print(f"   ⏱️ Analysis took {query_analysis_time:.3f}s")
 if analysis['pinecone_filter']:
     print(f"   Filter: {analysis['pinecone_filter']}")
 
@@ -703,7 +709,7 @@ if analysis['use_smart_filters'] and analysis['pinecone_filter']:
 # Build final filter and query with timeout protection
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
-# Use intelligent top_k (25-40 based on query complexity vs old 5)
+# Use intelligent top_k (30-50 based on query complexity vs old 5)
 search_top_k = analysis['recommended_top_k']
 ```
 
