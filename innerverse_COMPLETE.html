@@ -1974,7 +1974,7 @@
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
             function updateScrollPinState() {
-                const threshold = 100;
+                const threshold = 30;
                 const isNearBottom =
                     messages.scrollHeight -
                         messages.scrollTop -
@@ -1997,7 +1997,7 @@
             }
 
             function scrollToBottomIfNearBottom() {
-                const threshold = 100;
+                const threshold = 30;
                 const isNearBottom =
                     messages.scrollHeight -
                         messages.scrollTop -
@@ -2090,7 +2090,7 @@
 
                 // Remove broken safe-area calculation (env() can't be read by JS)
                 // Just use input height + buffer
-                const buffer = 40; // Increased buffer for comfort
+                const buffer = 100; // Increased buffer for comfort
                 const totalPadding = inputHeight + buffer;
 
                 messages.style.paddingBottom = totalPadding + "px";

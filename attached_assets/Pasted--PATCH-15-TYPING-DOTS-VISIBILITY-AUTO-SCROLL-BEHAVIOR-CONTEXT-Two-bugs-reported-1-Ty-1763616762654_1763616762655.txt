@@ -1,0 +1,112 @@
+# PATCH 15: TYPING DOTS VISIBILITY + AUTO-SCROLL BEHAVIOR
+
+## CONTEXT
+
+**Two bugs reported:**
+
+1. Typing dots completely invisible (never appear when AI responds)
+1. Auto-scroll fights user when they try to scroll up to read AI response
+
+**Root causes identified:**
+
+1. Bottom padding too small (40px) → typing dots hidden behind input bar
+1. Auto-scroll threshold too large (100px) → triggers even when user scrolls up
+
+-----
+
+## CHANGE #1: INCREASE BOTTOM PADDING
+
+**WHY:** Typing dots are inside `.messages` container at bottom but hidden behind input bar due to insufficient padding.
+
+**FILE:** `templates/innerverse.html`
+
+**FIND (Line 1976):**
+
+```javascript
+const buffer = 40; // Increased buffer for comfort
+```
+
+**REPLACE WITH:**
+
+```javascript
+const buffer = 100; // Increased buffer for comfort
+```
+
+**EXACT LINE NUMBER:** 1976
+
+-----
+
+## CHANGE #2: REDUCE AUTO-SCROLL THRESHOLD
+
+**WHY:** When user scrolls up to read, auto-scroll keeps pulling them back down because threshold is too large (100px = still considered “near bottom”). Reducing to 30px gives user freedom to scroll up without being yanked down.
+
+**FILE:** `templates/innerverse.html`
+
+**FIND (Line 1798):**
+
+```javascript
+const threshold = 100;
+```
+
+**REPLACE WITH:**
+
+```javascript
+const threshold = 30;
+```
+
+**EXACT LINE NUMBER:** 1798
+
+-----
+
+## CRITICAL INSTRUCTIONS
+
+⚠️ **CHANGE ONLY THE TWO LINES SPECIFIED ABOVE**
+⚠️ **DO NOT modify any other scroll logic**
+⚠️ **DO NOT add timeouts, retries, or additional observers**
+⚠️ **DO NOT “improve” or “optimize” anything else**
+
+**These are surgical changes to existing code. Change ONLY what is specified.**
+
+-----
+
+## TESTING CHECKLIST
+
+After applying changes, test on iOS Safari:
+
+**Test #1: Typing Dots Visibility**
+
+- [ ] Send a message to AI
+- [ ] Typing dots appear immediately (visible above input bar)
+- [ ] Dots disappear when AI response starts streaming
+
+**Test #2: Auto-Scroll Behavior**
+
+- [ ] Send a message to AI
+- [ ] While AI is responding, scroll UP to read earlier part of response
+- [ ] Messages should stay where you scrolled (no fighting/yanking back down)
+- [ ] If you scroll back to very bottom (within 30px), auto-scroll resumes
+
+**Test #3: Message Visibility**
+
+- [ ] Last message fully visible above input bar (no words cut off)
+- [ ] Proper spacing between last message and input bar
+
+-----
+
+## EXPECTED RESULTS
+
+**Before:**
+
+- Typing dots: Invisible
+- Auto-scroll: Fights user when they scroll up
+- Bottom padding: 108px (68px input + 40px buffer)
+
+**After:**
+
+- Typing dots: Visible above input bar
+- Auto-scroll: Only triggers when user is within 30px of bottom
+- Bottom padding: 168px (68px input + 100px buffer)
+
+-----
+
+**APPLY THESE TWO CHANGES EXACTLY AS SPECIFIED. TEST THOROUGHLY. REPORT RESULTS.**
