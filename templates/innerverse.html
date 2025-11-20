@@ -956,6 +956,7 @@
         let selectedImages = [];
         let searchTerm = '';
         let searchDebounceTimer = null;
+        let isUserPinnedToBottom = true; // Track if user is scrolled to bottom
 
         // Folder Configuration (matches backend projects)
         const FOLDERS = [
@@ -1174,6 +1175,10 @@
                     });
                 }
                 
+                // Re-initialize observers after DOM mutations
+                // Ensures observers watch the current conversation's nodes
+                initializeObservers();
+                
                 renderSidebar();
                 scrollToBottom();
                 
@@ -1197,35 +1202,60 @@
             }
         });
 
-        async function createNewConversation(projectId) {
-            try {
-                const response = await fetch('/claude/conversations', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        project: projectId, 
-                        name: 'New Chat' 
-                    })
-                });
-                
-                if (!response.ok) throw new Error('Failed to create conversation');
-                
-                const data = await response.json();
-                conversationId = data.id;
-                messages.innerHTML = '';
-                showWelcomeMessage();
-                await loadAllConversations();
-                
-                // Save new conversation as last viewed
-                localStorage.setItem('lastConversationId', data.id);
-                
-                // Auto-focus input after creating new chat
-                setTimeout(() => {
-                    messageInput.focus();
-                }, 100);
-            } catch (error) {
-                console.error('Create conversation error:', error);
-                showError('Failed to create new chat. Please try again.');
+        async function createNewConversation(projectId = 'brain-dump', retries = 3) {
+            for (let attempt = 1; attempt <= retries; attempt++) {
+                try {
+                    const response = await fetch('/claude/conversations', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            project: projectId, 
+                            name: 'New Chat' 
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Server error: ${response.status} - ${errorText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Verify we got a valid conversation ID
+                    if (!data || !data.id) {
+                        throw new Error('Server returned invalid conversation data');
+                    }
+                    
+                    conversationId = data.id;
+                    messages.innerHTML = '';
+                    showWelcomeMessage();
+                    await loadAllConversations();
+                    
+                    // Save new conversation as last viewed
+                    localStorage.setItem('lastConversationId', data.id);
+                    
+                    console.log('✅ Created new conversation:', conversationId);
+                    
+                    // Auto-focus input after creating new chat
+                    setTimeout(() => {
+                        messageInput.focus();
+                    }, 100);
+                    
+                    return conversationId; // Success
+                    
+                } catch (error) {
+                    console.error(`Create conversation error (attempt ${attempt}/${retries}):`, error);
+                    
+                    if (attempt === retries) {
+                        // Final attempt failed
+                        showError('Failed to create new chat after multiple attempts. Please refresh the page.');
+                        conversationId = null; // Ensure it's explicitly null
+                        return null;
+                    }
+                    
+                    // Wait before retry (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                }
             }
         }
 
@@ -1438,12 +1468,73 @@
 
         sendBtn.addEventListener('click', sendMessage);
 
+        // ===== PLATFORM DETECTION =====
+        function isDesktop() {
+            // Multi-criteria detection for keyboard-based devices
+            // Use "any-pointer" and "any-hover" to detect ALL available input methods,
+            // not just primary pointer (fixes Surface/hybrid devices)
+            
+            // Check 1: Any fine pointer (mouse/trackpad/stylus)
+            const hasAnyFinePointer = window.matchMedia('(any-pointer: fine)').matches;
+            
+            // Check 2: Any hover capability
+            const hasAnyHover = window.matchMedia('(any-hover: hover)').matches;
+            
+            // Check 3: User agent data (modern browsers)
+            if (navigator.userAgentData) {
+                const isMobileUA = navigator.userAgentData.mobile;
+                // If UA says mobile but has fine pointer/hover, it's a hybrid (iPad with keyboard)
+                if (!isMobileUA) return true;
+                if (hasAnyFinePointer || hasAnyHover) return true;
+                return false;
+            }
+            
+            // Check 4: UA fallback for iPadOS (Safari reports as desktop)
+            const ua = navigator.userAgent;
+            const isIPadOS = /Macintosh/.test(ua) && 'ontouchend' in document;
+            if (isIPadOS && (hasAnyFinePointer || hasAnyHover)) return true;
+            
+            // Check 5: Screen size + pointer combination
+            const isLargeScreen = window.innerWidth > 1024;
+            
+            // Desktop if: has ANY fine pointer OR ANY hover capability OR large screen
+            return hasAnyFinePointer || hasAnyHover || isLargeScreen;
+        }
+
+        // ===== PLATFORM-AWARE ENTER KEY HANDLING =====
         messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
+            if (e.key === 'Enter') {
+                // Don't interrupt IME composition (Asian languages)
+                if (e.isComposing) return;
+                
+                // Desktop behavior: Enter sends, Shift+Enter = newline
+                if (isDesktop()) {
+                    if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                    // Let Shift+Enter create newline naturally
+                }
+                // Mobile behavior: Enter = newline (default), button = send
+                else {
+                    // Let Enter create newline naturally
+                    // User must tap Send button to send
+                }
+                
+                // Universal shortcut: Cmd/Ctrl+Enter = send on all platforms
+                if (e.metaKey || e.ctrlKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
             }
         });
+
+        // Update placeholder based on platform
+        if (isDesktop()) {
+            messageInput.placeholder = 'Type your message... (Enter to send, Shift+Enter for new line)';
+        } else {
+            messageInput.placeholder = 'Type your message...';
+        }
 
         // ===== MESSAGE FUNCTIONS =====
         function addUserMessage(text, imageFiles) {
@@ -1498,6 +1589,34 @@
                         ALLOWED_ATTR: ['href', 'target', 'rel']
                     });
                     contentDiv.innerHTML = cleanHTML;
+                    
+                    // Wait for images to load before scrolling
+                    const images = Array.from(contentDiv.querySelectorAll('img'));
+                    if (images.length > 0) {
+                        let loadedCount = 0;
+                        const totalImages = images.length;
+                        
+                        const checkAllLoaded = () => {
+                            loadedCount++;
+                            if (loadedCount === totalImages) {
+                                scrollToBottom();
+                            }
+                        };
+                        
+                        images.forEach(img => {
+                            // Check if image is already loaded or failed (cached)
+                            if (img.complete) {
+                                // complete=true, naturalHeight>0 = success
+                                // complete=true, naturalHeight=0 = failed (expired/blocked URL)
+                                // Both cases: already finished, count it
+                                checkAllLoaded();
+                            } else {
+                                // Still loading, add event listeners
+                                img.addEventListener('load', checkAllLoaded);
+                                img.addEventListener('error', checkAllLoaded);
+                            }
+                        });
+                    }
                 } else {
                     contentDiv.textContent = content;
                 }
@@ -1587,8 +1706,20 @@
             messages.appendChild(welcomeDiv);
         }
 
+        // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
+        function updateScrollPinState() {
+            const threshold = 100;
+            const isNearBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < threshold;
+            isUserPinnedToBottom = isNearBottom;
+        }
+
         function scrollToBottom() {
-            messages.scrollTop = messages.scrollHeight;
+            if (!isUserPinnedToBottom) return; // Respect user intent
+            
+            requestAnimationFrame(() => {
+                messages.scrollTop = messages.scrollHeight;
+                console.log('📜 Auto-scrolled to bottom');
+            });
         }
 
         function scrollToBottomIfNearBottom() {
@@ -1597,6 +1728,89 @@
             if (isNearBottom) {
                 scrollToBottom();
             }
+        }
+
+        // ===== OBSERVER LIFECYCLE MANAGEMENT =====
+        let messageObserver = null;
+        let inputResizeObserver = null;
+        
+        function initializeObservers() {
+            // Clean up existing observers if any
+            if (messageObserver) {
+                messageObserver.disconnect();
+            }
+            if (inputResizeObserver) {
+                inputResizeObserver.disconnect();
+            }
+            
+            // Listen to manual scrolling to update pin state
+            messages.addEventListener('scroll', updateScrollPinState);
+
+            // MutationObserver to detect DOM changes in messages
+            messageObserver = new MutationObserver((mutations) => {
+                // Only scroll if content was added/changed
+                if (mutations.some(m => m.addedNodes.length > 0 || m.type === 'characterData')) {
+                    scrollToBottom();
+                }
+            });
+
+            messageObserver.observe(messages, {
+                childList: true,      // Watch for new messages
+                subtree: true,        // Watch nested elements (markdown rendering)
+                characterData: true   // Watch text updates (streaming)
+            });
+
+            // ResizeObserver for input container height changes
+            const inputContainer = document.querySelector('.input-container');
+            if (inputContainer) {
+                inputResizeObserver = new ResizeObserver(() => {
+                    updateMessagesPadding();
+                    scrollToBottom(); // Re-scroll after height change
+                });
+                inputResizeObserver.observe(inputContainer);
+            }
+
+            // Keyboard detection (mobile viewport changes)
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', handleViewportResize);
+            }
+
+            // Fallback: Listen to window resize
+            window.addEventListener('resize', handleWindowResize);
+            
+            console.log('✅ Observers initialized');
+        }
+        
+        function handleViewportResize() {
+            updateMessagesPadding();
+            scrollToBottom();
+        }
+        
+        function handleWindowResize() {
+            updateMessagesPadding();
+        }
+
+        // ===== DYNAMIC PADDING CALCULATION =====
+        function updateMessagesPadding() {
+            const inputContainer = document.querySelector('.input-container');
+            if (!inputContainer) return;
+            
+            // Measure actual input bar height
+            const rect = inputContainer.getBoundingClientRect();
+            const inputHeight = rect.height;
+            
+            // Get safe-area inset (iOS home indicator)
+            const rootStyle = getComputedStyle(document.documentElement);
+            const safeAreaBottom = parseInt(
+                rootStyle.getPropertyValue('--safe-area-inset-bottom') || '0'
+            );
+            
+            // Add extra buffer for comfort
+            const buffer = 20;
+            const totalPadding = inputHeight + safeAreaBottom + buffer;
+            
+            messages.style.paddingBottom = totalPadding + 'px';
+            console.log('📏 Updated padding:', totalPadding + 'px', '(input:', inputHeight + 'px, safe-area:', safeAreaBottom + 'px)');
         }
 
         // iOS Dynamic Input Bar Positioning (visualViewport API)
@@ -1661,6 +1875,9 @@
         (async function() {
             console.log('🚀 InnerVerse Chat - Phase 1 Loading...');
             
+            // Initialize observers first
+            initializeObservers();
+            
             // Load all conversations first
             await loadAllConversations();
             
@@ -1670,18 +1887,38 @@
                 console.log('📂 Loading last conversation:', lastConvId);
                 try {
                     await loadConversation(parseInt(lastConvId));
+                    
+                    // Verify conversation loaded successfully
+                    if (!conversationId) {
+                        throw new Error('Conversation ID not set after load');
+                    }
                 } catch (error) {
-                    console.log('⚠️ Could not load last conversation, showing new chat');
-                    // If last conversation failed to load, clear it
+                    console.log('⚠️ Could not load last conversation, creating new chat');
                     localStorage.removeItem('lastConversationId');
+                    const newId = await createNewConversation();
+                    
+                    if (!newId) {
+                        console.error('❌ Failed to auto-create conversation on startup');
+                    }
                 }
             } else {
-                console.log('📝 No last conversation, starting fresh');
+                console.log('📝 No last conversation, auto-creating new chat');
+                const newId = await createNewConversation();
+                
+                if (!newId) {
+                    console.error('❌ Failed to auto-create conversation on startup');
+                }
             }
+            
+            // Initialize scroll manager and dynamic padding
+            updateMessagesPadding();
+            isUserPinnedToBottom = true; // Start pinned to bottom
+            scrollToBottom();
             
             setupIOSInputBar();
             
             console.log('✅ InnerVerse Chat - Phase 1 Ready');
+            console.log('📊 Platform detected as:', isDesktop() ? 'Desktop' : 'Mobile');
         })();
     </script>
 </body>
