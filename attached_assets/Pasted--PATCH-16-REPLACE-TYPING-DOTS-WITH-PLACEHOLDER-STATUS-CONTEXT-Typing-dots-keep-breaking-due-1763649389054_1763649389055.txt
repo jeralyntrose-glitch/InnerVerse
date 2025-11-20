@@ -1,0 +1,272 @@
+# PATCH 16: REPLACE TYPING DOTS WITH PLACEHOLDER STATUS
+
+## CONTEXT
+
+**Typing dots keep breaking due to positioning issues. New approach:**
+
+- Remove typing dots entirely
+- Use input placeholder text to show status: “Claude is responding…”
+- Always visible, zero positioning bugs, professional UX (ChatGPT does this)
+
+**Benefits:**
+
+- Dead simple (can’t break)
+- More visible than dots (user looking at input naturally)
+- Zero CSS/positioning issues
+- Clean, professional feel
+
+-----
+
+## CHANGE #1: DISABLE TYPING DOTS (HIDE PERMANENTLY)
+
+**WHY:** We’re not using them anymore. Hide them so they don’t cause issues.
+
+**FILE:** `templates/innerverse.html`
+
+**FIND (Line 679):**
+
+```css
+/* Typing Indicator */
+.typing-indicator {
+    display: none;
+    padding: 8px 12px;
+    background: var(--bg-user-bubble);
+    border-radius: 16px;
+    width: fit-content;
+    margin-bottom: 16px;
+}
+
+.typing-indicator.visible {
+    display: block;
+}
+```
+
+**REPLACE WITH:**
+
+```css
+/* Typing Indicator - DISABLED (using placeholder text instead) */
+.typing-indicator {
+    display: none !important; /* Force hidden - using placeholder status instead */
+}
+```
+
+**EXACT LINE:** 679-692 (replace entire CSS block)
+
+-----
+
+## CHANGE #2: ADD PLACEHOLDER STATUS WHEN SENDING
+
+**WHY:** Show “Claude is responding…” while AI generates response.
+
+**FILE:** `templates/innerverse.html`
+
+**FIND (Line 1643-1650 in sendMessage function):**
+
+```javascript
+// Clear images
+if (hasImages) {
+    selectedImages = [];
+    imageUpload.value = "";
+    imagePreviewContainer.classList.remove("visible");
+    imagePreviewContainer.innerHTML = "";
+}
+
+// Show typing indicator and force scroll to bottom
+isUserPinnedToBottom = true; // Reset pin state when sending message
+typingIndicator.classList.add("visible");
+scrollToBottom(true);
+```
+
+**REPLACE WITH:**
+
+```javascript
+// Clear images
+if (hasImages) {
+    selectedImages = [];
+    imageUpload.value = "";
+    imagePreviewContainer.classList.remove("visible");
+    imagePreviewContainer.innerHTML = "";
+}
+
+// Show status in placeholder instead of typing dots
+isUserPinnedToBottom = true; // Reset pin state when sending message
+messageInput.placeholder = "Claude is responding...";
+messageInput.disabled = true;
+scrollToBottom(true);
+```
+
+**EXACT LINES:** 1643-1650
+
+-----
+
+## CHANGE #3: RESTORE PLACEHOLDER WHEN RESPONSE STARTS
+
+**WHY:** Once AI starts responding, restore normal placeholder.
+
+**FILE:** `templates/innerverse.html`
+
+**FIND (Line 1674-1683 in sendMessage streaming loop):**
+
+```javascript
+if (data.chunk) {
+    // Hide typing, create message div if needed
+    if (!assistantDiv) {
+        typingIndicator.classList.remove(
+            "visible",
+        );
+        assistantDiv = addMessage(
+            "assistant",
+            "",
+        );
+    }
+```
+
+**REPLACE WITH:**
+
+```javascript
+if (data.chunk) {
+    // Create message div if needed, restore placeholder
+    if (!assistantDiv) {
+        messageInput.placeholder = "Type your message...";
+        assistantDiv = addMessage(
+            "assistant",
+            "",
+        );
+    }
+```
+
+**EXACT LINES:** 1674-1683
+
+-----
+
+## CHANGE #4: RESTORE PLACEHOLDER ON ERROR
+
+**WHY:** If sending fails, restore normal state.
+
+**FILE:** `templates/innerverse.html`
+
+**FIND (Line 1721-1724 in sendMessage catch block):**
+
+```javascript
+} catch (error) {
+    console.error("Send message error:", error);
+    typingIndicator.classList.remove("visible");
+    showError("Failed to send message. Please try again.");
+```
+
+**REPLACE WITH:**
+
+```javascript
+} catch (error) {
+    console.error("Send message error:", error);
+    messageInput.placeholder = "Type your message...";
+    showError("Failed to send message. Please try again.");
+```
+
+**EXACT LINES:** 1721-1724
+
+-----
+
+## CHANGE #5: RESTORE PLACEHOLDER IN FINALLY BLOCK
+
+**WHY:** Ensure placeholder is always restored when request completes.
+
+**FILE:** `templates/innerverse.html`
+
+**FIND (Line 1725-1729 in sendMessage finally block):**
+
+```javascript
+} finally {
+    isStreaming = false;
+    sendBtn.disabled = false;
+    messageInput.focus();
+}
+```
+
+**REPLACE WITH:**
+
+```javascript
+} finally {
+    isStreaming = false;
+    sendBtn.disabled = false;
+    messageInput.disabled = false;
+    messageInput.placeholder = "Type your message...";
+    messageInput.focus();
+}
+```
+
+**EXACT LINES:** 1725-1729
+
+-----
+
+## CRITICAL INSTRUCTIONS
+
+⚠️ **CHANGE ONLY THE FIVE SECTIONS SPECIFIED ABOVE**
+⚠️ **DO NOT modify any other typing indicator code**
+⚠️ **DO NOT modify scroll logic**
+⚠️ **DO NOT add timeouts or delays**
+
+**These are surgical replacements. Change ONLY what is specified.**
+
+-----
+
+## TESTING CHECKLIST
+
+After applying changes, test on iOS Safari:
+
+**Test #1: Status Visibility**
+
+- [ ] Send a message to AI
+- [ ] Input placeholder immediately changes to “Claude is responding…”
+- [ ] Input is disabled (can’t type)
+- [ ] Status is clearly visible
+
+**Test #2: Status Clears**
+
+- [ ] AI starts responding (first chunk arrives)
+- [ ] Placeholder changes back to “Type your message…”
+- [ ] Input re-enabled when response complete
+- [ ] Can send next message normally
+
+**Test #3: Error Handling**
+
+- [ ] Trigger error (disconnect wifi, send message, reconnect)
+- [ ] Placeholder restores to normal
+- [ ] Input re-enabled
+- [ ] Can retry sending
+
+**Test #4: No Typing Dots**
+
+- [ ] Typing dots never appear
+- [ ] No positioning issues
+- [ ] Clean, simple experience
+
+-----
+
+## EXPECTED RESULTS
+
+**Before:**
+
+- Typing dots appear (broken positioning)
+- Hidden behind input bar
+- Unreliable
+
+**After:**
+
+- No typing dots
+- Placeholder shows “Claude is responding…”
+- Always visible, always works
+- Professional UX
+
+**User Experience:**
+
+1. User types message → sends
+1. Input immediately shows “Claude is responding…” (disabled)
+1. AI starts responding → placeholder back to normal
+1. Input re-enabled → user can send next message
+
+**Simple, reliable, professional.** ✨
+
+-----
+
+**APPLY THESE FIVE CHANGES EXACTLY AS SPECIFIED. TEST ON iOS. REPORT RESULTS.**
