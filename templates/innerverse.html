@@ -404,6 +404,7 @@
             padding-bottom: 200px;
             display: flex;
             flex-direction: column;
+            justify-content: flex-end; /* Push messages to bottom naturally */
             gap: 16px;
         }
 
@@ -1199,7 +1200,10 @@
                 initializeObservers();
                 
                 renderSidebar();
-                scrollToBottom();
+                
+                // Force scroll to bottom on load (bypass user intent check)
+                isUserPinnedToBottom = true;
+                scrollToBottom(true);
                 
                 // Save this conversation as last viewed
                 localStorage.setItem('lastConversationId', convId);
@@ -1254,6 +1258,10 @@
                     localStorage.setItem('lastConversationId', data.id);
                     
                     console.log('✅ Created new conversation:', conversationId);
+                    
+                    // Force scroll to bottom (bypass user intent check)
+                    isUserPinnedToBottom = true;
+                    scrollToBottom(true);
                     
                     // Auto-focus input after creating new chat
                     setTimeout(() => {
@@ -1405,9 +1413,10 @@
                 imagePreviewContainer.innerHTML = '';
             }
 
-            // Show typing indicator
+            // Show typing indicator and force scroll to bottom
+            isUserPinnedToBottom = true; // Reset pin state when sending message
             typingIndicator.classList.add('visible');
-            scrollToBottom();
+            scrollToBottom(true);
 
             let assistantDiv = null;
             let fullResponse = '';
@@ -1732,12 +1741,13 @@
             isUserPinnedToBottom = isNearBottom;
         }
 
-        function scrollToBottom() {
-            if (!isUserPinnedToBottom) return; // Respect user intent
+        function scrollToBottom(force = false) {
+            // Force parameter bypasses user intent check for initial loads/sends
+            if (!force && !isUserPinnedToBottom) return; // Respect user intent
             
             requestAnimationFrame(() => {
                 messages.scrollTop = messages.scrollHeight;
-                console.log('📜 Auto-scrolled to bottom');
+                console.log('📜 Auto-scrolled to bottom' + (force ? ' (forced)' : ''));
             });
         }
 
@@ -1927,7 +1937,7 @@
             // Initialize scroll manager and dynamic padding
             updateMessagesPadding();
             isUserPinnedToBottom = true; // Start pinned to bottom
-            scrollToBottom();
+            scrollToBottom(true); // Force scroll on initialization
             
             setupIOSInputBar();
             
