@@ -1578,6 +1578,8 @@
                 // Show typing indicator and force scroll to bottom
                 isUserPinnedToBottom = true; // Reset pin state when sending message
                 typingIndicator.classList.add("visible");
+                console.log('✅ TYPING DOTS SHOWN');
+                updateMessagesPadding(); // Trigger debug logging
                 scrollToBottom(true);
 
                 let assistantDiv = null;
@@ -1616,6 +1618,7 @@
                                             typingIndicator.classList.remove(
                                                 "visible",
                                             );
+                                            console.log('❌ TYPING DOTS HIDDEN');
                                             assistantDiv = addMessage(
                                                 "assistant",
                                                 "",
@@ -2094,12 +2097,50 @@
                 const totalPadding = inputHeight + buffer;
 
                 messages.style.paddingBottom = totalPadding + "px";
-                console.log(
-                    "📏 Updated padding:",
-                    totalPadding + "px",
-                    "(input:",
-                    inputHeight + "px)",
-                );
+                
+                // 🔍 DEBUG LOGGING
+                console.log('═══════════════════════════════════════');
+                console.log('🔍 PADDING DEBUG');
+                console.log('═══════════════════════════════════════');
+                console.log('Input Container:');
+                console.log('  - Height:', rect.height + 'px');
+                console.log('  - Top:', rect.top + 'px');
+                console.log('  - Bottom:', rect.bottom + 'px');
+                console.log('  - Width:', rect.width + 'px');
+                console.log('Buffer:', buffer + 'px');
+                console.log('Total Padding:', totalPadding + 'px');
+                console.log('Messages Container:');
+                console.log('  - scrollHeight:', messages.scrollHeight + 'px');
+                console.log('  - clientHeight:', messages.clientHeight + 'px');
+                console.log('  - scrollTop:', messages.scrollTop + 'px');
+                console.log('  - paddingBottom:', messages.style.paddingBottom);
+                
+                // Typing dots info
+                const typingDots = document.getElementById('typingIndicator');
+                if (typingDots) {
+                    const dotsRect = typingDots.getBoundingClientRect();
+                    console.log('Typing Dots:');
+                    console.log('  - Visible:', typingDots.classList.contains('visible'));
+                    console.log('  - Top:', dotsRect.top + 'px');
+                    console.log('  - Bottom:', dotsRect.bottom + 'px');
+                    console.log('  - Height:', dotsRect.height + 'px');
+                    console.log('  - Distance from input bar:', (rect.top - dotsRect.bottom) + 'px');
+                }
+                
+                // Visual viewport info (iOS)
+                if (window.visualViewport) {
+                    console.log('Visual Viewport (iOS):');
+                    console.log('  - Height:', window.visualViewport.height + 'px');
+                    console.log('  - Width:', window.visualViewport.width + 'px');
+                    console.log('  - Scale:', window.visualViewport.scale);
+                    console.log('  - offsetTop:', window.visualViewport.offsetTop + 'px');
+                }
+                
+                // Window dimensions
+                console.log('Window:');
+                console.log('  - innerHeight:', window.innerHeight + 'px');
+                console.log('  - innerWidth:', window.innerWidth + 'px');
+                console.log('═══════════════════════════════════════');
             }
 
             // iOS Dynamic Input Bar Positioning (visualViewport API)
