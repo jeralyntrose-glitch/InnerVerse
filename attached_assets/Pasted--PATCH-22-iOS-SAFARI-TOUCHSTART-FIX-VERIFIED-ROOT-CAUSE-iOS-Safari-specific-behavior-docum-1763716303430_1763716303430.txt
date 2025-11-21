@@ -1,0 +1,184 @@
+# PATCH 22: iOS SAFARI TOUCHSTART FIX
+
+## VERIFIED ROOT CAUSE
+
+**iOS Safari-specific behavior (documented in WebKit):**
+
+- iOS Safari DEFERS scroll events during active touch gestures
+- Scroll events fire ONLY AFTER the touch ends (finger lifts from screen)
+- This is different from desktop browsers which fire scroll events immediately
+
+**The Bug Timeline:**
+
+```
+T+0ms:    User finger touches screen, starts dragging up
+T+10ms:   AI chunk arrives
+T+10ms:   MutationObserver fires → scrollToBottom()
+T+10ms:   Checks isUserPinnedToBottom → STILL TRUE (scroll event deferred!)
+T+10ms:   YANK! ❌
+T+200ms:  User lifts finger
+T+200ms:  Scroll events FINALLY fire
+T+200ms:  isUserPinnedToBottom = false (TOO LATE - user already yanked)
+```
+
+**Why previous patches failed:**
+
+- PATCH 19-21 all relied on scroll events
+- Scroll events are DEFERRED on iOS Safari during active touch
+- By the time scroll event fires, user has already been yanked multiple times
+
+-----
+
+## THE FIX
+
+**Use `touchstart` event instead of (in addition to) scroll event.**
+
+`touchstart` fires THE INSTANT the user touches the screen - BEFORE any scroll events or AI chunks.
+
+-----
+
+## CHANGE #1: ADD TOUCHSTART LISTENER
+
+**FILE:** `templates/innerverse.html`
+
+**FIND (inside `initializeObservers()` function, around line 1858-1868):**
+
+```javascript
+// PATCH 20: IMMEDIATE scroll detection (no debounce - fixes race condition)
+messages.addEventListener("scroll", () => {
+    // Ignore synthetic scroll events from our own code
+    if (suppressScrollEvents) return;
+    
+    // Update pin state IMMEDIATELY when user scrolls
+    // No debounce - must detect intent before next AI chunk arrives (~10-20ms)
+    updateScrollPinState();
+});
+```
+
+**REPLACE WITH:**
+
+```javascript
+// PATCH 22: iOS touch detection (scroll events fire too late on iOS Safari)
+// touchstart fires THE INSTANT user touches screen - before scroll events
+messages.addEventListener("touchstart", () => {
+    // User touched messages area during streaming - they want to read
+    // Set this IMMEDIATELY before any AI chunks can trigger auto-scroll
+    if (isStreaming) {
+        isUserPinnedToBottom = false;
+        console.log("👆 Touch detected during streaming - disabled auto-scroll");
+    }
+}, { passive: true });
+
+// PATCH 20: Scroll detection for desktop and touch-end scenarios
+messages.addEventListener("scroll", () => {
+    // Ignore synthetic scroll events from our own code
+    if (suppressScrollEvents) return;
+    
+    // Update pin state when user scrolls
+    updateScrollPinState();
+});
+```
+
+-----
+
+## WHY THIS WORKS
+
+**Execution Timeline (After Fix):**
+
+```
+T+0ms:    User finger touches screen
+T+0ms:    touchstart fires → isUserPinnedToBottom = false ✅
+T+10ms:   AI chunk arrives
+T+10ms:   MutationObserver fires → scrollToBottom()
+T+10ms:   Checks isUserPinnedToBottom → FALSE
+T+10ms:   Respects user intent, no scroll ✅
+T+200ms:  User lifts finger, continues reading peacefully
+```
+
+**Key Points:**
+
+1. `touchstart` fires INSTANTLY on finger contact (0ms delay)
+1. Sets flag BEFORE any AI chunks can arrive
+1. MutationObserver sees `isUserPinnedToBottom = false` and respects it
+1. No yank, no tug-of-war
+1. `{ passive: true }` ensures no performance impact on scrolling
+
+-----
+
+## CRITICAL INSTRUCTIONS
+
+⚠️ **ADD the touchstart listener BEFORE the scroll listener**
+⚠️ **Keep the existing scroll listener (needed for desktop and re-enabling auto-scroll)**
+⚠️ **Use `{ passive: true }` to avoid scroll performance issues**
+⚠️ **Only set flag to false during streaming (`if (isStreaming)`)**
+
+-----
+
+## TESTING CHECKLIST
+
+**Test on iPhone 14 Pro (iOS Safari):**
+
+**Test #1: Touch During Streaming**
+
+- [ ] Send message to AI (generate long response)
+- [ ] AI starts streaming
+- [ ] Touch and drag UP while AI is typing
+- [ ] Expected: Page stays where you scrolled (NO YANK!)
+- [ ] Console shows: “👆 Touch detected during streaming - disabled auto-scroll”
+
+**Test #2: Auto-Scroll When Not Touching**
+
+- [ ] Send message to AI
+- [ ] Keep fingers OFF the screen
+- [ ] Expected: Auto-scrolls smoothly as text appears
+
+**Test #3: Return to Bottom**
+
+- [ ] Touch and scroll up during streaming
+- [ ] Manually scroll back to bottom
+- [ ] Expected: Auto-scroll resumes (re-enabled by scroll listener)
+
+**Test #4: Desktop Still Works**
+
+- [ ] Test on desktop browser
+- [ ] Mouse wheel scroll up during streaming
+- [ ] Expected: Still works (scroll listener handles it)
+
+-----
+
+## TECHNICAL NOTES
+
+**Why touchstart and not touchmove?**
+
+- `touchstart` fires at first contact (0ms)
+- `touchmove` fires during drag (after user has already started scrolling)
+- We need to detect intent BEFORE any movement
+
+**Why check `isStreaming`?**
+
+- Only disable auto-scroll during active AI streaming
+- Normal page load, conversation switching, etc. should still auto-scroll
+- Prevents false positives when user touches screen while not streaming
+
+**Why keep the scroll listener?**
+
+- Needed for desktop (no touch events)
+- Needed to RE-ENABLE auto-scroll when user scrolls back to bottom
+- touchstart only disables, scroll listener handles re-enabling
+
+-----
+
+## PATCH SUMMARY
+
+|Patch       |Issue                                  |Fix               |
+|------------|---------------------------------------|------------------|
+|PATCH 19    |Threshold too large (30px)             |Reduced to 5px    |
+|PATCH 20    |Debounce too slow (50ms)               |Removed debounce  |
+|PATCH 21    |scrollToBottomIfNearBottom recalculated|Trust the flag    |
+|**PATCH 22**|**iOS defers scroll events**           |**Use touchstart**|
+
+**PATCH 22 is the iOS-specific fix that previous patches couldn’t address.**
+
+-----
+
+**APPLY THIS CHANGE. TEST ON iOS. REPORT RESULTS.**
