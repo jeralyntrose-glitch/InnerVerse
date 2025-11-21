@@ -495,23 +495,19 @@ You are the Axis of Mind. Think in functions. Explain through positions. Teach t
     
     # Layer 2: Auto Type Stack Injection
     # Detect types in the last user message and inject correct CS Joseph stacks
-    last_user_message = ""
-    for msg in reversed(messages):
-        if isinstance(msg.get('content'), str) and msg.get('role') == 'user':
-            last_user_message = msg['content']
-            break
-        elif isinstance(msg.get('content'), list):
-            for block in msg['content']:
-                if isinstance(block, dict) and block.get('type') == 'text':
-                    last_user_message = block.get('text', '')
-                    break
-            if last_user_message:
+    # Only inject once (prevent duplicate injections on retries)
+    if "**Reference Data (USE THIS" not in system_message:
+        last_user_message_content = None
+        for msg in reversed(messages):
+            if msg.get('role') == 'user':
+                last_user_message_content = msg.get('content')
                 break
-    
-    context_injection = build_context_injection(last_user_message)
-    if context_injection:
-        system_message = f"{system_message}\n\n{context_injection}"
-        print(f"🎯 [TYPE INJECTION] Injected type stacks from reference_data.json")
+        
+        if last_user_message_content:
+            context_injection = build_context_injection(last_user_message_content)
+            if context_injection:
+                system_message = f"{system_message}\n\n{context_injection}"
+                print(f"🎯 [TYPE INJECTION] Injected type stacks from reference_data.json")
     
     tool_use_details = []
     max_iterations = 3
@@ -896,23 +892,19 @@ You are the Axis of Mind. Think in functions. Explain through positions. Teach t
     
     # Layer 2: Auto Type Stack Injection
     # Detect types in the last user message and inject correct CS Joseph stacks
-    last_user_message = ""
-    for msg in reversed(messages):
-        if isinstance(msg.get('content'), str) and msg.get('role') == 'user':
-            last_user_message = msg['content']
-            break
-        elif isinstance(msg.get('content'), list):
-            for block in msg['content']:
-                if isinstance(block, dict) and block.get('type') == 'text':
-                    last_user_message = block.get('text', '')
-                    break
-            if last_user_message:
+    # Only inject once (prevent duplicate injections on retries)
+    if "**Reference Data (USE THIS" not in system_message:
+        last_user_message_content = None
+        for msg in reversed(messages):
+            if msg.get('role') == 'user':
+                last_user_message_content = msg.get('content')
                 break
-    
-    context_injection = build_context_injection(last_user_message)
-    if context_injection:
-        system_message = f"{system_message}\n\n{context_injection}"
-        print(f"🎯 [TYPE INJECTION] Injected type stacks from reference_data.json")
+        
+        if last_user_message_content:
+            context_injection = build_context_injection(last_user_message_content)
+            if context_injection:
+                system_message = f"{system_message}\n\n{context_injection}"
+                print(f"🎯 [TYPE INJECTION] Injected type stacks from reference_data.json")
     
     max_iterations = 3
     

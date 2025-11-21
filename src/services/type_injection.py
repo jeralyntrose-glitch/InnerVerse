@@ -18,8 +18,32 @@ def load_reference_data():
             REFERENCE_DATA = json.load(f)
     return REFERENCE_DATA
 
+def normalize_message_content(content) -> str:
+    """
+    Normalize message content to string, handling both string and list formats.
+    Anthropic SDK stores content as list of blocks with {'type': 'text', 'text': '...'}
+    """
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, list):
+        # Extract text from all text blocks
+        text_parts = []
+        for block in content:
+            if isinstance(block, dict):
+                if block.get('type') == 'text' and 'text' in block:
+                    text_parts.append(block['text'])
+                elif 'text' in block:  # Fallback for different schemas
+                    text_parts.append(block['text'])
+        return ' '.join(text_parts)
+    return ""
+
 def detect_types_in_message(message: str) -> list[str]:
     """Extract MBTI types mentioned in user message."""
+    # Defensive: ensure message is a string
+    if not isinstance(message, str):
+        print(f"⚠️ [TYPE INJECTION] Expected string, got {type(message)}. Converting...")
+        message = str(message)
+    
     message_upper = message.upper()
     found_types = []
     for mbti_type in MBTI_TYPES:
@@ -56,12 +80,23 @@ def format_stack_for_prompt(type_data: dict) -> str:
 - Four Sides: Ego={four_sides['ego']['type']}, Shadow={four_sides['shadow']['type']}, Subconscious={four_sides['subconscious']['type']}, Superego={four_sides['superego']['type']}
 """
 
-def build_context_injection(user_message: str) -> str:
-    """Build context injection for detected types."""
+def build_context_injection(user_message_content) -> str:
+    """
+    Build context injection for detected types.
+    Handles both string and list message formats.
+    """
+    # Normalize content to string
+    user_message = normalize_message_content(user_message_content)
+    
+    if not user_message:
+        return ""
+    
     detected_types = detect_types_in_message(user_message)
     
     if not detected_types:
         return ""
+    
+    print(f"🔍 [TYPE INJECTION] Detected types in message: {detected_types}")
     
     injection_parts = ["**Reference Data (USE THIS, not general MBTI knowledge):**"]
     
@@ -69,5 +104,7 @@ def build_context_injection(user_message: str) -> str:
         type_data = get_type_stack(type_code)
         if type_data:
             injection_parts.append(format_stack_for_prompt(type_data))
+        else:
+            print(f"⚠️ [TYPE INJECTION] No data found for {type_code}")
     
     return "\n".join(injection_parts)
