@@ -8,6 +8,7 @@ import openai
 import time
 import json
 from src.services.pinecone_organizer import extract_all_metadata, organize_results_by_metadata, format_organized_context
+from src.services.type_injection import build_context_injection
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -492,6 +493,26 @@ Examples:
 You are the Axis of Mind. Think in functions. Explain through positions. Teach the system. 🧠
 """
     
+    # Layer 2: Auto Type Stack Injection
+    # Detect types in the last user message and inject correct CS Joseph stacks
+    last_user_message = ""
+    for msg in reversed(messages):
+        if isinstance(msg.get('content'), str) and msg.get('role') == 'user':
+            last_user_message = msg['content']
+            break
+        elif isinstance(msg.get('content'), list):
+            for block in msg['content']:
+                if isinstance(block, dict) and block.get('type') == 'text':
+                    last_user_message = block.get('text', '')
+                    break
+            if last_user_message:
+                break
+    
+    context_injection = build_context_injection(last_user_message)
+    if context_injection:
+        system_message = f"{system_message}\n\n{context_injection}"
+        print(f"🎯 [TYPE INJECTION] Injected type stacks from reference_data.json")
+    
     tool_use_details = []
     max_iterations = 3
     
@@ -872,6 +893,26 @@ Examples:
 
 You are the Axis of Mind. Think in functions. Explain through positions. Teach the system. 🧠
 """
+    
+    # Layer 2: Auto Type Stack Injection
+    # Detect types in the last user message and inject correct CS Joseph stacks
+    last_user_message = ""
+    for msg in reversed(messages):
+        if isinstance(msg.get('content'), str) and msg.get('role') == 'user':
+            last_user_message = msg['content']
+            break
+        elif isinstance(msg.get('content'), list):
+            for block in msg['content']:
+                if isinstance(block, dict) and block.get('type') == 'text':
+                    last_user_message = block.get('text', '')
+                    break
+            if last_user_message:
+                break
+    
+    context_injection = build_context_injection(last_user_message)
+    if context_injection:
+        system_message = f"{system_message}\n\n{context_injection}"
+        print(f"🎯 [TYPE INJECTION] Injected type stacks from reference_data.json")
     
     max_iterations = 3
     

@@ -1,0 +1,231 @@
+# Layer 2: Auto Type Stack Injection
+
+## The Problem
+
+Claude v3 prompt teaches it to “think in function stacks” but Claude uses its own general MBTI knowledge - which is WRONG for CS Joseph’s system.
+
+**Example of the bug:**
+
+- User asked about ENFP
+- Claude said ENFP has “Se trickster”
+- WRONG. Per CS Joseph (reference_data.json), ENFP has **Ti trickster**
+- Claude confused Trickster (7th) with Demon (8th)
+
+**Root cause:** The prompt tells Claude HOW to think, but doesn’t give it the CORRECT data.
+
+-----
+
+## The Solution
+
+When a type is mentioned in a message, auto-inject that type’s full stack from `reference_data.json` into the prompt context.
+
+**Before (current):**
+
+```
+User: "Why do ENFPs struggle with routine?"
+→ Claude uses its own (incorrect) MBTI knowledge
+→ Wrong function positions
+```
+
+**After (with injection):**
+
+```
+User: "Why do ENFPs struggle with routine?"
+→ Backend detects "ENFP"
+→ Injects ENFP stack from reference_data.json
+→ Claude uses CORRECT CS Joseph data
+→ Accurate function positions
+```
+
+-----
+
+## Implementation
+
+### Step 1: Type Detection
+
+Create a simple detector that scans user message for type codes:
+
+```python
+import re
+
+MBTI_TYPES = [
+    "ESTJ", "ESTP", "ENTJ", "ENFJ", "ESFJ", "ESFP", "ENTP", "ENFP",
+    "ISTJ", "ISTP", "INTJ", "INFJ", "ISFJ", "ISFP", "INTP", "INFP"
+]
+
+def detect_types_in_message(message: str) -> list[str]:
+    """Extract MBTI types mentioned in user message."""
+    message_upper = message.upper()
+    found_types = []
+    for mbti_type in MBTI_TYPES:
+        # Match whole word only (not INFJ inside another word)
+        if re.search(rf'\b{mbti_type}\b', message_upper):
+            found_types.append(mbti_type)
+    return found_types
+```
+
+### Step 2: Stack Lookup
+
+Load reference_data.json and extract the relevant type info:
+
+```python
+import json
+
+# Load once at startup
+with open('reference_data.json', 'r') as f:
+    REFERENCE_DATA = json.load(f)
+
+def get_type_stack(type_code: str) -> dict | None:
+    """Get full stack for a type from reference data."""
+    for type_data in REFERENCE_DATA['types']:
+        if type_data['code'] == type_code:
+            return type_data
+    return None
+
+def format_stack_for_prompt(type_data: dict) -> str:
+    """Format type data into concise prompt injection."""
+    code = type_data['code']
+    four_sides = type_data['four_sides']
+    
+    # Build ego stack string
+    ego_funcs = four_sides['ego']['functions']
+    ego_str = ", ".join([f"{f['function']} {f['position'].lower()}" for f in ego_funcs])
+    
+    # Build shadow stack string
+    shadow_funcs = four_sides['shadow']['functions']
+    shadow_str = ", ".join([f"{f['function']} {f['position'].lower()}" for f in shadow_funcs])
+    
+    # Include key metadata
+    categories = type_data['categories']
+    
+    return f"""
+**{code} Function Stack (CS Joseph):**
+- Ego: {ego_str}
+- Shadow: {shadow_str}
+- Quadra: {categories['quadra']} | Temple: {categories['temple']} | Archetype: {categories['archetype']}
+- Four Sides: Ego={four_sides['ego']['type']}, Shadow={four_sides['shadow']['type']}, Subconscious={four_sides['subconscious']['type']}, Superego={four_sides['superego']['type']}
+"""
+```
+
+### Step 3: Inject Into Prompt
+
+Modify the chat functions to inject type data before sending to Claude:
+
+```python
+def build_context_injection(user_message: str) -> str:
+    """Build context injection for detected types."""
+    detected_types = detect_types_in_message(user_message)
+    
+    if not detected_types:
+        return ""
+    
+    injection_parts = ["**Reference Data (USE THIS, not general MBTI knowledge):**"]
+    
+    for type_code in detected_types:
+        type_data = get_type_stack(type_code)
+        if type_data:
+            injection_parts.append(format_stack_for_prompt(type_data))
+    
+    return "\n".join(injection_parts)
+```
+
+### Step 4: Integrate with Claude API
+
+In `claude_api.py`, modify `chat_with_claude()` and `chat_with_claude_streaming()`:
+
+```python
+def chat_with_claude_streaming(conversation_history, user_message, ...):
+    # Detect types and build injection
+    context_injection = build_context_injection(user_message)
+    
+    # Add injection to system prompt OR as a system message
+    if context_injection:
+        # Option A: Append to system prompt
+        enhanced_system_prompt = f"{SYSTEM_PROMPT}\n\n{context_injection}"
+        
+        # Option B: Add as first message in conversation
+        # messages = [{"role": "system", "content": context_injection}] + messages
+    
+    # Continue with API call using enhanced prompt...
+```
+
+-----
+
+## Example Output
+
+**User message:** “Why do ENFPs and INFJs work well together?”
+
+**Injected context:**
+
+```
+**Reference Data (USE THIS, not general MBTI knowledge):**
+
+**ENFP Function Stack (CS Joseph):**
+- Ego: Ne hero, Fi parent, Te child, Si inferior
+- Shadow: Ni nemesis, Fe critic, Ti trickster, Se demon
+- Quadra: Delta | Temple: Soul | Archetype: Bard
+- Four Sides: Ego=ENFP, Shadow=INFJ, Subconscious=ISTJ, Superego=ESTP
+
+**INFJ Function Stack (CS Joseph):**
+- Ego: Ni hero, Fe parent, Ti child, Se inferior
+- Shadow: Ne nemesis, Fi critic, Te trickster, Si demon
+- Quadra: Beta | Temple: Soul | Archetype: Paladin
+- Four Sides: Ego=INFJ, Shadow=ENFP, Subconscious=ESTP, Superego=ISTJ
+```
+
+**Result:** Claude now uses the CORRECT function positions because they’re right there in the context.
+
+-----
+
+## Where to Put This Code
+
+**Option A: In `claude_api.py`** (simplest)
+
+- Add functions at top of file
+- Modify chat functions to call `build_context_injection()`
+
+**Option B: New file `type_injection.py`** (cleaner)
+
+- Create `src/services/type_injection.py`
+- Import into `claude_api.py`
+
+-----
+
+## Token Cost Estimate
+
+Each type injection adds ~150-200 tokens.
+
+- 1 type mentioned: +200 tokens
+- 2 types mentioned: +400 tokens
+- Rare to have 3+ types in one message
+
+**Negligible cost increase** compared to value of accurate responses.
+
+-----
+
+## Testing
+
+After implementation, test with:
+
+1. **“What are ENFP’s 8 functions?”**
+- Should list: Ne hero, Fi parent, Te child, Si inferior, Ni nemesis, Fe critic, Ti trickster, Se demon
+1. **“What is ENFP’s trickster function?”**
+- Should say: **Ti trickster** (NOT Se)
+1. **“ENFP INFJ compatibility”**
+- Should use correct stacks for BOTH types
+1. **“Why am I so bad with routine?” (no type mentioned)**
+- Should NOT inject anything (no type detected)
+
+-----
+
+## Summary
+
+|What                   |How                         |
+|-----------------------|----------------------------|
+|Detect types in message|Regex scan for 16 type codes|
+|Lookup stack           |Query reference_data.json   |
+|Format for prompt      |Concise function list       |
+|Inject                 |Append to system prompt     |
+|Cost                   |~200 tokens per type        |
+
+**This ensures Claude uses CS Joseph’s correct function stacks, not general MBTI knowledge.**
