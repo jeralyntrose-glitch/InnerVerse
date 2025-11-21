@@ -2088,13 +2088,23 @@
                     inputResizeObserver.disconnect();
                 }
 
-                // PATCH 20: IMMEDIATE scroll detection (no debounce - fixes race condition)
+                // PATCH 22: iOS touch detection (scroll events fire too late on iOS Safari)
+                // touchstart fires THE INSTANT user touches screen - before scroll events
+                messages.addEventListener("touchstart", () => {
+                    // User touched messages area during streaming - they want to read
+                    // Set this IMMEDIATELY before any AI chunks can trigger auto-scroll
+                    if (isStreaming) {
+                        isUserPinnedToBottom = false;
+                        console.log("👆 Touch detected during streaming - disabled auto-scroll");
+                    }
+                }, { passive: true });
+
+                // PATCH 20: Scroll detection for desktop and touch-end scenarios
                 messages.addEventListener("scroll", () => {
                     // Ignore synthetic scroll events from our own code
                     if (suppressScrollEvents) return;
                     
-                    // Update pin state IMMEDIATELY when user scrolls
-                    // No debounce - must detect intent before next AI chunk arrives (~10-20ms)
+                    // Update pin state when user scrolls
                     updateScrollPinState();
                 });
 
