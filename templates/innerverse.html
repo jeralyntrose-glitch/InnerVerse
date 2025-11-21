@@ -2151,10 +2151,20 @@
             // ChatGPT Pattern: Update scroll-to-bottom button visibility
             function updateScrollButtonVisibility() {
                 const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
-                if (distanceFromBottom > 100) {
+                const shouldShow = distanceFromBottom > 100;
+                
+                console.log(
+                    `🎯 Button visibility check: distance=${distanceFromBottom.toFixed(0)}px, ` +
+                    `shouldShow=${shouldShow}, scrollHeight=${messages.scrollHeight}, ` +
+                    `scrollTop=${messages.scrollTop}, clientHeight=${messages.clientHeight}`
+                );
+                
+                if (shouldShow) {
                     scrollToBottomBtn.classList.add('visible');
+                    console.log("👁️ Button SHOWN");
                 } else {
                     scrollToBottomBtn.classList.remove('visible');
+                    console.log("🙈 Button HIDDEN");
                 }
             }
 
