@@ -1136,7 +1136,11 @@
             let searchDebounceTimer = null;
             let isUserPinnedToBottom = true; // Track if user is scrolled to bottom
             let suppressScrollEvents = false; // Prevent intent tracking during programmatic scrolls
-            let lastTouchEndTime = 0; // Track iOS Safari touch gesture timing for deferred scroll protection
+            
+            // ChatGPT Pattern: Unified input tracking for iOS Safari deferred scroll protection
+            // Tracks ALL input types (touch, pointer, mouse) at document level to prevent yanking
+            let lastInputEndTime = 0; // Timestamp of last input gesture completion
+            const INPUT_COOLDOWN_MS = 250; // iOS Safari deferred scroll window (~200ms + buffer)
 
             // Folder Configuration (matches backend projects)
             const FOLDERS = [
@@ -1665,13 +1669,8 @@
                         showError(
                             "Failed to process images. Please try again.",
                         );
-                        requestAnimationFrame(() => {
-                            setTimeout(() => {
-                                isStreaming = false;
-                                updateScrollPinState();
-                                updateScrollButtonVisibility();
-                            }, 150);
-                        });
+                        // ChatGPT Pattern: Use Promise-based cleanup to prevent race conditions
+                        await endStreamingSafely();
                         sendBtn.disabled = false;
                         return;
                     }
@@ -1808,17 +1807,9 @@
                     typingIndicator.classList.remove("visible");
                     showError("Failed to send message. Please try again.");
                 } finally {
-                    // ChatGPT Pattern: Graceful streaming end with iOS Safari protection
-                    // Use requestAnimationFrame + timeout to ensure iOS Safari completes deferred scrolls
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            isStreaming = false;
-                            // Recompute scroll intent based on CURRENT position (not stale state)
-                            updateScrollPinState();
-                            // Update button visibility based on final scroll position
-                            updateScrollButtonVisibility();
-                        }, 150);
-                    });
+                    // ChatGPT Pattern: Promise-based cleanup ensures atomic state reset
+                    // Prevents race conditions when new messages sent immediately after abort/error
+                    await endStreamingSafely();
                     sendBtn.disabled = false;
                     messageInput.focus();
                 }
@@ -1826,19 +1817,19 @@
 
             sendBtn.addEventListener("click", sendMessage);
 
-            // ChatGPT Pattern: Scroll-to-bottom button click handler with iOS Safari protection
+            // ChatGPT Pattern: Scroll-to-bottom button with unified input protection
             scrollToBottomBtn.addEventListener("click", () => {
-                // Guard against iOS Safari deferred scroll gestures (~200ms after touchend)
-                // If user just finished a touch scroll, wait for Safari to complete it
-                const timeSinceTouch = Date.now() - lastTouchEndTime;
-                if (timeSinceTouch < 250) {
-                    console.log(`⏳ Delaying button scroll (${timeSinceTouch}ms since touch) to avoid iOS Safari yank`);
+                // Guard against iOS Safari deferred scroll gestures (~200ms after ANY input)
+                // Works for touch, pointer, and mouse events from anywhere on document
+                const timeSinceInput = Date.now() - lastInputEndTime;
+                if (timeSinceInput < INPUT_COOLDOWN_MS) {
+                    console.log(`⏳ Delaying button scroll (${timeSinceInput}ms since input) to avoid iOS Safari yank`);
                     setTimeout(() => {
                         messages.scrollTo({
                             top: messages.scrollHeight,
                             behavior: 'smooth'
                         });
-                    }, 250 - timeSinceTouch);
+                    }, INPUT_COOLDOWN_MS - timeSinceInput);
                 } else {
                     messages.scrollTo({
                         top: messages.scrollHeight,
@@ -2154,6 +2145,24 @@
                 return !isStreaming && isUserPinnedToBottom;
             }
 
+            // ChatGPT Pattern: Promise-based streaming cleanup to prevent race conditions
+            // This ensures atomic state transitions and prevents scroll yanking on abort/error
+            function endStreamingSafely() {
+                return new Promise((resolve) => {
+                    // Use requestAnimationFrame + timeout to let iOS Safari settle deferred scrolls
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            // Atomic state reset in single microtask
+                            isStreaming = false;
+                            updateScrollPinState(); // Recompute based on CURRENT position
+                            updateScrollButtonVisibility(); // Update button state
+                            console.log("✅ Streaming ended safely (atomic cleanup)");
+                            resolve();
+                        }, 150); // 150ms for iOS Safari deferred scroll completion
+                    });
+                });
+            }
+
             function scrollToBottom(force = false) {
                 // Force parameter bypasses user intent check for initial loads/sends
                 // ChatGPT Pattern: Use canAutoScroll() guard to prevent stale intent issues
@@ -2188,6 +2197,7 @@
             // ===== OBSERVER LIFECYCLE MANAGEMENT =====
             let messageObserver = null;
             let inputResizeObserver = null;
+            let messagesResizeObserver = null;
 
             function initializeObservers() {
                 // Clean up existing observers if any
@@ -2197,24 +2207,35 @@
                 if (inputResizeObserver) {
                     inputResizeObserver.disconnect();
                 }
+                if (messagesResizeObserver) {
+                    messagesResizeObserver.disconnect();
+                }
 
-                // iOS Safari touch gesture tracking (200ms deferred scroll protection)
-                // Track ALL touch lifecycle events to catch gesture interruptions
-                messages.addEventListener("touchend", () => {
-                    lastTouchEndTime = Date.now();
+                // ChatGPT Pattern: Document-level unified input tracking
+                // Handles ALL input types (touch, pointer, mouse) to prevent iOS Safari scroll yanking
+                // This replaces messages-only touch tracking to catch inputs outside the container
+                
+                // Touch events (iOS Safari primary concern)
+                document.addEventListener("touchend", () => {
+                    lastInputEndTime = Date.now();
                 }, { passive: true });
                 
-                messages.addEventListener("touchcancel", () => {
-                    lastTouchEndTime = Date.now();
+                document.addEventListener("touchcancel", () => {
+                    lastInputEndTime = Date.now();
                 }, { passive: true });
                 
-                // Update timestamp on touchmove to handle long drag gestures
-                let touchMoveDebounce = null;
-                messages.addEventListener("touchmove", () => {
-                    clearTimeout(touchMoveDebounce);
-                    touchMoveDebounce = setTimeout(() => {
-                        lastTouchEndTime = Date.now();
-                    }, 100); // Debounce to avoid excessive updates during drag
+                // Pointer events (Surface, stylus, hybrid devices)
+                document.addEventListener("pointerup", () => {
+                    lastInputEndTime = Date.now();
+                }, { passive: true });
+                
+                document.addEventListener("pointercancel", () => {
+                    lastInputEndTime = Date.now();
+                }, { passive: true });
+                
+                // Mouse events (desktop fallback)
+                document.addEventListener("mouseup", () => {
+                    lastInputEndTime = Date.now();
                 }, { passive: true });
 
                 // Scroll detection for desktop and touch scenarios
@@ -2258,6 +2279,20 @@
                     subtree: true, // Watch nested elements (markdown rendering)
                     characterData: true, // Watch text updates (streaming)
                 });
+
+                // ChatGPT Pattern: ResizeObserver for messages container
+                // This catches height changes IMMEDIATELY during streaming (not batched like MutationObserver)
+                // Fixes: Button visibility updates instantly even during long streaming sequences
+                messagesResizeObserver = new ResizeObserver(() => {
+                    // Always update button visibility on height change (even during streaming)
+                    updateScrollButtonVisibility();
+                    
+                    // Only auto-scroll if not streaming and user is pinned
+                    if (!isStreaming && isUserPinnedToBottom) {
+                        scrollToBottom();
+                    }
+                });
+                messagesResizeObserver.observe(messages);
 
                 // ResizeObserver for input container height changes
                 const inputContainer =
