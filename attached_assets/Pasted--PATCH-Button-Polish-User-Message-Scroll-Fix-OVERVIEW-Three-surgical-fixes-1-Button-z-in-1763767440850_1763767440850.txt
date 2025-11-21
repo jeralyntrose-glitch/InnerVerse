@@ -1,0 +1,121 @@
+# PATCH: Button Polish + User Message Scroll Fix
+
+## OVERVIEW
+
+Three surgical fixes:
+
+1. Button z-index - hides behind sidebar overlay
+1. Remove green/teal colors - keep neutral gray only
+1. User message scroll - actually push message to top
+
+-----
+
+## FIX 1: Z-INDEX (Button Behind Sidebar)
+
+**FILE:** `templates/innerverse.html`
+
+**FIND in `.scroll-to-bottom-btn` CSS:**
+
+```css
+z-index: 1001;
+```
+
+**REPLACE WITH:**
+
+```css
+z-index: 998;
+```
+
+-----
+
+## FIX 2: REMOVE GREEN/TEAL COLORS FROM BUTTON
+
+**FILE:** `templates/innerverse.html`
+
+**FIND:**
+
+```css
+            .scroll-to-bottom-btn:hover {
+                background: var(--bg-button-hover);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+```
+
+**REPLACE WITH:**
+
+```css
+            .scroll-to-bottom-btn:hover {
+                background: var(--bg-button-hover);
+            }
+```
+
+-----
+
+## FIX 3: USER MESSAGE SCROLL (Make It Actually Work)
+
+**FILE:** `templates/innerverse.html`
+
+**FIND:**
+
+```javascript
+                // Scroll so user message is near TOP, leaving room for AI response
+                // Use setTimeout to ensure DOM has updated with user message
+                setTimeout(() => {
+                    const userMessages = messages.querySelectorAll('.message.user');
+                    const lastUserMessage = userMessages[userMessages.length - 1];
+                    if (lastUserMessage) {
+                        // Scroll so user message is at top with some padding
+                        const messageTop = lastUserMessage.offsetTop;
+                        messages.scrollTo({
+                            top: messageTop - 20, // 20px padding from top
+                            behavior: 'smooth'
+                        });
+                        console.log("📱 User message scrolled to top");
+                    }
+                }, 50);
+```
+
+**REPLACE WITH:**
+
+```javascript
+                // Scroll so user message is near TOP, leaving room for AI response
+                // Use requestAnimationFrame to ensure DOM has painted
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const userMessages = messages.querySelectorAll('.message.user');
+                        const lastUserMessage = userMessages[userMessages.length - 1];
+                        if (lastUserMessage) {
+                            // Scroll so user message is at top with padding
+                            lastUserMessage.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                            console.log("📱 User message scrolled to top");
+                        }
+                    });
+                });
+```
+
+-----
+
+## SUMMARY
+
+|Fix|What                         |Why                                      |
+|---|-----------------------------|-----------------------------------------|
+|1  |z-index: 998                 |Button hides behind sidebar overlay (999)|
+|2  |Remove accent colors         |No green/teal on hover or press          |
+|3  |scrollIntoView block: ‘start’|Actually scrolls user message to top     |
+
+-----
+
+## TESTING CHECKLIST
+
+- [ ] Open sidebar with button visible → button should HIDE behind overlay
+- [ ] Hover/press button → stays gray, NO green/teal
+- [ ] Send message → YOUR message scrolls to TOP of screen
+- [ ] AI response appears BELOW your message
+
+-----
+
+**APPLY THESE 3 FIXES. TEST. REPORT RESULTS.**

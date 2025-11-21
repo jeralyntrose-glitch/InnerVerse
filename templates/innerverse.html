@@ -648,7 +648,7 @@
                 display: none;
                 align-items: center;
                 justify-content: center;
-                z-index: 1001;
+                z-index: 998;
                 transition: opacity 0.3s ease, transform 0.2s ease, background 0.2s ease;
                 box-shadow: 0 1px 4px var(--shadow);
                 opacity: 0;
@@ -656,8 +656,6 @@
 
             .scroll-to-bottom-btn:hover {
                 background: var(--bg-button-hover);
-                border-color: var(--accent);
-                color: var(--accent);
             }
 
             .scroll-to-bottom-btn:active {
@@ -1701,20 +1699,21 @@
                 typingIndicator.classList.add("visible");
                 
                 // Scroll so user message is near TOP, leaving room for AI response
-                // Use setTimeout to ensure DOM has updated with user message
-                setTimeout(() => {
-                    const userMessages = messages.querySelectorAll('.message.user');
-                    const lastUserMessage = userMessages[userMessages.length - 1];
-                    if (lastUserMessage) {
-                        // Scroll so user message is at top with some padding
-                        const messageTop = lastUserMessage.offsetTop;
-                        messages.scrollTo({
-                            top: messageTop - 20, // 20px padding from top
-                            behavior: 'smooth'
-                        });
-                        console.log("📱 User message scrolled to top");
-                    }
-                }, 50);
+                // Use requestAnimationFrame to ensure DOM has painted
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const userMessages = messages.querySelectorAll('.message.user');
+                        const lastUserMessage = userMessages[userMessages.length - 1];
+                        if (lastUserMessage) {
+                            // Scroll so user message is at top with padding
+                            lastUserMessage.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                            console.log("📱 User message scrolled to top");
+                        }
+                    });
+                });
 
                 let assistantDiv = null;
                 let fullResponse = "";
