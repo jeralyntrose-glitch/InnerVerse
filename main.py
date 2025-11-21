@@ -694,8 +694,10 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)
 
-# Configure Jinja2 templates
+# Configure Jinja2 templates with auto-reload (disable caching for development)
 templates = Jinja2Templates(directory="static")
+templates.env.auto_reload = True  # Disable template caching
+templates.env.cache = None  # Force no caching
 
 # Add CORS middleware
 app.add_middleware(
