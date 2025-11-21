@@ -1702,13 +1702,10 @@
                 isUserPinnedToBottom = true; // Reset pin state when sending message
                 typingIndicator.classList.add("visible");
                 
-                // Scroll user message into view AFTER DOM settles (double rAF for iOS Safari)
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        scrollToBottom(true);
-                        console.log("📱 User message scrolled into view");
-                    });
-                });
+                // Scroll user message into view IMMEDIATELY (before streaming starts)
+                // Using force=true bypasses all checks
+                scrollToBottom(true);
+                console.log("📱 User message scrolled into view");
 
                 let assistantDiv = null;
                 let fullResponse = "";
@@ -2516,8 +2513,13 @@
                 isUserPinnedToBottom = true; // Start pinned to bottom
                 scrollToBottom(true); // Force scroll on initialization
                 
-                // Ensure button is hidden on initial load (when at bottom)
-                updateScrollButtonVisibility();
+                // Ensure button is hidden AFTER scroll completes (timing fix)
+                // Must wait for rAF chain to complete before checking position
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        updateScrollButtonVisibility();
+                    });
+                });
 
                 setupIOSInputBar();
 
