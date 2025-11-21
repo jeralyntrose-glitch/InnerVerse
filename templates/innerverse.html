@@ -1698,10 +1698,17 @@
                     imagePreviewContainer.innerHTML = "";
                 }
 
-                // Show typing indicator and force scroll to bottom
+                // Show typing indicator
                 isUserPinnedToBottom = true; // Reset pin state when sending message
                 typingIndicator.classList.add("visible");
-                scrollToBottom(true);
+                
+                // Scroll user message into view AFTER DOM settles (double rAF for iOS Safari)
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        scrollToBottom(true);
+                        console.log("📱 User message scrolled into view");
+                    });
+                });
 
                 let assistantDiv = null;
                 let fullResponse = "";
@@ -2164,9 +2171,19 @@
             }
 
             function scrollToBottom(force = false) {
+                // Debug logging to identify unexpected scroll triggers
+                if (!force && isStreaming) {
+                    console.error("🚨 BUG: scrollToBottom() called during streaming without force=true!");
+                    console.trace("Stack trace:");
+                    return;
+                }
+                
                 // Force parameter bypasses user intent check for initial loads/sends
                 // ChatGPT Pattern: Use canAutoScroll() guard to prevent stale intent issues
-                if (!force && !canAutoScroll()) return; // Respect user intent AND streaming state
+                if (!force && !canAutoScroll()) {
+                    console.log("⛔ Scroll blocked: canAutoScroll() = false");
+                    return;
+                }
 
                 // PATCH 19: Suppress scroll events during programmatic scroll
                 suppressScrollEvents = true;
@@ -2174,8 +2191,9 @@
                 requestAnimationFrame(() => {
                     messages.scrollTop = messages.scrollHeight;
                     console.log(
-                        "📜 Auto-scrolled to bottom" +
-                            (force ? " (forced)" : ""),
+                        "📜 Scrolled to bottom" +
+                            (force ? " (forced)" : " (auto)") +
+                            ` | isStreaming=${isStreaming} | pinned=${isUserPinnedToBottom}`,
                     );
                     
                     // Clear suppression flag after scroll completes
