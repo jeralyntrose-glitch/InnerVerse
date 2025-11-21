@@ -1060,7 +1060,7 @@
                     </div>
 
                     <!-- ChatGPT-Style Scroll-to-Bottom Button -->
-                    <button class="scroll-to-bottom-btn" id="scrollToBottomBtn" style="display: none;">
+                    <button class="scroll-to-bottom-btn" id="scrollToBottomBtn">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 5v14M19 12l-7 7-7-7"/>
                         </svg>
@@ -1136,6 +1136,7 @@
             let searchDebounceTimer = null;
             let isUserPinnedToBottom = true; // Track if user is scrolled to bottom
             let suppressScrollEvents = false; // Prevent intent tracking during programmatic scrolls
+            let lastTouchEndTime = 0; // Track iOS Safari touch gesture timing for deferred scroll protection
 
             // Folder Configuration (matches backend projects)
             const FOLDERS = [
@@ -1664,7 +1665,13 @@
                         showError(
                             "Failed to process images. Please try again.",
                         );
-                        isStreaming = false;
+                        requestAnimationFrame(() => {
+                            setTimeout(() => {
+                                isStreaming = false;
+                                updateScrollPinState();
+                                updateScrollButtonVisibility();
+                            }, 150);
+                        });
                         sendBtn.disabled = false;
                         return;
                     }
@@ -1801,7 +1808,17 @@
                     typingIndicator.classList.remove("visible");
                     showError("Failed to send message. Please try again.");
                 } finally {
-                    isStreaming = false;
+                    // ChatGPT Pattern: Graceful streaming end with iOS Safari protection
+                    // Use requestAnimationFrame + timeout to ensure iOS Safari completes deferred scrolls
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            isStreaming = false;
+                            // Recompute scroll intent based on CURRENT position (not stale state)
+                            updateScrollPinState();
+                            // Update button visibility based on final scroll position
+                            updateScrollButtonVisibility();
+                        }, 150);
+                    });
                     sendBtn.disabled = false;
                     messageInput.focus();
                 }
@@ -1809,12 +1826,25 @@
 
             sendBtn.addEventListener("click", sendMessage);
 
-            // ChatGPT Pattern: Scroll-to-bottom button click handler
+            // ChatGPT Pattern: Scroll-to-bottom button click handler with iOS Safari protection
             scrollToBottomBtn.addEventListener("click", () => {
-                messages.scrollTo({
-                    top: messages.scrollHeight,
-                    behavior: 'smooth'
-                });
+                // Guard against iOS Safari deferred scroll gestures (~200ms after touchend)
+                // If user just finished a touch scroll, wait for Safari to complete it
+                const timeSinceTouch = Date.now() - lastTouchEndTime;
+                if (timeSinceTouch < 250) {
+                    console.log(`⏳ Delaying button scroll (${timeSinceTouch}ms since touch) to avoid iOS Safari yank`);
+                    setTimeout(() => {
+                        messages.scrollTo({
+                            top: messages.scrollHeight,
+                            behavior: 'smooth'
+                        });
+                    }, 250 - timeSinceTouch);
+                } else {
+                    messages.scrollTo({
+                        top: messages.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }
                 // Button will auto-hide when scroll completes (via scroll listener)
             });
 
@@ -2109,9 +2139,25 @@
                 isUserPinnedToBottom = isNearBottom;
             }
 
+            // ChatGPT Pattern: Update scroll-to-bottom button visibility
+            function updateScrollButtonVisibility() {
+                const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
+                if (distanceFromBottom > 100) {
+                    scrollToBottomBtn.classList.add('visible');
+                } else {
+                    scrollToBottomBtn.classList.remove('visible');
+                }
+            }
+
+            // ChatGPT Pattern: Guard auto-scroll based on streaming state and user intent
+            function canAutoScroll() {
+                return !isStreaming && isUserPinnedToBottom;
+            }
+
             function scrollToBottom(force = false) {
                 // Force parameter bypasses user intent check for initial loads/sends
-                if (!force && !isUserPinnedToBottom) return; // Respect user intent
+                // ChatGPT Pattern: Use canAutoScroll() guard to prevent stale intent issues
+                if (!force && !canAutoScroll()) return; // Respect user intent AND streaming state
 
                 // PATCH 19: Suppress scroll events during programmatic scroll
                 suppressScrollEvents = true;
@@ -2152,6 +2198,25 @@
                     inputResizeObserver.disconnect();
                 }
 
+                // iOS Safari touch gesture tracking (200ms deferred scroll protection)
+                // Track ALL touch lifecycle events to catch gesture interruptions
+                messages.addEventListener("touchend", () => {
+                    lastTouchEndTime = Date.now();
+                }, { passive: true });
+                
+                messages.addEventListener("touchcancel", () => {
+                    lastTouchEndTime = Date.now();
+                }, { passive: true });
+                
+                // Update timestamp on touchmove to handle long drag gestures
+                let touchMoveDebounce = null;
+                messages.addEventListener("touchmove", () => {
+                    clearTimeout(touchMoveDebounce);
+                    touchMoveDebounce = setTimeout(() => {
+                        lastTouchEndTime = Date.now();
+                    }, 100); // Debounce to avoid excessive updates during drag
+                }, { passive: true });
+
                 // Scroll detection for desktop and touch scenarios
                 messages.addEventListener("scroll", () => {
                     // Ignore synthetic scroll events from our own code
@@ -2160,18 +2225,23 @@
                     // Update pin state when user scrolls
                     updateScrollPinState();
                     
-                    // ChatGPT Pattern: Show/hide scroll-to-bottom button
-                    const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
-                    if (distanceFromBottom > 100) {
-                        scrollToBottomBtn.classList.add('visible');
-                    } else {
-                        scrollToBottomBtn.classList.remove('visible');
-                    }
+                    // ChatGPT Pattern: Update button visibility on scroll
+                    updateScrollButtonVisibility();
                 });
 
                 // MutationObserver to detect DOM changes in messages
                 messageObserver = new MutationObserver((mutations) => {
-                    // Only scroll if content was added/changed
+                    // ChatGPT Pattern: Update button visibility on EVERY callback (not batched)
+                    // This ensures button appears immediately during streaming, not after Safari releases
+                    updateScrollButtonVisibility();
+                    
+                    // ChatGPT Pattern: Disable auto-scroll during streaming
+                    if (isStreaming) {
+                        console.log(`🚫 Auto-scroll disabled during streaming`);
+                        return;
+                    }
+                    
+                    // Only auto-scroll if user is still pinned to bottom AND content changed (non-streaming)
                     if (
                         mutations.some(
                             (m) =>
@@ -2179,11 +2249,6 @@
                                 m.type === "characterData",
                         )
                     ) {
-                        // ChatGPT Pattern: Disable auto-scroll during streaming
-                        if (isStreaming) {
-                            console.log(`🚫 Auto-scroll disabled during streaming`);
-                            return;
-                        }
                         scrollToBottom();
                     }
                 });
