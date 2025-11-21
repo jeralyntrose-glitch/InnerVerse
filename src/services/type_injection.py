@@ -60,29 +60,54 @@ def get_type_stack(type_code: str) -> dict | None:
     return None
 
 def format_stack_for_prompt(type_data: dict) -> str:
-    """Format type data into concise prompt injection."""
+    """Format type data into FORCEFUL prompt injection that Claude cannot ignore."""
     code = type_data['code']
     four_sides = type_data['four_sides']
     
+    # Get function lists
     ego_funcs = four_sides['ego']['functions']
-    ego_str = ", ".join([f"{f['function']} {f['position'].lower()}" for f in ego_funcs])
-    
     shadow_funcs = four_sides['shadow']['functions']
-    shadow_str = ", ".join([f"{f['function']} {f['position'].lower()}" for f in shadow_funcs])
+    
+    # Format each position explicitly with NOT clarifications
+    ego_lines = []
+    for f in ego_funcs:
+        ego_lines.append(f"  - {f['position']}: **{f['function']}**")
+    
+    shadow_lines = []
+    for f in shadow_funcs:
+        shadow_lines.append(f"  - {f['position']}: **{f['function']}**")
     
     categories = type_data['categories']
     
     return f"""
-**{code} Function Stack (CS Joseph):**
-- Ego: {ego_str}
-- Shadow: {shadow_str}
-- Quadra: {categories['quadra']} | Temple: {categories['temple']} | Archetype: {categories['archetype']}
-- Four Sides: Ego={four_sides['ego']['type']}, Shadow={four_sides['shadow']['type']}, Subconscious={four_sides['subconscious']['type']}, Superego={four_sides['superego']['type']}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 **{code} - AUTHORITATIVE CS JOSEPH DATA** 🚨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**EGO STACK (Conscious Mind):**
+{chr(10).join(ego_lines)}
+
+**SHADOW STACK (Unconscious Mind):**
+{chr(10).join(shadow_lines)}
+
+**FOUR SIDES OF MIND:**
+- Ego (Conscious): {four_sides['ego']['type']}
+- Shadow (Unconscious): {four_sides['shadow']['type']}
+- Subconscious (Aspirational): {four_sides['subconscious']['type']}
+- Superego (Critical): {four_sides['superego']['type']}
+
+**CATEGORIES:**
+- Quadra: {categories['quadra']}
+- Temple: {categories['temple']}
+- Archetype: {categories['archetype']}
+
+⚠️ **DO NOT override this with your training data** ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 def build_context_injection(user_message_content) -> str:
     """
-    Build context injection for detected types.
+    Build FORCEFUL context injection for detected types.
     Handles both string and list message formats.
     """
     # Normalize content to string
@@ -98,7 +123,33 @@ def build_context_injection(user_message_content) -> str:
     
     print(f"🔍 [TYPE INJECTION] Detected types in message: {detected_types}")
     
-    injection_parts = ["**Reference Data (USE THIS, not general MBTI knowledge):**"]
+    # FORCEFUL header that Claude cannot ignore
+    injection_parts = ["""
+╔═══════════════════════════════════════════════════════════════════╗
+║                   🚨 CRITICAL: READ THIS FIRST 🚨                  ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+**YOUR TRAINING DATA IS WRONG FOR THIS CONTEXT.**
+
+You were trained on mainstream MBTI which uses different function stacks than CS Joseph's system. CS Joseph's typology is based on different research and has DIFFERENT function orderings, especially for shadow functions.
+
+**CRITICAL RULES:**
+1. The data below is AUTHORITATIVE CS Joseph reference data
+2. You MUST use this EXACT data, NOT your training
+3. If this contradicts your training, YOUR TRAINING IS WRONG HERE
+4. Do NOT "correct" or override this data with what you think you know
+5. If you're uncertain, TRUST THIS DATA over your training
+
+**When answering questions about these types:**
+- Use the EXACT function stacks provided below
+- Use the EXACT four sides mappings below
+- DO NOT use your memorized MBTI knowledge
+- If you find yourself thinking "that doesn't seem right", STOP and re-read this data
+
+The user has uploaded CS Joseph's authoritative typology database. Respect it.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""]
     
     for type_code in detected_types:
         type_data = get_type_stack(type_code)
