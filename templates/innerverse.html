@@ -1169,6 +1169,7 @@
             const themeToggle = document.getElementById("themeToggle");
             const messages = document.getElementById("messages");
             const typingIndicator = document.getElementById("typingIndicator");
+            const scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
             const uploadBtn = document.getElementById("uploadBtn");
             const imageUpload = document.getElementById("imageUpload");
             const imagePreviewContainer = document.getElementById(
@@ -2149,6 +2150,14 @@
                     
                     // Update pin state when user scrolls
                     updateScrollPinState();
+                    
+                    // ChatGPT Pattern: Show/hide scroll-to-bottom button
+                    const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
+                    if (distanceFromBottom > 100) {
+                        scrollToBottomBtn.classList.add('visible');
+                    } else {
+                        scrollToBottomBtn.classList.remove('visible');
+                    }
                 });
 
                 // MutationObserver to detect DOM changes in messages
