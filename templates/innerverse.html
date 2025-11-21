@@ -1793,7 +1793,9 @@
                                                 fullResponse;
                                         }
 
-                                        scrollToBottomIfNearBottom();
+                                        // REMOVED: scrollToBottomIfNearBottom()
+                                        // User has full scroll control during streaming
+                                        // Button provides escape hatch to return to bottom
                                     }
 
                                     if (data.error) {
@@ -1955,7 +1957,11 @@
                 messageDiv.appendChild(copyBtn);
 
                 messages.appendChild(messageDiv);
-                scrollToBottom();
+                
+                // Only auto-scroll when NOT streaming
+                if (!isStreaming) {
+                    scrollToBottom();
+                }
             }
 
             function addMessage(role, content) {
@@ -2006,7 +2012,10 @@
                             const checkAllLoaded = () => {
                                 loadedCount++;
                                 if (loadedCount === totalImages) {
-                                    scrollToBottom();
+                                    // Only auto-scroll when NOT streaming
+                                    if (!isStreaming) {
+                                        scrollToBottom();
+                                    }
                                 }
                             };
 
@@ -2042,7 +2051,12 @@
                 messageDiv.appendChild(copyBtn);
 
                 messages.appendChild(messageDiv);
-                scrollToBottom();
+                
+                // Only auto-scroll when NOT streaming
+                // During streaming, user controls scroll, button provides escape hatch
+                if (!isStreaming) {
+                    scrollToBottom();
+                }
 
                 return contentDiv;
             }
