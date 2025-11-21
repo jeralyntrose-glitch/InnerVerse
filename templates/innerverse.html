@@ -1082,7 +1082,6 @@
             let searchDebounceTimer = null;
             let isUserPinnedToBottom = true; // Track if user is scrolled to bottom
             let suppressScrollEvents = false; // Prevent intent tracking during programmatic scrolls
-            let userTouchActive = false; // PATCH 23: Latch when user is actively touching/scrolling
 
             // Folder Configuration (matches backend projects)
             const FOLDERS = [
@@ -2043,15 +2042,7 @@
                         messages.scrollTop -
                         messages.clientHeight <
                     threshold;
-                
-                // PATCH 23: Only update pin state if user isn't actively touching
-                // Let calculation happen but don't overwrite during active touch
-                if (!userTouchActive) {
-                    isUserPinnedToBottom = isNearBottom;
-                    console.log(`📍 Pin state updated: ${isUserPinnedToBottom ? 'pinned' : 'unpinned'}`);
-                } else {
-                    console.log(`🚫 Pin state NOT updated (user touch active) - would be: ${isNearBottom ? 'pinned' : 'unpinned'}`);
-                }
+                isUserPinnedToBottom = isNearBottom;
             }
 
             function scrollToBottom(force = false) {
@@ -2097,22 +2088,7 @@
                     inputResizeObserver.disconnect();
                 }
 
-                // PATCH 23: Complete touch interaction latch system
-                // Prevents ALL auto-scroll mechanisms during active user touch
-                messages.addEventListener("touchstart", () => {
-                    userTouchActive = true;
-                    if (isStreaming) {
-                        isUserPinnedToBottom = false;
-                    }
-                    console.log(`👆 touchstart - userTouchActive: ${userTouchActive}, pinned: ${isUserPinnedToBottom}, streaming: ${isStreaming}`);
-                }, { passive: true });
-
-                messages.addEventListener("touchmove", () => {
-                    userTouchActive = true;
-                    console.log("👆 touchmove - keeping latch active");
-                }, { passive: true });
-
-                // PATCH 20: Scroll detection for desktop and touch-end scenarios
+                // Scroll detection for desktop and touch scenarios
                 messages.addEventListener("scroll", () => {
                     // Ignore synthetic scroll events from our own code
                     if (suppressScrollEvents) return;
@@ -2131,9 +2107,9 @@
                                 m.type === "characterData",
                         )
                     ) {
-                        // PATCH 23: Gate auto-scroll - respect active touch AND pin state
-                        if (userTouchActive || !isUserPinnedToBottom) {
-                            console.log(`🚫 MutationObserver blocked scroll - userTouchActive: ${userTouchActive}, pinned: ${isUserPinnedToBottom}`);
+                        // ChatGPT Pattern: Disable auto-scroll during streaming
+                        if (isStreaming) {
+                            console.log(`🚫 Auto-scroll disabled during streaming`);
                             return;
                         }
                         scrollToBottom();
@@ -2153,9 +2129,8 @@
                     inputResizeObserver = new ResizeObserver(() => {
                         updateMessagesPadding();
                         
-                        // PATCH 23: Gate auto-scroll during resize (keyboard open/close)
-                        if (userTouchActive || !isUserPinnedToBottom) {
-                            console.log(`🚫 ResizeObserver blocked scroll - userTouchActive: ${userTouchActive}, pinned: ${isUserPinnedToBottom}`);
+                        // ChatGPT Pattern: Disable auto-scroll during streaming
+                        if (isStreaming) {
                             return;
                         }
                         scrollToBottom(); // Re-scroll after height change
@@ -2180,9 +2155,8 @@
             function handleViewportResize() {
                 updateMessagesPadding();
                 
-                // PATCH 23: Gate auto-scroll during viewport resize
-                if (userTouchActive || !isUserPinnedToBottom) {
-                    console.log(`🚫 ViewportResize blocked scroll - userTouchActive: ${userTouchActive}, pinned: ${isUserPinnedToBottom}`);
+                // ChatGPT Pattern: Disable auto-scroll during streaming
+                if (isStreaming) {
                     return;
                 }
                 scrollToBottom();
@@ -2283,26 +2257,6 @@
 
                 console.log("✅ iOS input bar setup complete");
             }
-
-            // ===== GLOBAL TOUCH RELEASE LISTENERS (PATCH 23) =====
-            // Attach ONCE at page load - ensures latch always clears even if touch ends outside messages
-            window.addEventListener("touchend", () => {
-                if (userTouchActive) {
-                    userTouchActive = false;
-                    console.log(`👆 touchend (global) - userTouchActive: ${userTouchActive}`);
-                    // Immediately refresh pin state after touch ends to avoid stale flag
-                    updateScrollPinState();
-                }
-            }, { passive: true, capture: true });
-
-            window.addEventListener("touchcancel", () => {
-                if (userTouchActive) {
-                    userTouchActive = false;
-                    console.log(`👆 touchcancel (global) - userTouchActive: ${userTouchActive} (iOS system gesture)`);
-                    // Immediately refresh pin state after touch cancels to avoid stale flag
-                    updateScrollPinState();
-                }
-            }, { passive: true, capture: true });
 
             // ===== INITIALIZE =====
             (async function () {
