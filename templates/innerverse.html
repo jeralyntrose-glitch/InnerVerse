@@ -635,48 +635,45 @@
             /* ChatGPT-Style Scroll-to-Bottom Button */
             .scroll-to-bottom-btn {
                 position: fixed;
-                bottom: 90px; /* Above input bar */
+                bottom: 90px;
                 left: 50%;
                 transform: translateX(-50%);
-                width: 36px;
-                height: 36px;
+                width: 28px;
+                height: 28px;
                 border-radius: 50%;
-                background: rgba(68, 70, 84, 0.9);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                color: rgba(255, 255, 255, 0.9);
+                background: var(--bg-button);
+                border: 1px solid var(--border-input);
+                color: var(--text-secondary);
                 cursor: pointer;
                 display: none;
                 align-items: center;
                 justify-content: center;
                 z-index: 1001;
-                transition: all 0.2s ease;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                transition: opacity 0.3s ease, transform 0.2s ease, background 0.2s ease;
+                box-shadow: 0 1px 4px var(--shadow);
+                opacity: 0;
             }
 
             .scroll-to-bottom-btn:hover {
-                background: rgba(68, 70, 84, 1);
-                transform: translateX(-50%) scale(1.1);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                background: var(--bg-button-hover);
+                border-color: var(--accent);
+                color: var(--accent);
             }
 
             .scroll-to-bottom-btn:active {
-                transform: translateX(-50%) scale(0.95);
+                transform: translateX(-50%) scale(0.9);
             }
 
             .scroll-to-bottom-btn.visible {
                 display: flex;
-                animation: fadeIn 0.2s ease;
+                opacity: 1;
             }
 
-            @keyframes fadeIn {
-                from {
-                    opacity: 0;
-                    transform: translateX(-50%) translateY(10px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(-50%) translateY(0);
-                }
+            .scroll-to-bottom-btn svg {
+                width: 14px;
+                height: 14px;
+                stroke: currentColor;
+                stroke-width: 2.5;
             }
 
             .typing-dots {
@@ -1061,9 +1058,9 @@
                     </div>
 
                     <!-- ChatGPT-Style Scroll-to-Bottom Button -->
-                    <button class="scroll-to-bottom-btn" id="scrollToBottomBtn">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 5v14M19 12l-7 7-7-7"/>
+                    <button class="scroll-to-bottom-btn" id="scrollToBottomBtn" aria-label="Scroll to bottom">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
 
@@ -1703,10 +1700,21 @@
                 isUserPinnedToBottom = true; // Reset pin state when sending message
                 typingIndicator.classList.add("visible");
                 
-                // Scroll user message into view IMMEDIATELY (before streaming starts)
-                // Using force=true bypasses all checks
-                scrollToBottom(true);
-                console.log("📱 User message scrolled into view");
+                // Scroll so user message is near TOP, leaving room for AI response
+                // Use setTimeout to ensure DOM has updated with user message
+                setTimeout(() => {
+                    const userMessages = messages.querySelectorAll('.message.user');
+                    const lastUserMessage = userMessages[userMessages.length - 1];
+                    if (lastUserMessage) {
+                        // Scroll so user message is at top with some padding
+                        const messageTop = lastUserMessage.offsetTop;
+                        messages.scrollTo({
+                            top: messageTop - 20, // 20px padding from top
+                            behavior: 'smooth'
+                        });
+                        console.log("📱 User message scrolled to top");
+                    }
+                }, 50);
 
                 let assistantDiv = null;
                 let fullResponse = "";
