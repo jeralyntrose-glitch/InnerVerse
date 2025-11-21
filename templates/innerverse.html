@@ -8,23 +8,6 @@
         />
         <title>InnerVerse - MBTI AI Chat</title>
         
-        <!-- PATCHED V2 MARKER - If you see this banner, the edited file is being served -->
-        <style>
-            .patch-marker {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: #ff0000;
-                color: white;
-                text-align: center;
-                padding: 8px;
-                font-weight: bold;
-                z-index: 999999;
-                font-family: monospace;
-            }
-        </style>
-
         <!-- External Dependencies -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
@@ -442,7 +425,8 @@
                 padding-bottom: 200px;
                 display: flex;
                 flex-direction: column;
-                justify-content: flex-end; /* Push messages to bottom naturally */
+                /* REMOVED: justify-content: flex-end - Caused browser-level auto-scroll during streaming */
+                /* ChatGPT Pattern: Let JavaScript control scroll, not CSS */
                 gap: 16px;
             }
 
@@ -992,9 +976,6 @@
         </style>
     </head>
     <body>
-        <!-- RED BANNER TO VERIFY FILE IS BEING SERVED -->
-        <div class="patch-marker">⚠️ PATCHED V2 - SCROLL FIX ACTIVE ⚠️</div>
-        
         <div class="app-container">
             <!-- Sidebar Overlay (Mobile) -->
             <div class="sidebar-overlay" id="sidebarOverlay"></div>
