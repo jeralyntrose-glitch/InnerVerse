@@ -2501,6 +2501,9 @@
                 updateMessagesPadding();
                 isUserPinnedToBottom = true; // Start pinned to bottom
                 scrollToBottom(true); // Force scroll on initialization
+                
+                // Ensure button is hidden on initial load (when at bottom)
+                updateScrollButtonVisibility();
 
                 setupIOSInputBar();
 
