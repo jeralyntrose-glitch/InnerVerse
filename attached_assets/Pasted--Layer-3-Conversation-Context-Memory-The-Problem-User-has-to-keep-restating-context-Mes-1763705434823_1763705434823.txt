@@ -1,0 +1,313 @@
+# Layer 3: Conversation Context Memory
+
+## The Problem
+
+User has to keep restating context:
+
+```
+Message 1: "I'm an ENFP and my partner is an INFJ"
+Message 5: "Why do they shut down during conflict?"
+Claude: "Who is 'they'? What type?"  ← ANNOYING
+```
+
+## The Solution
+
+Extract and remember context across the conversation. Inject it into every prompt automatically.
+
+```
+Message 1: "I'm an ENFP and my partner is an INFJ"
+→ System extracts: user_type=ENFP, partner_type=INFJ
+
+Message 5: "Why do they shut down during conflict?"
+→ System injects: "Context: User is ENFP. Partner is INFJ."
+→ Claude knows "they" = INFJ partner
+→ Gives accurate answer without asking
+```
+
+-----
+
+## Implementation
+
+### Step 1: Create Context Schema
+
+```python
+from dataclasses import dataclass, field
+from typing import Optional
+
+@dataclass
+class ConversationContext:
+    user_type: Optional[str] = None
+    partner_type: Optional[str] = None
+    friend_type: Optional[str] = None
+    coworker_type: Optional[str] = None
+    parent_type: Optional[str] = None
+    sibling_type: Optional[str] = None
+    child_type: Optional[str] = None
+    other_types: dict = field(default_factory=dict)  # {"boss": "ENTJ", "roommate": "ISTP"}
+    
+    def to_prompt_string(self) -> str:
+        """Convert context to string for prompt injection."""
+        parts = []
+        if self.user_type:
+            parts.append(f"User is {self.user_type}")
+        if self.partner_type:
+            parts.append(f"Partner is {self.partner_type}")
+        if self.friend_type:
+            parts.append(f"Friend is {self.friend_type}")
+        if self.coworker_type:
+            parts.append(f"Coworker is {self.coworker_type}")
+        if self.parent_type:
+            parts.append(f"Parent is {self.parent_type}")
+        if self.sibling_type:
+            parts.append(f"Sibling is {self.sibling_type}")
+        if self.child_type:
+            parts.append(f"Child is {self.child_type}")
+        for role, mbti in self.other_types.items():
+            parts.append(f"{role.capitalize()} is {mbti}")
+        
+        if not parts:
+            return ""
+        return "**Conversation Context:** " + ". ".join(parts) + "."
+```
+
+### Step 2: Context Extraction
+
+```python
+import re
+
+MBTI_TYPES = [
+    "ESTJ", "ESTP", "ENTJ", "ENFJ", "ESFJ", "ESFP", "ENTP", "ENFP",
+    "ISTJ", "ISTP", "INTJ", "INFJ", "ISFJ", "ISFP", "INTP", "INFP"
+]
+
+# Patterns to detect who the type belongs to
+RELATIONSHIP_PATTERNS = {
+    "user": [
+        r"i'?m\s+an?\s+({types})",
+        r"i\s+am\s+an?\s+({types})",
+        r"as\s+an?\s+({types})",
+        r"my\s+type\s+is\s+({types})",
+        r"i'?m\s+({types})",
+    ],
+    "partner": [
+        r"partner\s+is\s+an?\s+({types})",
+        r"boyfriend\s+is\s+an?\s+({types})",
+        r"girlfriend\s+is\s+an?\s+({types})",
+        r"husband\s+is\s+an?\s+({types})",
+        r"wife\s+is\s+an?\s+({types})",
+        r"spouse\s+is\s+an?\s+({types})",
+        r"dating\s+an?\s+({types})",
+        r"married\s+to\s+an?\s+({types})",
+        r"my\s+({types})\s+partner",
+        r"my\s+({types})\s+boyfriend",
+        r"my\s+({types})\s+girlfriend",
+        r"my\s+({types})\s+husband",
+        r"my\s+({types})\s+wife",
+    ],
+    "friend": [
+        r"friend\s+is\s+an?\s+({types})",
+        r"my\s+({types})\s+friend",
+        r"best\s+friend\s+is\s+an?\s+({types})",
+    ],
+    "coworker": [
+        r"coworker\s+is\s+an?\s+({types})",
+        r"colleague\s+is\s+an?\s+({types})",
+        r"boss\s+is\s+an?\s+({types})",
+        r"manager\s+is\s+an?\s+({types})",
+        r"my\s+({types})\s+boss",
+        r"my\s+({types})\s+coworker",
+    ],
+    "parent": [
+        r"mom\s+is\s+an?\s+({types})",
+        r"dad\s+is\s+an?\s+({types})",
+        r"mother\s+is\s+an?\s+({types})",
+        r"father\s+is\s+an?\s+({types})",
+        r"parent\s+is\s+an?\s+({types})",
+        r"my\s+({types})\s+mom",
+        r"my\s+({types})\s+dad",
+    ],
+    "sibling": [
+        r"sister\s+is\s+an?\s+({types})",
+        r"brother\s+is\s+an?\s+({types})",
+        r"sibling\s+is\s+an?\s+({types})",
+        r"my\s+({types})\s+sister",
+        r"my\s+({types})\s+brother",
+    ],
+    "child": [
+        r"son\s+is\s+an?\s+({types})",
+        r"daughter\s+is\s+an?\s+({types})",
+        r"kid\s+is\s+an?\s+({types})",
+        r"child\s+is\s+an?\s+({types})",
+        r"my\s+({types})\s+son",
+        r"my\s+({types})\s+daughter",
+    ],
+}
+
+def extract_context_from_message(message: str, existing_context: ConversationContext) -> ConversationContext:
+    """Extract type mentions and update context."""
+    message_lower = message.lower()
+    types_pattern = "|".join(MBTI_TYPES)
+    
+    for relationship, patterns in RELATIONSHIP_PATTERNS.items():
+        for pattern in patterns:
+            regex = pattern.format(types=types_pattern)
+            match = re.search(regex, message_lower)
+            if match:
+                found_type = match.group(1).upper()
+                if relationship == "user":
+                    existing_context.user_type = found_type
+                elif relationship == "partner":
+                    existing_context.partner_type = found_type
+                elif relationship == "friend":
+                    existing_context.friend_type = found_type
+                elif relationship == "coworker":
+                    existing_context.coworker_type = found_type
+                elif relationship == "parent":
+                    existing_context.parent_type = found_type
+                elif relationship == "sibling":
+                    existing_context.sibling_type = found_type
+                elif relationship == "child":
+                    existing_context.child_type = found_type
+    
+    return existing_context
+```
+
+### Step 3: Store Context Per Session
+
+```python
+# In-memory storage (or use Redis/database for persistence)
+session_contexts: dict[str, ConversationContext] = {}
+
+def get_or_create_context(session_id: str) -> ConversationContext:
+    """Get existing context or create new one for session."""
+    if session_id not in session_contexts:
+        session_contexts[session_id] = ConversationContext()
+    return session_contexts[session_id]
+
+def update_context(session_id: str, message: str) -> ConversationContext:
+    """Update context based on new message."""
+    context = get_or_create_context(session_id)
+    return extract_context_from_message(message, context)
+```
+
+### Step 4: Integrate with Claude API
+
+In `claude_api.py`:
+
+```python
+def chat_with_claude_streaming(conversation_history, user_message, session_id, ...):
+    # Update context from this message
+    context = update_context(session_id, user_message)
+    
+    # Build context injection string
+    context_string = context.to_prompt_string()
+    
+    # Also get type stack injection (from Layer 2)
+    type_injection = build_context_injection(user_message)
+    
+    # Combine all injections
+    full_injection = ""
+    if context_string:
+        full_injection += f"\n\n{context_string}"
+    if type_injection:
+        full_injection += f"\n\n{type_injection}"
+    
+    # Add to system prompt
+    enhanced_system_prompt = f"{SYSTEM_PROMPT}{full_injection}"
+    
+    # Continue with API call...
+```
+
+-----
+
+## Example Flow
+
+**Message 1:** “I’m an ENFP and my partner is an INFJ”
+
+```
+Context extracted:
+  user_type = "ENFP"
+  partner_type = "INFJ"
+
+Injected: "**Conversation Context:** User is ENFP. Partner is INFJ."
+```
+
+**Message 2:** “Why do they need so much alone time?”
+
+```
+Context still has:
+  user_type = "ENFP"
+  partner_type = "INFJ"
+
+Injected: "**Conversation Context:** User is ENFP. Partner is INFJ."
+
+Claude knows "they" = INFJ partner → explains through Ni hero
+```
+
+**Message 3:** “My sister is an ESTJ and she’s driving me crazy”
+
+```
+Context updated:
+  user_type = "ENFP"
+  partner_type = "INFJ"
+  sibling_type = "ESTJ"  ← NEW
+
+Injected: "**Conversation Context:** User is ENFP. Partner is INFJ. Sibling is ESTJ."
+```
+
+-----
+
+## Session ID
+
+You need a unique ID per conversation. Options:
+
+1. **Use existing chat/conversation ID** from your database
+1. **Generate UUID** when chat starts
+1. **Use user ID + timestamp**
+
+Whatever you already use to identify a conversation works.
+
+-----
+
+## Persistence (Optional Enhancement)
+
+Current spec stores context in memory. For persistence across server restarts:
+
+```python
+# Save to database when context updates
+def update_context(session_id: str, message: str) -> ConversationContext:
+    context = get_or_create_context(session_id)
+    context = extract_context_from_message(message, context)
+    
+    # Optional: Save to database
+    save_context_to_db(session_id, context)
+    
+    return context
+```
+
+-----
+
+## Testing
+
+After implementation:
+
+1. **Start new chat**
+1. **Say:** “I’m an ENFP and my partner is an INFJ”
+1. **Then ask:** “Why do they shut down during conflict?”
+1. **Expected:** Claude answers about INFJ without asking “who is they?”
+1. **Then ask:** “How can I support them better?”
+1. **Expected:** Claude gives ENFP→INFJ specific advice automatically
+
+-----
+
+## Summary
+
+|Component                     |What It Does                                           |
+|------------------------------|-------------------------------------------------------|
+|ConversationContext           |Stores user_type, partner_type, etc.                   |
+|extract_context_from_message()|Regex patterns to find “I’m an ENFP”, “partner is INFJ”|
+|session_contexts              |In-memory dict storing context per session             |
+|to_prompt_string()            |Converts context to injection string                   |
+|Integration                   |Inject context into every Claude prompt                |
+
+**Result:** Claude remembers who’s who throughout the conversation. 🧠
