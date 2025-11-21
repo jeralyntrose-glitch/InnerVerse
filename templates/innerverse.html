@@ -1809,6 +1809,15 @@
 
             sendBtn.addEventListener("click", sendMessage);
 
+            // ChatGPT Pattern: Scroll-to-bottom button click handler
+            scrollToBottomBtn.addEventListener("click", () => {
+                messages.scrollTo({
+                    top: messages.scrollHeight,
+                    behavior: 'smooth'
+                });
+                // Button will auto-hide when scroll completes (via scroll listener)
+            });
+
             // ===== PLATFORM DETECTION =====
             function isDesktop() {
                 // Multi-criteria detection for keyboard-based devices
