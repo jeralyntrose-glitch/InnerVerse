@@ -9,6 +9,7 @@ import time
 import json
 from src.services.pinecone_organizer import extract_all_metadata, organize_results_by_metadata, format_organized_context
 from src.services.type_injection import build_context_injection
+from src.services.conversation_context import update_context, get_or_create_context
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -528,6 +529,14 @@ You are the Axis of Mind. Think in functions. Consider all four sides. Query for
             if context_injection:
                 system_message = f"{system_message}\n\n{context_injection}"
                 print(f"🎯 [TYPE INJECTION] Injected type stacks from reference_data.json")
+            
+            # Layer 3: Conversation Context Memory
+            # Extract and remember relationship context across messages
+            context = update_context(conversation_id, last_user_message_content)
+            context_string = context.to_prompt_string()
+            if context_string:
+                system_message = f"{system_message}\n\n{context_string}"
+                print(f"🧠 [CONTEXT MEMORY] Injected conversation context")
     
     tool_use_details = []
     max_iterations = 3
@@ -945,6 +954,14 @@ You are the Axis of Mind. Think in functions. Consider all four sides. Query for
             if context_injection:
                 system_message = f"{system_message}\n\n{context_injection}"
                 print(f"🎯 [TYPE INJECTION] Injected type stacks from reference_data.json")
+            
+            # Layer 3: Conversation Context Memory
+            # Extract and remember relationship context across messages
+            context = update_context(conversation_id, last_user_message_content)
+            context_string = context.to_prompt_string()
+            if context_string:
+                system_message = f"{system_message}\n\n{context_string}"
+                print(f"🧠 [CONTEXT MEMORY] Injected conversation context")
     
     max_iterations = 3
     
