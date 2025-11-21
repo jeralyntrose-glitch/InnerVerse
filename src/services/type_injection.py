@@ -38,18 +38,34 @@ def normalize_message_content(content) -> str:
     return ""
 
 def detect_types_in_message(message: str) -> list[str]:
-    """Extract MBTI types mentioned in user message."""
+    """
+    Extract MBTI types mentioned in user message.
+    Handles composite patterns like:
+    - Basic: "INFJ", "ENTP"
+    - Octagram states: "UDUF INFJ", "SF/SF ENTP", "UD/UF ESTJ"
+    - Multiple types: "INFJ and ENFJ"
+    """
     # Defensive: ensure message is a string
     if not isinstance(message, str):
         print(f"⚠️ [TYPE INJECTION] Expected string, got {type(message)}. Converting...")
         message = str(message)
     
     message_upper = message.upper()
-    found_types = []
+    found_types = set()
+    
+    # Pattern 1: Octagram state prefix (UDUF INFJ, SF/SF ENTP, UD/UF ESTJ)
+    octagram_pattern = r'\b(?:UD|SD)(?:/)?(?:UF|SF)\s+([A-Z]{4})\b'
+    for match in re.finditer(octagram_pattern, message_upper):
+        type_code = match.group(1)
+        if type_code in MBTI_TYPES:
+            found_types.add(type_code)
+    
+    # Pattern 2: Basic type mention (word boundary)
     for mbti_type in MBTI_TYPES:
         if re.search(rf'\b{mbti_type}\b', message_upper):
-            found_types.append(mbti_type)
-    return found_types
+            found_types.add(mbti_type)
+    
+    return sorted(list(found_types))
 
 def get_type_stack(type_code: str) -> dict | None:
     """Get full stack for a type from reference data."""
