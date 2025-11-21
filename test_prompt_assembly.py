@@ -53,20 +53,20 @@ def test_uduf_infj_detection():
         return False
 
 
-def test_slash_pattern_detection():
-    """Test that SF/SF ENTP pattern detects ENTP."""
-    print("\n🧪 TEST: SF/SF ENTP Pattern Detection")
+def test_sdsf_pattern_detection():
+    """Test that SDSF ENTP pattern detects ENTP."""
+    print("\n🧪 TEST: SDSF ENTP Pattern Detection")
     
     try:
         system_prompt, metadata = build_system_prompt(
             conversation_id=999,
-            user_message="Tell me about SF/SF ENTP"
+            user_message="Tell me about SDSF ENTP"
         )
         
         assert 'ENTP' in metadata['detected_types'], f"ENTP not detected in {metadata['detected_types']}"
-        print(f"✅ Detected ENTP from SF/SF pattern")
+        print(f"✅ Detected ENTP from SDSF pattern")
         
-        print(f"✅ TEST PASSED: SF/SF ENTP detection works")
+        print(f"✅ TEST PASSED: SDSF ENTP detection works")
         return True
         
     except Exception as e:
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     
     results = [
         test_uduf_infj_detection(),      # Critical test
-        test_slash_pattern_detection(),   # Octagram pattern variant
+        test_sdsf_pattern_detection(),   # Octagram pattern variant
         test_basic_type_detection(),      # Basic functionality
         test_missing_reference_data_fails() # Validation
     ]
