@@ -1,0 +1,276 @@
+# CORRECTED PATCH: Fix 3 Bugs in Current Implementation
+
+## OVERVIEW
+
+The current implementation has 3 bugs:
+
+1. Button always visible (timing issue)
+1. `scrollToBottomIfNearBottom()` still in streaming loop
+1. `addMessage()` calls `scrollToBottom()` unconditionally
+
+-----
+
+## BUG FIX 1: Remove scrollToBottomIfNearBottom() from Streaming Loop
+
+**FILE:** `innerverse.html`
+
+**FIND (around line 1530-1540):**
+
+```javascript
+                                        } else {
+                                            assistantDiv.textContent =
+                                                fullResponse;
+                                        }
+
+                                        scrollToBottomIfNearBottom();
+                                    }
+```
+
+**REPLACE WITH:**
+
+```javascript
+                                        } else {
+                                            assistantDiv.textContent =
+                                                fullResponse;
+                                        }
+
+                                        // REMOVED: scrollToBottomIfNearBottom()
+                                        // User has full scroll control during streaming
+                                        // Button provides escape hatch to return to bottom
+                                    }
+```
+
+-----
+
+## BUG FIX 2: Gate scrollToBottom() in addMessage()
+
+**FILE:** `innerverse.html`
+
+**FIND (around line 1615-1625):**
+
+```javascript
+                messageDiv.appendChild(contentDiv);
+
+                // Add copy button
+                const copyBtn = createCopyButton(content);
+                messageDiv.appendChild(copyBtn);
+
+                messages.appendChild(messageDiv);
+                scrollToBottom();
+
+                return contentDiv;
+```
+
+**REPLACE WITH:**
+
+```javascript
+                messageDiv.appendChild(contentDiv);
+
+                // Add copy button
+                const copyBtn = createCopyButton(content);
+                messageDiv.appendChild(copyBtn);
+
+                messages.appendChild(messageDiv);
+                
+                // Only auto-scroll when NOT streaming
+                // During streaming, user controls scroll, button provides escape hatch
+                if (!isStreaming) {
+                    scrollToBottom();
+                }
+
+                return contentDiv;
+```
+
+-----
+
+## BUG FIX 3: Gate scrollToBottom() in addUserMessage()
+
+**FILE:** `innerverse.html`
+
+**FIND (around line 1575-1585):**
+
+```javascript
+                // Add copy button
+                const copyBtn = createCopyButton(text);
+                messageDiv.appendChild(copyBtn);
+
+                messages.appendChild(messageDiv);
+                scrollToBottom();
+            }
+```
+
+**REPLACE WITH:**
+
+```javascript
+                // Add copy button
+                const copyBtn = createCopyButton(text);
+                messageDiv.appendChild(copyBtn);
+
+                messages.appendChild(messageDiv);
+                
+                // Only auto-scroll when NOT streaming
+                if (!isStreaming) {
+                    scrollToBottom();
+                }
+            }
+```
+
+-----
+
+## BUG FIX 4: Fix Button Visibility Timing at Init
+
+**FILE:** `innerverse.html`
+
+**FIND (around line 2005-2015):**
+
+```javascript
+                // Initialize scroll manager and dynamic padding
+                updateMessagesPadding();
+                isUserPinnedToBottom = true; // Start pinned to bottom
+                scrollToBottom(true); // Force scroll on initialization
+                
+                // Ensure button is hidden on initial load (when at bottom)
+                updateScrollButtonVisibility();
+
+                setupIOSInputBar();
+```
+
+**REPLACE WITH:**
+
+```javascript
+                // Initialize scroll manager and dynamic padding
+                updateMessagesPadding();
+                isUserPinnedToBottom = true; // Start pinned to bottom
+                scrollToBottom(true); // Force scroll on initialization
+                
+                // Ensure button is hidden AFTER scroll completes (timing fix)
+                // Must wait for rAF chain to complete before checking position
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        updateScrollButtonVisibility();
+                    });
+                });
+
+                setupIOSInputBar();
+```
+
+-----
+
+## BUG FIX 5: Ensure User Message Scrolls Into View Before Streaming
+
+The current code scrolls AFTER `isStreaming = true` is set, which might cause issues.
+
+**FILE:** `innerverse.html`
+
+**FIND (around line 1425-1445):**
+
+```javascript
+                // Show typing indicator
+                isUserPinnedToBottom = true; // Reset pin state when sending message
+                typingIndicator.classList.add("visible");
+                
+                // Scroll user message into view AFTER DOM settles (double rAF for iOS Safari)
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        scrollToBottom(true);
+                        console.log("📱 User message scrolled into view");
+                    });
+                });
+
+                let assistantDiv = null;
+```
+
+**REPLACE WITH:**
+
+```javascript
+                // Show typing indicator
+                isUserPinnedToBottom = true; // Reset pin state when sending message
+                typingIndicator.classList.add("visible");
+                
+                // Scroll user message into view IMMEDIATELY (before streaming starts)
+                // Using force=true bypasses all checks
+                scrollToBottom(true);
+                console.log("📱 User message scrolled into view");
+
+                let assistantDiv = null;
+```
+
+-----
+
+## SUMMARY OF FIXES
+
+|Bug|Cause                                                      |Fix                               |
+|---|-----------------------------------------------------------|----------------------------------|
+|1  |`scrollToBottomIfNearBottom()` still in streaming loop     |Remove the call                   |
+|2  |`addMessage()` calls `scrollToBottom()` unconditionally    |Add `if (!isStreaming)` guard     |
+|3  |`addUserMessage()` calls `scrollToBottom()` unconditionally|Add `if (!isStreaming)` guard     |
+|4  |Button visibility checked before scroll completes          |Wait for rAF chain                |
+|5  |User message scroll uses delayed rAF                       |Scroll immediately with force=true|
+
+-----
+
+## EXPECTED BEHAVIOR AFTER FIXES
+
+**During Streaming:**
+
+- ✅ NO auto-scroll whatsoever
+- ✅ User can freely scroll up/down without yanking
+- ✅ Button appears when >100px from bottom
+- ✅ Tapping button scrolls to bottom
+
+**When Sending Message:**
+
+- ✅ User message appears
+- ✅ View scrolls to show user message (before streaming starts)
+- ✅ Typing indicator shows
+- ✅ Then AI response streams (no auto-scroll)
+
+**On Page Load:**
+
+- ✅ Button is hidden (user starts at bottom)
+- ✅ Auto-scroll works for loading conversation
+
+-----
+
+## TESTING CHECKLIST
+
+**Test 1: Button Hidden at Start**
+
+- [ ] Load the page
+- [ ] Expected: No ↓ button visible (you’re at bottom)
+
+**Test 2: Button Appears When Scrolled**
+
+- [ ] Scroll up in a conversation with messages
+- [ ] Expected: ↓ button appears after scrolling >100px
+
+**Test 3: No Auto-Scroll During Streaming**
+
+- [ ] Send message to AI
+- [ ] AI starts streaming
+- [ ] Scroll UP while AI types
+- [ ] Expected: Page stays where you scrolled (NO YANK!)
+
+**Test 4: User Message Scrolls Into View**
+
+- [ ] Send a message
+- [ ] Expected: Your message appears at bottom, view scrolls to show it
+
+**Test 5: Button Works**
+
+- [ ] Scroll up during streaming
+- [ ] Tap ↓ button
+- [ ] Expected: Smooth scroll to bottom
+
+-----
+
+## CRITICAL INSTRUCTIONS
+
+⚠️ **Apply ALL 5 fixes**
+⚠️ **Each FIND block must match EXACTLY**
+⚠️ **Do NOT add any other changes**
+⚠️ **Test on iOS Safari after applying**
+
+-----
+
+**APPLY THESE FIXES. TEST. REPORT RESULTS.**
