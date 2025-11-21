@@ -2037,20 +2037,21 @@
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
             function updateScrollPinState() {
-                // PATCH 23: Don't recalculate during active touch - prevents overwriting user intent
-                if (userTouchActive) {
-                    console.log("🚫 Scroll recalc blocked - user touch active");
-                    return;
-                }
-                
                 const threshold = 5; // PATCH 19: Reduced from 30px to 5px (industry standard)
                 const isNearBottom =
                     messages.scrollHeight -
                         messages.scrollTop -
                         messages.clientHeight <
                     threshold;
-                isUserPinnedToBottom = isNearBottom;
-                console.log(`📍 Pin state updated: ${isUserPinnedToBottom ? 'pinned' : 'unpinned'}`);
+                
+                // PATCH 23: Only update pin state if user isn't actively touching
+                // Let calculation happen but don't overwrite during active touch
+                if (!userTouchActive) {
+                    isUserPinnedToBottom = isNearBottom;
+                    console.log(`📍 Pin state updated: ${isUserPinnedToBottom ? 'pinned' : 'unpinned'}`);
+                } else {
+                    console.log(`🚫 Pin state NOT updated (user touch active) - would be: ${isNearBottom ? 'pinned' : 'unpinned'}`);
+                }
             }
 
             function scrollToBottom(force = false) {
@@ -2109,16 +2110,6 @@
                 messages.addEventListener("touchmove", () => {
                     userTouchActive = true;
                     console.log("👆 touchmove - keeping latch active");
-                }, { passive: true });
-
-                messages.addEventListener("touchend", () => {
-                    userTouchActive = false;
-                    console.log(`👆 touchend - userTouchActive: ${userTouchActive}`);
-                }, { passive: true });
-
-                messages.addEventListener("touchcancel", () => {
-                    userTouchActive = false;
-                    console.log(`👆 touchcancel - userTouchActive: ${userTouchActive} (iOS system gesture)`);
                 }, { passive: true });
 
                 // PATCH 20: Scroll detection for desktop and touch-end scenarios
@@ -2292,6 +2283,26 @@
 
                 console.log("✅ iOS input bar setup complete");
             }
+
+            // ===== GLOBAL TOUCH RELEASE LISTENERS (PATCH 23) =====
+            // Attach ONCE at page load - ensures latch always clears even if touch ends outside messages
+            window.addEventListener("touchend", () => {
+                if (userTouchActive) {
+                    userTouchActive = false;
+                    console.log(`👆 touchend (global) - userTouchActive: ${userTouchActive}`);
+                    // Immediately refresh pin state after touch ends to avoid stale flag
+                    updateScrollPinState();
+                }
+            }, { passive: true, capture: true });
+
+            window.addEventListener("touchcancel", () => {
+                if (userTouchActive) {
+                    userTouchActive = false;
+                    console.log(`👆 touchcancel (global) - userTouchActive: ${userTouchActive} (iOS system gesture)`);
+                    // Immediately refresh pin state after touch cancels to avoid stale flag
+                    updateScrollPinState();
+                }
+            }, { passive: true, capture: true });
 
             // ===== INITIALIZE =====
             (async function () {
