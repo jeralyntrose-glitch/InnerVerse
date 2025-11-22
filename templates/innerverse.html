@@ -636,7 +636,7 @@
             .scroll-to-bottom-btn {
                 position: fixed;
                 bottom: 90px;
-                left: 50%;
+                left: calc(50% + 140px); /* Center in main area: 50% + (280px sidebar / 2) */
                 transform: translateX(-50%);
                 width: 28px;
                 height: 28px;
@@ -939,6 +939,11 @@
                 /* Typing indicator - mobile override (sidebar is overlay, not inline) */
                 .typing-indicator {
                     left: 12px; /* Match mobile message padding */
+                }
+
+                /* Scroll-to-bottom button - mobile override (center on full width) */
+                .scroll-to-bottom-btn {
+                    left: 50% !important; /* Center on mobile (sidebar is overlay) */
                 }
             }
 
