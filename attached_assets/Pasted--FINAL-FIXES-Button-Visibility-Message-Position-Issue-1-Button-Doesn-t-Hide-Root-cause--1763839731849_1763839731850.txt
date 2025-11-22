@@ -1,0 +1,76 @@
+# FINAL FIXES: Button Visibility + Message Position
+
+## Issue 1: Button Doesn’t Hide
+
+**Root cause:** `scrollToBottom` uses `behavior: 'smooth'` which takes ~300ms to complete, but visibility check runs immediately after (~32ms). The scroll position is still old when checked.
+
+**FIX: Use ‘instant’ for initial load scroll**
+
+**FIND in scrollToBottom function (around line 2290):**
+
+```javascript
+messages.scrollTo({
+    top: Math.max(0, targetScroll),
+    behavior: 'smooth'
+});
+```
+
+**REPLACE WITH:**
+
+```javascript
+// Use instant for forced scrolls (initial load), smooth for user-triggered
+messages.scrollTo({
+    top: Math.max(0, targetScroll),
+    behavior: force ? 'instant' : 'smooth'
+});
+```
+
+This way:
+
+- Initial page load (`force=true`) → instant scroll → visibility check is accurate
+- User clicking button → smooth scroll → nice animation
+
+-----
+
+## Issue 2: Short Messages Going Too High
+
+**Root cause:** `topOffset` is capped at 150px, but iPhone 14 Pro needs ~59px for Dynamic Island + more visual breathing room.
+
+**FIND in sendMessage BULLETPROOF scroll (around line 1770):**
+
+```javascript
+if (messageHeight <= maxVisibleLines) {
+    // SHORT MESSAGE: Keep it lower on screen (don't push to top)
+    // Position message about 1/4 down from top of viewport
+    const topOffset = Math.min(viewportHeight * 0.25, 150);
+    targetScrollTop = Math.max(0, messageOffsetInContainer - topOffset);
+}
+```
+
+**REPLACE WITH:**
+
+```javascript
+if (messageHeight <= maxVisibleLines) {
+    // SHORT MESSAGE: Keep it lower on screen (don't push to top)
+    // Position message about 1/4 down from top of viewport
+    // 250px accounts for Dynamic Island (~59px) + visual breathing room
+    const topOffset = Math.min(viewportHeight * 0.3, 250);
+    targetScrollTop = Math.max(0, messageOffsetInContainer - topOffset);
+}
+```
+
+Changed:
+
+- `0.25` → `0.30` (30% of viewport instead of 25%)
+- `150` → `250` (higher cap to account for Dynamic Island)
+
+-----
+
+## TELL REPLIT:
+
+> Two fixes:
+> 
+> 1. **Button not hiding:** In `scrollToBottom`, change `behavior: 'smooth'` to `behavior: force ? 'instant' : 'smooth'` - this makes initial load instant so visibility check is accurate
+> 1. **Short messages too high:** In the BULLETPROOF scroll short message case, change `Math.min(viewportHeight * 0.25, 150)` to `Math.min(viewportHeight * 0.30, 250)` - gives more room for Dynamic Island
+
+These should be the final tweaks! 🎯

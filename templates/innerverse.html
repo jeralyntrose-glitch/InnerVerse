@@ -1746,8 +1746,9 @@
 
                             if (messageHeight <= maxVisibleLines) {
                                 // SHORT MESSAGE: Keep it lower on screen (don't push to top)
-                                // Position message about 1/4 down from top of viewport
-                                const topOffset = Math.min(viewportHeight * 0.25, 150);
+                                // Position message about 30% down from top of viewport
+                                // 250px accounts for Dynamic Island (~59px) + visual breathing room
+                                const topOffset = Math.min(viewportHeight * 0.30, 250);
                                 targetScrollTop = Math.max(0, messageOffsetInContainer - topOffset);
                             } else {
                                 // LONG MESSAGE: Show bottom ~12 lines, rest scrolled above
@@ -2353,9 +2354,10 @@
                         // Position last message at bottom of viewport (40px buffer)
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
                         const targetScroll = messageBottom - messages.clientHeight + 40;
+                        // Use instant for forced scrolls (initial load), smooth for user-triggered
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
-                            behavior: 'smooth'
+                            behavior: force ? 'instant' : 'smooth'
                         });
                         console.log(
                             "📜 Scrolled to last message" +
@@ -2364,9 +2366,10 @@
                         );
                     } else {
                         // Fallback if no messages exist
+                        // Use instant for forced scrolls (initial load), smooth for user-triggered
                         messages.scrollTo({
                             top: messages.scrollHeight,
-                            behavior: 'smooth'
+                            behavior: force ? 'instant' : 'smooth'
                         });
                         console.log("📜 Scrolled to bottom (no messages)" + (force ? " (forced)" : " (auto)"));
                     }
