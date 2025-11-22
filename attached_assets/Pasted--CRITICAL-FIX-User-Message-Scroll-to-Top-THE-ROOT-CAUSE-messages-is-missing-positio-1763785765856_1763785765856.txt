@@ -1,0 +1,77 @@
+# CRITICAL FIX: User Message Scroll to Top
+
+## THE ROOT CAUSE
+
+**`.messages` is missing `position: relative`**
+
+`offsetTop` returns position relative to the element's `offsetParent` - the nearest POSITIONED ancestor. Since `.messages` has NO position set, the message's `offsetTop` is measured relative to some other ancestor (probably the body), NOT the scroll container.
+
+This means:
+```javascript
+const messagePosition = lastUserMessage.offsetTop;  // Returns ~5000px (relative to body)
+messages.scrollTo({ top: 5000 - 20 });              // Scrolls to wrong position
+```
+
+## THE FIX (ONE LINE)
+
+**FILE:** `templates/innerverse.html`
+
+**FIND this CSS block (around line 395-410):**
+```css
+            .messages {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+                touch-action: pan-y;
+                padding: 20px;
+                padding-bottom: 200px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+```
+
+**REPLACE WITH:**
+```css
+            .messages {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+                touch-action: pan-y;
+                padding: 20px;
+                padding-bottom: 200px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                position: relative; /* CRITICAL: Makes this the offsetParent for child elements */
+            }
+```
+
+## WHY THIS WORKS
+
+| Before | After |
+|--------|-------|
+| `offsetTop` = position relative to body (~5000px) | `offsetTop` = position relative to `.messages` container |
+| Scroll goes to wrong position | Scroll goes to exact message position |
+
+When `.messages` has `position: relative`:
+1. It becomes the `offsetParent` for all child `.message` elements
+2. `lastUserMessage.offsetTop` now returns the correct position WITHIN the scroll container
+3. `messages.scrollTo({ top: offsetTop - 20 })` scrolls to show the message at top with 20px padding
+
+## TESTING
+
+After applying:
+1. Hard refresh (Cmd+Shift+R)
+2. Send a message in a conversation with history
+3. **Expected:** Your message appears at TOP of screen
+4. **Expected:** Space below for AI response to stream
+5. Check console for: `📱 User message at top: offsetTop = X, scrollTo = Y`
+   - X should be a reasonable number (few hundred to few thousand)
+   - Y should equal X - 20
+
+---
+
+**THIS IS A ONE LINE FIX. APPLY IT AND TEST.**
