@@ -1146,6 +1146,7 @@
             // Tracks ALL input types (touch, pointer, mouse) at document level to prevent yanking
             let lastInputEndTime = 0; // Timestamp of last input gesture completion
             const INPUT_COOLDOWN_MS = 250; // iOS Safari deferred scroll window (~200ms + buffer)
+            let scrollLockUntil = 0; // Prevents any scroll interference after manual scroll
 
             // Folder Configuration (matches backend projects)
             const FOLDERS = [
@@ -1713,29 +1714,47 @@
                 // Show typing indicator
                 typingIndicator.classList.add("visible");
                 
-                // Scroll so user message is at TOP, leaving room for AI response below
-                // Use offsetTop for reliable positioning (getBoundingClientRect is viewport-relative and unreliable)
+                // BULLETPROOF: Scroll user message to TOP of viewport
+                // Uses getBoundingClientRect (most accurate) + scroll lock (prevents interference)
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
+                        // Force synchronous reflow to ensure accurate measurements
+                        void messages.offsetHeight;
+                        
                         const userMessages = messages.querySelectorAll('.message.user');
                         const lastUserMessage = userMessages[userMessages.length - 1];
                         if (lastUserMessage) {
-                            // offsetTop = element's position within the scrollable container
-                            // This is stable regardless of current scroll position
-                            const messagePosition = lastUserMessage.offsetTop;
-                            const targetScrollTop = messagePosition - 20; // 20px padding from top
+                            // Get positions relative to viewport
+                            const containerRect = messages.getBoundingClientRect();
+                            const messageRect = lastUserMessage.getBoundingClientRect();
                             
-                            // Use instant scroll to avoid interruption from incoming AI response
-                            messages.scrollTo({
-                                top: Math.max(0, targetScrollTop),
-                                behavior: 'instant'
+                            // Calculate absolute position within scrollable content
+                            // Formula: (message viewport position - container viewport position) + current scroll
+                            const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
+                            const targetScrollTop = Math.max(0, messageOffsetInContainer - 20);
+                            
+                            // LOCK scrolling - prevent ANY interference for 300ms
+                            scrollLockUntil = Date.now() + 300;
+                            
+                            // Direct assignment (more reliable than scrollTo on iOS)
+                            messages.scrollTop = targetScrollTop;
+                            
+                            console.log("📱 BULLETPROOF scroll:", {
+                                messageTop: messageRect.top,
+                                containerTop: containerRect.top,
+                                currentScroll: messages.scrollTop,
+                                target: targetScrollTop,
+                                lockUntil: scrollLockUntil
                             });
-                            console.log("📱 User message at top: offsetTop =", messagePosition, "scrollTo =", Math.max(0, targetScrollTop));
                             
-                            // CRITICAL: iOS Safari doesn't fire scroll listeners on programmatic scrollTo
-                            // Manually recalculate pin state after scroll to ensure observers see correct value
-                            updateScrollPinState();
-                            console.log("📌 Pin state recalculated after send-message scroll: isUserPinnedToBottom =", isUserPinnedToBottom);
+                            // Auto-clear lock after 300ms with logging
+                            setTimeout(() => {
+                                if (Date.now() >= scrollLockUntil) {
+                                    console.log("🔓 Scroll lock expired");
+                                    // Recalculate pin state now that lock is cleared
+                                    updateScrollPinState();
+                                }
+                            }, 300);
                         }
                     });
                 });
@@ -2172,6 +2191,11 @@
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
             function updateScrollPinState() {
+                // Skip updates during scroll lock (prevents race conditions)
+                if (Date.now() < scrollLockUntil) {
+                    console.log("🔒 Pin state update blocked by lock, expires in:", scrollLockUntil - Date.now(), "ms");
+                    return;
+                }
                 const threshold = 5; // PATCH 19: Reduced from 30px to 5px (industry standard)
                 const isNearBottom =
                     messages.scrollHeight -
@@ -2219,6 +2243,10 @@
 
             // ChatGPT Pattern: Guard auto-scroll based on streaming state and user intent
             function canAutoScroll() {
+                // Respect scroll lock (prevents race conditions during manual scroll-to-top)
+                if (Date.now() < scrollLockUntil) {
+                    return false;
+                }
                 return !isStreaming && isUserPinnedToBottom;
             }
 
@@ -2241,6 +2269,12 @@
             }
 
             function scrollToBottom(force = false) {
+                // SCROLL LOCK: Prevent interference after manual scroll-to-top
+                if (Date.now() < scrollLockUntil) {
+                    console.log("🔒 Scroll blocked by lock, expires in:", scrollLockUntil - Date.now(), "ms");
+                    return;
+                }
+                
                 // Debug logging to identify unexpected scroll triggers
                 if (!force && isStreaming) {
                     console.error("🚨 BUG: scrollToBottom() called during streaming without force=true!");
