@@ -745,7 +745,7 @@
             .input-container {
                 position: fixed;
                 bottom: 0;
-                left: 0;
+                left: 280px; /* Offset by sidebar width on desktop */
                 right: 0;
                 padding: 12px;
                 padding-bottom: calc(12px + env(safe-area-inset-bottom));
@@ -922,6 +922,7 @@
                 }
 
                 .input-container {
+                    left: 0 !important; /* Full width on mobile (sidebar is overlay) */
                     padding: 12px !important;
                 }
 
