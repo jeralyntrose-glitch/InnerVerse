@@ -1737,8 +1737,24 @@
                             // Formula: (message viewport position - container viewport position) + current scroll
                             const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
                             
-                            // iPhone 14 Pro alignment: 25px = ~1 finger width below Dynamic Island
-                            const targetScrollTop = Math.max(0, messageOffsetInContainer - 25);
+                            // SMART positioning based on message height
+                            const messageHeight = messageRect.height;
+                            const viewportHeight = messages.clientHeight;
+                            const maxVisibleLines = 300; // ~12 lines worth of text
+
+                            let targetScrollTop;
+
+                            if (messageHeight <= maxVisibleLines) {
+                                // SHORT MESSAGE: Keep it lower on screen (don't push to top)
+                                // Position message about 1/4 down from top of viewport
+                                const topOffset = Math.min(viewportHeight * 0.25, 150);
+                                targetScrollTop = Math.max(0, messageOffsetInContainer - topOffset);
+                            } else {
+                                // LONG MESSAGE: Show bottom ~12 lines, rest scrolled above
+                                // Scroll so bottom of message is near bottom of viewport (leaving room for AI)
+                                const showFromBottom = maxVisibleLines; // Show this much of the message
+                                targetScrollTop = Math.max(0, messageOffsetInContainer + messageHeight - showFromBottom - 100);
+                            }
                             
                             // LOCK scrolling - prevent ANY interference for 300ms
                             scrollLockUntil = Date.now() + 300;
@@ -2248,13 +2264,22 @@
                     buttonVisibilityPending = requestAnimationFrame(() => {
                         buttonVisibilityPending = null; // Clear token
                         
-                        const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
-                        const shouldShow = distanceFromBottom > 150;
+                        // SMART: Check if last MESSAGE is below viewport, not just padding
+                        const allMessages = messages.querySelectorAll('.message');
+                        const lastMessage = allMessages[allMessages.length - 1];
+
+                        let shouldShow = false;
+                        if (lastMessage) {
+                            const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                            const viewportBottom = messages.scrollTop + messages.clientHeight;
+                            // Show button only if last message extends below visible area
+                            shouldShow = lastMessageBottom > viewportBottom + 50;
+                        }
                         
                         console.log(
-                            `🎯 Button visibility check: distance=${distanceFromBottom.toFixed(0)}px, ` +
-                            `shouldShow=${shouldShow}, scrollHeight=${messages.scrollHeight}, ` +
-                            `scrollTop=${messages.scrollTop}, clientHeight=${messages.clientHeight}`
+                            `🎯 Button visibility check (SMART): shouldShow=${shouldShow}, ` +
+                            `lastMessageBottom=${lastMessage ? (lastMessage.offsetTop + lastMessage.offsetHeight).toFixed(0) : 'N/A'}px, ` +
+                            `viewportBottom=${(messages.scrollTop + messages.clientHeight).toFixed(0)}px`
                         );
                         
                         if (shouldShow) {

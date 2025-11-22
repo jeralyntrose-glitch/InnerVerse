@@ -1,0 +1,82 @@
+# SMART SCROLL: Message Length Aware
+
+## Issue 1: Down Arrow Shows When It Shouldn’t
+
+The button checks distance from scroll bottom (which includes padding). It should check if there’s actual MESSAGE content below.
+
+**FIND the button visibility function:**
+
+```javascript
+const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
+const shouldShow = distanceFromBottom > 150;
+```
+
+**REPLACE WITH:**
+
+```javascript
+// Check if last MESSAGE is below viewport, not just padding
+const allMessages = messages.querySelectorAll('.message');
+const lastMessage = allMessages[allMessages.length - 1];
+
+let shouldShow = false;
+if (lastMessage) {
+    const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+    const viewportBottom = messages.scrollTop + messages.clientHeight;
+    // Show button only if last message extends below visible area
+    shouldShow = lastMessageBottom > viewportBottom + 50;
+}
+```
+
+-----
+
+## Issue 2: Smart Message Positioning Based on Length
+
+**FIND the BULLETPROOF scroll calculation:**
+
+```javascript
+const targetScrollTop = Math.max(0, messageOffsetInContainer - 25);
+```
+
+**REPLACE WITH:**
+
+```javascript
+// Smart positioning based on message height
+const messageHeight = messageRect.height;
+const viewportHeight = messages.clientHeight;
+const maxVisibleLines = 300; // ~12 lines worth of text
+
+let targetScrollTop;
+
+if (messageHeight <= maxVisibleLines) {
+    // SHORT MESSAGE: Keep it lower on screen (don't push to top)
+    // Position message about 1/4 down from top of viewport
+    const topOffset = Math.min(viewportHeight * 0.25, 150);
+    targetScrollTop = Math.max(0, messageOffsetInContainer - topOffset);
+} else {
+    // LONG MESSAGE: Show bottom ~12 lines, rest scrolled above
+    // Scroll so bottom of message is near bottom of viewport (leaving room for AI)
+    const showFromBottom = maxVisibleLines; // Show this much of the message
+    targetScrollTop = Math.max(0, messageOffsetInContainer + messageHeight - showFromBottom - 100);
+}
+```
+
+-----
+
+## SUMMARY
+
+|Message Type      |Behavior                                         |
+|------------------|-------------------------------------------------|
+|Short (< 12 lines)|Show whole message, positioned ~25% down from top|
+|Long (> 12 lines) |Show bottom 12 lines, rest scrolled above        |
+|Down arrow        |Only appears when last MESSAGE is below viewport |
+
+-----
+
+## TELL REPLIT:
+
+> Two logic changes:
+> 
+> 1. **Down arrow visibility:** Check if last MESSAGE is below viewport, not just scroll distance. Use `lastMessage.offsetTop + lastMessage.offsetHeight > scrollTop + clientHeight + 50`
+> 1. **Smart message positioning:**
+> - If message height < 300px: Position message 25% down from top (show whole message)
+> - If message height >= 300px: Show bottom 300px of message, rest scrolled above
