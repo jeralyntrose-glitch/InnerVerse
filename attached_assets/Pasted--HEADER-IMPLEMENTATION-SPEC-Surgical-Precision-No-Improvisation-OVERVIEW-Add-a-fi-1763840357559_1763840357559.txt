@@ -1,0 +1,432 @@
+# HEADER IMPLEMENTATION SPEC
+
+## Surgical Precision - No Improvisation
+
+-----
+
+## OVERVIEW
+
+Add a fixed header bar containing:
+
+- Burger menu (moved from floating position)
+- “INNERVERSE” title centered
+- Theme toggle button on right
+
+-----
+
+## STEP 1: ADD CSS FOR HEADER
+
+**FIND this comment in the CSS (around line 395):**
+
+```css
+            /* ===== CHAT AREA ===== */
+```
+
+**ADD THIS BLOCK IMMEDIATELY BEFORE IT:**
+
+```css
+            /* ===== CHAT HEADER ===== */
+            .chat-header {
+                position: fixed;
+                top: 0;
+                left: 280px; /* After sidebar on desktop */
+                right: 0;
+                height: calc(56px + env(safe-area-inset-top, 0px));
+                padding-top: env(safe-area-inset-top, 0px);
+                background: var(--bg-header);
+                border-bottom: 1px solid var(--border-main);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding-left: 16px;
+                padding-right: 16px;
+                z-index: 1001;
+            }
+
+            .chat-header .header-left {
+                position: absolute;
+                left: 16px;
+                display: flex;
+                align-items: center;
+            }
+
+            .chat-header .header-right {
+                position: absolute;
+                right: 16px;
+                display: flex;
+                align-items: center;
+            }
+
+            .chat-header .header-title {
+                font-size: 16px;
+                font-weight: 600;
+                letter-spacing: 1.5px;
+                color: var(--text-primary);
+            }
+
+            /* Desktop: hide burger in header (sidebar always visible) */
+            .chat-header .burger-menu {
+                display: none;
+            }
+```
+
+-----
+
+## STEP 2: UPDATE MOBILE CSS FOR HEADER
+
+**FIND this block in the mobile media query (around line 830):**
+
+```css
+            @media (max-width: 768px) {
+                .sidebar {
+                    position: fixed;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    width: 80%;
+                    z-index: 1101; /* Above overlay (1100) */
+                }
+
+                .input-container {
+                    left: 0 !important; /* Full width on mobile (sidebar is overlay) */
+                    padding: 12px !important;
+                }
+
+                .messages {
+                    padding: 16px 12px;
+                    padding-bottom: max(300px, calc(100vh - 150px + env(safe-area-inset-bottom))); /* CRITICAL: Mobile needs scroll room too */
+                }
+```
+
+**REPLACE WITH:**
+
+```css
+            @media (max-width: 768px) {
+                .sidebar {
+                    position: fixed;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    width: 80%;
+                    z-index: 1101; /* Above overlay (1100) */
+                }
+
+                .input-container {
+                    left: 0 !important; /* Full width on mobile (sidebar is overlay) */
+                    padding: 12px !important;
+                }
+
+                .messages {
+                    padding: 16px 12px;
+                    padding-top: calc(72px + env(safe-area-inset-top, 0px)); /* Header height + safe area */
+                    padding-bottom: max(300px, calc(100vh - 150px + env(safe-area-inset-bottom))); /* CRITICAL: Mobile needs scroll room too */
+                }
+
+                /* Mobile header: full width */
+                .chat-header {
+                    left: 0;
+                }
+
+                /* Mobile: show burger in header */
+                .chat-header .burger-menu {
+                    display: flex;
+                    position: static;
+                    margin: 0;
+                }
+```
+
+-----
+
+## STEP 3: UPDATE MESSAGES CONTAINER CSS
+
+**FIND this block (around line 410):**
+
+```css
+            .messages {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+                touch-action: pan-y;
+                padding: 20px;
+                padding-bottom: calc(100vh - 150px); /* CRITICAL: Enough space to scroll last message to top */
+                display: flex;
+                flex-direction: column;
+                /* REMOVED: justify-content: flex-end - Caused browser-level auto-scroll during streaming */
+                /* ChatGPT Pattern: Let JavaScript control scroll, not CSS */
+                gap: 16px;
+                position: relative; /* CRITICAL: Makes this the offsetParent for offsetTop calculations */
+            }
+```
+
+**REPLACE WITH:**
+
+```css
+            .messages {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+                touch-action: pan-y;
+                padding: 20px;
+                padding-top: calc(72px + env(safe-area-inset-top, 0px)); /* Header height + safe area */
+                padding-bottom: calc(100vh - 150px); /* CRITICAL: Enough space to scroll last message to top */
+                display: flex;
+                flex-direction: column;
+                /* REMOVED: justify-content: flex-end - Caused browser-level auto-scroll during streaming */
+                /* ChatGPT Pattern: Let JavaScript control scroll, not CSS */
+                gap: 16px;
+                position: relative; /* CRITICAL: Makes this the offsetParent for offsetTop calculations */
+            }
+```
+
+-----
+
+## STEP 4: REMOVE OLD FLOATING BURGER CSS
+
+**FIND this entire block (around line 140-165):**
+
+```css
+            /* ===== BURGER MENU (MOBILE) ===== */
+            .burger-menu {
+                position: fixed;
+                top: 12px;
+                left: 12px;
+                z-index: 1102; /* Above sidebar (1101) */
+                width: 40px;
+                height: 40px;
+                background: var(--bg-button);
+                border: 1px solid var(--border-input);
+                border-radius: 8px;
+                cursor: pointer;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
+
+            .burger-menu:hover {
+                background: var(--bg-button-hover);
+                border-color: var(--accent);
+            }
+
+            /* Show on mobile */
+            @media (max-width: 768px) {
+                .burger-menu {
+                    display: flex;
+                }
+            }
+
+            .burger-menu svg {
+                width: 20px;
+                height: 20px;
+                stroke: var(--text-primary);
+            }
+```
+
+**REPLACE WITH:**
+
+```css
+            /* ===== BURGER MENU (in header) ===== */
+            .burger-menu {
+                width: 40px;
+                height: 40px;
+                background: var(--bg-button);
+                border: 1px solid var(--border-input);
+                border-radius: 8px;
+                cursor: pointer;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
+
+            .burger-menu:hover {
+                background: var(--bg-button-hover);
+                border-color: var(--accent);
+            }
+
+            .burger-menu svg {
+                width: 20px;
+                height: 20px;
+                stroke: var(--text-primary);
+            }
+```
+
+-----
+
+## STEP 5: ADD HEADER HTML
+
+**FIND this HTML (around line 920):**
+
+```html
+            <!-- Main Content -->
+            <main class="main-content">
+                <div class="chat-container">
+                    <div class="messages" id="messages">
+```
+
+**REPLACE WITH:**
+
+```html
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Chat Header -->
+                <header class="chat-header">
+                    <div class="header-left">
+                        <button class="burger-menu" id="burgerMenu" aria-label="Toggle sidebar">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <span class="header-title">INNERVERSE</span>
+                    <div class="header-right">
+                        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                            <span class="theme-icon moon-icon">🌙</span>
+                            <span class="theme-icon sun-icon">☀️</span>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="chat-container">
+                    <div class="messages" id="messages">
+```
+
+-----
+
+## STEP 6: REMOVE OLD BURGER AND THEME TOGGLE FROM SIDEBAR AREA
+
+**FIND this HTML block (the old floating burger, around line 905):**
+
+```html
+            <!-- Burger Menu (Mobile) -->
+            <button
+                class="burger-menu"
+                id="burgerMenu"
+                aria-label="Toggle sidebar"
+            >
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                        d="M4 6h16M4 12h16M4 18h16"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                    />
+                </svg>
+            </button>
+```
+
+**DELETE THIS ENTIRE BLOCK** (it’s now in the header)
+
+-----
+
+## STEP 7: REMOVE THEME TOGGLE FROM SIDEBAR
+
+**FIND this in the sidebar header HTML (around line 935):**
+
+```html
+                    <div
+                        style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 12px;
+                        "
+                    >
+                        <button
+                            class="new-chat-btn"
+                            id="newChatBtn"
+                            style="flex: 1; margin-right: 8px"
+                        >
+                            <span>+</span>
+                            <span>New Chat</span>
+                        </button>
+
+                        <button
+                            class="theme-toggle"
+                            id="themeToggle"
+                            aria-label="Toggle theme"
+                        >
+                            <span class="theme-icon moon-icon">🌙</span>
+                            <span class="theme-icon sun-icon">☀️</span>
+                        </button>
+                    </div>
+```
+
+**REPLACE WITH:**
+
+```html
+                    <button class="new-chat-btn" id="newChatBtn">
+                        <span>+</span>
+                        <span>New Chat</span>
+                    </button>
+```
+
+-----
+
+## STEP 8: UPDATE THEME TOGGLE CSS LOCATION
+
+**FIND this CSS block (around line 375):**
+
+```css
+            .theme-toggle {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                background: var(--bg-button);
+                border: 1px solid var(--border-input);
+                border-radius: 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+```
+
+**REPLACE WITH:**
+
+```css
+            .theme-toggle {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                background: var(--bg-button);
+                border: 1px solid var(--border-input);
+                border-radius: 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+```
+
+-----
+
+## VERIFICATION CHECKLIST
+
+After implementation, verify:
+
+1. ✅ Header visible at top with “INNERVERSE” centered
+1. ✅ Burger menu in header-left on mobile
+1. ✅ Theme toggle in header-right on both mobile and desktop
+1. ✅ Messages start BELOW header (not hidden behind it)
+1. ✅ Dynamic Island area is respected (no content in notch)
+1. ✅ Desktop: header starts after sidebar (280px left offset)
+1. ✅ Mobile: header spans full width
+1. ✅ Sidebar still opens/closes correctly
+1. ✅ New Chat button still works (now full width in sidebar)
+
+-----
+
+## AFTER HEADER IS IMPLEMENTED
+
+Once verified working, we will need to re-tune:
+
+1. Scroll offset for short messages (currently -250px)
+1. Scroll offset for long messages
+1. Button scroll-to-bottom offset (currently +160px)
+
+**DO NOT CHANGE SCROLL VALUES IN THIS STEP** - just add the header structure.
