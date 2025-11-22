@@ -1,0 +1,112 @@
+# FIX: Scroll Overshooting in Both Directions
+
+## PROBLEM 1: Send Message Scrolls Too Far UP
+
+The user’s message is scrolled OFF the top of the screen. Looking at Image 3, only the bottom sliver of the message is visible.
+
+**Root cause:** The calculation doesn’t account for iOS safe area (notch/dynamic island).
+
+**FIND in sendMessage (BULLETPROOF scroll section):**
+
+```javascript
+const targetScrollTop = Math.max(0, messageOffsetInContainer - 20);
+```
+
+**REPLACE WITH:**
+
+```javascript
+// Account for iOS safe area (notch/dynamic island)
+const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0') || 50;
+const targetScrollTop = Math.max(0, messageOffsetInContainer - safeAreaTop - 20);
+```
+
+**OR simpler - just use a bigger offset:**
+
+```javascript
+const targetScrollTop = Math.max(0, messageOffsetInContainer - 80); // 80px from top instead of 20px
+```
+
+-----
+
+## PROBLEM 2: Down Button Scrolls Into Padding
+
+The button should show the LAST MESSAGE at the bottom of the viewport, but it’s scrolling past it into the padding.
+
+**FIND the scroll-to-bottom button click handler (Option B code):**
+Look for where it calculates `targetScroll` using `lastMessage.offsetTop + lastMessage.offsetHeight`
+
+**The issue:** We need to scroll so the last message’s BOTTOM aligns with the viewport’s BOTTOM (minus input bar height).
+
+**CORRECT CALCULATION:**
+
+```javascript
+// Get last message
+const allMessages = messages.querySelectorAll('.message');
+const lastMessage = allMessages[allMessages.length - 1];
+if (lastMessage) {
+    // Position where bottom of message should be
+    const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+    // Scroll so message bottom is at viewport bottom (with padding for input)
+    const inputBarHeight = 100; // approximate
+    const targetScroll = messageBottom - messages.clientHeight + inputBarHeight;
+    messages.scrollTop = Math.max(0, targetScroll);
+} else {
+    messages.scrollTop = 0;
+}
+```
+
+-----
+
+## SIMPLER APPROACH: Just Don’t Use Huge Padding
+
+The root cause is the 650-900px padding creating all these edge cases.
+
+**Alternative:** Keep padding at 200px and DON’T try to scroll message to top.
+
+Instead, when user sends message:
+
+1. Add message to DOM
+1. Scroll so message is visible at BOTTOM (natural position)
+1. AI response streams below it, pushing viewport down
+
+This is actually simpler and avoids all the calculation headaches.
+
+**To implement this, just remove the BULLETPROOF scroll code and let the normal `addUserMessage` flow handle it.**
+
+-----
+
+## RECOMMENDED FIX (Simplest)
+
+**Step 1:** In `updateMessagesPadding()`, use simple padding:
+
+```javascript
+const totalPadding = inputHeight + 150; // Simple, predictable
+```
+
+**Step 2:** Remove the BULLETPROOF scroll code entirely. Comment it out:
+
+```javascript
+// REMOVED: Complex scroll-to-top logic
+// Just let messages flow naturally
+```
+
+**Step 3:** In the button handler, scroll to actual bottom of content (not padding):
+
+```javascript
+const allMessages = messages.querySelectorAll('.message');
+const lastMessage = allMessages[allMessages.length - 1];
+if (lastMessage) {
+    lastMessage.scrollIntoView({ block: 'end', behavior: 'instant' });
+}
+```
+
+This gives up on “scroll message to top” but provides a stable, predictable experience.
+
+-----
+
+## YOUR CALL
+
+**Option A:** Keep trying to fix the calculations (may take more iterations)
+**Option B:** Simplify - remove scroll-to-top, use natural scroll flow
+
+What do you want to do?
