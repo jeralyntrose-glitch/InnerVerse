@@ -1885,19 +1885,36 @@
                 // Guard against iOS Safari deferred scroll gestures (~200ms after ANY input)
                 // Works for touch, pointer, and mouse events from anywhere on document
                 const timeSinceInput = Date.now() - lastInputEndTime;
-                if (timeSinceInput < INPUT_COOLDOWN_MS) {
-                    console.log(`⏳ Delaying button scroll (${timeSinceInput}ms since input) to avoid iOS Safari yank`);
-                    setTimeout(() => {
+                
+                // OPTION B: Scroll to show last message at bottom, not padding
+                const scrollToLastMessage = () => {
+                    const allMessages = messages.querySelectorAll('.message');
+                    const lastMessage = allMessages[allMessages.length - 1];
+                    
+                    if (lastMessage) {
+                        // Position last message at bottom of viewport (40px buffer)
+                        const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                        const targetScroll = messageBottom - messages.clientHeight + 40;
+                        messages.scrollTo({
+                            top: Math.max(0, targetScroll),
+                            behavior: 'instant'
+                        });
+                        console.log("🎯 Button scrolled to last message:", targetScroll + "px");
+                    } else {
+                        // Fallback if no messages exist
                         messages.scrollTo({
                             top: messages.scrollHeight,
                             behavior: 'instant'
                         });
-                    }, INPUT_COOLDOWN_MS - timeSinceInput);
+                        console.log("🎯 Button scrolled to bottom (no messages)");
+                    }
+                };
+                
+                if (timeSinceInput < INPUT_COOLDOWN_MS) {
+                    console.log(`⏳ Delaying button scroll (${timeSinceInput}ms since input) to avoid iOS Safari yank`);
+                    setTimeout(scrollToLastMessage, INPUT_COOLDOWN_MS - timeSinceInput);
                 } else {
-                    messages.scrollTo({
-                        top: messages.scrollHeight,
-                        behavior: 'instant'
-                    });
+                    scrollToLastMessage();
                 }
                 // Button will auto-hide when scroll completes (via scroll listener)
             });
@@ -2298,12 +2315,25 @@
                 suppressScrollEvents = true;
                 
                 requestAnimationFrame(() => {
-                    messages.scrollTop = messages.scrollHeight;
-                    console.log(
-                        "📜 Scrolled to bottom" +
-                            (force ? " (forced)" : " (auto)") +
-                            ` | isStreaming=${isStreaming} | pinned=${isUserPinnedToBottom}`,
-                    );
+                    // OPTION B FIX: Scroll to show last message at bottom, not padding
+                    const allMessages = messages.querySelectorAll('.message');
+                    const lastMessage = allMessages[allMessages.length - 1];
+                    
+                    if (lastMessage) {
+                        // Position last message at bottom of viewport (40px buffer)
+                        const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                        const targetScroll = messageBottom - messages.clientHeight + 40;
+                        messages.scrollTop = Math.max(0, targetScroll);
+                        console.log(
+                            "📜 Scrolled to last message" +
+                                (force ? " (forced)" : " (auto)") +
+                                ` | target=${targetScroll}px | isStreaming=${isStreaming} | pinned=${isUserPinnedToBottom}`,
+                        );
+                    } else {
+                        // Fallback if no messages exist
+                        messages.scrollTop = messages.scrollHeight;
+                        console.log("📜 Scrolled to bottom (no messages)" + (force ? " (forced)" : " (auto)"));
+                    }
                     
                     // Clear suppression flag after scroll completes
                     requestAnimationFrame(() => {
@@ -2465,6 +2495,9 @@
             }
 
             // ===== DYNAMIC PADDING CALCULATION =====
+            // Track padding mode to prevent oscillation (hysteresis)
+            let currentPaddingMode = null; // null, 'LARGE', or 'SMALL'
+            
             function updateMessagesPadding() {
                 const inputContainer =
                     document.querySelector(".input-container");
@@ -2485,21 +2518,54 @@
                     ? Math.max(0, window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop))
                     : 0; // Fallback to 0 for browsers without visualViewport (no safe-area)
                 
-                // Calculate minimum padding needed: viewport minus input area minus top buffer
-                const minPadding = vpHeight - inputHeight - 100;
+                // CONDITIONAL PADDING: Use large padding only when needed
+                // Calculate actual content height by summing all message heights
+                const allMessages = messages.querySelectorAll('.message');
+                let messagesContentHeight = 0;
+                allMessages.forEach(msg => {
+                    messagesContentHeight += msg.offsetHeight;
+                });
                 
-                // Clamp between 250px and 400px for reasonable spacing
-                // Add safe-area-inset for iPhone home indicator
-                const totalPadding = Math.max(250, Math.min(400, minPadding + safeAreaInset));
+                // HYSTERESIS: Add buffer zone to prevent oscillation between modes
+                const threshold = vpHeight + inputHeight;
+                const upperThreshold = threshold + 300; // Switch to LARGE
+                const lowerThreshold = threshold - 300; // Switch to SMALL
+                
+                // Determine if we need large padding with hysteresis
+                let needsLargePadding;
+                if (currentPaddingMode === null) {
+                    // First calculation - use simple threshold
+                    needsLargePadding = messagesContentHeight > threshold;
+                } else if (currentPaddingMode === 'LARGE') {
+                    // Already in LARGE mode - only switch to SMALL if content drops significantly
+                    needsLargePadding = messagesContentHeight > lowerThreshold;
+                } else {
+                    // Currently in SMALL mode - only switch to LARGE if content grows significantly
+                    needsLargePadding = messagesContentHeight > upperThreshold;
+                }
+                
+                let totalPadding;
+                if (needsLargePadding) {
+                    // Long conversation: Use large padding for scroll-to-top behavior
+                    const minPadding = vpHeight - inputHeight - 100;
+                    totalPadding = Math.max(650, Math.min(900, minPadding + safeAreaInset));
+                    currentPaddingMode = 'LARGE';
+                } else {
+                    // Short conversation/fresh load: Use minimal padding
+                    totalPadding = inputHeight + 120 + safeAreaInset;
+                    currentPaddingMode = 'SMALL';
+                }
 
                 messages.style.paddingBottom = totalPadding + "px";
                 console.log(
                     "📏 Updated padding:",
                     totalPadding + "px",
-                    "(viewport:",
+                    `(${currentPaddingMode} mode)`,
+                    "| viewport:",
                     vpHeight + "px, input:",
                     inputHeight + "px, safe-area:",
-                    safeAreaInset + "px)",
+                    safeAreaInset + "px, content:",
+                    messagesContentHeight + "px)",
                 );
             }
 
