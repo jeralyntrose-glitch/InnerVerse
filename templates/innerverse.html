@@ -422,7 +422,7 @@
                 overscroll-behavior-y: contain;
                 touch-action: pan-y;
                 padding: 20px;
-                padding-bottom: 200px;
+                padding-bottom: calc(100vh - 150px); /* CRITICAL: Enough space to scroll last message to top */
                 display: flex;
                 flex-direction: column;
                 /* REMOVED: justify-content: flex-end - Caused browser-level auto-scroll during streaming */
@@ -931,7 +931,7 @@
 
                 .messages {
                     padding: 16px 12px;
-                    padding-bottom: 80px;
+                    padding-bottom: max(300px, calc(100vh - 150px + env(safe-area-inset-bottom))); /* CRITICAL: Mobile needs scroll room too */
                 }
 
                 .message.user .message-content,
