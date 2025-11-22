@@ -1710,7 +1710,6 @@
                 }
 
                 // Show typing indicator
-                isUserPinnedToBottom = true; // Reset pin state when sending message
                 typingIndicator.classList.add("visible");
                 
                 // Scroll so user message is at TOP, leaving room for AI response below
@@ -1731,6 +1730,11 @@
                                 behavior: 'instant'
                             });
                             console.log("📱 User message at top: offsetTop =", messagePosition, "scrollTo =", Math.max(0, targetScrollTop));
+                            
+                            // CRITICAL: iOS Safari doesn't fire scroll listeners on programmatic scrollTo
+                            // Manually recalculate pin state after scroll to ensure observers see correct value
+                            updateScrollPinState();
+                            console.log("📌 Pin state recalculated after send-message scroll: isUserPinnedToBottom =", isUserPinnedToBottom);
                         }
                     });
                 });
