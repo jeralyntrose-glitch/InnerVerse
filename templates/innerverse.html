@@ -428,6 +428,7 @@
                 /* REMOVED: justify-content: flex-end - Caused browser-level auto-scroll during streaming */
                 /* ChatGPT Pattern: Let JavaScript control scroll, not CSS */
                 gap: 16px;
+                position: relative; /* CRITICAL: Makes this the offsetParent for offsetTop calculations */
             }
 
             .empty-chat-welcome {

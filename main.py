@@ -7912,6 +7912,7 @@ async def openai_chat_completions(request: Request):
         if stream:
             # Streaming response in OpenAI SSE format
             def generate_openai_stream():
+                import json  # Import at function scope to avoid scoping issues
                 full_response = []
                 chunk_id = f"chatcmpl-{uuid.uuid4().hex[:8]}"
                 
