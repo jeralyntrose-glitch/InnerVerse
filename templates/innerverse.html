@@ -1434,7 +1434,10 @@
                         showWelcomeMessage();
                     } else {
                         data.messages.forEach((msg) => {
-                            addMessage(msg.role, msg.content);
+                            // Defensive check: skip messages with missing content
+                            if (msg && msg.content) {
+                                addMessage(msg.role, msg.content);
+                            }
                         });
                     }
 
