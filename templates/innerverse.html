@@ -1737,8 +1737,8 @@
                             // Formula: (message viewport position - container viewport position) + current scroll
                             const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
                             
-                            // iPhone 14 Pro alignment: 50px = Dynamic Island with lighter offset
-                            const targetScrollTop = Math.max(0, messageOffsetInContainer - 50);
+                            // iPhone 14 Pro alignment: 25px = ~1 finger width below Dynamic Island
+                            const targetScrollTop = Math.max(0, messageOffsetInContainer - 25);
                             
                             // LOCK scrolling - prevent ANY interference for 300ms
                             scrollLockUntil = Date.now() + 300;
@@ -2249,7 +2249,7 @@
                         buttonVisibilityPending = null; // Clear token
                         
                         const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
-                        const shouldShow = distanceFromBottom > 100;
+                        const shouldShow = distanceFromBottom > 150;
                         
                         console.log(
                             `🎯 Button visibility check: distance=${distanceFromBottom.toFixed(0)}px, ` +
