@@ -38,6 +38,11 @@
                 box-sizing: border-box;
             }
 
+            /* ===== CSS CUSTOM PROPERTIES ===== */
+            :root {
+                --sab: env(safe-area-inset-bottom, 0px); /* iPhone notch/home indicator */
+            }
+
             /* ===== THEME VARIABLES ===== */
             [data-theme="light"] {
                 --bg-main: #ffffff;
@@ -2469,16 +2474,32 @@
                 const rect = inputContainer.getBoundingClientRect();
                 const inputHeight = rect.height;
 
-                // Use input height + buffer for bottom padding
-                const buffer = 100;
-                const totalPadding = inputHeight + buffer;
+                // CRITICAL: Use viewport height to create enough scroll room
+                // This allows the last user message to scroll to the top with space below for AI response
+                const vpHeight = window.visualViewport?.height ?? window.innerHeight;
+                
+                // Get safe-area-inset-bottom (iPhone home indicator only, not keyboard)
+                // Formula: innerHeight - (vpHeight + offsetTop) isolates bottom inset
+                // offsetTop = status bar + notch, vpHeight = visible area, difference = home indicator
+                const safeAreaInset = window.visualViewport 
+                    ? Math.max(0, window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop))
+                    : 0; // Fallback to 0 for browsers without visualViewport (no safe-area)
+                
+                // Calculate minimum padding needed: viewport minus input area minus top buffer
+                const minPadding = vpHeight - inputHeight - 100;
+                
+                // Clamp between 650px (empirically verified minimum) and 900px (prevent huge gutters)
+                // Add safe-area-inset for iPhone home indicator
+                const totalPadding = Math.max(650, Math.min(900, minPadding + safeAreaInset));
 
                 messages.style.paddingBottom = totalPadding + "px";
                 console.log(
                     "📏 Updated padding:",
                     totalPadding + "px",
-                    "(input:",
-                    inputHeight + "px)",
+                    "(viewport:",
+                    vpHeight + "px, input:",
+                    inputHeight + "px, safe-area:",
+                    safeAreaInset + "px)",
                 );
             }
 
@@ -2617,6 +2638,17 @@
                 });
 
                 setupIOSInputBar();
+
+                // CRITICAL: Listen to visualViewport resize for iOS keyboard show/hide
+                // This ensures padding recalculates when keyboard opens/closes
+                if (window.visualViewport) {
+                    let resizeTimer;
+                    window.visualViewport.addEventListener('resize', () => {
+                        clearTimeout(resizeTimer);
+                        resizeTimer = setTimeout(updateMessagesPadding, 100); // Debounce 100ms
+                    });
+                    console.log("✅ visualViewport.onresize listener registered");
+                }
 
                 console.log("✅ InnerVerse Chat - Phase 1 Ready");
                 console.log(
