@@ -2488,9 +2488,9 @@
                 // Calculate minimum padding needed: viewport minus input area minus top buffer
                 const minPadding = vpHeight - inputHeight - 100;
                 
-                // Clamp between 650px (empirically verified minimum) and 900px (prevent huge gutters)
+                // Clamp between 250px and 400px for reasonable spacing
                 // Add safe-area-inset for iPhone home indicator
-                const totalPadding = Math.max(650, Math.min(900, minPadding + safeAreaInset));
+                const totalPadding = Math.max(250, Math.min(400, minPadding + safeAreaInset));
 
                 messages.style.paddingBottom = totalPadding + "px";
                 console.log(

@@ -1,0 +1,116 @@
+# FIX: Padding Too Aggressive
+
+## THE PROBLEM
+
+The 650-900px padding is creating issues:
+
+1. Fresh page load - messages pushed to top with huge empty space
+1. Keyboard opens - content goes off screen
+1. Down button - scrolls to “bottom” but bottom is now just empty padding
+
+## THE SOLUTION
+
+Two options:
+
+### OPTION A: Reduce padding, fix scroll calculation (RECOMMENDED)
+
+Change padding back to reasonable amount, and fix the scroll-to-top calculation to NOT need huge padding.
+
+**FIND in `updateMessagesPadding()`:**
+
+```javascript
+                // CRITICAL: Use viewport height minus input area
+                const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+                const minPadding = viewportHeight - inputHeight - 100;
+                const totalPadding = Math.max(650, Math.min(900, minPadding));
+```
+
+**REPLACE WITH:**
+
+```javascript
+                // Reasonable padding - just enough to clear input bar + buffer
+                const totalPadding = inputHeight + 120;
+```
+
+Then fix the scroll-to-top to scroll user message to BOTTOM of viewport (not top):
+
+**FIND in sendMessage (the BULLETPROOF scroll code):**
+
+```javascript
+                        const targetScrollTop = Math.max(0, messageOffsetInContainer - 20);
+```
+
+**REPLACE WITH:**
+
+```javascript
+                        // Scroll so user message is at BOTTOM of visible area (above input)
+                        // This leaves the whole viewport above it for AI response
+                        const viewportHeight = messages.clientHeight;
+                        const messageHeight = messageRect.height;
+                        const targetScrollTop = Math.max(0, messageOffsetInContainer - viewportHeight + messageHeight + 40);
+```
+
+-----
+
+### OPTION B: Keep large padding, fix scrollToBottom
+
+Keep the large padding but fix `scrollToBottom` to scroll to last MESSAGE, not end of container.
+
+**FIND `scrollToBottom` function:**
+
+```javascript
+                requestAnimationFrame(() => {
+                    messages.scrollTop = messages.scrollHeight;
+```
+
+**REPLACE WITH:**
+
+```javascript
+                requestAnimationFrame(() => {
+                    // Scroll to show last message at bottom, not padding
+                    const allMessages = messages.querySelectorAll('.message');
+                    const lastMessage = allMessages[allMessages.length - 1];
+                    if (lastMessage) {
+                        const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                        const targetScroll = messageBottom - messages.clientHeight + 40;
+                        messages.scrollTop = Math.max(0, targetScroll);
+                    } else {
+                        messages.scrollTop = messages.scrollHeight;
+                    }
+```
+
+-----
+
+## MY RECOMMENDATION
+
+**Option A** - Reduce padding, position user message at BOTTOM of viewport instead of top.
+
+This is actually how ChatGPT works - your message appears at the BOTTOM, and AI response streams ABOVE it… wait no, AI streams below.
+
+Actually let me reconsider. The current behavior “works” but padding is too big.
+
+**Simpler fix:** Just reduce the minimum padding:
+
+```javascript
+const totalPadding = Math.max(300, Math.min(500, minPadding));
+```
+
+This gives 300-500px instead of 650-900px. Should be enough scroll room without being excessive.
+
+-----
+
+## QUICK FIX (Try this first)
+
+**FIND:**
+
+```javascript
+const totalPadding = Math.max(650, Math.min(900, minPadding + safeAreaInset));
+```
+
+**REPLACE WITH:**
+
+```javascript
+const totalPadding = Math.max(250, Math.min(400, minPadding + safeAreaInset));
+```
+
+This reduces padding to 250-400px range. Test and adjust if needed.
