@@ -1737,14 +1737,17 @@
                             // Formula: (message viewport position - container viewport position) + current scroll
                             const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
                             
-                            // iPhone 14 Pro alignment: 80px = Dynamic Island (~59px) + padding (21px)
-                            const targetScrollTop = Math.max(0, messageOffsetInContainer - 80);
+                            // iPhone 14 Pro alignment: 50px = Dynamic Island with lighter offset
+                            const targetScrollTop = Math.max(0, messageOffsetInContainer - 50);
                             
                             // LOCK scrolling - prevent ANY interference for 300ms
                             scrollLockUntil = Date.now() + 300;
                             
-                            // Direct assignment (more reliable than scrollTo on iOS)
-                            messages.scrollTop = targetScrollTop;
+                            // Smooth scrolling for polished UX
+                            messages.scrollTo({
+                                top: targetScrollTop,
+                                behavior: 'smooth'
+                            });
                             
                             console.log("📱 BULLETPROOF scroll:", {
                                 messageTop: messageRect.top,
@@ -1894,19 +1897,19 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // iPhone 14 Pro alignment: 120px = input bar (~70px) + home indicator (~34px) + buffer (16px)
+                        // iPhone 14 Pro alignment: 160px = input bar (~70px) + home indicator (~34px) + extra buffer for content visibility
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 120;
+                        const targetScroll = messageBottom - messages.clientHeight + 160;
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
-                            behavior: 'instant'
+                            behavior: 'smooth'
                         });
                         console.log("🎯 Button scrolled to last message:", targetScroll + "px");
                     } else {
                         // Fallback if no messages exist - scroll to absolute bottom
                         messages.scrollTo({
                             top: messages.scrollHeight,
-                            behavior: 'instant'
+                            behavior: 'smooth'
                         });
                         console.log("🎯 Button scrolled to bottom (no messages)");
                     }
@@ -2325,7 +2328,10 @@
                         // Position last message at bottom of viewport (40px buffer)
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
                         const targetScroll = messageBottom - messages.clientHeight + 40;
-                        messages.scrollTop = Math.max(0, targetScroll);
+                        messages.scrollTo({
+                            top: Math.max(0, targetScroll),
+                            behavior: 'smooth'
+                        });
                         console.log(
                             "📜 Scrolled to last message" +
                                 (force ? " (forced)" : " (auto)") +
@@ -2333,7 +2339,10 @@
                         );
                     } else {
                         // Fallback if no messages exist
-                        messages.scrollTop = messages.scrollHeight;
+                        messages.scrollTo({
+                            top: messages.scrollHeight,
+                            behavior: 'smooth'
+                        });
                         console.log("📜 Scrolled to bottom (no messages)" + (force ? " (forced)" : " (auto)"));
                     }
                     
