@@ -1455,9 +1455,11 @@
 
                     renderSidebar();
 
-                    // Force scroll to bottom on load (bypass user intent check)
-                    isUserPinnedToBottom = true;
-                    scrollToBottom(true);
+                    // Scroll to bottom on load ONLY if not streaming
+                    // Let scroll position determine pin state naturally
+                    if (!isStreaming) {
+                        scrollToBottom(true);
+                    }
 
                     // Save this conversation as last viewed
                     localStorage.setItem("lastConversationId", convId);
@@ -1527,9 +1529,11 @@
                             conversationId,
                         );
 
-                        // Force scroll to bottom (bypass user intent check)
-                        isUserPinnedToBottom = true;
-                        scrollToBottom(true);
+                        // Scroll to bottom ONLY if not streaming
+                        // Let scroll position determine pin state naturally
+                        if (!isStreaming) {
+                            scrollToBottom(true);
+                        }
 
                         // Auto-focus input after creating new chat
                         setTimeout(() => {
@@ -1709,28 +1713,24 @@
                 isUserPinnedToBottom = true; // Reset pin state when sending message
                 typingIndicator.classList.add("visible");
                 
-                // Scroll so user message is near TOP, leaving room for AI response
-                // Use direct scrollTo on container (scrollIntoView unreliable in nested scroll contexts)
+                // Scroll so user message is at TOP, leaving room for AI response below
+                // Use offsetTop for reliable positioning (getBoundingClientRect is viewport-relative and unreliable)
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         const userMessages = messages.querySelectorAll('.message.user');
                         const lastUserMessage = userMessages[userMessages.length - 1];
                         if (lastUserMessage) {
-                            // Scroll to show user message at the top of the visible area
-                            // offsetTop gives position within container, we want it at top of viewport
-                            const containerRect = messages.getBoundingClientRect();
-                            const messageRect = lastUserMessage.getBoundingClientRect();
-                            const currentScrollTop = messages.scrollTop;
+                            // offsetTop = element's position within the scrollable container
+                            // This is stable regardless of current scroll position
+                            const messagePosition = lastUserMessage.offsetTop;
+                            const targetScrollTop = messagePosition - 20; // 20px padding from top
                             
-                            // Calculate how much to scroll to put message at top with 20px padding
-                            const scrollOffset = messageRect.top - containerRect.top;
-                            const targetScrollTop = currentScrollTop + scrollOffset - 20;
-                            
+                            // Use instant scroll to avoid interruption from incoming AI response
                             messages.scrollTo({
                                 top: Math.max(0, targetScrollTop),
-                                behavior: 'smooth'
+                                behavior: 'instant'
                             });
-                            console.log("📱 User message scrolled to top, target =", targetScrollTop, "offset =", scrollOffset);
+                            console.log("📱 User message at top: offsetTop =", messagePosition, "scrollTo =", Math.max(0, targetScrollTop));
                         }
                     });
                 });
@@ -1861,13 +1861,13 @@
                     setTimeout(() => {
                         messages.scrollTo({
                             top: messages.scrollHeight,
-                            behavior: 'smooth'
+                            behavior: 'instant'
                         });
                     }, INPUT_COOLDOWN_MS - timeSinceInput);
                 } else {
                     messages.scrollTo({
                         top: messages.scrollHeight,
-                        behavior: 'smooth'
+                        behavior: 'instant'
                     });
                 }
                 // Button will auto-hide when scroll completes (via scroll listener)
@@ -2177,23 +2177,39 @@
             }
 
             // ChatGPT Pattern: Update scroll-to-bottom button visibility
+            // DEBOUNCED with cancellation to prevent stacking stale measurements
+            // Button updates run even during streaming (user can manually scroll away)
+            let buttonVisibilityPending = null;
             function updateScrollButtonVisibility() {
-                const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
-                const shouldShow = distanceFromBottom > 100;
-                
-                console.log(
-                    `🎯 Button visibility check: distance=${distanceFromBottom.toFixed(0)}px, ` +
-                    `shouldShow=${shouldShow}, scrollHeight=${messages.scrollHeight}, ` +
-                    `scrollTop=${messages.scrollTop}, clientHeight=${messages.clientHeight}`
-                );
-                
-                if (shouldShow) {
-                    scrollToBottomBtn.classList.add('visible');
-                    console.log("👁️ Button SHOWN");
-                } else {
-                    scrollToBottomBtn.classList.remove('visible');
-                    console.log("🙈 Button HIDDEN");
+                // Cancel any pending measurement
+                if (buttonVisibilityPending) {
+                    cancelAnimationFrame(buttonVisibilityPending);
+                    buttonVisibilityPending = null;
                 }
+                
+                // Schedule new measurement after DOM reflow
+                buttonVisibilityPending = requestAnimationFrame(() => {
+                    buttonVisibilityPending = requestAnimationFrame(() => {
+                        buttonVisibilityPending = null; // Clear token
+                        
+                        const distanceFromBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
+                        const shouldShow = distanceFromBottom > 100;
+                        
+                        console.log(
+                            `🎯 Button visibility check: distance=${distanceFromBottom.toFixed(0)}px, ` +
+                            `shouldShow=${shouldShow}, scrollHeight=${messages.scrollHeight}, ` +
+                            `scrollTop=${messages.scrollTop}, clientHeight=${messages.clientHeight}`
+                        );
+                        
+                        if (shouldShow) {
+                            scrollToBottomBtn.classList.add('visible');
+                            console.log("👁️ Button SHOWN");
+                        } else {
+                            scrollToBottomBtn.classList.remove('visible');
+                            console.log("🙈 Button HIDDEN");
+                        }
+                    });
+                });
             }
 
             // ChatGPT Pattern: Guard auto-scroll based on streaming state and user intent
@@ -2368,11 +2384,10 @@
                     inputResizeObserver = new ResizeObserver(() => {
                         updateMessagesPadding();
                         
-                        // ChatGPT Pattern: Disable auto-scroll during streaming
-                        if (isStreaming) {
-                            return;
+                        // Only auto-scroll if not streaming AND user is pinned
+                        if (!isStreaming && isUserPinnedToBottom) {
+                            scrollToBottom();
                         }
-                        scrollToBottom(); // Re-scroll after height change
                     });
                     inputResizeObserver.observe(inputContainer);
                 }
@@ -2548,8 +2563,11 @@
 
                 // Initialize scroll manager and dynamic padding
                 updateMessagesPadding();
-                isUserPinnedToBottom = true; // Start pinned to bottom
-                scrollToBottom(true); // Force scroll on initialization
+                // Scroll to bottom on init ONLY if not streaming
+                // Let scroll position determine pin state naturally
+                if (!isStreaming) {
+                    scrollToBottom(true);
+                }
                 
                 // Ensure button is hidden AFTER scroll completes (timing fix)
                 // Must wait for rAF chain to complete before checking position
