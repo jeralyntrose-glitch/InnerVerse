@@ -1737,23 +1737,8 @@
                             // Formula: (message viewport position - container viewport position) + current scroll
                             const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
                             
-                            // DYNAMIC safe-area-inset-top for iOS notch/dynamic island
-                            // Measure actual device safe area, fallback to 50px for non-iOS or older browsers
-                            let safeAreaTop = 50; // Default fallback
-                            if (window.visualViewport) {
-                                // visualViewport.offsetTop gives us the top safe area (status bar + notch)
-                                safeAreaTop = window.visualViewport.offsetTop || 50;
-                            } else {
-                                // Fallback: Try to read CSS env() variable
-                                const cssValue = getComputedStyle(document.documentElement).getPropertyValue('--sat');
-                                if (cssValue) {
-                                    const parsed = parseFloat(cssValue);
-                                    if (!isNaN(parsed)) safeAreaTop = parsed;
-                                }
-                            }
-                            
-                            // Position message below safe area with 20px breathing room
-                            const targetScrollTop = Math.max(0, messageOffsetInContainer - safeAreaTop - 20);
+                            // iPhone 14 Pro alignment: 80px = Dynamic Island (~59px) + padding (21px)
+                            const targetScrollTop = Math.max(0, messageOffsetInContainer - 80);
                             
                             // LOCK scrolling - prevent ANY interference for 300ms
                             scrollLockUntil = Date.now() + 300;
@@ -1909,10 +1894,14 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // SIMPLER: Use scrollIntoView which handles all the math
-                        // 'end' means align the bottom of the element with the bottom of the viewport
-                        lastMessage.scrollIntoView({ block: 'end', behavior: 'instant' });
-                        console.log("🎯 Button scrolled last message into view (block: end)");
+                        // iPhone 14 Pro alignment: 120px = input bar (~70px) + home indicator (~34px) + buffer (16px)
+                        const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                        const targetScroll = messageBottom - messages.clientHeight + 120;
+                        messages.scrollTo({
+                            top: Math.max(0, targetScroll),
+                            behavior: 'instant'
+                        });
+                        console.log("🎯 Button scrolled to last message:", targetScroll + "px");
                     } else {
                         // Fallback if no messages exist - scroll to absolute bottom
                         messages.scrollTo({
