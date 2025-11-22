@@ -6100,6 +6100,7 @@ async def send_message_streaming(conversation_id: int, request: Request):
         
         # Create generator for streaming
         def generate():
+            import json  # Import at function scope to avoid scoping issues
             full_response = []
             follow_up_question = None
             
@@ -6109,7 +6110,6 @@ async def send_message_streaming(conversation_id: int, request: Request):
                     
                     # Collect text chunks and follow-up for database storage
                     if '"chunk"' in chunk:
-                        import json
                         try:
                             chunk_data = json.loads(chunk.replace("data: ", ""))
                             if "chunk" in chunk_data:
@@ -6118,7 +6118,6 @@ async def send_message_streaming(conversation_id: int, request: Request):
                             pass
                     elif '"done"' in chunk:
                         # Extract follow-up question from done event
-                        import json
                         try:
                             done_data = json.loads(chunk.replace("data: ", ""))
                             if "follow_up" in done_data:
