@@ -1,0 +1,194 @@
+# BULLETPROOF SCROLL FIX
+
+## THE PROBLEM
+
+We've tried multiple approaches and scroll still doesn't work. Something is likely UNDOING our scroll after we set it.
+
+## THE SOLUTION
+
+Three changes:
+1. Force reflow before measuring
+2. Use direct `scrollTop` assignment instead of `scrollTo()`
+3. Add scroll lock to prevent any interference for 300ms
+
+---
+
+## CHANGE 1: Add scroll lock variable
+
+**FIND (around line 1122, in the STATE section):**
+```javascript
+            let lastInputEndTime = 0; // Timestamp of last input gesture completion
+            const INPUT_COOLDOWN_MS = 250; // iOS Safari deferred scroll window (~200ms + buffer)
+```
+
+**REPLACE WITH:**
+```javascript
+            let lastInputEndTime = 0; // Timestamp of last input gesture completion
+            const INPUT_COOLDOWN_MS = 250; // iOS Safari deferred scroll window (~200ms + buffer)
+            let scrollLockUntil = 0; // Prevents any scroll interference after manual scroll
+```
+
+---
+
+## CHANGE 2: Replace the scroll-to-top code in sendMessage
+
+**FIND (around line 1710-1735):**
+```javascript
+                // Scroll so user message is at TOP, leaving room for AI response below
+                // Use offsetTop for reliable positioning (getBoundingClientRect is viewport-relative and unreliable)
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const userMessages = messages.querySelectorAll('.message.user');
+                        const lastUserMessage = userMessages[userMessages.length - 1];
+                        if (lastUserMessage) {
+                            // offsetTop = element's position within the scrollable container
+                            // This is stable regardless of current scroll position
+                            const messagePosition = lastUserMessage.offsetTop;
+                            const targetScrollTop = messagePosition - 20; // 20px padding from top
+                            
+                            // Use instant scroll to avoid interruption from incoming AI response
+                            messages.scrollTo({
+                                top: Math.max(0, targetScrollTop),
+                                behavior: 'instant'
+                            });
+                            console.log("📱 User message at top: offsetTop =", messagePosition, "scrollTo =", Math.max(0, targetScrollTop));
+                            
+                            // CRITICAL: iOS Safari doesn't fire scroll listeners on programmatic scrollTo
+                            // Manually recalculate pin state after scroll to ensure observers see correct value
+                            updateScrollPinState();
+                            console.log("📌 Pin state recalculated after send-message scroll: isUserPinnedToBottom =", isUserPinnedToBottom);
+                        }
+                    });
+                });
+```
+
+**REPLACE WITH:**
+```javascript
+                // BULLETPROOF: Scroll user message to TOP of viewport
+                // Uses getBoundingClientRect (most accurate) + scroll lock (prevents interference)
+                requestAnimationFrame(() => {
+                    // Force synchronous reflow to ensure accurate measurements
+                    void messages.offsetHeight;
+                    
+                    const userMessages = messages.querySelectorAll('.message.user');
+                    const lastUserMessage = userMessages[userMessages.length - 1];
+                    if (lastUserMessage) {
+                        // Get positions relative to viewport
+                        const containerRect = messages.getBoundingClientRect();
+                        const messageRect = lastUserMessage.getBoundingClientRect();
+                        
+                        // Calculate absolute position within scrollable content
+                        // Formula: (message viewport position - container viewport position) + current scroll
+                        const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
+                        const targetScrollTop = Math.max(0, messageOffsetInContainer - 20);
+                        
+                        // LOCK scrolling - prevent ANY interference for 300ms
+                        scrollLockUntil = Date.now() + 300;
+                        
+                        // Direct assignment (more reliable than scrollTo on iOS)
+                        messages.scrollTop = targetScrollTop;
+                        
+                        console.log("📱 BULLETPROOF scroll:", {
+                            messageTop: messageRect.top,
+                            containerTop: containerRect.top,
+                            currentScroll: messages.scrollTop,
+                            target: targetScrollTop,
+                            lockUntil: scrollLockUntil
+                        });
+                        
+                        // Update pin state
+                        updateScrollPinState();
+                    }
+                });
+```
+
+---
+
+## CHANGE 3: Add scroll lock check to scrollToBottom
+
+**FIND (the scrollToBottom function, around line 2180):**
+```javascript
+            function scrollToBottom(force = false) {
+                // Debug logging to identify unexpected scroll triggers
+                if (!force && isStreaming) {
+                    console.error("🚨 BUG: scrollToBottom() called during streaming without force=true!");
+                    console.trace("Stack trace:");
+                    return;
+                }
+```
+
+**REPLACE WITH:**
+```javascript
+            function scrollToBottom(force = false) {
+                // SCROLL LOCK: Prevent interference after manual scroll-to-top
+                if (Date.now() < scrollLockUntil) {
+                    console.log("🔒 Scroll blocked by lock, expires in:", scrollLockUntil - Date.now(), "ms");
+                    return;
+                }
+                
+                // Debug logging to identify unexpected scroll triggers
+                if (!force && isStreaming) {
+                    console.error("🚨 BUG: scrollToBottom() called during streaming without force=true!");
+                    console.trace("Stack trace:");
+                    return;
+                }
+```
+
+---
+
+## CHANGE 4: Ensure .messages has position: relative (if not already)
+
+**FIND in CSS (around line 395-410):**
+```css
+            .messages {
+                flex: 1;
+                overflow-y: auto;
+```
+
+**Make sure this block includes:**
+```css
+                position: relative;
+```
+
+---
+
+## WHY THIS WORKS
+
+| Problem | Solution |
+|---------|----------|
+| Stale layout data | `void messages.offsetHeight` forces reflow |
+| `offsetTop` unreliable in flex | Using `getBoundingClientRect` instead |
+| `scrollTo()` might be async | Using direct `scrollTop` assignment |
+| Something undoes our scroll | Scroll lock blocks ALL scrolls for 300ms |
+
+---
+
+## TESTING
+
+1. Apply all 4 changes
+2. Hard refresh
+3. Send a message in a conversation with history
+4. Check console for: `📱 BULLETPROOF scroll: {...}`
+5. **Expected:** Your message at TOP, space below for AI
+
+If it STILL doesn't work, the console log will show us exactly what values are being calculated.
+
+---
+
+## NUCLEAR OPTION (if above fails)
+
+If even this doesn't work, we can try `scrollIntoView` with overflow hidden:
+
+```javascript
+// Temporarily prevent body scroll
+document.body.style.overflow = 'hidden';
+
+lastUserMessage.scrollIntoView({ block: 'start', behavior: 'instant' });
+
+// Restore after a frame
+requestAnimationFrame(() => {
+    document.body.style.overflow = '';
+});
+```
+
+But try the main fix first.
