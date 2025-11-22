@@ -1,0 +1,77 @@
+# FIX: User Message Scroll to Top
+
+## THE PROBLEM
+
+`scrollIntoView()` is unreliable in nested scroll containers - it tries to scroll ALL ancestor containers (including the viewport), causing unpredictable behavior on iOS Safari.
+
+## THE FIX
+
+Use `messages.scrollTo()` directly to control the exact container.
+
+-----
+
+## FIND (around line 1700-1715):
+
+```javascript
+                // Scroll so user message is near TOP, leaving room for AI response
+                // Use requestAnimationFrame to ensure DOM has painted
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const userMessages = messages.querySelectorAll('.message.user');
+                        const lastUserMessage = userMessages[userMessages.length - 1];
+                        if (lastUserMessage) {
+                            // Scroll so user message is at top with padding
+                            lastUserMessage.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                            console.log("📱 User message scrolled to top");
+                        }
+                    });
+                });
+```
+
+## REPLACE WITH:
+
+```javascript
+                // Scroll so user message is near TOP, leaving room for AI response
+                // Use direct scrollTo on container (scrollIntoView unreliable in nested scroll contexts)
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const userMessages = messages.querySelectorAll('.message.user');
+                        const lastUserMessage = userMessages[userMessages.length - 1];
+                        if (lastUserMessage) {
+                            // Calculate scroll position to put message at top with padding
+                            const targetScrollTop = lastUserMessage.offsetTop - 20;
+                            messages.scrollTo({
+                                top: Math.max(0, targetScrollTop),
+                                behavior: 'smooth'
+                            });
+                            console.log("📱 User message scrolled to top, scrollTop =", targetScrollTop);
+                        }
+                    });
+                });
+```
+
+-----
+
+## WHY THIS WORKS
+
+|Method               |Behavior                                                   |
+|---------------------|-----------------------------------------------------------|
+|`scrollIntoView()`   |Unreliable - affects multiple scroll containers, iOS issues|
+|`messages.scrollTo()`|Direct control - scrolls only the messages container       |
+
+The `offsetTop - 20` puts the message 20px from the top (matching container padding), leaving room below for AI response.
+
+-----
+
+## TESTING
+
+- [ ] Send a message
+- [ ] Your message should scroll to TOP of screen
+- [ ] Space below for AI response to stream
+
+-----
+
+**APPLY THIS FIX. TEST. REPORT RESULTS.**

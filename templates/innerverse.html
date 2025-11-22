@@ -1699,18 +1699,19 @@
                 typingIndicator.classList.add("visible");
                 
                 // Scroll so user message is near TOP, leaving room for AI response
-                // Use requestAnimationFrame to ensure DOM has painted
+                // Use direct scrollTo on container (scrollIntoView unreliable in nested scroll contexts)
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         const userMessages = messages.querySelectorAll('.message.user');
                         const lastUserMessage = userMessages[userMessages.length - 1];
                         if (lastUserMessage) {
-                            // Scroll so user message is at top with padding
-                            lastUserMessage.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'start'
+                            // Calculate scroll position to put message at top with padding
+                            const targetScrollTop = lastUserMessage.offsetTop - 20;
+                            messages.scrollTo({
+                                top: Math.max(0, targetScrollTop),
+                                behavior: 'smooth'
                             });
-                            console.log("📱 User message scrolled to top");
+                            console.log("📱 User message scrolled to top, scrollTop =", targetScrollTop);
                         }
                     });
                 });
