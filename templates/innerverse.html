@@ -1708,13 +1708,21 @@
                         const userMessages = messages.querySelectorAll('.message.user');
                         const lastUserMessage = userMessages[userMessages.length - 1];
                         if (lastUserMessage) {
-                            // Calculate scroll position to put message at top with padding
-                            const targetScrollTop = lastUserMessage.offsetTop - 20;
+                            // Scroll to show user message at the top of the visible area
+                            // offsetTop gives position within container, we want it at top of viewport
+                            const containerRect = messages.getBoundingClientRect();
+                            const messageRect = lastUserMessage.getBoundingClientRect();
+                            const currentScrollTop = messages.scrollTop;
+                            
+                            // Calculate how much to scroll to put message at top with 20px padding
+                            const scrollOffset = messageRect.top - containerRect.top;
+                            const targetScrollTop = currentScrollTop + scrollOffset - 20;
+                            
                             messages.scrollTo({
                                 top: Math.max(0, targetScrollTop),
                                 behavior: 'smooth'
                             });
-                            console.log("📱 User message scrolled to top, scrollTop =", targetScrollTop);
+                            console.log("📱 User message scrolled to top, target =", targetScrollTop, "offset =", scrollOffset);
                         }
                     });
                 });
