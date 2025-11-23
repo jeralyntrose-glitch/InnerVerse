@@ -2259,7 +2259,8 @@
             }
 
             // ===== SCROLL CLAMP (Prevent scrolling into empty padding) =====
-            // Works WITH iOS elastic bounce, not against it
+            // Instant clamp lets iOS do its native ~100px overscroll bounce
+            // No delays or smooth animations that fight native physics
             function clampScrollPosition() {
                 const allMessages = messages.querySelectorAll('.message');
                 if (allMessages.length === 0) return;
@@ -2269,16 +2270,7 @@
                 const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + 220);
                 
                 if (messages.scrollTop > maxAllowedScroll) {
-                    // Delay allows iOS bounce to happen naturally first
-                    // Then gently guide back if user keeps scrolling past limit
-                    setTimeout(() => {
-                        if (messages.scrollTop > maxAllowedScroll) {
-                            messages.scrollTo({
-                                top: maxAllowedScroll,
-                                behavior: 'smooth'
-                            });
-                        }
-                    }, 100);
+                    messages.scrollTop = maxAllowedScroll;
                 }
             }
 
