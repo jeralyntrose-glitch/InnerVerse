@@ -2259,10 +2259,17 @@
             }
 
             // ===== SCROLL CLAMP (Prevent scrolling into empty padding) =====
-            // Only clamp AFTER user finishes scrolling, not during (ChatGPT pattern)
-            // This prevents fighting iOS physics and loss of control
+            // CRITICAL: Only prevents scrolling DOWN into padding, never interferes with scrolling UP
             let clampTimeout = null;
+            let lastScrollTop = 0;
+            let scrollDirection = 'down'; // Track direction at scroll event time
+            
             function clampScrollPosition() {
+                // Track scroll direction BEFORE debounce
+                const currentScrollTop = messages.scrollTop;
+                scrollDirection = currentScrollTop > lastScrollTop ? 'down' : 'up';
+                lastScrollTop = currentScrollTop;
+                
                 // Clear any pending clamp
                 if (clampTimeout) {
                     clearTimeout(clampTimeout);
@@ -2275,10 +2282,18 @@
                     
                     const lastMessage = allMessages[allMessages.length - 1];
                     const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                    // Reduced buffer: 80px = ChatGPT-like tight bounce (was 220px)
-                    const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + 80);
                     
-                    if (messages.scrollTop > maxAllowedScroll) {
+                    // Calculate buffer based on input bar height + breathing room
+                    const inputContainer = document.querySelector('.input-container');
+                    const inputHeight = inputContainer ? inputContainer.offsetHeight : 80;
+                    const buffer = inputHeight + 100; // Input bar + 100px breathing room
+                    
+                    // Max scroll = last message bottom is fully visible above input bar
+                    const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
+                    
+                    // ONLY clamp if scrolling DOWN and past the limit
+                    // NEVER clamp if scrolling UP (reading old messages)
+                    if (scrollDirection === 'down' && messages.scrollTop > maxAllowedScroll) {
                         messages.scrollTop = maxAllowedScroll;
                     }
                 }, 50); // 50ms debounce = feels instant but doesn't fight active scrolling
