@@ -1886,7 +1886,7 @@
                                             suppressScrollEvents = true;
                                             const lastMessage = assistantDiv;
                                             const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                                            const targetScroll = messageBottom - messages.clientHeight + 30;
+                                            const targetScroll = messageBottom - messages.clientHeight + 120;
                                             messages.scrollTop = Math.max(0, targetScroll);
                                             requestAnimationFrame(() => {
                                                 suppressScrollEvents = false;
@@ -1935,9 +1935,9 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // ChatGPT-exact: 30px buffer - text goes very close to bottom
+                        // Keep text visible above input bar
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 30;
+                        const targetScroll = messageBottom - messages.clientHeight + 120;
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
                             behavior: 'smooth'
@@ -2283,13 +2283,16 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
                     
-                    // ChatGPT-exact: 30px buffer - text goes very close to bottom
-                    const buffer = 30;
+                    // Keep text visible ABOVE input bar (input bar is ~70-100px tall)
+                    const buffer = 120; // Ensures ~2-3 lines visible above input bar
                     const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
                     
                     // Only correct if still past limit after iOS bounce settles
                     if (messages.scrollTop > maxAllowedScroll) {
-                        messages.scrollTop = maxAllowedScroll;
+                        messages.scrollTo({
+                            top: maxAllowedScroll,
+                            behavior: 'smooth'
+                        });
                     }
                 }, 100); // 100ms debounce - feels instant but doesn't fight iOS physics
             }
@@ -2410,9 +2413,9 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // Position last message at bottom of viewport (30px buffer)
+                        // Position last message at bottom of viewport (120px buffer)
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 30;
+                        const targetScroll = messageBottom - messages.clientHeight + 120;
                         // Use instant for forced scrolls (initial load), smooth for user-triggered
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
@@ -2521,9 +2524,8 @@
 
                 // Scroll detection for desktop and touch scenarios
                 addTrackedEventListener(messages, "scroll", () => {
-                    // P0 Fix #3: CLAMP must run BEFORE suppressScrollEvents check
-                    // Otherwise iOS keyboard dismiss can scroll past maxScroll
-                    clampScrollPosition();
+                    // Let iOS handle scroll physics naturally - don't fight user interaction
+                    // Clamp only runs on content changes (MutationObserver below)
                     
                     // Ignore synthetic scroll events from our own code
                     if (suppressScrollEvents) return;
