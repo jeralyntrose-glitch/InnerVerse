@@ -1784,11 +1784,21 @@
                             // Calculate absolute position within scrollable content
                             // Formula: (message viewport position - container viewport position) + current scroll
                             const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
+                            const messageHeight = lastUserMessage.offsetHeight;
+                            const viewportHeight = messages.clientHeight;
                             
-                            // CHATGPT PATTERN: Always position message at TOP of viewport
-                            // For long messages, shows partial (top portion visible, rest below)
-                            const topOffset = 100; // Small offset from absolute top (breathing room for header)
-                            const targetScrollTop = Math.max(0, messageOffsetInContainer - topOffset);
+                            // CHATGPT PATTERN: Show full message if it fits, otherwise show top portion
+                            const topPadding = 100; // Breathing room at top
+                            const bottomBuffer = 180; // Space for input bar
+                            
+                            let targetScrollTop;
+                            if (messageHeight + topPadding + bottomBuffer <= viewportHeight) {
+                                // Short message: show the WHOLE thing (position bottom with buffer)
+                                targetScrollTop = Math.max(0, messageOffsetInContainer + messageHeight - viewportHeight + bottomBuffer);
+                            } else {
+                                // Long message: show top portion (ChatGPT pattern)
+                                targetScrollTop = Math.max(0, messageOffsetInContainer - topPadding);
+                            }
                             
                             // Instant scroll (smooth causes clamp to fight during animation)
                             messages.scrollTo({
@@ -2289,11 +2299,14 @@
                 const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
                 
                 // Buffer: keeps text visible above input bar
-                const buffer = 160;
+                const buffer = 180;
                 const maxScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
                 
-                // Smooth clamp (not instant snap)
-                if (currentScrollTop > maxScroll) {
+                // Rubber band: Allow small overscroll (50px) before snapping back
+                const overscrollLimit = 50; // ChatGPT-style rubber band resistance
+                
+                if (currentScrollTop > maxScroll + overscrollLimit) {
+                    // Exceeded rubber band, gently return
                     messages.scrollTo({
                         top: maxScroll,
                         behavior: 'smooth'
@@ -2606,12 +2619,19 @@
                 console.log("✅ Observers initialized");
             }
 
+            // Track viewport height to detect keyboard show/hide
+            let lastViewportHeight = window.innerHeight;
+            
             function handleViewportResize() {
                 updateMessagesPadding();
                 
-                // P1 Fix #5: Restore scroll position when keyboard closes (iOS)
-                // This prevents content jumping when keyboard dismisses
-                if (!isStreaming && isUserPinnedToBottom) {
+                const currentViewportHeight = window.innerHeight;
+                const viewportExpanded = currentViewportHeight > lastViewportHeight;
+                lastViewportHeight = currentViewportHeight;
+                
+                // ONLY restore scroll when keyboard CLOSES (viewport expands)
+                // When keyboard opens (viewport shrinks), let content stay in place
+                if (viewportExpanded && !isStreaming && isUserPinnedToBottom) {
                     scrollToBottom();
                 }
             }
