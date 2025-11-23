@@ -41,6 +41,7 @@
             /* ===== CSS CUSTOM PROPERTIES ===== */
             :root {
                 --sab: env(safe-area-inset-bottom, 0px); /* iPhone notch/home indicator */
+                --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px); /* P1 Fix #4: Reliable safe area */
             }
 
             /* ===== THEME VARIABLES ===== */
@@ -458,6 +459,7 @@
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 overscroll-behavior-y: contain;
+                -webkit-overscroll-behavior-y: contain; /* P1 Fix: iOS Safari <16 fallback */
                 touch-action: pan-y;
                 padding: 20px;
                 padding-top: calc(72px + env(safe-area-inset-top, 0px)); /* Header height + safe area */
@@ -1259,11 +1261,7 @@
                 }
             });
 
-            // Observe messages container for layout changes (catches all edge cases)
-            const messagesObserver = new ResizeObserver(() => {
-                updateTypingIndicatorPosition();
-            });
-            messagesObserver.observe(messages);
+            // P0 Fix #2: Removed duplicate messagesObserver (now handled in initializeObservers())
 
             // ===== MOBILE SIDEBAR =====
             if (window.innerWidth <= 768) {
@@ -2316,37 +2314,35 @@
                     buttonVisibilityPending = null;
                 }
                 
-                // Schedule new measurement after DOM reflow
+                // P1 Fix #6: Removed nested RAF (single frame is sufficient for DOM measurements)
                 buttonVisibilityPending = requestAnimationFrame(() => {
-                    buttonVisibilityPending = requestAnimationFrame(() => {
-                        buttonVisibilityPending = null; // Clear token
-                        
-                        // SMART: Check if last MESSAGE is below viewport, not just padding
-                        const allMessages = messages.querySelectorAll('.message');
-                        const lastMessage = allMessages[allMessages.length - 1];
+                    buttonVisibilityPending = null; // Clear token
+                    
+                    // SMART: Check if last MESSAGE is below viewport, not just padding
+                    const allMessages = messages.querySelectorAll('.message');
+                    const lastMessage = allMessages[allMessages.length - 1];
 
-                        let shouldShow = false;
-                        if (lastMessage) {
-                            const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                            const viewportBottom = messages.scrollTop + messages.clientHeight;
-                            // Show button only if last message extends below visible area
-                            shouldShow = lastMessageBottom > viewportBottom + 50;
-                        }
-                        
-                        console.log(
-                            `🎯 Button visibility check (SMART): shouldShow=${shouldShow}, ` +
-                            `lastMessageBottom=${lastMessage ? (lastMessage.offsetTop + lastMessage.offsetHeight).toFixed(0) : 'N/A'}px, ` +
-                            `viewportBottom=${(messages.scrollTop + messages.clientHeight).toFixed(0)}px`
-                        );
-                        
-                        if (shouldShow) {
-                            scrollToBottomBtn.classList.add('visible');
-                            console.log("👁️ Button SHOWN");
-                        } else {
-                            scrollToBottomBtn.classList.remove('visible');
-                            console.log("🙈 Button HIDDEN");
-                        }
-                    });
+                    let shouldShow = false;
+                    if (lastMessage) {
+                        const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                        const viewportBottom = messages.scrollTop + messages.clientHeight;
+                        // Show button only if last message extends below visible area
+                        shouldShow = lastMessageBottom > viewportBottom + 50;
+                    }
+                    
+                    console.log(
+                        `🎯 Button visibility check (SMART): shouldShow=${shouldShow}, ` +
+                        `lastMessageBottom=${lastMessage ? (lastMessage.offsetTop + lastMessage.offsetHeight).toFixed(0) : 'N/A'}px, ` +
+                        `viewportBottom=${(messages.scrollTop + messages.clientHeight).toFixed(0)}px`
+                    );
+                    
+                    if (shouldShow) {
+                        scrollToBottomBtn.classList.add('visible');
+                        console.log("👁️ Button SHOWN");
+                    } else {
+                        scrollToBottomBtn.classList.remove('visible');
+                        console.log("🙈 Button HIDDEN");
+                    }
                 });
             }
 
@@ -2450,53 +2446,80 @@
             let messageObserver = null;
             let inputResizeObserver = null;
             let messagesResizeObserver = null;
-
-            function initializeObservers() {
-                // Clean up existing observers if any
+            
+            // P0 Fix #1: Event listener cleanup system
+            const eventListeners = [];
+            
+            function addTrackedEventListener(target, event, handler, options) {
+                target.addEventListener(event, handler, options);
+                eventListeners.push({ target, event, handler, options });
+            }
+            
+            function cleanupObservers() {
+                console.log("🧹 Cleaning up observers and event listeners...");
+                
+                // Disconnect all observers
                 if (messageObserver) {
                     messageObserver.disconnect();
+                    messageObserver = null;
                 }
                 if (inputResizeObserver) {
                     inputResizeObserver.disconnect();
+                    inputResizeObserver = null;
                 }
                 if (messagesResizeObserver) {
                     messagesResizeObserver.disconnect();
+                    messagesResizeObserver = null;
                 }
+                
+                // Remove all tracked event listeners
+                eventListeners.forEach(({ target, event, handler, options }) => {
+                    target.removeEventListener(event, handler, options);
+                });
+                eventListeners.length = 0; // Clear array
+                
+                console.log("✅ Cleanup complete");
+            }
+
+            function initializeObservers() {
+                // P0 Fix #1: Clean up ALL existing observers and listeners
+                cleanupObservers();
 
                 // ChatGPT Pattern: Document-level unified input tracking
                 // Handles ALL input types (touch, pointer, mouse) to prevent iOS Safari scroll yanking
                 // This replaces messages-only touch tracking to catch inputs outside the container
                 
                 // Touch events (iOS Safari primary concern)
-                document.addEventListener("touchend", () => {
+                addTrackedEventListener(document, "touchend", () => {
                     lastInputEndTime = Date.now();
                 }, { passive: true });
                 
-                document.addEventListener("touchcancel", () => {
+                addTrackedEventListener(document, "touchcancel", () => {
                     lastInputEndTime = Date.now();
                 }, { passive: true });
                 
                 // Pointer events (Surface, stylus, hybrid devices)
-                document.addEventListener("pointerup", () => {
+                addTrackedEventListener(document, "pointerup", () => {
                     lastInputEndTime = Date.now();
                 }, { passive: true });
                 
-                document.addEventListener("pointercancel", () => {
+                addTrackedEventListener(document, "pointercancel", () => {
                     lastInputEndTime = Date.now();
                 }, { passive: true });
                 
                 // Mouse events (desktop fallback)
-                document.addEventListener("mouseup", () => {
+                addTrackedEventListener(document, "mouseup", () => {
                     lastInputEndTime = Date.now();
                 }, { passive: true });
 
                 // Scroll detection for desktop and touch scenarios
-                messages.addEventListener("scroll", () => {
+                addTrackedEventListener(messages, "scroll", () => {
+                    // P0 Fix #3: CLAMP must run BEFORE suppressScrollEvents check
+                    // Otherwise iOS keyboard dismiss can scroll past maxScroll
+                    clampScrollPosition();
+                    
                     // Ignore synthetic scroll events from our own code
                     if (suppressScrollEvents) return;
-                    
-                    // CLAMP: Prevent scrolling into empty padding zone
-                    clampScrollPosition();
                     
                     // Update pin state when user scrolls
                     updateScrollPinState();
@@ -2569,14 +2592,15 @@
 
                 // Keyboard detection (mobile viewport changes)
                 if (window.visualViewport) {
-                    window.visualViewport.addEventListener(
+                    addTrackedEventListener(
+                        window.visualViewport,
                         "resize",
-                        handleViewportResize,
+                        handleViewportResize
                     );
                 }
 
                 // Fallback: Listen to window resize
-                window.addEventListener("resize", handleWindowResize);
+                addTrackedEventListener(window, "resize", handleWindowResize);
 
                 console.log("✅ Observers initialized");
             }
@@ -2584,11 +2608,11 @@
             function handleViewportResize() {
                 updateMessagesPadding();
                 
-                // ChatGPT Pattern: Disable auto-scroll during streaming
-                if (isStreaming) {
-                    return;
+                // P1 Fix #5: Restore scroll position when keyboard closes (iOS)
+                // This prevents content jumping when keyboard dismisses
+                if (!isStreaming && isUserPinnedToBottom) {
+                    scrollToBottom();
                 }
-                scrollToBottom();
             }
 
             function handleWindowResize() {
@@ -2697,27 +2721,25 @@
                     inputContainer.style.paddingRight = "12px";
                     inputContainer.style.paddingTop = "12px";
 
-                    // Calculate bottom padding based on safe area
+                    // P1 Fix #4: Calculate bottom padding using CSS custom property
                     let bottomPadding = 12; // Base padding
-
-                    // Try to get safe area inset
-                    const computedStyle =
-                        window.getComputedStyle(inputContainer);
-                    const currentBottom = computedStyle.paddingBottom;
-
-                    // Check if env(safe-area-inset-bottom) is working
-                    if (currentBottom && parseInt(currentBottom) > 12) {
-                        // CSS env() is working, use it
-                        bottomPadding = parseInt(currentBottom);
+                    
+                    // Read safe area from CSS custom property (more reliable than env())
+                    const rootStyle = getComputedStyle(document.documentElement);
+                    const safeAreaBottom = rootStyle.getPropertyValue('--safe-area-inset-bottom').trim();
+                    
+                    if (safeAreaBottom && safeAreaBottom !== '0px') {
+                        bottomPadding = 12 + parseInt(safeAreaBottom);
                         console.log(
-                            "✅ Using CSS safe-area:",
+                            "✅ Using CSS custom property safe-area:",
+                            safeAreaBottom,
+                            "→ total padding:",
                             bottomPadding + "px",
                         );
                     } else {
                         // Fallback: use fixed safe area for iOS
                         bottomPadding = 46; // 12px base + 34px for home indicator
-                        inputContainer.style.paddingBottom =
-                            bottomPadding + "px";
+                        inputContainer.style.paddingBottom = bottomPadding + "px";
                         console.log(
                             "📱 iOS: Applied fallback padding:",
                             bottomPadding + "px",
