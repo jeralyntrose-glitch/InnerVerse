@@ -2259,19 +2259,29 @@
             }
 
             // ===== SCROLL CLAMP (Prevent scrolling into empty padding) =====
-            // Instant clamp lets iOS do its native ~100px overscroll bounce
-            // No delays or smooth animations that fight native physics
+            // Only clamp AFTER user finishes scrolling, not during (ChatGPT pattern)
+            // This prevents fighting iOS physics and loss of control
+            let clampTimeout = null;
             function clampScrollPosition() {
-                const allMessages = messages.querySelectorAll('.message');
-                if (allMessages.length === 0) return;
-                
-                const lastMessage = allMessages[allMessages.length - 1];
-                const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + 220);
-                
-                if (messages.scrollTop > maxAllowedScroll) {
-                    messages.scrollTop = maxAllowedScroll;
+                // Clear any pending clamp
+                if (clampTimeout) {
+                    clearTimeout(clampTimeout);
                 }
+                
+                // Wait for scroll to settle (user finished gesture)
+                clampTimeout = setTimeout(() => {
+                    const allMessages = messages.querySelectorAll('.message');
+                    if (allMessages.length === 0) return;
+                    
+                    const lastMessage = allMessages[allMessages.length - 1];
+                    const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                    // Reduced buffer: 80px = ChatGPT-like tight bounce (was 220px)
+                    const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + 80);
+                    
+                    if (messages.scrollTop > maxAllowedScroll) {
+                        messages.scrollTop = maxAllowedScroll;
+                    }
+                }, 50); // 50ms debounce = feels instant but doesn't fight active scrolling
             }
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
