@@ -1894,9 +1894,20 @@
                                                 fullResponse;
                                         }
 
-                                        // REMOVED: scrollToBottomIfNearBottom()
-                                        // User has full scroll control during streaming
-                                        // Button provides escape hatch to return to bottom
+                                        // SPEC: Auto-scroll follows streaming IF user was already at bottom
+                                        // If user scrolls up during streaming, respect their intent (don't auto-scroll)
+                                        if (isUserPinnedToBottom) {
+                                            // User is at bottom, follow the streaming content
+                                            suppressScrollEvents = true;
+                                            const lastMessage = assistantDiv;
+                                            const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                                            const targetScroll = messageBottom - messages.clientHeight + 40;
+                                            messages.scrollTop = Math.max(0, targetScroll);
+                                            requestAnimationFrame(() => {
+                                                suppressScrollEvents = false;
+                                            });
+                                        }
+                                        // If user scrolled up (isUserPinnedToBottom = false), don't auto-scroll
                                     }
 
                                     if (data.error) {
@@ -2258,44 +2269,43 @@
                 messages.appendChild(welcomeDiv);
             }
 
-            // ===== SCROLL CLAMP (Prevent scrolling into empty padding) =====
-            // CRITICAL: Only prevents scrolling DOWN into padding, never interferes with scrolling UP
-            let clampTimeout = null;
-            let lastScrollTop = 0;
-            let scrollDirection = 'down'; // Track direction at scroll event time
+            // ===== SCROLL CLAMP (ChatGPT/Claude Pattern) =====
+            // SPEC:
+            // 1. Scrolling UP: Always allowed, zero interference
+            // 2. Scrolling DOWN: Allow iOS natural bounce (~50-80px), prevent scrolling into large padding
+            // 3. Should feel invisible - user shouldn't notice it exists
+            
+            let lastClampScrollTop = 0;
             
             function clampScrollPosition() {
-                // Track scroll direction BEFORE debounce
                 const currentScrollTop = messages.scrollTop;
-                scrollDirection = currentScrollTop > lastScrollTop ? 'down' : 'up';
-                lastScrollTop = currentScrollTop;
                 
-                // Clear any pending clamp
-                if (clampTimeout) {
-                    clearTimeout(clampTimeout);
+                // Determine scroll direction
+                const isScrollingDown = currentScrollTop > lastClampScrollTop;
+                lastClampScrollTop = currentScrollTop;
+                
+                // NEVER interfere with scrolling UP (reading old messages)
+                if (!isScrollingDown) {
+                    return;
                 }
                 
-                // Wait for scroll to settle (user finished gesture)
-                clampTimeout = setTimeout(() => {
-                    const allMessages = messages.querySelectorAll('.message');
-                    if (allMessages.length === 0) return;
-                    
-                    const lastMessage = allMessages[allMessages.length - 1];
-                    const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                    
-                    // ChatGPT-exact buffer: only 80px of space below last message
-                    // Matches ChatGPT's tight spacing with minimal breathing room
-                    const buffer = 80;
-                    
-                    // Max scroll = last message stays visible with tight spacing
-                    const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
-                    
-                    // ONLY clamp if scrolling DOWN and past the limit
-                    // NEVER clamp if scrolling UP (reading old messages)
-                    if (scrollDirection === 'down' && messages.scrollTop > maxAllowedScroll) {
-                        messages.scrollTop = maxAllowedScroll;
-                    }
-                }, 50); // 50ms debounce = feels instant but doesn't fight active scrolling
+                // Only process downward scrolling
+                const allMessages = messages.querySelectorAll('.message');
+                if (allMessages.length === 0) return;
+                
+                const lastMessage = allMessages[allMessages.length - 1];
+                const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                
+                // ChatGPT-exact: 80px buffer = last message sits just above input bar
+                // When iOS bounces, it settles here naturally
+                const buffer = 80;
+                const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
+                
+                // ONLY clamp if scrolling down AND past the limit
+                // iOS bounce still happens at render level - this just sets the max settle point
+                if (currentScrollTop > maxAllowedScroll) {
+                    messages.scrollTop = maxAllowedScroll;
+                }
             }
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
