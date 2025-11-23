@@ -472,6 +472,24 @@
                 position: relative; /* CRITICAL: Makes this the offsetParent for offsetTop calculations */
             }
 
+            /* Scrollbar styling - always visible */
+            .messages::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            .messages::-webkit-scrollbar-track {
+                background: var(--bg-main);
+            }
+
+            .messages::-webkit-scrollbar-thumb {
+                background: var(--border-main);
+                border-radius: 4px;
+            }
+
+            .messages::-webkit-scrollbar-thumb:hover {
+                background: var(--text-tertiary);
+            }
+
             .empty-chat-welcome {
                 display: flex;
                 flex-direction: column;
@@ -2254,12 +2272,11 @@
                 messages.appendChild(welcomeDiv);
             }
 
-            // ===== SCROLL CLAMP (ChatGPT/Claude Pattern) =====
-            // SPEC: Let iOS handle the elastic bounce naturally (soft bungee feel)
-            // Don't fight the bounce - only set the limit where it settles
+            // ===== SCROLL CLAMP (ChatGPT Pattern) =====
+            // Instant clamp on downward scroll creates the "resistance" feel
+            // iOS overscroll-behavior handles the visual bounce at CSS level
             
             let lastClampScrollTop = 0;
-            let clampDebounce = null;
             
             function clampScrollPosition() {
                 const currentScrollTop = messages.scrollTop;
@@ -2273,28 +2290,22 @@
                     return;
                 }
                 
-                // Don't clamp during active scrolling - let iOS bounce happen naturally
-                // Only clamp after scroll settles (user released)
-                clearTimeout(clampDebounce);
-                clampDebounce = setTimeout(() => {
-                    const allMessages = messages.querySelectorAll('.message');
-                    if (allMessages.length === 0) return;
-                    
-                    const lastMessage = allMessages[allMessages.length - 1];
-                    const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                    
-                    // Keep text visible ABOVE input bar (input bar is ~70-100px tall)
-                    const buffer = 120; // Ensures ~2-3 lines visible above input bar
-                    const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
-                    
-                    // Only correct if still past limit after iOS bounce settles
-                    if (messages.scrollTop > maxAllowedScroll) {
-                        messages.scrollTo({
-                            top: maxAllowedScroll,
-                            behavior: 'smooth'
-                        });
-                    }
-                }, 100); // 100ms debounce - feels instant but doesn't fight iOS physics
+                // Check limit immediately for downward scrolling
+                const allMessages = messages.querySelectorAll('.message');
+                if (allMessages.length === 0) return;
+                
+                const lastMessage = allMessages[allMessages.length - 1];
+                const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                
+                // Keep text visible ABOVE input bar (input bar is ~70-100px tall)
+                const buffer = 120; // Ensures ~2-3 lines visible above input bar
+                const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
+                
+                // Instant clamp creates "resistance" feel
+                // CSS overscroll-behavior creates visual bounce
+                if (currentScrollTop > maxAllowedScroll) {
+                    messages.scrollTop = maxAllowedScroll;
+                }
             }
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
@@ -2524,8 +2535,9 @@
 
                 // Scroll detection for desktop and touch scenarios
                 addTrackedEventListener(messages, "scroll", () => {
-                    // Let iOS handle scroll physics naturally - don't fight user interaction
-                    // Clamp only runs on content changes (MutationObserver below)
+                    // Clamp has 100ms debounce - won't fight iOS during active scroll
+                    // Only applies limit after user releases
+                    clampScrollPosition();
                     
                     // Ignore synthetic scroll events from our own code
                     if (suppressScrollEvents) return;
