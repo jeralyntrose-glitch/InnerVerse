@@ -1788,11 +1788,19 @@
                             // LOCK scrolling - prevent ANY interference for 300ms
                             scrollLockUntil = Date.now() + 300;
                             
+                            // Suppress scroll events during programmatic scroll
+                            suppressScrollEvents = true;
+                            
                             // Smooth scrolling for polished UX
                             messages.scrollTo({
                                 top: targetScrollTop,
                                 behavior: 'smooth'
                             });
+                            
+                            // Re-enable scroll events after animation completes
+                            setTimeout(() => {
+                                suppressScrollEvents = false;
+                            }, 350); // Slightly longer than scroll lock
                             
                             console.log("📱 BULLETPROOF scroll:", {
                                 messageTop: messageRect.top,
@@ -2278,6 +2286,13 @@
             let lastClampScrollTop = 0;
             
             function clampScrollPosition() {
+                // CRITICAL: Respect scroll lock (prevents interference with programmatic scrolls)
+                if (Date.now() < scrollLockUntil) {
+                    // Update tracking but don't clamp
+                    lastClampScrollTop = messages.scrollTop;
+                    return;
+                }
+                
                 const currentScrollTop = messages.scrollTop;
                 
                 // Track direction
