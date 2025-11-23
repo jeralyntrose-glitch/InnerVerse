@@ -1762,25 +1762,10 @@
                             // Formula: (message viewport position - container viewport position) + current scroll
                             const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
                             
-                            // SMART positioning based on message height
-                            const messageHeight = messageRect.height;
-                            const viewportHeight = messages.clientHeight;
-                            const maxVisibleLines = 300; // ~12 lines worth of text
-
-                            let targetScrollTop;
-
-                            if (messageHeight <= maxVisibleLines) {
-                                // SHORT MESSAGE: Keep it lower on screen (don't push to top)
-                                // Position message about 30% down from top of viewport
-                                // 250px accounts for Dynamic Island (~59px) + visual breathing room
-                                const topOffset = Math.min(viewportHeight * 0.30, 250);
-                                targetScrollTop = Math.max(0, messageOffsetInContainer - topOffset);
-                            } else {
-                                // LONG MESSAGE: Show bottom ~12 lines, rest scrolled above
-                                // Scroll so bottom of message is near bottom of viewport (leaving room for AI)
-                                const showFromBottom = maxVisibleLines; // Show this much of the message
-                                targetScrollTop = Math.max(0, messageOffsetInContainer + messageHeight - showFromBottom - 100);
-                            }
+                            // CHATGPT PATTERN: Always position message at TOP of viewport
+                            // For long messages, shows partial (top portion visible, rest below)
+                            const topOffset = 100; // Small offset from absolute top (breathing room for header)
+                            const targetScrollTop = Math.max(0, messageOffsetInContainer - topOffset);
                             
                             // LOCK scrolling - prevent ANY interference for 300ms
                             scrollLockUntil = Date.now() + 300;
@@ -1901,7 +1886,7 @@
                                             suppressScrollEvents = true;
                                             const lastMessage = assistantDiv;
                                             const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                                            const targetScroll = messageBottom - messages.clientHeight + 40;
+                                            const targetScroll = messageBottom - messages.clientHeight + 30;
                                             messages.scrollTop = Math.max(0, targetScroll);
                                             requestAnimationFrame(() => {
                                                 suppressScrollEvents = false;
@@ -1950,9 +1935,9 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // iPhone 14 Pro alignment: 160px = input bar (~70px) + home indicator (~34px) + extra buffer for content visibility
+                        // ChatGPT-exact: 30px buffer - text goes very close to bottom
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 160;
+                        const targetScroll = messageBottom - messages.clientHeight + 30;
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
                             behavior: 'smooth'
@@ -2270,12 +2255,11 @@
             }
 
             // ===== SCROLL CLAMP (ChatGPT/Claude Pattern) =====
-            // SPEC:
-            // 1. Scrolling UP: Always allowed, zero interference
-            // 2. Scrolling DOWN: Allow iOS natural bounce (~50-80px), prevent scrolling into large padding
-            // 3. Should feel invisible - user shouldn't notice it exists
+            // SPEC: Let iOS handle the elastic bounce naturally (soft bungee feel)
+            // Don't fight the bounce - only set the limit where it settles
             
             let lastClampScrollTop = 0;
+            let clampDebounce = null;
             
             function clampScrollPosition() {
                 const currentScrollTop = messages.scrollTop;
@@ -2289,23 +2273,25 @@
                     return;
                 }
                 
-                // Only process downward scrolling
-                const allMessages = messages.querySelectorAll('.message');
-                if (allMessages.length === 0) return;
-                
-                const lastMessage = allMessages[allMessages.length - 1];
-                const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                
-                // ChatGPT-exact: 80px buffer = last message sits just above input bar
-                // When iOS bounces, it settles here naturally
-                const buffer = 80;
-                const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
-                
-                // ONLY clamp if scrolling down AND past the limit
-                // iOS bounce still happens at render level - this just sets the max settle point
-                if (currentScrollTop > maxAllowedScroll) {
-                    messages.scrollTop = maxAllowedScroll;
-                }
+                // Don't clamp during active scrolling - let iOS bounce happen naturally
+                // Only clamp after scroll settles (user released)
+                clearTimeout(clampDebounce);
+                clampDebounce = setTimeout(() => {
+                    const allMessages = messages.querySelectorAll('.message');
+                    if (allMessages.length === 0) return;
+                    
+                    const lastMessage = allMessages[allMessages.length - 1];
+                    const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                    
+                    // ChatGPT-exact: 30px buffer - text goes very close to bottom
+                    const buffer = 30;
+                    const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
+                    
+                    // Only correct if still past limit after iOS bounce settles
+                    if (messages.scrollTop > maxAllowedScroll) {
+                        messages.scrollTop = maxAllowedScroll;
+                    }
+                }, 100); // 100ms debounce - feels instant but doesn't fight iOS physics
             }
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
@@ -2424,9 +2410,9 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // Position last message at bottom of viewport (40px buffer)
+                        // Position last message at bottom of viewport (30px buffer)
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 40;
+                        const targetScroll = messageBottom - messages.clientHeight + 30;
                         // Use instant for forced scrolls (initial load), smooth for user-triggered
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
