@@ -1745,6 +1745,11 @@
                     welcomeMsg.remove();
                 }
 
+                // LOCK scrolling BEFORE adding message (prevents MutationObserver from interfering)
+                scrollLockUntil = Date.now() + 500;
+                isUserPinnedToBottom = false;
+                suppressScrollEvents = true;
+                
                 // Add user message to UI
                 addUserMessage(
                     text,
@@ -1785,34 +1790,18 @@
                             const topOffset = 100; // Small offset from absolute top (breathing room for header)
                             const targetScrollTop = Math.max(0, messageOffsetInContainer - topOffset);
                             
-                            // LOCK scrolling - prevent ANY interference for 300ms
-                            scrollLockUntil = Date.now() + 300;
-                            
-                            // CRITICAL: Set pin state to false when scrolling message to top
-                            // This prevents streaming auto-scroll from fighting our scroll
-                            isUserPinnedToBottom = false;
-                            
-                            // Suppress scroll events during programmatic scroll
-                            suppressScrollEvents = true;
-                            
-                            // Smooth scrolling for polished UX
+                            // Instant scroll (smooth causes clamp to fight during animation)
                             messages.scrollTo({
                                 top: targetScrollTop,
-                                behavior: 'smooth'
+                                behavior: 'instant'
                             });
                             
-                            // Re-enable scroll events after animation completes
+                            // Re-enable scroll events after lock expires
                             setTimeout(() => {
                                 suppressScrollEvents = false;
-                            }, 350); // Slightly longer than scroll lock
-                            
-                            // Auto-clear lock after 300ms
-                            setTimeout(() => {
-                                if (Date.now() >= scrollLockUntil) {
-                                    // Recalculate pin state now that lock is cleared
-                                    updateScrollPinState();
-                                }
-                            }, 300);
+                                // Recalculate pin state now that lock is cleared
+                                updateScrollPinState();
+                            }, 500);
                         }
                     });
                 });
@@ -2279,8 +2268,8 @@
             let lastClampScrollTop = 0;
             
             function clampScrollPosition() {
-                // Respect scroll lock (don't interfere with programmatic scrolls)
-                if (Date.now() < scrollLockUntil) {
+                // NEVER interfere with programmatic scrolls
+                if (Date.now() < scrollLockUntil || suppressScrollEvents) {
                     lastClampScrollTop = messages.scrollTop;
                     return;
                 }
@@ -2303,9 +2292,12 @@
                 const buffer = 160;
                 const maxScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
                 
-                // Instant clamp when past limit (CSS handles visual bounce)
+                // Smooth clamp (not instant snap)
                 if (currentScrollTop > maxScroll) {
-                    messages.scrollTop = maxScroll;
+                    messages.scrollTo({
+                        top: maxScroll,
+                        behavior: 'smooth'
+                    });
                 }
             }
 
