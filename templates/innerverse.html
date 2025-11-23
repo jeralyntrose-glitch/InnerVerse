@@ -114,15 +114,16 @@
 
             body {
                 font-family:
-                    "Inter",
                     -apple-system,
                     BlinkMacSystemFont,
                     "Segoe UI",
+                    "Helvetica Neue",
+                    Arial,
                     sans-serif;
                 background: var(--bg-main);
                 color: var(--text-primary);
-                font-size: 15px;
-                line-height: 1.6;
+                font-size: 16px;
+                line-height: 1.75;
                 overflow: hidden;
                 height: 100%;
                 min-height: 100vh;
@@ -227,7 +228,7 @@
                 background: transparent;
                 font-size: 14px;
                 color: var(--text-primary);
-                font-family: "Inter", sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
                 outline: none;
             }
 
@@ -331,7 +332,7 @@
 
             .conversation-title {
                 flex: 1;
-                font-size: 13px;
+                font-size: 14px;
                 color: var(--text-secondary);
                 white-space: nowrap;
                 overflow: hidden;
@@ -539,12 +540,14 @@
             /* User Messages */
             .message.user .message-content {
                 background: var(--bg-user-bubble);
-                padding: 12px 16px;
+                padding: 10px 14px;
                 border-radius: 18px;
                 max-width: 70%;
                 margin-left: auto;
                 color: var(--text-primary);
                 word-wrap: break-word;
+                font-size: 16px;
+                line-height: 1.5;
             }
 
             .message.user .message-images {
@@ -570,7 +573,8 @@
 
             .message.assistant .message-content {
                 color: var(--text-primary);
-                line-height: 1.6;
+                line-height: 1.75;
+                font-size: 16px;
             }
 
             .message.assistant .message-content h1,
@@ -579,16 +583,17 @@
                 margin-top: 16px;
                 margin-bottom: 8px;
                 font-weight: 600;
+                line-height: 1.3;
             }
 
             .message.assistant .message-content h1 {
-                font-size: 1.5em;
+                font-size: 24px;
             }
             .message.assistant .message-content h2 {
-                font-size: 1.3em;
+                font-size: 20px;
             }
             .message.assistant .message-content h3 {
-                font-size: 1.1em;
+                font-size: 18px;
             }
 
             .message.assistant .message-content p {
@@ -609,7 +614,7 @@
                 background: var(--bg-code);
                 padding: 2px 6px;
                 border-radius: 4px;
-                font-family: "Monaco", "Courier New", monospace;
+                font-family: "SF Mono", "Monaco", "Menlo", "Courier New", monospace;
                 font-size: 14px;
             }
 
@@ -904,8 +909,8 @@
                 padding: 10px 16px;
                 border: 1px solid var(--border-input);
                 border-radius: 20px;
-                font-size: 15px;
-                font-family: "Inter", sans-serif;
+                font-size: 16px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
                 background: var(--bg-input);
                 color: var(--text-primary);
                 outline: none;
@@ -2619,21 +2624,41 @@
                 console.log("✅ Observers initialized");
             }
 
-            // Track viewport height to detect keyboard show/hide
+            // Track viewport height and scroll position to maintain visual consistency
             let lastViewportHeight = window.innerHeight;
+            let savedScrollFromBottom = null; // Distance from bottom before keyboard opens
             
             function handleViewportResize() {
                 updateMessagesPadding();
                 
                 const currentViewportHeight = window.innerHeight;
+                const viewportShrunk = currentViewportHeight < lastViewportHeight;
                 const viewportExpanded = currentViewportHeight > lastViewportHeight;
-                lastViewportHeight = currentViewportHeight;
                 
-                // ONLY restore scroll when keyboard CLOSES (viewport expands)
-                // When keyboard opens (viewport shrinks), let content stay in place
-                if (viewportExpanded && !isStreaming && isUserPinnedToBottom) {
-                    scrollToBottom();
+                if (viewportShrunk) {
+                    // Keyboard opening - save current position from bottom
+                    const messages = document.getElementById("messages");
+                    if (messages) {
+                        const scrollHeight = messages.scrollHeight;
+                        const scrollTop = messages.scrollTop;
+                        const clientHeight = messages.clientHeight;
+                        savedScrollFromBottom = scrollHeight - scrollTop - clientHeight;
+                    }
+                } else if (viewportExpanded && savedScrollFromBottom !== null) {
+                    // Keyboard closing - restore exact position from bottom
+                    const messages = document.getElementById("messages");
+                    if (messages) {
+                        requestAnimationFrame(() => {
+                            const scrollHeight = messages.scrollHeight;
+                            const clientHeight = messages.clientHeight;
+                            const targetScrollTop = scrollHeight - clientHeight - savedScrollFromBottom;
+                            messages.scrollTop = Math.max(0, targetScrollTop);
+                            savedScrollFromBottom = null; // Reset
+                        });
+                    }
                 }
+                
+                lastViewportHeight = currentViewportHeight;
             }
 
             function handleWindowResize() {
