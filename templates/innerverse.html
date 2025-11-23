@@ -1788,6 +1788,10 @@
                             // LOCK scrolling - prevent ANY interference for 300ms
                             scrollLockUntil = Date.now() + 300;
                             
+                            // CRITICAL: Set pin state to false when scrolling message to top
+                            // This prevents streaming auto-scroll from fighting our scroll
+                            isUserPinnedToBottom = false;
+                            
                             // Suppress scroll events during programmatic scroll
                             suppressScrollEvents = true;
                             
@@ -1802,18 +1806,9 @@
                                 suppressScrollEvents = false;
                             }, 350); // Slightly longer than scroll lock
                             
-                            console.log("📱 BULLETPROOF scroll:", {
-                                messageTop: messageRect.top,
-                                containerTop: containerRect.top,
-                                currentScroll: messages.scrollTop,
-                                target: targetScrollTop,
-                                lockUntil: scrollLockUntil
-                            });
-                            
-                            // Auto-clear lock after 300ms with logging
+                            // Auto-clear lock after 300ms
                             setTimeout(() => {
                                 if (Date.now() >= scrollLockUntil) {
-                                    console.log("🔓 Scroll lock expired");
                                     // Recalculate pin state now that lock is cleared
                                     updateScrollPinState();
                                 }
@@ -1968,19 +1963,16 @@
                             top: Math.max(0, targetScroll),
                             behavior: 'smooth'
                         });
-                        console.log("🎯 Button scrolled to last message:", targetScroll + "px");
                     } else {
                         // Fallback if no messages exist - scroll to absolute bottom
                         messages.scrollTo({
                             top: messages.scrollHeight,
                             behavior: 'smooth'
                         });
-                        console.log("🎯 Button scrolled to bottom (no messages)");
                     }
                 };
                 
                 if (timeSinceInput < INPUT_COOLDOWN_MS) {
-                    console.log(`⏳ Delaying button scroll (${timeSinceInput}ms since input) to avoid iOS Safari yank`);
                     setTimeout(scrollToLastMessage, INPUT_COOLDOWN_MS - timeSinceInput);
                 } else {
                     scrollToLastMessage();
@@ -2281,40 +2273,37 @@
             }
 
             // ===== SCROLL CLAMP (ChatGPT Pattern) =====
-            // Simple: Just set a floor. iOS handles the rubber band bounce via CSS.
+            // Prevents scrolling into empty padding zone below last message
+            // iOS CSS overscroll-behavior provides the visual rubber band effect
             
             let lastClampScrollTop = 0;
             
             function clampScrollPosition() {
-                // CRITICAL: Respect scroll lock (prevents interference with programmatic scrolls)
+                // Respect scroll lock (don't interfere with programmatic scrolls)
                 if (Date.now() < scrollLockUntil) {
-                    // Update tracking but don't clamp
                     lastClampScrollTop = messages.scrollTop;
                     return;
                 }
                 
                 const currentScrollTop = messages.scrollTop;
-                
-                // Track direction
                 const isScrollingDown = currentScrollTop > lastClampScrollTop;
                 lastClampScrollTop = currentScrollTop;
                 
-                // Free scrolling UP (reading old messages)
+                // Only clamp downward scrolling (allow free upward scrolling)
                 if (!isScrollingDown) return;
                 
-                // Calculate the floor (max scroll position)
+                // Find last message
                 const allMessages = messages.querySelectorAll('.message');
                 if (allMessages.length === 0) return;
                 
                 const lastMessage = allMessages[allMessages.length - 1];
                 const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
                 
-                // Floor: last message sits above input bar with breathing room
+                // Buffer: keeps text visible above input bar
                 const buffer = 160;
                 const maxScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
                 
-                // If past the floor, snap back instantly
-                // CSS overscroll-behavior creates the visual rubber band
+                // Instant clamp when past limit (CSS handles visual bounce)
                 if (currentScrollTop > maxScroll) {
                     messages.scrollTop = maxScroll;
                 }
@@ -2324,7 +2313,6 @@
             function updateScrollPinState() {
                 // Skip updates during scroll lock (prevents race conditions)
                 if (Date.now() < scrollLockUntil) {
-                    console.log("🔒 Pin state update blocked by lock, expires in:", scrollLockUntil - Date.now(), "ms");
                     return;
                 }
                 const threshold = 5; // PATCH 19: Reduced from 30px to 5px (industry standard)
@@ -2363,18 +2351,10 @@
                         shouldShow = lastMessageBottom > viewportBottom + 50;
                     }
                     
-                    console.log(
-                        `🎯 Button visibility check (SMART): shouldShow=${shouldShow}, ` +
-                        `lastMessageBottom=${lastMessage ? (lastMessage.offsetTop + lastMessage.offsetHeight).toFixed(0) : 'N/A'}px, ` +
-                        `viewportBottom=${(messages.scrollTop + messages.clientHeight).toFixed(0)}px`
-                    );
-                    
                     if (shouldShow) {
                         scrollToBottomBtn.classList.add('visible');
-                        console.log("👁️ Button SHOWN");
                     } else {
                         scrollToBottomBtn.classList.remove('visible');
-                        console.log("🙈 Button HIDDEN");
                     }
                 });
             }
@@ -2409,7 +2389,6 @@
             function scrollToBottom(force = false) {
                 // SCROLL LOCK: Prevent interference after manual scroll-to-top
                 if (Date.now() < scrollLockUntil) {
-                    console.log("🔒 Scroll blocked by lock, expires in:", scrollLockUntil - Date.now(), "ms");
                     return;
                 }
                 
@@ -2423,7 +2402,6 @@
                 // Force parameter bypasses user intent check for initial loads/sends
                 // ChatGPT Pattern: Use canAutoScroll() guard to prevent stale intent issues
                 if (!force && !canAutoScroll()) {
-                    console.log("⛔ Scroll blocked: canAutoScroll() = false");
                     return;
                 }
 
@@ -2456,7 +2434,6 @@
                             top: messages.scrollHeight,
                             behavior: force ? 'instant' : 'smooth'
                         });
-                        console.log("📜 Scrolled to bottom (no messages)" + (force ? " (forced)" : " (auto)"));
                     }
                     
                     // Clear suppression flag after scroll completes
@@ -2572,7 +2549,6 @@
                     
                     // ChatGPT Pattern: Disable auto-scroll during streaming
                     if (isStreaming) {
-                        console.log(`🚫 Auto-scroll disabled during streaming`);
                         return;
                     }
                     
