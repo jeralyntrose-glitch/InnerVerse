@@ -2259,31 +2259,26 @@
             }
 
             // ===== SCROLL CLAMP (Prevent scrolling into empty padding) =====
-            // Makes scrolling feel "solid" like ChatGPT instead of "slippery"
+            // Works WITH iOS elastic bounce, not against it
             function clampScrollPosition() {
-                // Find the last visible element (messages, errors, welcome, etc.)
-                // Skip typing indicators and other temporary placeholders
-                let lastElement = messages.lastElementChild;
-                while (lastElement && lastElement.classList.contains('typing-indicator')) {
-                    lastElement = lastElement.previousElementSibling;
-                }
+                const allMessages = messages.querySelectorAll('.message');
+                if (allMessages.length === 0) return;
                 
-                // If no content exists, prevent any scrolling
-                if (!lastElement) {
-                    if (messages.scrollTop > 0) {
-                        messages.scrollTop = 0;
-                    }
-                    return;
-                }
-                
-                const lastElementBottom = lastElement.offsetTop + lastElement.offsetHeight;
-                
-                // Fix #1: Increased buffer from 120px to 220px (shows ~5 lines instead of 1)
-                // Fix #2: Use smooth scroll instead of instant snap for better UX
-                const maxAllowedScroll = Math.max(0, lastElementBottom - messages.clientHeight + 220);
+                const lastMessage = allMessages[allMessages.length - 1];
+                const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + 220);
                 
                 if (messages.scrollTop > maxAllowedScroll) {
-                    messages.scrollTo({ top: maxAllowedScroll, behavior: 'smooth' });
+                    // Delay allows iOS bounce to happen naturally first
+                    // Then gently guide back if user keeps scrolling past limit
+                    setTimeout(() => {
+                        if (messages.scrollTop > maxAllowedScroll) {
+                            messages.scrollTo({
+                                top: maxAllowedScroll,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }, 100);
                 }
             }
 
