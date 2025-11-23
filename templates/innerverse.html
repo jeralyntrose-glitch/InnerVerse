@@ -1789,21 +1789,10 @@
                             // Calculate absolute position within scrollable content
                             // Formula: (message viewport position - container viewport position) + current scroll
                             const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
-                            const messageHeight = lastUserMessage.offsetHeight;
-                            const viewportHeight = messages.clientHeight;
                             
-                            // CHATGPT PATTERN: Show full message if it fits, otherwise show top portion
-                            const topPadding = 100; // Breathing room at top
-                            const bottomBuffer = 180; // Space for input bar
-                            
-                            let targetScrollTop;
-                            if (messageHeight + topPadding + bottomBuffer <= viewportHeight) {
-                                // Short message: show the WHOLE thing (position bottom with buffer)
-                                targetScrollTop = Math.max(0, messageOffsetInContainer + messageHeight - viewportHeight + bottomBuffer);
-                            } else {
-                                // Long message: show top portion (ChatGPT pattern)
-                                targetScrollTop = Math.max(0, messageOffsetInContainer - topPadding);
-                            }
+                            // CHATGPT PATTERN: Position message at top with small padding
+                            const topPadding = 20; // Small breathing room from absolute top
+                            const targetScrollTop = Math.max(0, messageOffsetInContainer - topPadding);
                             
                             // Instant scroll (smooth causes clamp to fight during animation)
                             messages.scrollTo({
@@ -2624,41 +2613,27 @@
                 console.log("✅ Observers initialized");
             }
 
-            // Track viewport height and scroll position to maintain visual consistency
-            let lastViewportHeight = window.innerHeight;
-            let savedScrollFromBottom = null; // Distance from bottom before keyboard opens
-            
             function handleViewportResize() {
+                // Save scroll position BEFORE padding changes
+                const messages = document.getElementById("messages");
+                if (!messages) return;
+                
+                const scrollHeightBefore = messages.scrollHeight;
+                const scrollTopBefore = messages.scrollTop;
+                
+                // Update padding (changes scrollHeight)
                 updateMessagesPadding();
                 
-                const currentViewportHeight = window.innerHeight;
-                const viewportShrunk = currentViewportHeight < lastViewportHeight;
-                const viewportExpanded = currentViewportHeight > lastViewportHeight;
-                
-                if (viewportShrunk) {
-                    // Keyboard opening - save current position from bottom
-                    const messages = document.getElementById("messages");
-                    if (messages) {
-                        const scrollHeight = messages.scrollHeight;
-                        const scrollTop = messages.scrollTop;
-                        const clientHeight = messages.clientHeight;
-                        savedScrollFromBottom = scrollHeight - scrollTop - clientHeight;
+                // Restore visual position after padding change
+                requestAnimationFrame(() => {
+                    const scrollHeightAfter = messages.scrollHeight;
+                    const heightDiff = scrollHeightAfter - scrollHeightBefore;
+                    
+                    // Adjust scrollTop to maintain visual position
+                    if (heightDiff !== 0) {
+                        messages.scrollTop = scrollTopBefore + heightDiff;
                     }
-                } else if (viewportExpanded && savedScrollFromBottom !== null) {
-                    // Keyboard closing - restore exact position from bottom
-                    const messages = document.getElementById("messages");
-                    if (messages) {
-                        requestAnimationFrame(() => {
-                            const scrollHeight = messages.scrollHeight;
-                            const clientHeight = messages.clientHeight;
-                            const targetScrollTop = scrollHeight - clientHeight - savedScrollFromBottom;
-                            messages.scrollTop = Math.max(0, targetScrollTop);
-                            savedScrollFromBottom = null; // Reset
-                        });
-                    }
-                }
-                
-                lastViewportHeight = currentViewportHeight;
+                });
             }
 
             function handleWindowResize() {
