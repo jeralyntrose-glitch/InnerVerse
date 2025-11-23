@@ -1912,7 +1912,7 @@
                                             suppressScrollEvents = true;
                                             const lastMessage = assistantDiv;
                                             const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                                            const targetScroll = messageBottom - messages.clientHeight + 70;
+                                            const targetScroll = messageBottom - messages.clientHeight + 160;
                                             messages.scrollTop = Math.max(0, targetScroll);
                                             requestAnimationFrame(() => {
                                                 suppressScrollEvents = false;
@@ -1961,9 +1961,9 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // Keep text visible above input bar (tiny gap)
+                        // Keep text visible above input bar
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 70;
+                        const targetScroll = messageBottom - messages.clientHeight + 160;
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
                             behavior: 'smooth'
@@ -2309,8 +2309,8 @@
                 const lastMessage = allMessages[allMessages.length - 1];
                 const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
                 
-                // Floor: last message sits ~70px above input bar (tiny gap)
-                const buffer = 70;
+                // Floor: last message sits above input bar with breathing room
+                const buffer = 160;
                 const maxScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
                 
                 // If past the floor, snap back instantly
@@ -2436,9 +2436,9 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // Position last message at bottom of viewport (70px buffer)
+                        // Position last message at bottom of viewport (160px buffer)
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 70;
+                        const targetScroll = messageBottom - messages.clientHeight + 160;
                         // Use instant for forced scrolls (initial load), smooth for user-triggered
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
