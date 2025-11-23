@@ -2283,12 +2283,11 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
                     
-                    // Calculate buffer based on input bar height + breathing room
-                    const inputContainer = document.querySelector('.input-container');
-                    const inputHeight = inputContainer ? inputContainer.offsetHeight : 80;
-                    const buffer = inputHeight + 100; // Input bar + 100px breathing room
+                    // ChatGPT-exact buffer: only 80px of space below last message
+                    // Matches ChatGPT's tight spacing with minimal breathing room
+                    const buffer = 80;
                     
-                    // Max scroll = last message bottom is fully visible above input bar
+                    // Max scroll = last message stays visible with tight spacing
                     const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
                     
                     // ONLY clamp if scrolling DOWN and past the limit
