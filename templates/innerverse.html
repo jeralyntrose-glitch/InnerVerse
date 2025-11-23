@@ -2278,12 +2278,12 @@
                 
                 const lastElementBottom = lastElement.offsetTop + lastElement.offsetHeight;
                 
-                // Maximum scroll = last element bottom + small buffer (120px breathing room)
-                // This prevents scrolling into the large padding zone
-                const maxAllowedScroll = Math.max(0, lastElementBottom - messages.clientHeight + 120);
+                // Fix #1: Increased buffer from 120px to 220px (shows ~5 lines instead of 1)
+                // Fix #2: Use smooth scroll instead of instant snap for better UX
+                const maxAllowedScroll = Math.max(0, lastElementBottom - messages.clientHeight + 220);
                 
                 if (messages.scrollTop > maxAllowedScroll) {
-                    messages.scrollTop = maxAllowedScroll;
+                    messages.scrollTo({ top: maxAllowedScroll, behavior: 'smooth' });
                 }
             }
 
