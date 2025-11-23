@@ -1790,8 +1790,8 @@
                             // Formula: (message viewport position - container viewport position) + current scroll
                             const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
                             
-                            // CHATGPT PATTERN: Position message at top with small padding
-                            const topPadding = 20; // Small breathing room from absolute top
+                            // CHATGPT PATTERN: Position message at top with comfortable padding
+                            const topPadding = 80; // Breathing room - keeps message visible but near top
                             const targetScrollTop = Math.max(0, messageOffsetInContainer - topPadding);
                             
                             // Instant scroll (smooth causes clamp to fight during animation)
@@ -2614,25 +2614,26 @@
             }
 
             function handleViewportResize() {
-                // Save scroll position BEFORE padding changes
                 const messages = document.getElementById("messages");
                 if (!messages) return;
                 
+                // Save distance from BOTTOM before padding changes
                 const scrollHeightBefore = messages.scrollHeight;
                 const scrollTopBefore = messages.scrollTop;
+                const clientHeightBefore = messages.clientHeight;
+                const distanceFromBottom = scrollHeightBefore - scrollTopBefore - clientHeightBefore;
                 
-                // Update padding (changes scrollHeight)
+                // Update padding (changes scrollHeight and potentially clientHeight)
                 updateMessagesPadding();
                 
-                // Restore visual position after padding change
+                // Restore same distance from bottom after padding change
                 requestAnimationFrame(() => {
                     const scrollHeightAfter = messages.scrollHeight;
-                    const heightDiff = scrollHeightAfter - scrollHeightBefore;
+                    const clientHeightAfter = messages.clientHeight;
                     
-                    // Adjust scrollTop to maintain visual position
-                    if (heightDiff !== 0) {
-                        messages.scrollTop = scrollTopBefore + heightDiff;
-                    }
+                    // Calculate new scrollTop that maintains same distance from bottom
+                    const newScrollTop = scrollHeightAfter - clientHeightAfter - distanceFromBottom;
+                    messages.scrollTop = Math.max(0, newScrollTop);
                 });
             }
 
