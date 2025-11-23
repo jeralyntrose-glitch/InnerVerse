@@ -1904,7 +1904,7 @@
                                             suppressScrollEvents = true;
                                             const lastMessage = assistantDiv;
                                             const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                                            const targetScroll = messageBottom - messages.clientHeight + 120;
+                                            const targetScroll = messageBottom - messages.clientHeight + 160;
                                             messages.scrollTop = Math.max(0, targetScroll);
                                             requestAnimationFrame(() => {
                                                 suppressScrollEvents = false;
@@ -1955,7 +1955,7 @@
                     if (lastMessage) {
                         // Keep text visible above input bar
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 120;
+                        const targetScroll = messageBottom - messages.clientHeight + 160;
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
                             behavior: 'smooth'
@@ -2273,10 +2273,10 @@
             }
 
             // ===== SCROLL CLAMP (ChatGPT Pattern) =====
-            // Instant clamp on downward scroll creates the "resistance" feel
-            // iOS overscroll-behavior handles the visual bounce at CSS level
+            // Professional implementation: passive monitoring only, no fighting
             
             let lastClampScrollTop = 0;
+            let clampPending = null;
             
             function clampScrollPosition() {
                 const currentScrollTop = messages.scrollTop;
@@ -2290,22 +2290,31 @@
                     return;
                 }
                 
-                // Check limit immediately for downward scrolling
-                const allMessages = messages.querySelectorAll('.message');
-                if (allMessages.length === 0) return;
-                
-                const lastMessage = allMessages[allMessages.length - 1];
-                const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                
-                // Keep text visible ABOVE input bar (input bar is ~70-100px tall)
-                const buffer = 120; // Ensures ~2-3 lines visible above input bar
-                const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
-                
-                // Instant clamp creates "resistance" feel
-                // CSS overscroll-behavior creates visual bounce
-                if (currentScrollTop > maxAllowedScroll) {
-                    messages.scrollTop = maxAllowedScroll;
+                // Cancel any pending clamp check
+                if (clampPending) {
+                    cancelAnimationFrame(clampPending);
                 }
+                
+                // Wait one frame to check if past limit
+                // This lets iOS handle the bounce animation naturally
+                clampPending = requestAnimationFrame(() => {
+                    const allMessages = messages.querySelectorAll('.message');
+                    if (allMessages.length === 0) return;
+                    
+                    const lastMessage = allMessages[allMessages.length - 1];
+                    const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                    
+                    // Keep text visible ABOVE input bar
+                    const buffer = 160; // Larger buffer prevents text hiding behind input
+                    const maxAllowedScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
+                    
+                    // Only correct if wayyyy past limit (user is actively dragging into padding)
+                    // Allow iOS bounce to happen naturally for normal scrolling
+                    const hardLimit = maxAllowedScroll + 100;
+                    if (messages.scrollTop > hardLimit) {
+                        messages.scrollTop = maxAllowedScroll;
+                    }
+                });
             }
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
@@ -2424,9 +2433,9 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // Position last message at bottom of viewport (120px buffer)
+                        // Position last message at bottom of viewport (160px buffer)
                         const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 120;
+                        const targetScroll = messageBottom - messages.clientHeight + 160;
                         // Use instant for forced scrolls (initial load), smooth for user-triggered
                         messages.scrollTo({
                             top: Math.max(0, targetScroll),
