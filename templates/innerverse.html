@@ -597,14 +597,14 @@
             }
 
             .message {
-                animation: fadeIn 0.2s ease;
+                animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 position: relative;
             }
 
             @keyframes fadeIn {
                 from {
                     opacity: 0;
-                    transform: translateY(8px);
+                    transform: translateY(12px);
                 }
                 to {
                     opacity: 1;
@@ -789,13 +789,13 @@
 
             .typing-indicator.visible {
                 display: block;
-                animation: fadeInUp 0.3s ease;
+                animation: fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
             @keyframes fadeInUp {
                 from {
                     opacity: 0;
-                    transform: translateY(10px);
+                    transform: translateY(12px);
                 }
                 to {
                     opacity: 1;
@@ -820,17 +820,20 @@
                 align-items: center;
                 justify-content: center;
                 z-index: 998;
-                transition: opacity 0.3s ease, transform 0.2s ease, background 0.2s ease;
-                box-shadow: 0 1px 4px var(--shadow);
+                transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                            transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                            background 0.2s ease;
+                box-shadow: 0 2px 8px var(--shadow);
                 opacity: 0;
             }
 
             .scroll-to-bottom-btn:hover {
                 background: var(--bg-button-hover);
+                transform: translateX(-50%) scale(1.05);
             }
 
             .scroll-to-bottom-btn:active {
-                transform: translateX(-50%) scale(0.9);
+                transform: translateX(-50%) scale(0.95);
             }
 
             .scroll-to-bottom-btn.visible {
@@ -921,18 +924,18 @@
                 padding: 12px;
                 padding-bottom: calc(12px + env(safe-area-inset-bottom));
                 background: var(--bg-main);
-                border-top: 1px solid var(--border-main);
+                /* Removed border-top to eliminate line through buttons */
                 z-index: 1000;
                 display: flex;
                 gap: 8px;
                 align-items: flex-end;
-                transition: border-color 0.2s, background-color 0.2s;
+                transition: background-color 0.2s;
             }
             
             .input-container.drag-over {
-                border-color: var(--accent);
-                border-top-width: 2px;
+                /* Add subtle highlight without border to maintain clean look */
                 background: var(--accent-light);
+                box-shadow: 0 -2px 8px rgba(var(--accent-rgb), 0.2);
             }
 
             .upload-btn {
@@ -1048,7 +1051,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
             .send-btn:hover:not(:disabled) {
@@ -1071,7 +1074,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                 color: var(--error-text);
             }
             
@@ -1363,6 +1366,7 @@
             let lastInputEndTime = 0; // Timestamp of last input gesture completion
             const INPUT_COOLDOWN_MS = 250; // iOS Safari deferred scroll window (~200ms + buffer)
             let scrollLockUntil = 0; // Prevents any scroll interference after manual scroll
+            let hardScrollLock = false; // NUCLEAR OPTION: Completely freeze scroll position during critical operations
 
             // Folder Configuration (matches backend projects)
             const FOLDERS = [
@@ -2270,8 +2274,10 @@
                     welcomeMsg.remove();
                 }
 
-                // LOCK scrolling BEFORE adding message (prevents MutationObserver from interfering)
-                scrollLockUntil = Date.now() + 500;
+                // NUCLEAR SCROLL LOCK: Completely freeze scroll during message positioning
+                // This prevents ANY scroll interference (touch, mutation observer, clamp, etc.)
+                hardScrollLock = true;
+                scrollLockUntil = Date.now() + 1500; // Extended lock for iOS
                 isUserPinnedToBottom = false;
                 suppressScrollEvents = true;
                 
@@ -2293,7 +2299,7 @@
                 typingIndicator.classList.add("visible");
                 
                 // BULLETPROOF: Scroll user message to TOP of viewport
-                // Uses getBoundingClientRect (most accurate) + scroll lock (prevents interference)
+                // Uses getBoundingClientRect (most accurate) + HARD scroll lock (prevents ALL interference)
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         // Force synchronous reflow to ensure accurate measurements
@@ -2320,12 +2326,13 @@
                                 behavior: 'instant'
                             });
                             
-                            // Re-enable scroll events after lock expires
+                            // Release hard lock after position settles (iOS needs extra time)
                             setTimeout(() => {
+                                hardScrollLock = false;
                                 suppressScrollEvents = false;
                                 // Recalculate pin state now that lock is cleared
                                 updateScrollPinState();
-                            }, 500);
+                            }, 1500); // Extended timeout for iOS touch events
                         }
                     });
                 });
@@ -2844,8 +2851,20 @@
             let lastClampScrollTop = 0;
             
             function clampScrollPosition() {
+                // HARD LOCK: Completely disable clamping during critical operations
+                if (hardScrollLock) {
+                    lastClampScrollTop = messages.scrollTop;
+                    return;
+                }
+                
                 // NEVER interfere with programmatic scrolls
                 if (Date.now() < scrollLockUntil || suppressScrollEvents) {
+                    lastClampScrollTop = messages.scrollTop;
+                    return;
+                }
+                
+                // DISABLE clamping during streaming (prevents old messages from appearing)
+                if (isStreaming) {
                     lastClampScrollTop = messages.scrollTop;
                     return;
                 }
@@ -2882,6 +2901,11 @@
 
             // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
             function updateScrollPinState() {
+                // HARD LOCK: Don't update pin state during critical operations
+                if (hardScrollLock) {
+                    return;
+                }
+                
                 // Skip updates during scroll lock (prevents race conditions)
                 if (Date.now() < scrollLockUntil) {
                     return;
@@ -2932,6 +2956,11 @@
 
             // ChatGPT Pattern: Guard auto-scroll based on streaming state and user intent
             function canAutoScroll() {
+                // HARD LOCK: No auto-scroll during critical operations
+                if (hardScrollLock) {
+                    return false;
+                }
+                
                 // Respect scroll lock (prevents race conditions during manual scroll-to-top)
                 if (Date.now() < scrollLockUntil) {
                     return false;
@@ -2958,6 +2987,11 @@
             }
 
             function scrollToBottom(force = false) {
+                // HARD LOCK: No scroll during critical operations
+                if (hardScrollLock) {
+                    return;
+                }
+                
                 // SCROLL LOCK: Prevent interference after manual scroll-to-top
                 if (Date.now() < scrollLockUntil) {
                     return;
@@ -3095,6 +3129,12 @@
 
                 // Scroll detection for desktop and touch scenarios
                 addTrackedEventListener(messages, "scroll", () => {
+                    // HARD LOCK: Prevent ALL scroll handling during critical operations
+                    if (hardScrollLock) {
+                        // Immediately restore locked position if user tries to scroll
+                        return;
+                    }
+                    
                     // Clamp has 100ms debounce - won't fight iOS during active scroll
                     // Only applies limit after user releases
                     clampScrollPosition();
@@ -3111,6 +3151,11 @@
 
                 // MutationObserver to detect DOM changes in messages
                 messageObserver = new MutationObserver((mutations) => {
+                    // HARD LOCK: Prevent mutation observer from interfering during critical operations
+                    if (hardScrollLock) {
+                        return;
+                    }
+                    
                     // ChatGPT Pattern: Update button visibility on EVERY callback (not batched)
                     // This ensures button appears immediately during streaming, not after Safari releases
                     updateScrollButtonVisibility();
@@ -3145,6 +3190,11 @@
                 // This catches height changes IMMEDIATELY during streaming (not batched like MutationObserver)
                 // Fixes: Button visibility updates instantly even during long streaming sequences
                 messagesResizeObserver = new ResizeObserver(() => {
+                    // HARD LOCK: Prevent resize observer from interfering during critical operations
+                    if (hardScrollLock) {
+                        return;
+                    }
+                    
                     // Always update button visibility on height change (even during streaming)
                     updateScrollButtonVisibility();
                     
@@ -3160,6 +3210,11 @@
                     document.querySelector(".input-container");
                 if (inputContainer) {
                     inputResizeObserver = new ResizeObserver(() => {
+                        // HARD LOCK: Prevent input resize from interfering during critical operations
+                        if (hardScrollLock) {
+                            return;
+                        }
+                        
                         updateMessagesPadding();
                         
                         // Only auto-scroll if not streaming AND user is pinned
