@@ -72,7 +72,7 @@
                 --bg-main: #ffffff;
                 --bg-sidebar: #f7f7f8;
                 --bg-header: #f7f7f8;
-                --bg-input: #ffffff;
+                --bg-input: #f5f5f7; /* Subtle gray to make input bar visible */
                 --bg-user-bubble: #e5e5ea;
                 --bg-button: #ffffff;
                 --bg-button-hover: #f5f5f5;
@@ -927,14 +927,18 @@
                 padding: 12px;
                 padding-bottom: calc(12px + env(safe-area-inset-bottom));
                 background: var(--bg-main);
-                /* Removed border-top to eliminate line through buttons */
                 z-index: 1000;
                 display: flex;
                 gap: 8px;
                 align-items: flex-end;
-                transition: background-color 0.2s;
+                transition: background-color 0.2s, box-shadow 0.2s;
                 /* iOS Fix: Extend background into safe area to prevent edge line */
                 padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            }
+            
+            /* Light mode: Add subtle shadow to make input bar visible */
+            [data-theme="light"] .input-container {
+                box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.08);
             }
             
             /* Extend background below input bar to cover safe area completely */
@@ -2486,23 +2490,35 @@
                 }
             });
 
-            // ChatGPT Pattern: Scroll-to-bottom button with unified input protection
+            // iOS-NATIVE: Scroll-to-bottom button with input bar offset
             scrollToBottomBtn.addEventListener("click", () => {
-                // Guard against iOS Safari deferred scroll gestures (~200ms after ANY input)
-                // Works for touch, pointer, and mouse events from anywhere on document
+                // Guard against iOS Safari deferred scroll gestures
                 const timeSinceInput = Date.now() - lastInputEndTime;
                 
-                // iOS-NATIVE: Use scrollIntoView for reliable scroll
                 const scrollToLastMessage = () => {
                     const allMessages = messages.querySelectorAll('.message');
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // iOS-native: Let scrollIntoView handle positioning
+                        // Hybrid approach: scrollIntoView to get close, then adjust for input bar
+                        // scrollIntoView({ block: 'end' }) positions it BEHIND the input bar
+                        // So we scroll it to 'start' first, then manually position it properly
                         lastMessage.scrollIntoView({ 
-                            behavior: 'smooth',
+                            behavior: 'instant',  // Instant first, we'll smooth-scroll after
                             block: 'end',
                             inline: 'nearest'
+                        });
+                        
+                        // Now adjust upward to account for input bar (160px buffer keeps content visible)
+                        requestAnimationFrame(() => {
+                            const inputBar = document.querySelector('.input-container');
+                            const inputBarHeight = inputBar ? inputBar.offsetHeight : 80;
+                            const buffer = inputBarHeight + 80; // Input bar + comfortable spacing
+                            
+                            messages.scrollTo({
+                                top: messages.scrollTop - buffer,
+                                behavior: 'smooth'
+                            });
                         });
                     } else {
                         // Fallback if no messages exist
@@ -3010,7 +3026,7 @@
                     return;
                 }
 
-                // iOS-NATIVE: Use scrollIntoView for reliable scroll
+                // iOS-NATIVE with input bar adjustment
                 suppressScrollEvents = true;
                 
                 requestAnimationFrame(() => {
@@ -3018,17 +3034,30 @@
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // iOS-native scroll: Let iOS handle positioning
+                        // Scroll to end first (instant to get position)
                         lastMessage.scrollIntoView({ 
-                            behavior: force ? 'instant' : 'smooth',
-                            block: 'end',      // Position at bottom of viewport
+                            behavior: 'instant',
+                            block: 'end',
                             inline: 'nearest'
                         });
-                        console.log(
-                            "📜 Scrolled to last message (iOS-native)" +
-                                (force ? " (instant)" : " (smooth)") +
-                                ` | isStreaming=${isStreaming} | pinned=${isUserPinnedToBottom}`,
-                        );
+                        
+                        // Adjust for input bar
+                        requestAnimationFrame(() => {
+                            const inputBar = document.querySelector('.input-container');
+                            const inputBarHeight = inputBar ? inputBar.offsetHeight : 80;
+                            const buffer = inputBarHeight + 80; // Input bar + spacing
+                            
+                            messages.scrollTo({
+                                top: messages.scrollTop - buffer,
+                                behavior: force ? 'instant' : 'smooth'
+                            });
+                            
+                            console.log(
+                                "📜 Scrolled to last message with input offset" +
+                                    (force ? " (instant)" : " (smooth)") +
+                                    ` | buffer=${buffer}px`,
+                            );
+                        });
                     } else {
                         // Fallback if no messages exist
                         messages.scrollTo({
