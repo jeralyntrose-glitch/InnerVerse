@@ -2509,15 +2509,20 @@
                             inline: 'nearest'
                         });
                         
-                        // Now adjust upward to account for input bar
+                        // Now scroll DOWN to reveal content above input bar
                         requestAnimationFrame(() => {
                             const inputBar = document.querySelector('.input-container');
                             const inputBarHeight = inputBar ? inputBar.offsetHeight : 80;
-                            // Increased buffer: input bar + extra spacing to show full content
-                            const buffer = inputBarHeight + 160; // More generous spacing
+                            // Buffer: scroll down enough to show content above input bar
+                            const buffer = inputBarHeight + 100; // Input bar + comfortable spacing
+                            
+                            // Get the message's bottom position
+                            const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                            // Calculate target: show message above input bar
+                            const targetScroll = messageBottom - messages.clientHeight + buffer;
                             
                             messages.scrollTo({
-                                top: messages.scrollTop - buffer,
+                                top: Math.max(0, targetScroll),
                                 behavior: 'smooth'
                             });
                         });
@@ -3042,21 +3047,26 @@
                             inline: 'nearest'
                         });
                         
-                        // Adjust for input bar
+                        // Calculate proper scroll position to show content above input bar
                         requestAnimationFrame(() => {
                             const inputBar = document.querySelector('.input-container');
                             const inputBarHeight = inputBar ? inputBar.offsetHeight : 80;
-                            const buffer = inputBarHeight + 160; // Input bar + generous spacing
+                            const buffer = inputBarHeight + 100; // Input bar + spacing
+                            
+                            // Get message bottom position
+                            const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                            // Calculate scroll position: show message with buffer above input
+                            const targetScroll = messageBottom - messages.clientHeight + buffer;
                             
                             messages.scrollTo({
-                                top: messages.scrollTop - buffer,
+                                top: Math.max(0, targetScroll),
                                 behavior: force ? 'instant' : 'smooth'
                             });
                             
                             console.log(
                                 "📜 Scrolled to last message with input offset" +
                                     (force ? " (instant)" : " (smooth)") +
-                                    ` | buffer=${buffer}px`,
+                                    ` | buffer=${buffer}px, target=${targetScroll}px`,
                             );
                         });
                     } else {
