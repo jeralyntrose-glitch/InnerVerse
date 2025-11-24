@@ -2502,18 +2502,19 @@
                     if (lastMessage) {
                         // Hybrid approach: scrollIntoView to get close, then adjust for input bar
                         // scrollIntoView({ block: 'end' }) positions it BEHIND the input bar
-                        // So we scroll it to 'start' first, then manually position it properly
+                        // So we need to scroll up enough to show the content above the input bar
                         lastMessage.scrollIntoView({ 
                             behavior: 'instant',  // Instant first, we'll smooth-scroll after
                             block: 'end',
                             inline: 'nearest'
                         });
                         
-                        // Now adjust upward to account for input bar (160px buffer keeps content visible)
+                        // Now adjust upward to account for input bar
                         requestAnimationFrame(() => {
                             const inputBar = document.querySelector('.input-container');
                             const inputBarHeight = inputBar ? inputBar.offsetHeight : 80;
-                            const buffer = inputBarHeight + 80; // Input bar + comfortable spacing
+                            // Increased buffer: input bar + extra spacing to show full content
+                            const buffer = inputBarHeight + 160; // More generous spacing
                             
                             messages.scrollTo({
                                 top: messages.scrollTop - buffer,
@@ -3045,7 +3046,7 @@
                         requestAnimationFrame(() => {
                             const inputBar = document.querySelector('.input-container');
                             const inputBarHeight = inputBar ? inputBar.offsetHeight : 80;
-                            const buffer = inputBarHeight + 80; // Input bar + spacing
+                            const buffer = inputBarHeight + 160; // Input bar + generous spacing
                             
                             messages.scrollTo({
                                 top: messages.scrollTop - buffer,
