@@ -546,6 +546,9 @@
                 /* ChatGPT Pattern: Let JavaScript control scroll, not CSS */
                 gap: 16px;
                 position: relative; /* CRITICAL: Makes this the offsetParent for offsetTop calculations */
+                /* iOS-NATIVE: Let iOS handle scroll smoothness */
+                scroll-behavior: smooth;
+                overflow-anchor: auto; /* Browser maintains scroll position during content changes */
             }
 
             /* Scrollbar styling - always visible */
@@ -1037,7 +1040,7 @@
             .message-input {
                 flex: 1;
                 padding: 10px 16px;
-                border: 1px solid var(--border-input);
+                border: none; /* Removed border to eliminate visible line */
                 border-radius: 20px;
                 font-size: 16px;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
@@ -2313,43 +2316,26 @@
                 // Show typing indicator
                 typingIndicator.classList.add("visible");
                 
-                // BULLETPROOF: Scroll user message to TOP of viewport
-                // Uses getBoundingClientRect (most accurate) + HARD scroll lock (prevents ALL interference)
+                // iOS-NATIVE: Let iOS handle scroll positioning
+                // scrollIntoView is iOS-optimized and respects safe areas
                 requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        // Force synchronous reflow to ensure accurate measurements
-                        void messages.offsetHeight;
+                    const userMessages = messages.querySelectorAll('.message.user');
+                    const lastUserMessage = userMessages[userMessages.length - 1];
+                    if (lastUserMessage) {
+                        // Native iOS scroll - smooth, reliable, respects all constraints
+                        lastUserMessage.scrollIntoView({ 
+                            behavior: 'instant',  // Instant for immediate user action
+                            block: 'start',       // Position at top of viewport
+                            inline: 'nearest'     // Don't scroll horizontally
+                        });
                         
-                        const userMessages = messages.querySelectorAll('.message.user');
-                        const lastUserMessage = userMessages[userMessages.length - 1];
-                        if (lastUserMessage) {
-                            // Get positions relative to viewport
-                            const containerRect = messages.getBoundingClientRect();
-                            const messageRect = lastUserMessage.getBoundingClientRect();
-                            
-                            // Calculate absolute position within scrollable content
-                            // Formula: (message viewport position - container viewport position) + current scroll
-                            const messageOffsetInContainer = (messageRect.top - containerRect.top) + messages.scrollTop;
-                            
-                            // CHATGPT PATTERN: Position message at top with comfortable padding
-                            const topPadding = 80; // Breathing room - keeps message visible but near top
-                            const targetScrollTop = Math.max(0, messageOffsetInContainer - topPadding);
-                            
-                            // Instant scroll (smooth causes clamp to fight during animation)
-                            messages.scrollTo({
-                                top: targetScrollTop,
-                                behavior: 'instant'
-                            });
-                            
-                            // Release hard lock after position settles (iOS needs extra time)
-                            setTimeout(() => {
-                                hardScrollLock = false;
-                                suppressScrollEvents = false;
-                                // Recalculate pin state now that lock is cleared
-                                updateScrollPinState();
-                            }, 1500); // Extended timeout for iOS touch events
-                        }
-                    });
+                        // Keep hard lock but much shorter - just prevent immediate touch interference
+                        setTimeout(() => {
+                            hardScrollLock = false;
+                            suppressScrollEvents = false;
+                            updateScrollPinState();
+                        }, 800); // Reduced from 1500ms - iOS scrollIntoView is faster
+                    }
                 });
 
                 let assistantDiv = null;
@@ -2445,15 +2431,17 @@
                                                 fullResponse;
                                         }
 
-                                        // SPEC: Auto-scroll follows streaming IF user was already at bottom
+                                        // iOS-NATIVE: Auto-scroll follows streaming IF user was already at bottom
                                         // If user scrolls up during streaming, respect their intent (don't auto-scroll)
                                         if (isUserPinnedToBottom) {
                                             // User is at bottom, follow the streaming content
+                                            // Use scrollIntoView for smooth, iOS-native scrolling
                                             suppressScrollEvents = true;
-                                            const lastMessage = assistantDiv;
-                                            const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                                            const targetScroll = messageBottom - messages.clientHeight + 160;
-                                            messages.scrollTop = Math.max(0, targetScroll);
+                                            assistantDiv.scrollIntoView({ 
+                                                behavior: 'smooth',  // Smooth during streaming
+                                                block: 'end',        // Keep bottom visible
+                                                inline: 'nearest'
+                                            });
                                             requestAnimationFrame(() => {
                                                 suppressScrollEvents = false;
                                             });
@@ -2504,21 +2492,20 @@
                 // Works for touch, pointer, and mouse events from anywhere on document
                 const timeSinceInput = Date.now() - lastInputEndTime;
                 
-                // OPTION B: Scroll to show last message at bottom, not padding
+                // iOS-NATIVE: Use scrollIntoView for reliable scroll
                 const scrollToLastMessage = () => {
                     const allMessages = messages.querySelectorAll('.message');
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // Keep text visible above input bar
-                        const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 160;
-                        messages.scrollTo({
-                            top: Math.max(0, targetScroll),
-                            behavior: 'smooth'
+                        // iOS-native: Let scrollIntoView handle positioning
+                        lastMessage.scrollIntoView({ 
+                            behavior: 'smooth',
+                            block: 'end',
+                            inline: 'nearest'
                         });
                     } else {
-                        // Fallback if no messages exist - scroll to absolute bottom
+                        // Fallback if no messages exist
                         messages.scrollTo({
                             top: messages.scrollHeight,
                             behavior: 'smooth'
@@ -2738,12 +2725,11 @@
 
                 messages.appendChild(messageDiv);
                 
-                // Only auto-scroll when NOT streaming
-                // During streaming, user controls scroll, button provides escape hatch
-                if (!isStreaming) {
-                    scrollToBottom();
-                }
-
+                // CRITICAL: Never auto-scroll during message append
+                // User message positioning is handled separately with hard scroll lock
+                // Assistant message follows streaming scroll logic
+                // Adding messages should NEVER trigger scroll jumps
+                
                 return contentDiv;
             }
 
@@ -3020,36 +3006,31 @@
                 }
                 
                 // Force parameter bypasses user intent check for initial loads/sends
-                // ChatGPT Pattern: Use canAutoScroll() guard to prevent stale intent issues
                 if (!force && !canAutoScroll()) {
                     return;
                 }
 
-                // PATCH 19: Suppress scroll events during programmatic scroll
+                // iOS-NATIVE: Use scrollIntoView for reliable scroll
                 suppressScrollEvents = true;
                 
                 requestAnimationFrame(() => {
-                    // OPTION B FIX: Scroll to show last message at bottom, not padding
                     const allMessages = messages.querySelectorAll('.message');
                     const lastMessage = allMessages[allMessages.length - 1];
                     
                     if (lastMessage) {
-                        // Position last message at bottom of viewport (160px buffer)
-                        const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                        const targetScroll = messageBottom - messages.clientHeight + 160;
-                        // Use instant for forced scrolls (initial load), smooth for user-triggered
-                        messages.scrollTo({
-                            top: Math.max(0, targetScroll),
-                            behavior: force ? 'instant' : 'smooth'
+                        // iOS-native scroll: Let iOS handle positioning
+                        lastMessage.scrollIntoView({ 
+                            behavior: force ? 'instant' : 'smooth',
+                            block: 'end',      // Position at bottom of viewport
+                            inline: 'nearest'
                         });
                         console.log(
-                            "📜 Scrolled to last message" +
-                                (force ? " (forced)" : " (auto)") +
-                                ` | target=${targetScroll}px | isStreaming=${isStreaming} | pinned=${isUserPinnedToBottom}`,
+                            "📜 Scrolled to last message (iOS-native)" +
+                                (force ? " (instant)" : " (smooth)") +
+                                ` | isStreaming=${isStreaming} | pinned=${isUserPinnedToBottom}`,
                         );
                     } else {
                         // Fallback if no messages exist
-                        // Use instant for forced scrolls (initial load), smooth for user-triggered
                         messages.scrollTo({
                             top: messages.scrollHeight,
                             behavior: force ? 'instant' : 'smooth'
@@ -3171,17 +3152,18 @@
                         return;
                     }
                     
+                    // STREAMING: Completely disable mutation observer during streaming
+                    // Prevents any scroll interference when assistant message is added/updated
+                    if (isStreaming) {
+                        return;
+                    }
+                    
                     // ChatGPT Pattern: Update button visibility on EVERY callback (not batched)
                     // This ensures button appears immediately during streaming, not after Safari releases
                     updateScrollButtonVisibility();
                     
                     // Recalculate clamp after content changes
                     clampScrollPosition();
-                    
-                    // ChatGPT Pattern: Disable auto-scroll during streaming
-                    if (isStreaming) {
-                        return;
-                    }
                     
                     // Only auto-scroll if user is still pinned to bottom AND content changed (non-streaming)
                     if (
@@ -3210,11 +3192,17 @@
                         return;
                     }
                     
-                    // Always update button visibility on height change (even during streaming)
+                    // STREAMING: Disable resize observer during streaming
+                    // Prevents scroll jumps when assistant message is added
+                    if (isStreaming) {
+                        return;
+                    }
+                    
+                    // Update button visibility on height change
                     updateScrollButtonVisibility();
                     
-                    // Only auto-scroll if not streaming and user is pinned
-                    if (!isStreaming && isUserPinnedToBottom) {
+                    // Only auto-scroll if user is pinned
+                    if (isUserPinnedToBottom) {
                         scrollToBottom();
                     }
                 });
