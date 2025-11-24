@@ -930,6 +930,20 @@
                 gap: 8px;
                 align-items: flex-end;
                 transition: background-color 0.2s;
+                /* iOS Fix: Extend background into safe area to prevent edge line */
+                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            }
+            
+            /* Extend background below input bar to cover safe area completely */
+            .input-container::after {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+                height: env(safe-area-inset-bottom, 0px);
+                background: var(--bg-main);
+                z-index: -1;
             }
             
             .input-container.drag-over {
@@ -1136,7 +1150,8 @@
 
                 .input-container {
                     left: 0 !important; /* Full width on mobile (sidebar is overlay) */
-                    padding: 12px !important;
+                    padding: 12px;
+                    padding-bottom: calc(12px + env(safe-area-inset-bottom, 34px)) !important;
                 }
 
                 .messages {
@@ -3281,9 +3296,10 @@
                 const rect = inputContainer.getBoundingClientRect();
                 const inputHeight = rect.height;
 
-                // CRITICAL: Use viewport height to create enough scroll room
-                // This allows the last user message to scroll to the top with space below for AI response
-                const vpHeight = window.visualViewport?.height ?? window.innerHeight;
+                // CRITICAL: Always use innerHeight, NOT visualViewport.height
+                // visualViewport shrinks when keyboard opens, causing excessive padding
+                // We want consistent padding regardless of keyboard state
+                const vpHeight = window.innerHeight;
                 
                 // Get safe-area-inset-bottom (iPhone home indicator only, not keyboard)
                 // Formula: innerHeight - (vpHeight + offsetTop) isolates bottom inset
