@@ -3259,6 +3259,19 @@
                 const messages = document.getElementById("messages");
                 if (!messages) return;
                 
+                // iOS KEYBOARD FIX: Don't recalculate padding when keyboard is open
+                // The keyboard opening reduces visualViewport.height significantly
+                // We only want to recalculate when keyboard is fully closed
+                if (window.visualViewport) {
+                    const keyboardHeight = window.innerHeight - window.visualViewport.height;
+                    const keyboardIsOpen = keyboardHeight > 100; // Threshold for keyboard detection
+                    
+                    if (keyboardIsOpen) {
+                        console.log("⌨️ Keyboard detected, skipping padding update");
+                        return; // Don't update padding while keyboard is open
+                    }
+                }
+                
                 // Save distance from BOTTOM before padding changes
                 const scrollHeightBefore = messages.scrollHeight;
                 const scrollTopBefore = messages.scrollTop;
@@ -3284,9 +3297,6 @@
             }
 
             // ===== DYNAMIC PADDING CALCULATION =====
-            // Track padding mode to prevent oscillation (hysteresis)
-            let currentPaddingMode = null; // null, 'LARGE', or 'SMALL'
-            
             function updateMessagesPadding() {
                 const inputContainer =
                     document.querySelector(".input-container");
@@ -3316,41 +3326,29 @@
                     messagesContentHeight += msg.offsetHeight;
                 });
                 
-                // HYSTERESIS: Add buffer zone to prevent oscillation between modes
+                // SIMPLIFIED: Remove hysteresis that was causing padding to stick
+                // Just use simple threshold - padding should be responsive to content changes
                 const threshold = vpHeight + inputHeight;
-                const upperThreshold = threshold + 300; // Switch to LARGE
-                const lowerThreshold = threshold - 300; // Switch to SMALL
-                
-                // Determine if we need large padding with hysteresis
-                let needsLargePadding;
-                if (currentPaddingMode === null) {
-                    // First calculation - use simple threshold
-                    needsLargePadding = messagesContentHeight > threshold;
-                } else if (currentPaddingMode === 'LARGE') {
-                    // Already in LARGE mode - only switch to SMALL if content drops significantly
-                    needsLargePadding = messagesContentHeight > lowerThreshold;
-                } else {
-                    // Currently in SMALL mode - only switch to LARGE if content grows significantly
-                    needsLargePadding = messagesContentHeight > upperThreshold;
-                }
+                const needsLargePadding = messagesContentHeight > threshold;
                 
                 let totalPadding;
+                let paddingMode;
                 if (needsLargePadding) {
                     // Long conversation: Use large padding for scroll-to-top behavior
                     const minPadding = vpHeight - inputHeight - 100;
                     totalPadding = Math.max(650, Math.min(900, minPadding + safeAreaInset));
-                    currentPaddingMode = 'LARGE';
+                    paddingMode = 'LARGE';
                 } else {
                     // Short conversation/fresh load: Use minimal padding
                     totalPadding = inputHeight + 120 + safeAreaInset;
-                    currentPaddingMode = 'SMALL';
+                    paddingMode = 'SMALL';
                 }
 
                 messages.style.paddingBottom = totalPadding + "px";
                 console.log(
                     "📏 Updated padding:",
                     totalPadding + "px",
-                    `(${currentPaddingMode} mode)`,
+                    `(${paddingMode} mode)`,
                     "| viewport:",
                     vpHeight + "px, input:",
                     inputHeight + "px, safe-area:",
@@ -3493,16 +3491,8 @@
 
                 setupIOSInputBar();
 
-                // CRITICAL: Listen to visualViewport resize for iOS keyboard show/hide
-                // This ensures padding recalculates when keyboard opens/closes
-                if (window.visualViewport) {
-                    let resizeTimer;
-                    window.visualViewport.addEventListener('resize', () => {
-                        clearTimeout(resizeTimer);
-                        resizeTimer = setTimeout(updateMessagesPadding, 100); // Debounce 100ms
-                    });
-                    console.log("✅ visualViewport.onresize listener registered");
-                }
+                // REMOVED DUPLICATE: visualViewport resize listener is already registered in initializeObservers()
+                // The duplicate was causing padding to update incorrectly when keyboard opens/closes
 
                 console.log("✅ InnerVerse Chat - Phase 1 Ready");
                 console.log(
