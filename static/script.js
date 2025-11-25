@@ -342,9 +342,28 @@ function processFile(file) {
       saveUploadedFiles(uploadedFiles);
       
       // Save tags if present (InnerVerse Intelligence Layer)
-      if (result.tags && Array.isArray(result.tags) && result.tags.length > 0) {
-        saveDocumentTags(result.document_id, file.name, result.tags);
-        console.log(`🏷️ Document tagged with ${result.tags.length} concepts:`, result.tags.slice(0, 5));
+      // Backend returns 'structured_metadata' with MBTI/Jungian tags
+      const metadata = result.structured_metadata || result.tags;
+      
+      if (metadata && typeof metadata === 'object' && Object.keys(metadata).length > 0) {
+        // Convert structured metadata to tags array for display
+        const tags = [];
+        if (metadata.content_type && metadata.content_type !== 'none') tags.push(metadata.content_type);
+        if (metadata.difficulty && metadata.difficulty !== 'none') tags.push(metadata.difficulty);
+        if (metadata.primary_category && metadata.primary_category !== 'none') tags.push(metadata.primary_category);
+        if (metadata.types_discussed) tags.push(...metadata.types_discussed);
+        if (metadata.functions_covered) tags.push(...metadata.functions_covered);
+        if (metadata.quadra && metadata.quadra !== 'none') tags.push(metadata.quadra);
+        if (metadata.temple && metadata.temple !== 'none') tags.push(metadata.temple);
+        if (metadata.topics) tags.push(...metadata.topics);
+        
+        if (tags.length > 0) {
+          saveDocumentTags(result.document_id, file.name, tags);
+          console.log(`🏷️ Document tagged with ${tags.length} concepts:`, tags.slice(0, 5));
+          console.log(`📊 Full metadata:`, metadata);
+        } else {
+          console.warn('⚠️ Metadata present but no tags extracted for:', file.name);
+        }
       } else {
         // Warn user that auto-tagging failed (but upload succeeded)
         console.warn('⚠️ Auto-tagging failed for:', file.name);
