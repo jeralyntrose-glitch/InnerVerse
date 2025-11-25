@@ -268,6 +268,115 @@
       </div>
     </div>
 
+    <!-- 🚀 ULTIMATE OPTIMIZATION Section -->
+    <div class="ultimate-optimize-section">
+      <button class="ultimate-optimize-toggle" id="ultimate-optimize-toggle">
+        <div class="ultimate-optimize-toggle-content">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <span>🚀 ULTIMATE OPTIMIZATION - Transform ALL Files</span>
+        </div>
+        <svg class="ultimate-optimize-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      
+      <div class="ultimate-optimize-content" id="ultimate-optimize-content">
+        <div class="ultimate-optimize-info">
+          <h3>🔥 The Best-in-Class RAG Backend</h3>
+          <p class="ultimate-optimize-description">
+            Full 3-stage pipeline + semantic chunking for ALL your Season 1-21 documents:
+          </p>
+          
+          <div class="optimization-features">
+            <div class="feature-item">
+              <span class="feature-icon">🔧</span>
+              <div class="feature-text">
+                <strong>Stage 1:</strong> Fix ALL typos (MBTI types, functions, UDSF/SDUF)
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🤖</span>
+              <div class="feature-text">
+                <strong>Stage 2:</strong> GPT-4o-mini cleaning (60-70% size reduction, no quality loss)
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🧠</span>
+              <div class="feature-text">
+                <strong>Semantic Chunking:</strong> Respect concept boundaries for perfect RAG
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🔄</span>
+              <div class="feature-text">
+                <strong>Re-embedding:</strong> text-embedding-3-large with optimized chunks
+              </div>
+            </div>
+          </div>
+          
+          <div class="optimization-stats">
+            <div class="stat-box">
+              <div class="stat-label">Estimated Time</div>
+              <div class="stat-value">3-4 hours</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Estimated Cost</div>
+              <div class="stat-value">~$6-9</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Quality Boost</div>
+              <div class="stat-value">MAXIMUM 🔥</div>
+            </div>
+          </div>
+          
+          <div class="warning-box">
+            ⚠️ <strong>Important:</strong> This will replace ALL existing vectors with optimized ones. 
+            Make sure you have backups if needed. This process takes 3-4 hours and cannot be cancelled mid-way.
+          </div>
+          
+          <button id="ultimate-optimize-btn" class="btn-ultimate-optimize">
+            🚀 START ULTIMATE OPTIMIZATION
+          </button>
+        </div>
+        
+        <div id="ultimate-optimize-progress" class="ultimate-optimize-progress hidden">
+          <div class="progress-header">
+            <h3>🔥 Ultimate Optimization in Progress...</h3>
+            <p class="progress-subtitle">This will take 3-4 hours. You can close this page.</p>
+          </div>
+          
+          <div class="progress-stats-grid">
+            <div class="progress-stat">
+              <div class="progress-stat-label">Documents Processed</div>
+              <div class="progress-stat-value" id="ultimate-docs-processed">0 / 0</div>
+            </div>
+            <div class="progress-stat">
+              <div class="progress-stat-label">Vectors Optimized</div>
+              <div class="progress-stat-value" id="ultimate-vectors-optimized">0</div>
+            </div>
+            <div class="progress-stat">
+              <div class="progress-stat-label">Failed</div>
+              <div class="progress-stat-value error" id="ultimate-docs-failed">0</div>
+            </div>
+          </div>
+          
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="ultimate-progress-bar"></div>
+            <div class="progress-bar-text" id="ultimate-progress-text">0%</div>
+          </div>
+          
+          <div class="current-document-box">
+            <div class="current-doc-label">Current Document:</div>
+            <div class="current-doc-name" id="ultimate-current-doc">Initializing...</div>
+          </div>
+          
+          <div id="ultimate-optimize-result" class="ultimate-optimize-result"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 🔄 Batch Re-Tagging Section -->
     <div class="batch-retag-section">
       <button class="batch-retag-toggle" id="batch-retag-toggle">

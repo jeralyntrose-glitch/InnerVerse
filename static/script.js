@@ -1846,3 +1846,124 @@ async function startBatchRetag() {
     button.textContent = '🔄 Start Batch Re-Tagging';
   }
 }
+
+// === ULTIMATE OPTIMIZATION ===
+const ultimateOptimizeToggle = document.getElementById('ultimate-optimize-toggle');
+const ultimateOptimizeContent = document.getElementById('ultimate-optimize-content');
+const ultimateOptimizeBtn = document.getElementById('ultimate-optimize-btn');
+
+if (ultimateOptimizeToggle) {
+  ultimateOptimizeToggle.addEventListener('click', () => {
+    ultimateOptimizeContent.classList.toggle('hidden');
+    ultimateOptimizeToggle.classList.toggle('active');
+  });
+}
+
+if (ultimateOptimizeBtn) {
+  ultimateOptimizeBtn.addEventListener('click', async () => {
+    // Confirm with user
+    const confirmed = confirm(
+      '🚀 ULTIMATE OPTIMIZATION\n\n' +
+      'This will:\n' +
+      '• Process ALL documents in Pinecone\n' +
+      '• Fix typos, optimize text, semantic chunking\n' +
+      '• Re-embed everything with optimized chunks\n' +
+      '• Replace old vectors with new ones\n\n' +
+      'Time: 3-4 hours\n' +
+      'Cost: ~$6-9\n\n' +
+      'Continue?'
+    );
+    
+    if (!confirmed) return;
+    
+    // Disable button
+    ultimateOptimizeBtn.disabled = true;
+    ultimateOptimizeBtn.textContent = '⏳ Starting Optimization...';
+    
+    // Show progress section
+    const progressDiv = document.getElementById('ultimate-optimize-progress');
+    progressDiv.classList.remove('hidden');
+    
+    const resultDiv = document.getElementById('ultimate-optimize-result');
+    const docsProcessed = document.getElementById('ultimate-docs-processed');
+    const vectorsOptimized = document.getElementById('ultimate-vectors-optimized');
+    const docsFailed = document.getElementById('ultimate-docs-failed');
+    const progressBar = document.getElementById('ultimate-progress-bar');
+    const progressText = document.getElementById('ultimate-progress-text');
+    const currentDocName = document.getElementById('ultimate-current-doc');
+    
+    // Reset display
+    docsProcessed.textContent = '0 / 0';
+    vectorsOptimized.textContent = '0';
+    docsFailed.textContent = '0';
+    progressBar.style.width = '0%';
+    progressText.textContent = '0%';
+    currentDocName.textContent = 'Querying Pinecone...';
+    resultDiv.innerHTML = '';
+    
+    try {
+      console.log('🚀 Starting ULTIMATE optimization...');
+      
+      // Start the optimization (this will take hours)
+      const response = await fetch('/api/batch-full-optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Optimization failed');
+      }
+      
+      console.log('✅ Ultimate optimization complete:', result);
+      
+      // Update final stats
+      docsProcessed.textContent = `${result.documents_optimized} / ${result.total_documents}`;
+      vectorsOptimized.textContent = result.total_vectors_created || 0;
+      docsFailed.textContent = result.documents_failed || 0;
+      progressBar.style.width = '100%';
+      progressText.textContent = '100%';
+      currentDocName.textContent = 'COMPLETE! 🎉';
+      
+      // Show success message
+      resultDiv.innerHTML = `
+        <div style="color: #10A37F; font-weight: bold; font-size: 18px; margin-top: 20px;">
+          🎉 ULTIMATE OPTIMIZATION COMPLETE!
+        </div>
+        <div style="margin-top: 15px; font-size: 14px;">
+          ✅ ${result.documents_optimized} documents transformed<br>
+          ✅ ${result.total_vectors_created} optimized vectors created<br>
+          ✅ Quality level: MAXIMUM 🔥<br>
+          ${result.documents_failed > 0 ? `<br>⚠️ ${result.documents_failed} documents failed` : ''}
+        </div>
+        <div style="margin-top: 15px; padding: 15px; background: rgba(16, 163, 127, 0.1); border-radius: 8px; font-size: 13px;">
+          Your RAG backend is now best-in-class! Try asking questions about your Season 1-21 content - 
+          the quality will be dramatically better! 🎯
+        </div>
+      `;
+      
+      // Re-enable button
+      ultimateOptimizeBtn.disabled = false;
+      ultimateOptimizeBtn.textContent = '✅ Optimization Complete!';
+      
+    } catch (error) {
+      console.error('❌ Ultimate optimization error:', error);
+      
+      currentDocName.textContent = 'ERROR';
+      resultDiv.innerHTML = `
+        <div style="color: #FF4444; font-weight: bold; margin-top: 15px;">
+          ❌ Error: ${error.message}
+        </div>
+        <div style="margin-top: 10px; font-size: 13px; color: #999;">
+          Check your server logs for details. You may need to restart the process.
+        </div>
+      `;
+      
+      ultimateOptimizeBtn.disabled = false;
+      ultimateOptimizeBtn.textContent = '🔄 Retry Optimization';
+    }
+  });
+}
