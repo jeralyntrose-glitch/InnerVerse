@@ -2135,6 +2135,108 @@ label,
   border: 1px dashed var(--border-color);
 }
 
+/* Document Card Styles */
+.documents-placeholder {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-style: italic;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--drop-area-bg);
+  border-radius: 12px;
+  border: 2px dashed var(--border-color);
+}
+
+.document-card {
+  padding: 20px;
+  background: var(--drop-area-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.document-card:hover {
+  border-color: #8b5cf6;
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+.document-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.document-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.document-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.document-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.document-date, .document-size {
+  font-weight: 500;
+}
+
+.document-separator {
+  opacity: 0.5;
+}
+
+.document-status {
+  color: #10a37f;
+  font-weight: 600;
+}
+
+.document-card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.doc-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.doc-action-btn:hover {
+  color: #8b5cf6;
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.doc-action-btn svg {
+  stroke: currentColor;
+}
+
+/* Legacy styles for backward compatibility */
 .tagged-document-item {
   padding: 16px;
   background: var(--drop-area-bg);

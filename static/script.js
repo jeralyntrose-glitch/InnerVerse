@@ -1588,75 +1588,79 @@ async function loadTagLibrary() {
     const data = await response.json();
     
     if (!data.documents || Object.keys(data.documents).length === 0) {
-      document.getElementById('tag-cloud').innerHTML = '<div class="tag-cloud-placeholder">Upload documents to see extracted tags...</div>';
-      document.getElementById('tagged-documents-list').innerHTML = '<div class="tagged-documents-placeholder">No tagged documents yet. Upload a PDF to see auto-extracted MBTI tags!</div>';
+      document.getElementById('tagged-documents-list').innerHTML = '<div class="documents-placeholder">No documents yet. Upload a PDF to get started!</div>';
       return;
     }
     
     const taggedDocs = data.documents;
     const docCount = Object.keys(taggedDocs).length;
     
-    console.log(`📚 Loading tag library with ${docCount} documents from Pinecone`);
+    console.log(`📚 Loading document library with ${docCount} documents`);
     
-    // Build tag frequency map
-    const tagFrequency = {};
-    Object.values(taggedDocs).forEach(doc => {
-      if (doc.tags && Array.isArray(doc.tags)) {
-        doc.tags.forEach(tag => {
-          tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
-        });
-      }
-    });
-    
-    // Sort tags by frequency
-    const sortedTags = Object.entries(tagFrequency)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 30); // Top 30 tags
-    
-    // Build tag cloud
-    const tagCloudHTML = sortedTags.map(([tag, count]) => 
-      `<div class="tag-badge clickable" onclick="filterByTag('${tag}')">
-        ${tag}
-        <span class="tag-count">${count}</span>
-      </div>`
-    ).join('');
-    
-    document.getElementById('tag-cloud').innerHTML = tagCloudHTML || '<div class="tag-cloud-placeholder">No tags extracted yet</div>';
-    
-    // Build document list
+    // Build document list sorted by most recent
     const docsArray = Object.entries(taggedDocs)
       .map(([id, doc]) => ({ id, ...doc }))
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
+    // Helper function to format file size
+    const formatFileSize = (bytes) => {
+      if (!bytes) return '—';
+      const mb = bytes / (1024 * 1024);
+      return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+    };
+    
+    // Helper function to format date
+    const formatDate = (timestamp) => {
+      const date = new Date(timestamp);
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      return date.toLocaleDateString('en-US', options);
+    };
+    
     const docsHTML = docsArray.map(doc => `
-      <div class="tagged-document-item">
-        <div class="tagged-document-header">
-          <div class="tagged-document-title" id="doc-title-${doc.id}">${doc.filename}</div>
-          <button class="doc-edit-btn" onclick="editDocumentTitle('${doc.id}', '${(doc.filename || '').replace(/'/g, "\\'")}')">
+      <div class="document-card">
+        <div class="document-card-header">
+          <span class="document-icon">📄</span>
+          <div class="document-title" id="doc-title-${doc.id}">${doc.filename || 'Untitled Document'}</div>
+        </div>
+        <div class="document-card-meta">
+          <span class="document-date">${formatDate(doc.timestamp)}</span>
+          <span class="document-separator">•</span>
+          <span class="document-size">${formatFileSize(doc.fileSize)}</span>
+          <span class="document-separator">•</span>
+          <span class="document-status">✓ Indexed</span>
+        </div>
+        <div class="document-card-actions">
+          <button class="doc-action-btn" onclick="editDocumentTitle('${doc.id}', '${(doc.filename || '').replace(/'/g, "\\'")}')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
+            Rename
           </button>
-        </div>
-        <div class="tagged-document-tags">
-          ${doc.tags && doc.tags.length > 0 
-            ? doc.tags.map(tag => `<span class="tag-mini">${tag}</span>`).join('')
-            : '<span class="tag-mini" style="opacity: 0.5;">No tags</span>'
-          }
-        </div>
-        <div class="tagged-document-meta">
-          <span>🏷️ ${doc.tags?.length || 0} tags</span>
-          <span>📅 ${new Date(doc.timestamp).toLocaleDateString()}</span>
+          <button class="doc-action-btn" onclick="deleteDocument('${doc.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Delete
+          </button>
+          <button class="doc-action-btn" onclick="downloadDocument('${doc.id}', '${(doc.filename || '').replace(/'/g, "\\'")}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download
+          </button>
         </div>
       </div>
     `).join('');
     
     document.getElementById('tagged-documents-list').innerHTML = docsHTML;
-    console.log(`✅ Tag library loaded: ${sortedTags.length} tags, ${docsArray.length} documents`);
+    console.log(`✅ Document library loaded: ${docsArray.length} documents`);
   } catch (error) {
-    console.error('❌ Error loading tag library:', error);
-    document.getElementById('tag-cloud').innerHTML = '<div class="tag-cloud-placeholder">Error loading tags...</div>';
+    console.error('❌ Error loading document library:', error);
+    document.getElementById('tagged-documents-list').innerHTML = '<div class="documents-placeholder">Error loading documents...</div>';
   }
 }
 
@@ -1666,6 +1670,42 @@ function filterByTag(tag) {
   // For now, just highlight the tag
   alert(`Filter by tag: ${tag}\n\nThis will search documents tagged with "${tag}"`);
 }
+
+// Delete document (exposed globally for onclick)
+window.deleteDocument = async function(docId) {
+  if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+    return;
+  }
+  
+  try {
+    console.log(`🗑️ Deleting document: ${docId}`);
+    
+    const response = await fetch(`/documents/${docId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete document');
+    }
+    
+    const result = await response.json();
+    console.log('✅ Document deleted:', result);
+    
+    // Reload document library
+    await loadTagLibrary();
+    showSuccess('Document deleted successfully');
+  } catch (error) {
+    console.error('❌ Delete error:', error);
+    showError(`Failed to delete document: ${error.message}`);
+  }
+};
+
+// Download document (exposed globally for onclick)
+window.downloadDocument = function(docId, filename) {
+  console.log(`📥 Download requested for: ${filename}`);
+  showError('Download feature coming soon! Documents are stored in Pinecone vector database.');
+};
 
 // Edit document title in tag library (exposed globally for onclick)
 window.editDocumentTitle = async function(docId, currentTitle) {
