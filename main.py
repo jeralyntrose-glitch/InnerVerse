@@ -668,6 +668,278 @@ Your response (valid JSON only):"""
         }
 
 
+# ============================================================================
+# ENTERPRISE AUTO-TAGGING V2 - Professional-Grade Metadata Extraction
+# ============================================================================
+
+async def auto_tag_document_v2_enterprise(text: str, filename: str, openai_client) -> dict:
+    """
+    🚀 ENTERPRISE-GRADE AUTO-TAGGING with expanded metadata extraction.
+    
+    Improvements over v1:
+    - Multi-chunk sampling (beginning, middle, end) instead of just first 3000 chars
+    - Expanded to 18 metadata fields (vs 10 in v1)
+    - Octagram state extraction (UDSF, UDUF, SDSF, SDUF)
+    - Function position extraction (Ni_hero, Te_parent, etc.)
+    - Season/episode number extraction
+    - Key concept extraction
+    - Confidence scoring
+    - Pair dynamics detection
+    - Archetype identification
+    
+    Returns: Enhanced metadata dictionary with 18 fields
+    """
+    
+    # STEP 1: Multi-chunk sampling for better coverage
+    text_length = len(text)
+    chunks_to_sample = []
+    
+    if text_length <= 4000:
+        # Short document - analyze everything
+        chunks_to_sample.append(("full", text))
+    else:
+        # Long document - sample beginning, middle, end
+        beginning = text[:2000]
+        middle_start = (text_length // 2) - 1000
+        middle = text[middle_start:middle_start + 2000]
+        end = text[-2000:]
+        
+        chunks_to_sample.append(("beginning", beginning))
+        chunks_to_sample.append(("middle", middle))
+        chunks_to_sample.append(("end", end))
+    
+    # Combine samples for analysis
+    combined_sample = "\n\n[...]\n\n".join([chunk for _, chunk in chunks_to_sample])
+    sample_text = combined_sample[:6000]  # Max 6000 chars for cost control
+    
+    # STEP 2: Extract season/episode from filename
+    import re
+    season_match = re.search(r'[Ss]eason\s*(\d+)', filename)
+    episode_match = re.search(r'[Ee]pisode\s*(\d+)|[Ee]p\s*(\d+)', filename)
+    
+    season_number = season_match.group(1) if season_match else None
+    episode_number = (episode_match.group(1) or episode_match.group(2)) if episode_match else None
+    
+    # STEP 3: Get reference data for validation
+    reference_summary = {}
+    if VALIDATOR:
+        reference_summary = VALIDATOR.get_reference_summary()
+    
+    # STEP 4: Build enterprise-grade extraction prompt
+    prompt = f"""You are an expert in CS Joseph's MBTI/Jungian Analytical Psychology system. Analyze this transcript and extract COMPREHENSIVE structured metadata.
+
+TRANSCRIPT TITLE: {filename}
+DETECTED SEASON: {season_number or "Unknown"}
+DETECTED EPISODE: {episode_number or "Unknown"}
+
+TRANSCRIPT CONTENT (multi-chunk sample):
+{sample_text}
+
+AUTHORITATIVE REFERENCE DATA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Valid MBTI Types: {', '.join(reference_summary.get('valid_types', []))}
+Valid Functions: {', '.join(reference_summary.get('valid_function_codes', []))}
+Valid Quadras: {', '.join(reference_summary.get('valid_quadras', []))}
+Valid Temperaments: {', '.join(reference_summary.get('valid_temperaments', []))}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Extract COMPREHENSIVE metadata as valid JSON with these 18 fields:
+
+{{
+  // === CORE CLASSIFICATION (existing) ===
+  "content_type": "main_season | csj_responds | special | cutting_edge | celebrity_typing",
+  "difficulty": "foundation | intermediate | advanced | expert",
+  "primary_category": "cognitive_functions | type_profiles | relationships | personal_development | typing_methodology | four_sides | octagram | compatibility | celebrity_example",
+  "season_number": "21",
+  "episode_number": "5",
+  
+  // === TYPE & FUNCTION ANALYSIS (existing + enhanced) ===
+  "types_discussed": ["INTJ", "ENFP"],
+  "functions_covered": ["Ni", "Te", "Fi", "Se"],
+  "function_positions": ["Ni_hero", "Te_parent", "Fi_demon", "Se_child"],
+  
+  // === CS JOSEPH FRAMEWORKS (NEW - CRITICAL!) ===
+  "octagram_states": ["UDSF", "UDUF", "SDSF", "SDUF"],
+  "pair_dynamics": ["golden_pair", "pedagogue_pair", "silver_pair", "bronze_pair", "companion", "none"],
+  "archetypes": ["paladin", "gladiator", "bard", "crusader", "judicator", "none"],
+  
+  // === RELATIONSHIP & STRUCTURE (existing) ===
+  "relationship_type": "golden_pair | pedagogue_pair | bronze_pair | dyad_pair | none",
+  "quadra": "Alpha | Beta | Gamma | Delta | none",
+  "temple": "soul | heart | mind | body | multi | none",
+  
+  // === CONTENT INTELLIGENCE (NEW) ===
+  "key_concepts": ["cognitive_transitions", "shadow_integration", "Ni_nemesis_behavior"],
+  "teaching_focus": "theoretical | practical | case_study | Q&A | mixed",
+  "target_audience": "beginner | intermediate | advanced | expert | general",
+  
+  // === LEGACY FIELDS (existing) ===
+  "topics": ["se_demon", "trust_issues"],
+  "use_case": ["self_improvement", "relationship_help", "typing_others", "understanding_theory"]
+}}
+
+CRITICAL EXTRACTION RULES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔥 OCTAGRAM STATES (Priority #1):
+- Look for: "UDSF", "UDUF", "SDSF", "SDUF" (case-insensitive)
+- Look for: "unconscious developed subconscious focused"
+- Look for: "subconscious developed unconscious focused"
+- Extract ALL mentioned states, not just one
+- If none found, use empty array []
+
+🔥 FUNCTION POSITIONS (Priority #2):
+- Format: "{function}_{position}" (e.g., "Ni_hero", "Te_parent")
+- Valid positions: hero, parent, child, inferior, nemesis, critic, trickster, demon
+- Extract ONLY explicitly mentioned function-position pairs
+- Examples: "Ni hero" → "Ni_hero", "Fe critic" → "Fe_critic"
+- Max 8 entries (one per function position in stack)
+
+🔥 PAIR DYNAMICS (Priority #3):
+- golden_pair: Mentioned as "golden pair" or two types with complementary functions
+- pedagogue_pair: Teaching relationship
+- silver_pair, bronze_pair: Mentioned explicitly
+- companion: Same-quadra relationship
+- Extract ALL mentioned pair types
+
+🔥 ARCHETYPES (Priority #4):
+- paladin, gladiator, bard, crusader, judicator, guardian, etc.
+- Extract from CS Joseph's archetype system
+- If none mentioned, use []
+
+🔥 KEY CONCEPTS (Priority #5):
+- Extract 3-7 core teaching points
+- Use snake_case format (e.g., "shadow_integration", "cognitive_transitions")
+- Focus on UNIQUE insights, not generic MBTI terms
+- Examples: "Ni_nemesis_hypervigilance", "Fe_critic_harsh_judgment"
+
+✅ VALIDATION:
+- ONLY use types/functions from reference data
+- Use "none" for singular fields if not applicable
+- Use [] for array fields if no data
+- Be specific but don't hallucinate
+- If season/episode detected in filename, validate against content
+
+Your response (valid JSON only, no markdown):"""
+
+    try:
+        print(f"🏷️ [ENTERPRISE V2] Auto-tagging: {filename}")
+        print(f"   📊 Analyzing {len(sample_text):,} chars across {len(chunks_to_sample)} chunks")
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "You are an expert in CS Joseph's MBTI/Jungian system. Extract comprehensive structured metadata from transcripts as valid JSON. ONLY use values from authoritative reference data. Be thorough and precise."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,  # Lower for more consistent extraction
+            max_tokens=1200  # More tokens for expanded metadata
+        )
+        
+        # Track usage
+        input_tokens = response.usage.prompt_tokens
+        output_tokens = response.usage.completion_tokens
+        cost = (input_tokens / 1000) * PRICING["gpt-4o-mini-input"] + \
+               (output_tokens / 1000) * PRICING["gpt-4o-mini-output"]
+        log_api_usage("auto_tagging_v2_enterprise", "gpt-4o-mini", 
+                      input_tokens=input_tokens, 
+                      output_tokens=output_tokens, 
+                      cost=cost)
+        
+        # Parse response
+        response_text = response.choices[0].message.content.strip()
+        
+        # Remove markdown if present
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+            response_text = response_text.strip()
+        
+        raw_metadata = json.loads(response_text)
+        
+        # STEP 5: Add confidence scoring based on data quality
+        confidence_score = 1.0
+        
+        # Reduce confidence if season/episode mismatch
+        if season_number and raw_metadata.get('season_number') != season_number:
+            confidence_score -= 0.1
+        
+        # Reduce confidence if no types found
+        if not raw_metadata.get('types_discussed'):
+            confidence_score -= 0.15
+        
+        # Reduce confidence if no functions found
+        if not raw_metadata.get('functions_covered'):
+            confidence_score -= 0.1
+        
+        # Boost confidence if octagram states found
+        if raw_metadata.get('octagram_states'):
+            confidence_score += 0.05
+        
+        # Boost confidence if function positions found
+        if raw_metadata.get('function_positions'):
+            confidence_score += 0.05
+        
+        # Clamp between 0.5 and 1.0
+        confidence_score = max(0.5, min(1.0, confidence_score))
+        
+        # Add confidence and content density to metadata
+        raw_metadata['tag_confidence'] = round(confidence_score, 2)
+        raw_metadata['content_density'] = "high" if len(text) > 15000 else "medium" if len(text) > 5000 else "low"
+        
+        # STEP 6: Validate with reference validator
+        if VALIDATOR:
+            validated_metadata, validation_report = VALIDATOR.validate_structured_metadata(raw_metadata)
+            
+            # Log results
+            print(f"   ✅ [V2] Validated metadata:")
+            print(f"      📁 Content: {validated_metadata.get('content_type')} | Season {validated_metadata.get('season_number', '?')}")
+            print(f"      🎯 Category: {validated_metadata.get('primary_category')} | Difficulty: {validated_metadata.get('difficulty')}")
+            print(f"      👥 Types: {validated_metadata.get('types_discussed', [])}")
+            print(f"      🧠 Functions: {validated_metadata.get('functions_covered', [])}")
+            print(f"      🔄 Octagram: {validated_metadata.get('octagram_states', [])} {'✨ NEW!' if validated_metadata.get('octagram_states') else ''}")
+            print(f"      ⚡ Positions: {validated_metadata.get('function_positions', [])[:3]}{'...' if len(validated_metadata.get('function_positions', [])) > 3 else ''} {'✨ NEW!' if validated_metadata.get('function_positions') else ''}")
+            print(f"      💡 Key Concepts: {validated_metadata.get('key_concepts', [])[:2]}...")
+            print(f"      📊 Confidence: {validated_metadata.get('tag_confidence', 0.0):.2f}")
+            
+            return validated_metadata
+        else:
+            print(f"   ⚠️ [V2] Validator not available - using unvalidated metadata")
+            return raw_metadata
+        
+    except Exception as e:
+        print(f"   ❌ [V2] Enterprise tagging failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return minimal fallback metadata
+        return {
+            "content_type": "none",
+            "difficulty": "none",
+            "primary_category": "none",
+            "season_number": season_number or "unknown",
+            "episode_number": episode_number or "unknown",
+            "types_discussed": [],
+            "functions_covered": [],
+            "function_positions": [],
+            "octagram_states": [],
+            "pair_dynamics": [],
+            "archetypes": [],
+            "relationship_type": "none",
+            "quadra": "none",
+            "temple": "none",
+            "key_concepts": [],
+            "teaching_focus": "none",
+            "target_audience": "none",
+            "topics": [],
+            "use_case": [],
+            "tag_confidence": 0.5,
+            "content_density": "unknown"
+        }
 
 
 # Lifespan context manager for startup/shutdown
@@ -6228,10 +6500,11 @@ OUTPUT FORMAT:
                 semantic_chunks = await semantic_chunk_text(optimized_text, openai_client)
                 print(f"      ✅ Created {len(semantic_chunks)} semantic chunks")
                 
-                # === AUTO-TAGGING (on optimized text) ===
-                print(f"   🏷️ Auto-tagging with GPT-4o-mini...")
-                structured_metadata = await auto_tag_document(optimized_text[:3000], filename, openai_client)
+                # === ENTERPRISE AUTO-TAGGING V2 (on optimized text) ===
+                print(f"   🏷️ Auto-tagging with ENTERPRISE V2 (18 fields)...")
+                structured_metadata = await auto_tag_document_v2_enterprise(optimized_text, filename, openai_client)
                 print(f"      ✅ Tags: {structured_metadata.get('content_type')}, {len(structured_metadata.get('types_discussed', []))} types")
+                print(f"      ✅ Octagram: {structured_metadata.get('octagram_states', [])} | Confidence: {structured_metadata.get('tag_confidence', 0.0):.2f}")
                 
                 # === RE-EMBEDDING ===
                 print(f"   🔄 Re-embedding {len(semantic_chunks)} chunks with text-embedding-3-large...")
@@ -6252,7 +6525,7 @@ OUTPUT FORMAT:
                     )
                     vector = embedding_response.data[0].embedding
                     
-                    # Build metadata (keep original + add structured)
+                    # Build metadata (keep original + add ENTERPRISE V2 structured metadata - 18 fields!)
                     chunk_metadata = {
                         "text": chunk,
                         "doc_id": doc_id,
@@ -6260,15 +6533,39 @@ OUTPUT FORMAT:
                         "upload_timestamp": doc_data['metadata'].get('upload_timestamp', datetime.now().isoformat()),
                         "chunk_index": i,
                         "optimized": True,  # Flag to indicate this is optimized
-                        # Structured metadata
+                        
+                        # === CORE CLASSIFICATION ===
                         "content_type": structured_metadata.get("content_type", "none"),
                         "difficulty": structured_metadata.get("difficulty", "none"),
                         "primary_category": structured_metadata.get("primary_category", "none"),
+                        "season": structured_metadata.get("season_number", "unknown"),
+                        "episode": structured_metadata.get("episode_number", "unknown"),
+                        
+                        # === TYPE & FUNCTION ANALYSIS ===
                         "types_discussed": structured_metadata.get("types_discussed", []),
                         "functions_covered": structured_metadata.get("functions_covered", []),
+                        "function_positions": structured_metadata.get("function_positions", []),  # NEW!
+                        
+                        # === CS JOSEPH FRAMEWORKS (ENTERPRISE V2!) ===
+                        "octagram_states": structured_metadata.get("octagram_states", []),  # 🔥 NEW!
+                        "pair_dynamics": structured_metadata.get("pair_dynamics", []),  # NEW!
+                        "archetypes": structured_metadata.get("archetypes", []),  # NEW!
+                        
+                        # === RELATIONSHIP & STRUCTURE ===
                         "relationship_type": structured_metadata.get("relationship_type", "none"),
                         "quadra": structured_metadata.get("quadra", "none"),
                         "temple": structured_metadata.get("temple", "none"),
+                        
+                        # === CONTENT INTELLIGENCE (ENTERPRISE V2!) ===
+                        "key_concepts": structured_metadata.get("key_concepts", []),  # NEW!
+                        "teaching_focus": structured_metadata.get("teaching_focus", "none"),  # NEW!
+                        "target_audience": structured_metadata.get("target_audience", "none"),  # NEW!
+                        
+                        # === QUALITY METRICS (ENTERPRISE V2!) ===
+                        "tag_confidence": structured_metadata.get("tag_confidence", 0.0),  # NEW!
+                        "content_density": structured_metadata.get("content_density", "unknown"),  # NEW!
+                        
+                        # === LEGACY FIELDS ===
                         "topics": structured_metadata.get("topics", []),
                         "use_case": structured_metadata.get("use_case", [])
                     }
