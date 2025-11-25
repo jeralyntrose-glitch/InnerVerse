@@ -67,6 +67,191 @@ def extract_follow_up_question(text: str) -> str:
         return follow_up_match.group(1).strip()
     return None
 
+def detect_functions_in_message(text: str) -> List[str]:
+    """
+    Detect cognitive functions mentioned in message.
+    Returns list of function codes (e.g., ['Ni', 'Te', 'Fi'])
+    """
+    import re
+    
+    if not text:
+        return []
+    
+    text_upper = text.upper()
+    functions = ['NI', 'NE', 'SI', 'SE', 'TI', 'TE', 'FI', 'FE']
+    detected = []
+    
+    for func in functions:
+        # Match function code as standalone word or with common suffixes
+        patterns = [
+            rf'\b{func}\b',  # Standalone: "Ni hero"
+            rf'\b{func} HERO\b',
+            rf'\b{func} PARENT\b',
+            rf'\b{func} CHILD\b',
+            rf'\b{func} INFERIOR\b',
+            rf'\b{func} NEMESIS\b',
+            rf'\b{func} CRITIC\b',
+            rf'\b{func} TRICKSTER\b',
+            rf'\b{func} DEMON\b',
+        ]
+        
+        if any(re.search(pattern, text_upper) for pattern in patterns):
+            detected.append(func.capitalize())
+    
+    return list(set(detected))  # Remove duplicates
+
+def rerank_chunks_with_metadata(chunks: List[Dict], user_question: str) -> List[Dict]:
+    """
+    Re-rank chunks using BOTH similarity score AND metadata relevance.
+    Boosts chunks that match detected types, functions, and query intent.
+    """
+    from src.services.type_injection import detect_types_in_message
+    
+    detected_types = detect_types_in_message(user_question)
+    detected_functions = detect_functions_in_message(user_question)
+    question_lower = user_question.lower()
+    
+    for chunk in chunks:
+        base_score = chunk.get('score', 0.0)
+        boost = 0.0
+        
+        # Boost if types match (strongest signal)
+        chunk_types = chunk.get('types_discussed', [])
+        if chunk_types and detected_types:
+            matching_types = set(chunk_types) & set(detected_types)
+            if matching_types:
+                boost += 0.12 * len(matching_types)  # Up to +0.24 for 2 types
+        
+        # Boost if functions match
+        chunk_functions = chunk.get('functions_covered', [])
+        if chunk_functions and detected_functions:
+            matching_funcs = set(chunk_functions) & set(detected_functions)
+            if matching_funcs:
+                boost += 0.08 * len(matching_funcs)
+        
+        # Boost recent seasons (Season 20+ reflects latest thinking)
+        season_str = chunk.get('season', '')
+        if season_str:
+            try:
+                season_num = int(season_str)
+                if season_num >= 20:
+                    boost += 0.06
+                elif season_num >= 15:
+                    boost += 0.03
+            except (ValueError, TypeError):
+                pass
+        
+        # Boost if content_type matches query intent
+        content_type = chunk.get('content_type', '').lower()
+        
+        # Relationship queries
+        if any(keyword in question_lower for keyword in ['relationship', 'compatible', 'interact', 'pair', 'together']):
+            if 'relationship' in content_type:
+                boost += 0.10
+        
+        # Octagram queries
+        if any(keyword in question_lower for keyword in ['octagram', 'udsf', 'uduf', 'sdsf', 'sduf', 'developed', 'focused']):
+            if 'octagram' in content_type or 'development' in content_type:
+                boost += 0.15
+        
+        # Function-specific queries
+        if any(keyword in question_lower for keyword in ['function', 'hero', 'parent', 'child', 'inferior', 'shadow']):
+            if 'function' in content_type or 'cognitive' in content_type:
+                boost += 0.08
+        
+        # Type comparison queries
+        if len(detected_types) >= 2:
+            if 'comparison' in content_type or 'dynamics' in content_type:
+                boost += 0.10
+        
+        # Apply boost (cap at 1.0)
+        chunk['boosted_score'] = min(1.0, base_score + boost)
+        chunk['boost_applied'] = boost
+    
+    # Re-sort by boosted score
+    chunks.sort(key=lambda x: x.get('boosted_score', x.get('score', 0.0)), reverse=True)
+    
+    return chunks
+
+def format_rag_context_professional(sorted_chunks: List[Dict]) -> str:
+    """
+    Format RAG chunks with metadata, citations, and confidence indicators.
+    Makes it CRYSTAL CLEAR to Claude what's authoritative vs. uncertain.
+    
+    This structured format helps Claude:
+    1. Prioritize high-confidence results
+    2. Cite sources accurately
+    3. Cross-reference multiple excerpts
+    4. Flag when content is moderate confidence
+    """
+    if not sorted_chunks:
+        return "No relevant content found in the knowledge base."
+    
+    context_parts = []
+    context_parts.append("=" * 80)
+    context_parts.append("📚 KNOWLEDGE BASE RESULTS")
+    context_parts.append(f"Retrieved {len(sorted_chunks)} relevant excerpts from CS Joseph transcripts")
+    context_parts.append("=" * 80)
+    context_parts.append("")
+    
+    for i, chunk in enumerate(sorted_chunks, 1):
+        score = chunk.get('boosted_score', chunk.get('score', 0.0))
+        
+        # Confidence tiers
+        if score >= 0.85:
+            confidence = "HIGH"
+            emoji = "🟢"
+        elif score >= 0.75:
+            confidence = "MEDIUM"
+            emoji = "🟡"
+        else:
+            confidence = "MODERATE"
+            emoji = "🟠"
+        
+        # Extract enriched metadata
+        filename = chunk.get('filename', 'Unknown')
+        content_type = chunk.get('content_type', '')
+        season = chunk.get('season', '')
+        types_discussed = chunk.get('types_discussed', [])
+        functions = chunk.get('functions_covered', [])
+        difficulty = chunk.get('difficulty', '')
+        
+        # Build metadata line
+        metadata_parts = []
+        if season:
+            metadata_parts.append(f"Season {season}")
+        if content_type:
+            metadata_parts.append(content_type.replace('_', ' ').title())
+        if types_discussed:
+            metadata_parts.append(f"Types: {', '.join(types_discussed[:4])}")
+        if not metadata_parts:
+            # Fallback to filename if no metadata
+            metadata_parts.append(filename)
+        
+        metadata_str = " | ".join(metadata_parts)
+        
+        # Format chunk with structure
+        context_parts.append(f"{emoji} [EXCERPT #{i} - {confidence} CONFIDENCE]")
+        context_parts.append(f"Score: {score:.3f}")
+        context_parts.append(f"Source: {metadata_str}")
+        
+        if functions:
+            context_parts.append(f"Functions Covered: {', '.join(functions[:6])}")
+        
+        if difficulty:
+            context_parts.append(f"Difficulty: {difficulty.capitalize()}")
+        
+        context_parts.append("-" * 80)
+        context_parts.append(chunk['text'])
+        context_parts.append("")
+    
+    context_parts.append("=" * 80)
+    context_parts.append("END OF KNOWLEDGE BASE RESULTS")
+    context_parts.append(f"Total Excerpts: {len(sorted_chunks)}")
+    context_parts.append("=" * 80)
+    
+    return "\n".join(context_parts)
+
 def query_innerverse_local(question: str) -> str:
     """
     IMPROVED HYBRID SEARCH for MBTI content:
@@ -188,17 +373,30 @@ def query_innerverse_local(question: str) -> str:
             print("❌ [CLAUDE DEBUG] No chunks found! Returning empty message.")
             return "No relevant MBTI content found in knowledge base."
         
-        # IMPROVEMENT 3: Simple re-ranking by relevance score
-        # Sort by score and take top 12 unique chunks (more context for better answers)
-        sorted_chunks = sorted(all_chunks.values(), key=lambda x: x["score"], reverse=True)[:12]
-        contexts = [chunk["text"] for chunk in sorted_chunks]
+        # IMPROVEMENT 3: Metadata-boosted re-ranking
+        # Sort by base score, apply metadata boosts, re-sort, take top 12
+        sorted_chunks = sorted(all_chunks.values(), key=lambda x: x["score"], reverse=True)[:20]  # Get top 20 first
         
         print(f"📚 [CLAUDE DEBUG] Total unique chunks collected: {len(all_chunks)}")
-        print(f"📚 [CLAUDE DEBUG] Top 12 chunks selected for context")
-        print(f"📚 [CLAUDE DEBUG] Sample filenames: {', '.join(set([c['filename'] for c in sorted_chunks[:5]]))}")
+        print(f"🔄 [CLAUDE DEBUG] Applying metadata-boosted re-ranking...")
         
-        result = "\n\n".join(contexts)
-        print(f"✅ [CLAUDE DEBUG] Returning {len(contexts)} chunks ({len(result)} chars)")
+        # Apply intelligent re-ranking
+        reranked_chunks = rerank_chunks_with_metadata(sorted_chunks, question)
+        final_chunks = reranked_chunks[:12]  # Take top 12 after re-ranking
+        
+        # Log boost details
+        boosted_count = sum(1 for c in final_chunks if c.get('boost_applied', 0) > 0)
+        print(f"📈 [CLAUDE DEBUG] {boosted_count}/{len(final_chunks)} chunks received metadata boost")
+        if boosted_count > 0:
+            avg_boost = sum(c.get('boost_applied', 0) for c in final_chunks) / len(final_chunks)
+            print(f"📈 [CLAUDE DEBUG] Average boost: +{avg_boost:.3f}")
+        
+        print(f"📚 [CLAUDE DEBUG] Top 12 chunks selected for context")
+        print(f"📚 [CLAUDE DEBUG] Sample sources: {', '.join(set([c.get('season', 'Unknown') for c in final_chunks[:5] if c.get('season')]))}")
+        
+        # Format with professional structure
+        result = format_rag_context_professional(final_chunks)
+        print(f"✅ [CLAUDE DEBUG] Returning structured context ({len(result)} chars)")
         return result
         
     except Exception as e:
