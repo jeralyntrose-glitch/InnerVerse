@@ -1762,11 +1762,7 @@
             console.log('✅ [INIT] StateManager created');
             
             // Backward compatibility - map old global variables to StateManager
-            let conversationId = null;
-            let isStreaming = false;
-            let allConversations = [];
-            let uploadedImages = [];
-            let currentAbortController = null;
+            // NOTE: Do NOT declare local variables here - they would shadow the window properties!
             
             Object.defineProperty(window, 'conversationId', {
                 get: () => appState.conversationId,
