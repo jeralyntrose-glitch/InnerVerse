@@ -1029,8 +1029,12 @@ async def upload_pdf_base64(data: Base64Upload):
         pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
         page_count = len(pdf_reader.pages)
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
-        chunks = chunk_text(text)
-        print(f"📄 Uploading {len(chunks)} chunks to Pinecone")
+        
+        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection
+        print(f"📄 Extracted {len(text)} characters from {page_count} pages")
+        print(f"🧠 Starting semantic chunking with GPT-4o-mini...")
+        chunks = await semantic_chunk_text(text, openai_client)
+        print(f"✅ Created {len(chunks)} semantic chunks (avg {sum(len(c) for c in chunks)//len(chunks) if chunks else 0} chars/chunk)")
 
         doc_id = str(uuid.uuid4())
         openai_client = get_openai_client()
@@ -1065,6 +1069,7 @@ async def upload_pdf_base64(data: Base64Upload):
                 "filename": data.filename,
                 "upload_timestamp": datetime.now().isoformat(),
                 "chunk_index": i,
+                "optimized": True,  # 🚀 FLAG: Semantic chunking applied
                 # ENTERPRISE V2: Core classification (10 fields from v1)
                 "content_type": structured_metadata.get("content_type", "none"),
                 "difficulty": structured_metadata.get("difficulty", "none"),
@@ -1135,8 +1140,12 @@ async def upload_pdf(file: UploadFile = File(...)):
         pdf_reader = PdfReader(io.BytesIO(contents))
         page_count = len(pdf_reader.pages)
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
-        chunks = chunk_text(text)
-        print(f"📄 Processing {len(chunks)} chunks from {page_count} pages")
+        
+        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection
+        print(f"📄 Extracted {len(text)} characters from {page_count} pages")
+        print(f"🧠 Starting semantic chunking with GPT-4o-mini...")
+        chunks = await semantic_chunk_text(text, openai_client)
+        print(f"✅ Created {len(chunks)} semantic chunks (avg {sum(len(c) for c in chunks)//len(chunks) if chunks else 0} chars/chunk)")
 
         doc_id = str(uuid.uuid4())
         openai_client = get_openai_client()
@@ -1175,6 +1184,7 @@ async def upload_pdf(file: UploadFile = File(...)):
                     "filename": file.filename,
                     "upload_timestamp": datetime.now().isoformat(),
                     "chunk_index": i,
+                    "optimized": True,  # 🚀 FLAG: Semantic chunking applied
                     # ENTERPRISE V2: Core classification (10 fields from v1)
                     "content_type": structured_metadata.get("content_type", "none"),
                     "difficulty": structured_metadata.get("difficulty", "none"),
