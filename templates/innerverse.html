@@ -604,11 +604,6 @@
                 gap: 12px;
             }
 
-            .empty-chat-welcome .emoji {
-                font-size: 48px;
-                margin-bottom: 8px;
-            }
-
             .empty-chat-welcome .title {
                 font-size: 18px;
                 font-weight: 400;
@@ -1358,20 +1353,7 @@
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-header">
-                    <!-- Search Bar First -->
-                    <div class="search-container">
-                        <span class="search-icon">🔍</span>
-                        <input
-                            type="text"
-                            id="searchInput"
-                            class="search-input"
-                            placeholder="Search conversations..."
-                            autocomplete="off"
-                        />
-                        <button class="search-clear" id="searchClear">×</button>
-                    </div>
-                    
-                    <!-- Icon Row: New Chat + Theme Toggle -->
+                    <!-- Icon Row FIRST: New Chat + Theme Toggle (ChatGPT Order) -->
                     <div class="sidebar-icon-row">
                         <button class="new-chat-btn" id="newChatBtn" aria-label="New chat">
                             <svg viewBox="0 0 24 24" fill="none">
@@ -1384,6 +1366,19 @@
                         <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
                             <span class="theme-icon">◐</span>
                         </button>
+                    </div>
+                    
+                    <!-- Search Bar BELOW Icons -->
+                    <div class="search-container">
+                        <span class="search-icon">🔍</span>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            class="search-input"
+                            placeholder="Search conversations..."
+                            autocomplete="off"
+                        />
+                        <button class="search-clear" id="searchClear">×</button>
                     </div>
                 </div>
 
@@ -2335,7 +2330,7 @@
                     } else {
                         await loadAllConversations();
                     }
-                }, 150); // Reduced from 300ms for snappier feel
+                }, 50); // Ultra-fast, responsive search (ChatGPT speed)
             });
 
             searchClear.addEventListener("click", async () => {
@@ -2555,16 +2550,20 @@
                 }
             }
 
-            // ===== NEW CHAT =====
+            // ===== NEW CHAT - CHATGPT STYLE (FAST & SMOOTH) =====
             newChatBtn.addEventListener("click", async () => {
+                // Close sidebar IMMEDIATELY on all devices (ChatGPT pattern)
+                sidebar.classList.add("closed");
+                sidebarOverlay.classList.remove("visible");
+                updateTypingIndicatorPosition();
+                
+                // Create new conversation
                 await createNewConversation("brain-dump");
-
-                // Close sidebar on mobile
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.add("closed");
-                    sidebarOverlay.classList.remove("visible");
-                    updateTypingIndicatorPosition(); // Update position when closing
-                }
+                
+                // Auto-focus keyboard IMMEDIATELY (ChatGPT pattern)
+                setTimeout(() => {
+                    messageInput.focus();
+                }, 100);
             });
 
             async function createNewConversation(
@@ -3458,7 +3457,6 @@
                 const welcomeDiv = document.createElement("div");
                 welcomeDiv.className = "empty-chat-welcome";
                 welcomeDiv.innerHTML = `
-                <div class="emoji">✨</div>
                 <div class="title">Ready to explore cognitive functions?</div>
                 <div class="subtitle">Ask me anything about MBTI, typology,<br>or dive deep into Jungian psychology...</div>
             `;
