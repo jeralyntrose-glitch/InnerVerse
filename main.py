@@ -3456,6 +3456,106 @@ async def reprocess_pdf(background_tasks: BackgroundTasks, file: UploadFile = Fi
         )
 
 
+# === Transcribe Voice Message (Quick transcription for chat) ===
+@app.post("/transcribe-audio")
+async def transcribe_audio(audio: UploadFile = File(...)):
+    """
+    Quick voice message transcription for chat interface.
+    Accepts audio, transcribes with Whisper, returns text only (no PDF, no upload).
+    """
+    try:
+        print(f"🎤 Received voice message: {audio.filename}")
+        
+        # Validate file type (WebM from browser, or MP3/M4A/WAV)
+        allowed_extensions = ['.webm', '.mp3', '.m4a', '.wav', '.ogg']
+        file_ext = os.path.splitext(audio.filename)[1].lower()
+        
+        if file_ext not in allowed_extensions:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Unsupported audio format"}
+            )
+        
+        # Read audio content
+        contents = await audio.read()
+        file_size_mb = len(contents) / (1024 * 1024)
+        print(f"📦 Audio size: {file_size_mb:.2f} MB")
+        
+        # Check file size (Whisper has 25MB limit, but voice messages should be much smaller)
+        if file_size_mb > 24:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Audio file too large ({file_size_mb:.1f}MB). Maximum size is 24MB."}
+            )
+        
+        # Create temp file for Whisper API (requires file path)
+        temp_dir = tempfile.mkdtemp()
+        audio_path = os.path.join(temp_dir, f"voice_message{file_ext}")
+        
+        try:
+            # Save audio file temporarily
+            with open(audio_path, 'wb') as f:
+                f.write(contents)
+            
+            # Get OpenAI client
+            openai_client = get_openai_client()
+            if not openai_client:
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": "OpenAI client not initialized"}
+                )
+            
+            # Transcribe with Whisper
+            print("🎤 Transcribing with Whisper...")
+            with open(audio_path, "rb") as audio_file:
+                transcript_response = openai_client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text",
+                    language="en",  # Optimize for English (faster)
+                    timeout=120  # 2 minute timeout (voice messages are short)
+                )
+            
+            # Extract text
+            transcript_text = transcript_response if isinstance(transcript_response, str) else transcript_response.text
+            
+            # Log usage for cost tracking
+            try:
+                from pydub import AudioSegment
+                audio_segment = AudioSegment.from_file(audio_path)
+                duration_minutes = len(audio_segment) / (1000 * 60)
+                whisper_cost = duration_minutes * PRICING.get("whisper-1", 0.006)
+                log_api_usage("whisper_voice_message", "whisper-1", 
+                             input_tokens=0, output_tokens=0, cost=whisper_cost)
+                print(f"✅ Transcription complete: {len(transcript_text)} characters ({duration_minutes:.2f} min, ${whisper_cost:.4f})")
+            except:
+                # If duration calculation fails, still return transcription
+                print(f"✅ Transcription complete: {len(transcript_text)} characters")
+            
+            return JSONResponse({
+                "success": True,
+                "text": transcript_text,
+                "message": "Transcription successful"
+            })
+            
+        finally:
+            # Clean up temp files
+            try:
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+                if os.path.exists(temp_dir):
+                    os.rmdir(temp_dir)
+            except:
+                pass
+    
+    except Exception as e:
+        print(f"❌ Voice transcription error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Transcription failed: {str(e)}"}
+        )
+
+
 # === Upload Audio File (MP3/M4A/WAV) for Transcription ===
 @app.post("/upload-audio")
 async def upload_audio(file: UploadFile = File(...)):
