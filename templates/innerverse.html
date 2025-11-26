@@ -1613,46 +1613,8 @@
                 }
             }
             
-            // Initialize ScrollManager
-            const scrollManager = new ScrollManager(messages, SCROLL_CONFIG);
-            console.log('✅ [INIT] ScrollManager created');
-            
-            // ===== BACKWARD COMPATIBILITY ALIASES =====
-            // These map old variable names to ScrollManager state
-            // TODO: Gradually migrate all code to use scrollManager.state directly
-            
-            // Scroll state aliases (read/write through ScrollManager)
-            Object.defineProperty(window, 'isUserPinnedToBottom', {
-                get: () => scrollManager.state.isPinnedToBottom,
-                set: (val) => { scrollManager.state.isPinnedToBottom = val; }
-            });
-            
-            Object.defineProperty(window, 'suppressScrollEvents', {
-                get: () => scrollManager.state.suppressEvents,
-                set: (val) => { scrollManager.state.suppressEvents = val; }
-            });
-            
-            Object.defineProperty(window, 'hardScrollLock', {
-                get: () => scrollManager.state.hardLocked,
-                set: (val) => { scrollManager.state.hardLocked = val; }
-            });
-            
-            Object.defineProperty(window, 'scrollLockUntil', {
-                get: () => scrollManager.state.lockUntil,
-                set: (val) => { scrollManager.state.lockUntil = val; }
-            });
-            
-            Object.defineProperty(window, 'lastInputEndTime', {
-                get: () => scrollManager.state.lastInputEndTime,
-                set: (val) => { scrollManager.state.lastInputEndTime = val; }
-            });
-            
-            Object.defineProperty(window, 'conversationScrollPositions', {
-                get: () => scrollManager.state.conversationPositions,
-                set: (val) => { scrollManager.state.conversationPositions = val; }
-            });
-            
-            console.log('✅ [INIT] Compatibility aliases created (old variables → ScrollManager.state)');
+            // NOTE: ScrollManager and compatibility aliases will be initialized AFTER DOM elements are defined
+            // See below after const messages = document.getElementById("messages")
             
             // ============================================================================
             // ENTERPRISE STATE MANAGER - Centralized application state
@@ -1905,6 +1867,47 @@
             const messageInput = document.getElementById("messageInput");
             const sendBtn = document.getElementById("sendBtn");
             const stopBtn = document.getElementById("stopBtn");
+            
+            // ===== INITIALIZE SCROLL MANAGER (now that DOM elements exist) =====
+            const scrollManager = new ScrollManager(messages, SCROLL_CONFIG);
+            console.log('✅ [INIT] ScrollManager created');
+            
+            // ===== BACKWARD COMPATIBILITY ALIASES FOR SCROLL MANAGER =====
+            // These map old variable names to ScrollManager state
+            // TODO: Gradually migrate all code to use scrollManager.state directly
+            
+            // Scroll state aliases (read/write through ScrollManager)
+            Object.defineProperty(window, 'isUserPinnedToBottom', {
+                get: () => scrollManager.state.isPinnedToBottom,
+                set: (val) => { scrollManager.state.isPinnedToBottom = val; }
+            });
+            
+            Object.defineProperty(window, 'suppressScrollEvents', {
+                get: () => scrollManager.state.suppressEvents,
+                set: (val) => { scrollManager.state.suppressEvents = val; }
+            });
+            
+            Object.defineProperty(window, 'hardScrollLock', {
+                get: () => scrollManager.state.hardLocked,
+                set: (val) => { scrollManager.state.hardLocked = val; }
+            });
+            
+            Object.defineProperty(window, 'scrollLockUntil', {
+                get: () => scrollManager.state.lockUntil,
+                set: (val) => { scrollManager.state.lockUntil = val; }
+            });
+            
+            Object.defineProperty(window, 'lastInputEndTime', {
+                get: () => scrollManager.state.lastInputEndTime,
+                set: (val) => { scrollManager.state.lastInputEndTime = val; }
+            });
+            
+            Object.defineProperty(window, 'conversationScrollPositions', {
+                get: () => scrollManager.state.conversationPositions,
+                set: (val) => { scrollManager.state.conversationPositions = val; }
+            });
+            
+            console.log('✅ [INIT] ScrollManager compatibility aliases created');
             
             // ===== ASYNC STORAGE WRAPPER WITH FALLBACKS =====
             class Storage {
