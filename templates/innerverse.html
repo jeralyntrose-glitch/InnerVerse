@@ -618,21 +618,22 @@
                 line-height: 1.6;
             }
 
-            /* ===== PROFESSIONAL MESSAGE STYLES ===== */
+            /* ===== PROFESSIONAL MESSAGE STYLES WITH POLISHED ANIMATIONS ===== */
             .message {
-                animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                animation: messageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
                 position: relative;
-                margin-bottom: 20px;
+                margin-bottom: 24px;
+                will-change: transform, opacity;
             }
 
-            @keyframes fadeIn {
+            @keyframes messageSlideIn {
                 from {
                     opacity: 0;
-                    transform: translateY(8px);
+                    transform: translateY(12px) scale(0.98);
                 }
                 to {
                     opacity: 1;
-                    transform: translateY(0);
+                    transform: translateY(0) scale(1);
                 }
             }
 
@@ -704,33 +705,47 @@
             }
 
             .message.assistant .message-content p {
-                margin-bottom: 12px;
+                margin-bottom: 16px;
+                line-height: 1.7;
             }
 
             .message.assistant .message-content ul,
             .message.assistant .message-content ol {
-                margin-left: 24px;
-                margin-bottom: 12px;
+                margin-left: 28px;
+                margin-bottom: 16px;
+                line-height: 1.7;
             }
 
             .message.assistant .message-content li {
-                margin-bottom: 4px;
+                margin-bottom: 6px;
+            }
+            
+            .message.assistant .message-content blockquote {
+                border-left: 3px solid var(--border-main);
+                padding-left: 16px;
+                margin: 16px 0;
+                color: var(--text-secondary);
+                font-style: italic;
             }
 
             .message.assistant .message-content code {
                 background: var(--bg-code);
-                padding: 2px 6px;
+                padding: 3px 6px;
                 border-radius: 4px;
                 font-family: "SF Mono", "Monaco", "Menlo", "Courier New", monospace;
-                font-size: 14px;
+                font-size: 13.5px;
+                font-weight: 500;
+                letter-spacing: -0.01em;
             }
 
             .message.assistant .message-content pre {
                 background: var(--bg-code);
-                padding: 12px;
+                padding: 16px;
                 border-radius: 8px;
                 overflow-x: auto;
-                margin-bottom: 12px;
+                margin-bottom: 16px;
+                border: 1px solid var(--border-main);
+                box-shadow: 0 1px 3px var(--shadow-sm);
             }
 
             .message.assistant .message-content pre code {
@@ -738,64 +753,124 @@
                 padding: 0;
             }
 
+            /* ===== SKELETON LOADING SCREEN ===== */
+            .skeleton-message {
+                max-width: 100%;
+                padding-right: 60px;
+                animation: fadeIn 0.3s ease;
+            }
+
+            .skeleton-content {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .skeleton-line {
+                height: 16px;
+                background: linear-gradient(
+                    90deg,
+                    var(--bg-code) 0%,
+                    var(--bg-button-hover) 50%,
+                    var(--bg-code) 100%
+                );
+                background-size: 200% 100%;
+                border-radius: 4px;
+                animation: skeletonShimmer 1.5s ease-in-out infinite;
+            }
+
+            .skeleton-line.short {
+                width: 75%;
+            }
+
+            .skeleton-line.medium {
+                width: 90%;
+            }
+
+            .skeleton-line.long {
+                width: 100%;
+            }
+
+            @keyframes skeletonShimmer {
+                0% {
+                    background-position: 200% 0;
+                }
+                100% {
+                    background-position: -200% 0;
+                }
+            }
+
             /* Copy Button */
+            /* ===== COPY BUTTON - POLISHED ===== */
             .copy-btn {
                 position: absolute;
                 top: 8px;
                 right: 8px;
-                width: 28px;
-                height: 28px;
-                background: transparent;
-                border: none;
+                width: 32px;
+                height: 32px;
+                background: var(--bg-button);
+                border: 1px solid var(--border-main);
                 border-radius: 6px;
                 cursor: pointer;
                 opacity: 0;
-                transition: all 0.2s;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                box-shadow: 0 1px 3px var(--shadow-sm);
             }
 
             .message:hover .copy-btn {
                 opacity: 1;
+                transform: translateY(0);
             }
 
             .copy-btn:hover {
-                background: var(--accent-light);
+                background: var(--bg-button-hover);
+                transform: translateY(-2px);
+                box-shadow: 0 2px 6px var(--shadow-md);
+            }
+
+            .copy-btn:active {
+                transform: translateY(0);
+                box-shadow: 0 1px 2px var(--shadow-sm);
             }
 
             .copy-btn svg {
-                width: 16px;
-                height: 16px;
+                width: 14px;
+                height: 14px;
                 stroke: var(--text-secondary);
+                stroke-width: 2;
             }
 
             .copy-btn:hover svg {
-                stroke: var(--accent);
+                stroke: var(--text-primary);
             }
             
             .copy-btn.copied {
-                background: var(--accent-light);
+                background: var(--btn-primary);
+                border-color: var(--btn-primary);
             }
             
             .copy-btn.copied svg {
-                stroke: var(--accent);
+                stroke: white;
             }
             
-            /* Toast notification */
+            /* ===== TOAST NOTIFICATION - POLISHED ===== */
             .toast {
                 position: fixed;
                 bottom: 100px;
                 left: 50%;
                 transform: translateX(-50%) translateY(100px);
-                background: var(--bg-button);
-                color: var(--text-primary);
-                padding: 12px 24px;
+                background: var(--btn-primary);
+                color: var(--btn-text-primary);
+                padding: 12px 20px;
                 border-radius: 8px;
-                box-shadow: 0 4px 12px var(--shadow);
+                box-shadow: 0 4px 16px var(--shadow-lg);
                 font-size: 14px;
+                font-weight: 500;
                 opacity: 0;
-                transition: all 0.3s ease;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 pointer-events: none;
                 z-index: 10000;
             }
