@@ -1041,8 +1041,8 @@ async def upload_pdf_base64(data: Base64Upload):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
 
-        # Auto-tag document with structured metadata (GPT-4o-mini)
-        structured_metadata = await auto_tag_document(text, data.filename, openai_client)
+        # Auto-tag document with ENTERPRISE V2 structured metadata (18 fields)
+        structured_metadata = await auto_tag_document_v2_enterprise(text, data.filename, openai_client)
         
         # Extract enriched metadata
         enriched_meta = extract_enriched_metadata(data.filename, text[:2000])
@@ -1058,14 +1058,14 @@ async def upload_pdf_base64(data: Base64Upload):
                 input=chunk, model="text-embedding-3-large", timeout=60)
             vector = response.data[0].embedding
             
-            # Build comprehensive metadata with structured fields
+            # Build comprehensive metadata with ENTERPRISE V2 structured fields (18 total)
             chunk_metadata = {
                 "text": chunk,
                 "doc_id": doc_id,
                 "filename": data.filename,
                 "upload_timestamp": datetime.now().isoformat(),
                 "chunk_index": i,
-                # Structured metadata from GPT-4o-mini
+                # ENTERPRISE V2: Core classification (10 fields from v1)
                 "content_type": structured_metadata.get("content_type", "none"),
                 "difficulty": structured_metadata.get("difficulty", "none"),
                 "primary_category": structured_metadata.get("primary_category", "none"),
@@ -1075,7 +1075,20 @@ async def upload_pdf_base64(data: Base64Upload):
                 "quadra": structured_metadata.get("quadra", "none"),
                 "temple": structured_metadata.get("temple", "none"),
                 "topics": structured_metadata.get("topics", []),
-                "use_case": structured_metadata.get("use_case", [])
+                "use_case": structured_metadata.get("use_case", []),
+                # ENTERPRISE V2: Advanced fields (8 new fields)
+                "octagram_states": structured_metadata.get("octagram_states", []),
+                "function_positions": structured_metadata.get("function_positions", []),
+                "pair_dynamics": structured_metadata.get("pair_dynamics", []),
+                "archetypes": structured_metadata.get("archetypes", []),
+                "interaction_style_details": structured_metadata.get("interaction_style_details", []),
+                "key_concepts": structured_metadata.get("key_concepts", []),
+                "teaching_focus": structured_metadata.get("teaching_focus", "none"),
+                "prerequisite_knowledge": structured_metadata.get("prerequisite_knowledge", []),
+                # Metadata quality indicators
+                "tag_confidence": structured_metadata.get("tag_confidence", 1.0),
+                "content_density": structured_metadata.get("content_density", "medium"),
+                "target_audience": structured_metadata.get("target_audience", "general")
             }
             # Add enriched metadata (season/episode parsed from filename)
             chunk_metadata.update(enriched_meta)
@@ -1134,8 +1147,8 @@ async def upload_pdf(file: UploadFile = File(...)):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
 
-        # Auto-tag document with structured metadata (GPT-4o-mini)
-        structured_metadata = await auto_tag_document(text, file.filename, openai_client)
+        # Auto-tag document with ENTERPRISE V2 structured metadata (18 fields)
+        structured_metadata = await auto_tag_document_v2_enterprise(text, file.filename, openai_client)
         
         # Extract enriched metadata
         enriched_meta = extract_enriched_metadata(file.filename, text[:2000])
@@ -1155,14 +1168,14 @@ async def upload_pdf(file: UploadFile = File(...)):
                     input=chunk, model="text-embedding-3-large", timeout=120)  # Upgraded model
                 vector = response.data[0].embedding
                 
-                # Build comprehensive metadata with structured fields
+                # Build comprehensive metadata with ENTERPRISE V2 structured fields (18 total)
                 chunk_metadata = {
                     "text": chunk,
                     "doc_id": doc_id,
                     "filename": file.filename,
                     "upload_timestamp": datetime.now().isoformat(),
                     "chunk_index": i,
-                    # Structured metadata from GPT-4o-mini
+                    # ENTERPRISE V2: Core classification (10 fields from v1)
                     "content_type": structured_metadata.get("content_type", "none"),
                     "difficulty": structured_metadata.get("difficulty", "none"),
                     "primary_category": structured_metadata.get("primary_category", "none"),
@@ -1172,7 +1185,20 @@ async def upload_pdf(file: UploadFile = File(...)):
                     "quadra": structured_metadata.get("quadra", "none"),
                     "temple": structured_metadata.get("temple", "none"),
                     "topics": structured_metadata.get("topics", []),
-                    "use_case": structured_metadata.get("use_case", [])
+                    "use_case": structured_metadata.get("use_case", []),
+                    # ENTERPRISE V2: Advanced fields (8 new fields)
+                    "octagram_states": structured_metadata.get("octagram_states", []),
+                    "function_positions": structured_metadata.get("function_positions", []),
+                    "pair_dynamics": structured_metadata.get("pair_dynamics", []),
+                    "archetypes": structured_metadata.get("archetypes", []),
+                    "interaction_style_details": structured_metadata.get("interaction_style_details", []),
+                    "key_concepts": structured_metadata.get("key_concepts", []),
+                    "teaching_focus": structured_metadata.get("teaching_focus", "none"),
+                    "prerequisite_knowledge": structured_metadata.get("prerequisite_knowledge", []),
+                    # Metadata quality indicators
+                    "tag_confidence": structured_metadata.get("tag_confidence", 1.0),
+                    "content_density": structured_metadata.get("content_density", "medium"),
+                    "target_audience": structured_metadata.get("target_audience", "general")
                 }
                 # Add enriched metadata (season/episode parsed from filename)
                 chunk_metadata.update(enriched_meta)
