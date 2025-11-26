@@ -1029,16 +1029,22 @@ async def upload_pdf_base64(data: Base64Upload):
         pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
         page_count = len(pdf_reader.pages)
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
-        
-        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection
         print(f"📄 Extracted {len(text)} characters from {page_count} pages")
-        print(f"🧠 Starting semantic chunking with GPT-4o-mini...")
-        chunks = await semantic_chunk_text(text, openai_client)
-        print(f"✅ Created {len(chunks)} semantic chunks (avg {sum(len(c) for c in chunks)//len(chunks) if chunks else 0} chars/chunk)")
 
+        # Initialize clients FIRST (CRITICAL: must be before semantic chunking!)
         doc_id = str(uuid.uuid4())
         openai_client = get_openai_client()
         pinecone_index = get_pinecone_client()
+        
+        if not openai_client or not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "OpenAI or Pinecone client not initialized"})
+        
+        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection (uses openai_client)
+        print(f"🧠 Starting semantic chunking with GPT-4o-mini...")
+        chunks = await semantic_chunk_text(text, openai_client)
+        print(f"✅ Created {len(chunks)} semantic chunks (avg {sum(len(c) for c in chunks)//len(chunks) if chunks else 0} chars/chunk)")
 
         if not openai_client or not pinecone_index:
             return JSONResponse(
@@ -1140,16 +1146,22 @@ async def upload_pdf(file: UploadFile = File(...)):
         pdf_reader = PdfReader(io.BytesIO(contents))
         page_count = len(pdf_reader.pages)
         text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
-        
-        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection
         print(f"📄 Extracted {len(text)} characters from {page_count} pages")
-        print(f"🧠 Starting semantic chunking with GPT-4o-mini...")
-        chunks = await semantic_chunk_text(text, openai_client)
-        print(f"✅ Created {len(chunks)} semantic chunks (avg {sum(len(c) for c in chunks)//len(chunks) if chunks else 0} chars/chunk)")
 
+        # Initialize clients FIRST (CRITICAL: must be before semantic chunking!)
         doc_id = str(uuid.uuid4())
         openai_client = get_openai_client()
         pinecone_index = get_pinecone_client()
+        
+        if not openai_client or not pinecone_index:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "OpenAI or Pinecone client not initialized"})
+        
+        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection (uses openai_client)
+        print(f"🧠 Starting semantic chunking with GPT-4o-mini...")
+        chunks = await semantic_chunk_text(text, openai_client)
+        print(f"✅ Created {len(chunks)} semantic chunks (avg {sum(len(c) for c in chunks)//len(chunks) if chunks else 0} chars/chunk)")
 
         if not openai_client or not pinecone_index:
             return JSONResponse(
