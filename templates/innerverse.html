@@ -3010,8 +3010,8 @@
                     }
                 };
                 
-                if (timeSinceInput < INPUT_COOLDOWN_MS) {
-                    setTimeout(scrollToLastMessage, INPUT_COOLDOWN_MS - timeSinceInput);
+                if (timeSinceInput < SCROLL_CONFIG.INPUT_COOLDOWN_MS) {
+                    setTimeout(scrollToLastMessage, SCROLL_CONFIG.INPUT_COOLDOWN_MS - timeSinceInput);
                 } else {
                     scrollToLastMessage();
                 }
