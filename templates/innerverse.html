@@ -459,40 +459,34 @@
                 position: relative;
             }
 
-            /* ===== THEME TOGGLE - MINIMAL CIRCLE IN SIDEBAR ===== */
+            /* ===== THEME TOGGLE - HALF CIRCLE ◐ ===== */
             .theme-toggle {
-                width: 32px;
-                height: 32px;
-                min-width: 32px;
+                width: 36px;
+                height: 36px;
                 background: transparent;
                 border: none;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: opacity 0.2s;
+                transition: all 0.15s;
                 padding: 0;
+                border-radius: 8px;
             }
 
             .theme-toggle:hover {
-                opacity: 0.7;
+                background: var(--bg-button-hover);
             }
 
-            .theme-circle {
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                transition: background-color 0.3s ease;
-            }
-
-            /* Light mode: Show black circle */
-            [data-theme="light"] .theme-circle {
-                background-color: #1a1a1a;
+            .theme-icon {
+                font-size: 20px;
+                color: var(--text-primary);
+                transition: transform 0.3s ease;
             }
             
-            /* Dark mode: Show white circle */
-            [data-theme="dark"] .theme-circle {
-                background-color: #ffffff;
+            /* Rotate icon on theme change for visual feedback */
+            [data-theme="dark"] .theme-icon {
+                transform: rotate(180deg);
             }
 
             /* ===== CHAT HEADER ===== */
@@ -1166,13 +1160,13 @@
                 color: var(--text-tertiary);
             }
 
-            /* ===== SEND/STOP BUTTONS - PROFESSIONAL GRAY ===== */
+            /* ===== SEND/STOP BUTTONS - LIGHT GRAY PROFESSIONAL ===== */
             .send-btn {
                 width: 40px;
                 height: 40px;
                 min-width: 40px;
-                background: var(--btn-primary);
-                border: none;
+                background: var(--btn-secondary); /* Light gray, not dark */
+                border: 1px solid var(--border-main);
                 border-radius: 50%;
                 cursor: pointer;
                 display: flex;
@@ -1183,7 +1177,7 @@
             }
 
             .send-btn:hover:not(:disabled) {
-                background: var(--btn-primary-hover);
+                background: var(--btn-secondary-hover);
                 transform: translateY(-1px);
                 box-shadow: 0 2px 6px var(--shadow-md);
             }
@@ -1201,7 +1195,7 @@
             .send-btn svg {
                 width: 18px;
                 height: 18px;
-                stroke: var(--btn-text-primary);
+                stroke: var(--text-primary); /* Gray arrow, not blue/white */
                 stroke-width: 2.5;
             }
             
@@ -1424,13 +1418,7 @@
                             title="Upload images (max 10)"
                         >
                             <svg viewBox="0 0 24 24" fill="none">
-                                <path
-                                    d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                />
+                                <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                         </button>
 
