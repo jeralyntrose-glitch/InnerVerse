@@ -31,7 +31,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
             rel="stylesheet"
         />
 
@@ -67,67 +67,81 @@
                 --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px); /* P1 Fix #4: Reliable safe area */
             }
 
-            /* ===== THEME VARIABLES ===== */
+            /* ===== THEME VARIABLES - PROFESSIONAL EDITION ===== */
             [data-theme="light"] {
                 --bg-main: #ffffff;
-                --bg-sidebar: #f7f7f8;
-                --bg-header: #f7f7f8;
-                --bg-input: #f5f5f7; /* Subtle gray to make input bar visible */
-                --bg-user-bubble: #e5e5ea;
+                --bg-sidebar: #f9f9f9;
+                --bg-header: #ffffff;
+                --bg-input: #f7f7f8;
+                --bg-user-bubble: #f4f4f5;
                 --bg-button: #ffffff;
-                --bg-button-hover: #f5f5f5;
-                --bg-folder-hover: #f5f5f5;
+                --bg-button-hover: #f4f4f5;
+                --bg-folder-hover: #f4f4f5;
                 --bg-conv-hover: #f7f7f7;
-                --bg-conv-active: #e6f7f4;
-                --bg-code: #f5f5f5;
+                --bg-conv-active: #f0f0f0;
+                --bg-code: #f6f6f7;
 
-                --text-primary: #2d2d2d;
-                --text-secondary: #6b6b6b;
-                --text-tertiary: #999999;
+                --text-primary: #0d0d0d;
+                --text-secondary: #676767;
+                --text-tertiary: #8e8e93;
 
-                --border-main: #e5e5e5;
+                --border-main: #e5e5e7;
                 --border-input: #d1d1d6;
+                --border-subtle: #ececec;
 
-                --accent: #10a37f;
-                --accent-hover: #0d8c6c;
-                --accent-light: #e6f7f4;
+                /* Professional neutral palette - NO GREEN */
+                --btn-primary: #2d2d2d;
+                --btn-primary-hover: #1a1a1a;
+                --btn-secondary: #f4f4f5;
+                --btn-secondary-hover: #e8e8e8;
+                --btn-text-primary: #ffffff;
+                --btn-text-secondary: #2d2d2d;
 
                 --error-bg: #fee;
                 --error-text: #c33;
                 --error-border: #c33;
 
-                --shadow: rgba(0, 0, 0, 0.1);
+                --shadow-sm: rgba(0, 0, 0, 0.04);
+                --shadow-md: rgba(0, 0, 0, 0.08);
+                --shadow-lg: rgba(0, 0, 0, 0.12);
             }
 
             [data-theme="dark"] {
-                --bg-main: #1a1a1a;
-                --bg-sidebar: #1f1f1f;
-                --bg-header: #252525;
-                --bg-input: #40414f;
-                --bg-user-bubble: #2d2d2d;
-                --bg-button: #2d2d2d;
+                --bg-main: #212121;
+                --bg-sidebar: #171717;
+                --bg-header: #2a2a2a;
+                --bg-input: #2f2f2f;
+                --bg-user-bubble: #3a3a3a;
+                --bg-button: #2a2a2a;
                 --bg-button-hover: #353535;
                 --bg-folder-hover: #2d2d2d;
                 --bg-conv-hover: #2a2a2a;
-                --bg-conv-active: #1a3830;
-                --bg-code: #2d2d2d;
+                --bg-conv-active: #323232;
+                --bg-code: #1a1a1a;
 
-                --text-primary: #e5e5e5;
-                --text-secondary: #a0a0a0;
-                --text-tertiary: #707070;
+                --text-primary: #ececec;
+                --text-secondary: #b4b4b4;
+                --text-tertiary: #8e8e8e;
 
                 --border-main: #3a3a3a;
-                --border-input: #565869;
+                --border-input: #4a4a4a;
+                --border-subtle: #2a2a2a;
 
-                --accent: #10a37f;
-                --accent-hover: #0d8c6c;
-                --accent-light: #1a3830;
+                /* Professional dark mode - NO GREEN */
+                --btn-primary: #f4f4f5;
+                --btn-primary-hover: #e8e8e8;
+                --btn-secondary: #3a3a3a;
+                --btn-secondary-hover: #444444;
+                --btn-text-primary: #1a1a1a;
+                --btn-text-secondary: #ececec;
 
                 --error-bg: #4a1f1f;
                 --error-text: #ff6b6b;
                 --error-border: #8b3a3a;
 
-                --shadow: rgba(0, 0, 0, 0.3);
+                --shadow-sm: rgba(0, 0, 0, 0.2);
+                --shadow-md: rgba(0, 0, 0, 0.3);
+                --shadow-lg: rgba(0, 0, 0, 0.4);
             }
 
             /* ===== BODY & LAYOUT ===== */
@@ -136,17 +150,15 @@
             }
 
             body {
-                font-family:
-                    -apple-system,
-                    BlinkMacSystemFont,
-                    "Segoe UI",
-                    "Helvetica Neue",
-                    Arial,
-                    sans-serif;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
                 background: var(--bg-main);
                 color: var(--text-primary);
-                font-size: 16px;
-                line-height: 1.75;
+                font-size: 15px; /* Slightly smaller for better density */
+                line-height: 1.6; /* Tighter for modern look */
+                font-weight: 400;
+                letter-spacing: -0.011em; /* Apple-style tight tracking */
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
                 overflow: hidden;
                 height: 100%;
                 min-height: 100vh;
@@ -160,28 +172,29 @@
             }
 
             /* ===== BURGER MENU (in header) ===== */
+            /* ===== BURGER MENU - MINIMAL ICON ONLY ===== */
             .burger-menu {
-                width: 40px;
-                height: 40px;
-                background: var(--bg-button);
-                border: 1px solid var(--border-input);
-                border-radius: 8px;
+                width: 32px;
+                height: 32px;
+                background: transparent;
+                border: none;
                 cursor: pointer;
                 display: none;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s ease;
+                transition: opacity 0.2s ease;
+                padding: 0;
             }
 
             .burger-menu:hover {
-                background: var(--bg-button-hover);
-                border-color: var(--accent);
+                opacity: 0.7;
             }
 
             .burger-menu svg {
-                width: 20px;
-                height: 20px;
+                width: 22px;
+                height: 22px;
                 stroke: var(--text-primary);
+                stroke-width: 2;
             }
 
             /* ===== SIDEBAR ===== */
@@ -210,23 +223,31 @@
 
             .new-chat-btn {
                 width: 100%;
-                padding: 10px 16px;
-                background: var(--accent);
-                color: white;
-                border: none;
+                padding: 12px 16px;
+                background: var(--bg-button);
+                color: var(--text-primary);
+                border: 1px solid var(--border-main);
                 border-radius: 8px;
                 font-size: 14px;
                 font-weight: 500;
                 cursor: pointer;
-                transition: background 0.2s;
+                transition: all 0.15s;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 6px;
+                gap: 8px;
             }
 
             .new-chat-btn:hover {
-                background: var(--accent-hover);
+                background: var(--bg-button-hover);
+                border-color: var(--text-tertiary);
+            }
+            
+            .new-chat-btn svg {
+                width: 16px;
+                height: 16px;
+                stroke: var(--text-primary);
+                stroke-width: 2;
             }
 
             .search-container {
@@ -438,44 +459,40 @@
                 position: relative;
             }
 
+            /* ===== THEME TOGGLE - MINIMAL CIRCLE IN SIDEBAR ===== */
             .theme-toggle {
-                width: 40px;
-                height: 40px;
-                min-width: 40px;
-                background: var(--bg-button);
-                border: 1px solid var(--border-input);
-                border-radius: 8px;
+                width: 32px;
+                height: 32px;
+                min-width: 32px;
+                background: transparent;
+                border: none;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s;
+                transition: opacity 0.2s;
+                padding: 0;
             }
 
             .theme-toggle:hover {
-                background: var(--bg-button-hover);
-                border-color: var(--accent);
+                opacity: 0.7;
             }
 
-            .theme-toggle:active {
-                transform: scale(0.95);
+            .theme-circle {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                transition: background-color 0.3s ease;
             }
 
-            .theme-icon {
-                font-size: 20px;
+            /* Light mode: Show black circle */
+            [data-theme="light"] .theme-circle {
+                background-color: #1a1a1a;
             }
-
-            [data-theme="light"] .moon-icon {
-                display: block;
-            }
-            [data-theme="light"] .sun-icon {
-                display: none;
-            }
-            [data-theme="dark"] .moon-icon {
-                display: none;
-            }
-            [data-theme="dark"] .sun-icon {
-                display: block;
+            
+            /* Dark mode: Show white circle */
+            [data-theme="dark"] .theme-circle {
+                background-color: #ffffff;
             }
 
             /* ===== CHAT HEADER ===== */
@@ -511,10 +528,12 @@
             }
 
             .chat-header .header-title {
-                font-size: 16px;
-                font-weight: 600;
-                letter-spacing: 1.5px;
+                font-size: 15px;
+                font-weight: 300; /* Thin, modern weight */
+                letter-spacing: 2px; /* Wider tracking for elegance */
                 color: var(--text-primary);
+                text-transform: uppercase;
+                opacity: 0.9;
             }
 
             /* Desktop: hide burger in header (sidebar always visible) */
@@ -599,15 +618,17 @@
                 line-height: 1.6;
             }
 
+            /* ===== PROFESSIONAL MESSAGE STYLES ===== */
             .message {
-                animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 position: relative;
+                margin-bottom: 20px;
             }
 
             @keyframes fadeIn {
                 from {
                     opacity: 0;
-                    transform: translateY(12px);
+                    transform: translateY(8px);
                 }
                 to {
                     opacity: 1;
@@ -615,17 +636,24 @@
                 }
             }
 
-            /* User Messages */
+            /* ===== USER MESSAGES - ELEGANT BUBBLE (CHATGPT STYLE) ===== */
+            .message.user {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+            }
+
             .message.user .message-content {
                 background: var(--bg-user-bubble);
-                padding: 10px 14px;
-                border-radius: 18px;
-                max-width: 70%;
-                margin-left: auto;
+                padding: 12px 16px;
+                border-radius: 20px;
+                border-bottom-right-radius: 4px;
+                max-width: 75%;
                 color: var(--text-primary);
                 word-wrap: break-word;
-                font-size: 16px;
+                font-size: 15px;
                 line-height: 1.5;
+                box-shadow: 0 1px 2px var(--shadow-sm);
             }
 
             .message.user .message-images {
@@ -633,8 +661,7 @@
                 flex-wrap: wrap;
                 gap: 8px;
                 margin-bottom: 8px;
-                max-width: 70%;
-                margin-left: auto;
+                max-width: 75%;
             }
 
             .message.user .message-images img {
@@ -642,17 +669,19 @@
                 max-height: 200px;
                 border-radius: 12px;
                 object-fit: cover;
+                box-shadow: 0 2px 8px var(--shadow-md);
             }
 
-            /* AI Messages */
+            /* ===== AI MESSAGES - FLAT, FULL WIDTH (CHATGPT STYLE) ===== */
             .message.assistant {
                 max-width: 100%;
+                padding-right: 60px; /* Space for copy button */
             }
 
             .message.assistant .message-content {
                 color: var(--text-primary);
-                line-height: 1.75;
-                font-size: 16px;
+                line-height: 1.65;
+                font-size: 15px;
             }
 
             .message.assistant .message-content h1,
@@ -959,33 +988,29 @@
                 box-shadow: 0 -2px 8px rgba(var(--accent-rgb), 0.2);
             }
 
+            /* ===== UPLOAD BUTTON - GRAY PLUS SIGN ===== */
             .upload-btn {
                 width: 40px;
                 height: 40px;
                 min-width: 40px;
-                background: var(--bg-button);
-                border: 1px solid var(--border-input);
-                border-radius: 8px;
+                background: transparent;
+                border: none;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s;
+                transition: opacity 0.15s;
             }
 
             .upload-btn:hover {
-                background: var(--bg-button-hover);
-                border-color: var(--accent);
+                opacity: 0.7;
             }
 
             .upload-btn svg {
                 width: 20px;
                 height: 20px;
                 stroke: var(--text-secondary);
-            }
-
-            .upload-btn:hover svg {
-                stroke: var(--accent);
+                stroke-width: 2.5;
             }
 
             .input-wrapper {
@@ -1043,87 +1068,95 @@
 
             .message-input {
                 flex: 1;
-                padding: 10px 16px;
-                border: none; /* Removed border to eliminate visible line */
+                padding: 12px 16px;
+                border: none;
                 border-radius: 20px;
-                font-size: 16px;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+                font-size: 15px;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
                 background: var(--bg-input);
                 color: var(--text-primary);
                 outline: none;
                 resize: none;
                 min-height: 44px;
-                max-height: 44px;
+                max-height: 200px; /* ~10 lines */
                 line-height: 1.5;
+                overflow-y: auto; /* Scroll if exceeds max-height */
+                transition: height 0.1s ease; /* Smooth expansion */
             }
 
             .message-input::placeholder {
                 color: var(--text-tertiary);
             }
 
+            /* ===== SEND/STOP BUTTONS - PROFESSIONAL GRAY ===== */
             .send-btn {
                 width: 40px;
                 height: 40px;
                 min-width: 40px;
-                background: var(--accent);
+                background: var(--btn-primary);
                 border: none;
                 border-radius: 50%;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 1px 3px var(--shadow-sm);
             }
 
             .send-btn:hover:not(:disabled) {
-                background: var(--accent-hover);
-                transform: scale(1.05);
+                background: var(--btn-primary-hover);
+                transform: translateY(-1px);
+                box-shadow: 0 2px 6px var(--shadow-md);
             }
 
             .send-btn:active {
-                transform: scale(0.95);
+                transform: translateY(0);
+                box-shadow: 0 1px 2px var(--shadow-sm);
+            }
+            
+            .send-btn:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+
+            .send-btn svg {
+                width: 18px;
+                height: 18px;
+                stroke: var(--btn-text-primary);
+                stroke-width: 2.5;
             }
             
             .stop-btn {
                 width: 40px;
                 height: 40px;
                 min-width: 40px;
-                background: var(--error-bg);
-                border: 1px solid var(--error-border);
+                background: var(--btn-secondary);
+                border: 1px solid var(--border-main);
                 border-radius: 50%;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                color: var(--error-text);
+                transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 1px 3px var(--shadow-sm);
             }
             
             .stop-btn:hover {
-                background: var(--error-text);
-                color: white;
-                transform: scale(1.05);
+                background: var(--btn-secondary-hover);
+                transform: translateY(-1px);
+                box-shadow: 0 2px 6px var(--shadow-md);
             }
             
             .stop-btn:active {
-                transform: scale(0.95);
+                transform: translateY(0);
+                box-shadow: 0 1px 2px var(--shadow-sm);
             }
             
             .stop-btn svg {
                 width: 16px;
                 height: 16px;
-            }
-
-            .send-btn:disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-            }
-
-            .send-btn svg {
-                width: 20px;
-                height: 20px;
-                stroke: white;
-                stroke-width: 2.5;
+                fill: var(--text-primary);
             }
 
             /* ===== SIDEBAR OVERLAY (MOBILE) ===== */
@@ -1233,7 +1266,10 @@
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-header">
                     <button class="new-chat-btn" id="newChatBtn">
-                        <span>+</span>
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2.5L3.5 11V20.5H20.5V11L12 2.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M15 14L17.5 11.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
                         <span>New Chat</span>
                     </button>
 
@@ -1248,6 +1284,11 @@
                         />
                         <button class="search-clear" id="searchClear">×</button>
                     </div>
+                    
+                    <!-- Theme Toggle - Clean Circle -->
+                    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                        <div class="theme-circle"></div>
+                    </button>
                 </div>
 
                 <div class="sidebar-content" id="sidebarContent">
@@ -1267,12 +1308,6 @@
                         </button>
                     </div>
                     <span class="header-title">INNERVERSE</span>
-                    <div class="header-right">
-                        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-                            <span class="theme-icon moon-icon">🌙</span>
-                            <span class="theme-icon sun-icon">☀️</span>
-                        </button>
-                    </div>
                 </header>
 
                 <div class="chat-container">
@@ -2090,11 +2125,20 @@
                     return;
                 }
                 
-                // Enter in message input: Send (unless Shift+Enter for newline)
-                if (e.key === 'Enter' && !e.shiftKey && document.activeElement === messageInput) {
-                    e.preventDefault();
-                    sendMessage();
-                    return;
+                // Enter behavior: Desktop sends, Mobile creates new line
+                if (e.key === 'Enter' && document.activeElement === messageInput) {
+                    // MOBILE: Enter always creates new line (user taps button to send)
+                    if (window.innerWidth <= 768) {
+                        // Let default behavior happen (new line)
+                        return;
+                    }
+                    
+                    // DESKTOP: Enter sends (unless Shift+Enter for new line)
+                    if (!e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                        return;
+                    }
                 }
             });
 
@@ -2109,8 +2153,7 @@
                 document.documentElement.setAttribute("data-theme", newTheme);
                 localStorage.setItem("innerverse-theme", newTheme);
                 
-                // Update button icon
-                themeToggle.textContent = newTheme === "dark" ? "☀️" : "🌙";
+                // Icon automatically updates via CSS
                 
                 // Remove transitioning class after animation completes
                 setTimeout(() => {
@@ -2118,9 +2161,7 @@
                 }, 300);
             });
             
-            // Set initial theme icon
-            const initialTheme = document.documentElement.getAttribute("data-theme");
-            themeToggle.textContent = initialTheme === "dark" ? "☀️" : "🌙";
+            // Theme icon automatically updates via CSS based on data-theme attribute
 
             // ===== TYPING INDICATOR POSITIONING =====
             // Dynamically position typing indicator to align with message column
