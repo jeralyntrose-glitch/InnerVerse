@@ -2910,22 +2910,13 @@
                                                 fullResponse;
                                         }
 
-                                        // iOS-NATIVE: Auto-scroll follows streaming IF user was already at bottom
-                                        // If user scrolls up during streaming, respect their intent (don't auto-scroll)
-                                        if (isUserPinnedToBottom) {
-                                            // User is at bottom, follow the streaming content
-                                            // Use scrollIntoView for smooth, iOS-native scrolling
-                                            suppressScrollEvents = true;
-                                            assistantDiv.scrollIntoView({ 
-                                                behavior: 'smooth',  // Smooth during streaming
-                                                block: 'end',        // Keep bottom visible
-                                                inline: 'nearest'
-                                            });
-                                            requestAnimationFrame(() => {
-                                                suppressScrollEvents = false;
-                                            });
-                                        }
-                                        // If user scrolled up (isUserPinnedToBottom = false), don't auto-scroll
+                                        // ✅ CHATGPT PATTERN: No forced auto-scroll during streaming
+                                        // Let user freely scroll up/down without being yanked
+                                        // They can manually scroll to bottom if they want to follow along
+                                        // Auto-scroll only happens AFTER streaming completes
+                                        
+                                        // Optional: Update scroll button visibility so they know there's new content
+                                        updateScrollButtonVisibility();
                                     }
 
                                     if (data.error) {
