@@ -1370,25 +1370,503 @@
         </div>
 
         <script>
-            console.log("🚀 InnerVerse Chat - Phase 1 Loading...");
+            console.log("🚀 InnerVerse Chat - Enterprise Edition Loading...");
 
-            // ===== STATE =====
+            // ============================================================================
+            // ENTERPRISE SCROLL MANAGER - Centralized scroll control
+            // ============================================================================
+            
+            const SCROLL_CONFIG = {
+                // Buffers - space between last message and viewport bottom
+                BUFFER_PRIMARY: 180,        // Standard scroll buffer (above input bar)
+                BUFFER_SECONDARY: 160,      // Alternate buffer for specific scenarios
+                BUFFER_DOWN_ARROW: 160,     // Down arrow scroll target
+                
+                // Timing - iOS Safari specific
+                INPUT_COOLDOWN_MS: 250,     // iOS deferred scroll window (~200ms + buffer)
+                HARD_LOCK_DURATION: 300,    // Duration of hard scroll lock (ms)
+                ANIMATION_DURATION: 300,    // Smooth scroll animation duration
+                
+                // Thresholds
+                PIN_THRESHOLD: 5,           // Distance from bottom to consider "pinned" (px)
+                OVERSCROLL_LIMIT: 50,       // Rubber band resistance for overscroll (px)
+                
+                // Detection
+                NEAR_BOTTOM_THRESHOLD: 100, // Within 100px = "near bottom"
+            };
+            
+            class ScrollManager {
+                constructor(container, config = SCROLL_CONFIG) {
+                    this.container = container;
+                    this.config = config;
+                    
+                    // State management
+                    this.state = {
+                        isPinnedToBottom: true,
+                        suppressEvents: false,
+                        hardLocked: false,
+                        lockUntil: 0,
+                        lastInputEndTime: 0,
+                        conversationPositions: {}
+                    };
+                    
+                    console.log('✅ [ScrollManager] Initialized with config:', config);
+                }
+                
+                // ===== CORE API =====
+                
+                toBottom(force = false, smooth = true) {
+                    /**
+                     * Scroll to bottom with proper buffer above input bar.
+                     * Uses iOS-native scrollIntoView for smooth behavior.
+                     */
+                    if (!force && !this.canAutoScroll()) {
+                        console.log('🚫 [ScrollManager] Auto-scroll blocked');
+                        return false;
+                    }
+                    
+                    const lastMessage = this.container.lastElementChild;
+                    if (!lastMessage) return false;
+                    
+                    console.log('📜 [ScrollManager] Scrolling to bottom...');
+                    
+                    lastMessage.scrollIntoView({
+                        behavior: smooth ? 'smooth' : 'auto',
+                        block: 'end',
+                        inline: 'nearest'
+                    });
+                    
+                    this.state.isPinnedToBottom = true;
+                    return true;
+                }
+                
+                clampPosition() {
+                    /**
+                     * Prevent scrolling past the last message.
+                     * Maintains buffer space above input bar.
+                     */
+                    if (this.state.hardLocked) return;
+                    
+                    const lastMessage = this.container.lastElementChild;
+                    if (!lastMessage) return;
+                    
+                    const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
+                    const buffer = this.config.BUFFER_PRIMARY;
+                    const maxScroll = Math.max(0, lastMessageBottom - this.container.clientHeight + buffer);
+                    
+                    const currentScroll = this.container.scrollTop;
+                    const overscrollLimit = this.config.OVERSCROLL_LIMIT;
+                    
+                    if (currentScroll > maxScroll + overscrollLimit) {
+                        this.container.scrollTop = maxScroll;
+                    }
+                }
+                
+                updatePinState() {
+                    /**
+                     * Update whether user is pinned to bottom.
+                     * Used to determine if auto-scroll should happen.
+                     */
+                    if (this.state.suppressEvents || this.state.hardLocked) return;
+                    
+                    const threshold = this.config.PIN_THRESHOLD;
+                    const scrollTop = this.container.scrollTop;
+                    const scrollHeight = this.container.scrollHeight;
+                    const clientHeight = this.container.clientHeight;
+                    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+                    
+                    const wasPinned = this.state.isPinnedToBottom;
+                    this.state.isPinnedToBottom = distanceFromBottom <= threshold;
+                    
+                    if (wasPinned !== this.state.isPinnedToBottom) {
+                        console.log(`📌 [ScrollManager] Pin state: ${this.state.isPinnedToBottom ? 'PINNED' : 'UNPINNED'}`);
+                    }
+                }
+                
+                canAutoScroll() {
+                    /**
+                     * Determine if automatic scrolling is allowed.
+                     * Checks locks, user intent, and timing.
+                     */
+                    // Hard lock = absolute no
+                    if (this.state.hardLocked) {
+                        return false;
+                    }
+                    
+                    // Timed lock
+                    if (Date.now() < this.state.lockUntil) {
+                        return false;
+                    }
+                    
+                    // iOS input cooldown (prevent scroll during keyboard settle)
+                    if (Date.now() < this.state.lastInputEndTime + this.config.INPUT_COOLDOWN_MS) {
+                        return false;
+                    }
+                    
+                    // User must be pinned to bottom
+                    return this.state.isPinnedToBottom;
+                }
+                
+                // ===== LOCK MANAGEMENT =====
+                
+                enableHardLock(duration = null) {
+                    /**
+                     * NUCLEAR OPTION: Completely freeze scroll position.
+                     * Used during critical operations like message send.
+                     */
+                    this.state.hardLocked = true;
+                    console.log('🔒 [ScrollManager] HARD LOCK enabled');
+                    
+                    if (duration) {
+                        setTimeout(() => {
+                            this.state.hardLocked = false;
+                            console.log('🔓 [ScrollManager] HARD LOCK released');
+                        }, duration);
+                    }
+                }
+                
+                disableHardLock() {
+                    this.state.hardLocked = false;
+                    console.log('🔓 [ScrollManager] HARD LOCK released (manual)');
+                }
+                
+                setTimedLock(ms) {
+                    /**
+                     * Prevent auto-scroll for a specific duration.
+                     * Used after user manually scrolls.
+                     */
+                    this.state.lockUntil = Date.now() + ms;
+                    console.log(`⏱️ [ScrollManager] Timed lock: ${ms}ms`);
+                }
+                
+                recordInputEnd() {
+                    /**
+                     * Record when user input (touch/mouse) ended.
+                     * Prevents scroll during iOS keyboard settle period.
+                     */
+                    this.state.lastInputEndTime = Date.now();
+                }
+                
+                // ===== POSITION MANAGEMENT =====
+                
+                savePosition(conversationId) {
+                    /**
+                     * Save current scroll position for a conversation.
+                     */
+                    if (conversationId) {
+                        this.state.conversationPositions[conversationId] = this.container.scrollTop;
+                        console.log(`💾 [ScrollManager] Saved position for conv ${conversationId}: ${this.container.scrollTop}px`);
+                    }
+                }
+                
+                restorePosition(conversationId) {
+                    /**
+                     * Restore saved scroll position for a conversation.
+                     * Returns true if position was restored, false if scrolling to bottom instead.
+                     */
+                    if (conversationId && this.state.conversationPositions[conversationId] !== undefined) {
+                        this.container.scrollTop = this.state.conversationPositions[conversationId];
+                        console.log(`📂 [ScrollManager] Restored position for conv ${conversationId}`);
+                        return true;
+                    }
+                    return false;
+                }
+                
+                // ===== UTILITIES =====
+                
+                isNearBottom() {
+                    /**
+                     * Check if scroll position is near bottom (within threshold).
+                     */
+                    const scrollTop = this.container.scrollTop;
+                    const scrollHeight = this.container.scrollHeight;
+                    const clientHeight = this.container.clientHeight;
+                    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+                    
+                    return distanceFromBottom <= this.config.NEAR_BOTTOM_THRESHOLD;
+                }
+                
+                getScrollInfo() {
+                    /**
+                     * Get current scroll metrics for debugging.
+                     */
+                    return {
+                        scrollTop: this.container.scrollTop,
+                        scrollHeight: this.container.scrollHeight,
+                        clientHeight: this.container.clientHeight,
+                        distanceFromBottom: this.container.scrollHeight - this.container.scrollTop - this.container.clientHeight,
+                        isPinned: this.state.isPinnedToBottom,
+                        hardLocked: this.state.hardLocked,
+                        timedLocked: Date.now() < this.state.lockUntil
+                    };
+                }
+                
+                suppressEventsTemporarily(duration = 100) {
+                    /**
+                     * Suppress scroll events during programmatic scrolls.
+                     * Prevents triggering pin state updates during auto-scroll.
+                     */
+                    this.state.suppressEvents = true;
+                    setTimeout(() => {
+                        this.state.suppressEvents = false;
+                    }, duration);
+                }
+            }
+            
+            // Initialize ScrollManager
+            const scrollManager = new ScrollManager(messages, SCROLL_CONFIG);
+            console.log('✅ [INIT] ScrollManager created');
+            
+            // ===== BACKWARD COMPATIBILITY ALIASES =====
+            // These map old variable names to ScrollManager state
+            // TODO: Gradually migrate all code to use scrollManager.state directly
+            
+            // Scroll state aliases (read/write through ScrollManager)
+            Object.defineProperty(window, 'isUserPinnedToBottom', {
+                get: () => scrollManager.state.isPinnedToBottom,
+                set: (val) => { scrollManager.state.isPinnedToBottom = val; }
+            });
+            
+            Object.defineProperty(window, 'suppressScrollEvents', {
+                get: () => scrollManager.state.suppressEvents,
+                set: (val) => { scrollManager.state.suppressEvents = val; }
+            });
+            
+            Object.defineProperty(window, 'hardScrollLock', {
+                get: () => scrollManager.state.hardLocked,
+                set: (val) => { scrollManager.state.hardLocked = val; }
+            });
+            
+            Object.defineProperty(window, 'scrollLockUntil', {
+                get: () => scrollManager.state.lockUntil,
+                set: (val) => { scrollManager.state.lockUntil = val; }
+            });
+            
+            Object.defineProperty(window, 'lastInputEndTime', {
+                get: () => scrollManager.state.lastInputEndTime,
+                set: (val) => { scrollManager.state.lastInputEndTime = val; }
+            });
+            
+            Object.defineProperty(window, 'conversationScrollPositions', {
+                get: () => scrollManager.state.conversationPositions,
+                set: (val) => { scrollManager.state.conversationPositions = val; }
+            });
+            
+            console.log('✅ [INIT] Compatibility aliases created (old variables → ScrollManager.state)');
+            
+            // ============================================================================
+            // ENTERPRISE STATE MANAGER - Centralized application state
+            // ============================================================================
+            
+            class StateManager {
+                constructor() {
+                    this.state = {
+                        // Conversation state
+                        conversation: {
+                            id: null,
+                            messages: [],
+                            isStreaming: false,
+                            currentAbortController: null
+                        },
+                        
+                        // UI state
+                        ui: {
+                            sidebarOpen: false,
+                            searchTerm: '',
+                            searchDebounceTimer: null,
+                            theme: localStorage.getItem('theme') || 'dark',
+                            allConversations: []
+                        },
+                        
+                        // Image upload state
+                        images: {
+                            queue: [],
+                            previews: []
+                        },
+                        
+                        // User preferences (persisted)
+                        user: {
+                            lastConversationId: localStorage.getItem('lastConversationId'),
+                            folderStates: JSON.parse(localStorage.getItem('innerverse-folder-states') || '{}')
+                        }
+                    };
+                    
+                    this.listeners = [];
+                    console.log('✅ [StateManager] Initialized');
+                }
+                
+                // ===== GETTERS =====
+                
+                get conversationId() { return this.state.conversation.id; }
+                set conversationId(val) { 
+                    this.state.conversation.id = val;
+                    this.notify('conversation.id', val);
+                }
+                
+                get isStreaming() { return this.state.conversation.isStreaming; }
+                set isStreaming(val) {
+                    this.state.conversation.isStreaming = val;
+                    this.notify('conversation.isStreaming', val);
+                }
+                
+                get searchTerm() { return this.state.ui.searchTerm; }
+                set searchTerm(val) {
+                    this.state.ui.searchTerm = val;
+                    this.notify('ui.searchTerm', val);
+                }
+                
+                get allConversations() { return this.state.ui.allConversations; }
+                set allConversations(val) {
+                    this.state.ui.allConversations = val;
+                    this.notify('ui.allConversations', val);
+                }
+                
+                get uploadedImages() { return this.state.images.queue; }
+                set uploadedImages(val) {
+                    this.state.images.queue = val;
+                    this.notify('images.queue', val);
+                }
+                
+                get currentAbortController() { return this.state.conversation.currentAbortController; }
+                set currentAbortController(val) {
+                    this.state.conversation.currentAbortController = val;
+                }
+                
+                // ===== STATE CHANGE NOTIFICATION =====
+                
+                notify(path, value) {
+                    console.log(`🔄 [StateManager] ${path} =`, value);
+                    this.listeners.forEach(listener => listener(path, value));
+                }
+                
+                subscribe(callback) {
+                    this.listeners.push(callback);
+                    return () => {
+                        this.listeners = this.listeners.filter(l => l !== callback);
+                    };
+                }
+                
+                // ===== DEBUGGING =====
+                
+                getState() {
+                    return JSON.parse(JSON.stringify(this.state)); // Deep clone for safety
+                }
+                
+                logState() {
+                    console.log('📊 [StateManager] Current State:', this.getState());
+                }
+            }
+            
+            // Initialize StateManager
+            const appState = new StateManager();
+            console.log('✅ [INIT] StateManager created');
+            
+            // Backward compatibility - map old global variables to StateManager
             let conversationId = null;
             let isStreaming = false;
             let allConversations = [];
-            let selectedImages = [];
+            let uploadedImages = [];
+            let currentAbortController = null;
+            
+            Object.defineProperty(window, 'conversationId', {
+                get: () => appState.conversationId,
+                set: (val) => { appState.conversationId = val; }
+            });
+            
+            Object.defineProperty(window, 'isStreaming', {
+                get: () => appState.isStreaming,
+                set: (val) => { appState.isStreaming = val; }
+            });
+            
+            Object.defineProperty(window, 'allConversations', {
+                get: () => appState.allConversations,
+                set: (val) => { appState.allConversations = val; }
+            });
+            
+            Object.defineProperty(window, 'uploadedImages', {
+                get: () => appState.uploadedImages,
+                set: (val) => { appState.uploadedImages = val; }
+            });
+            
+            Object.defineProperty(window, 'currentAbortController', {
+                get: () => appState.currentAbortController,
+                set: (val) => { appState.currentAbortController = val; }
+            });
+            
+            // Simple variables (not moved to StateManager yet - low priority)
             let searchTerm = "";
             let searchDebounceTimer = null;
-            let isUserPinnedToBottom = true; // Track if user is scrolled to bottom
-            let suppressScrollEvents = false; // Prevent intent tracking during programmatic scrolls
-            let conversationScrollPositions = {}; // Store scroll position per conversation
             
-            // ChatGPT Pattern: Unified input tracking for iOS Safari deferred scroll protection
-            // Tracks ALL input types (touch, pointer, mouse) at document level to prevent yanking
-            let lastInputEndTime = 0; // Timestamp of last input gesture completion
-            const INPUT_COOLDOWN_MS = 250; // iOS Safari deferred scroll window (~200ms + buffer)
-            let scrollLockUntil = 0; // Prevents any scroll interference after manual scroll
-            let hardScrollLock = false; // NUCLEAR OPTION: Completely freeze scroll position during critical operations
+            console.log('✅ [INIT] StateManager compatibility layer active');
+            
+            // ============================================================================
+            // EVENT MANAGER - Centralized event listener management
+            // ============================================================================
+            
+            class EventManager {
+                constructor() {
+                    this.listeners = [];
+                    this.conversationListeners = []; // Listeners that need cleanup on conversation switch
+                    console.log('✅ [EventManager] Initialized');
+                }
+                
+                // ===== GLOBAL LISTENERS (persist across conversations) =====
+                
+                addGlobal(element, event, handler, options = {}) {
+                    /**
+                     * Add a global event listener (never cleaned up).
+                     * Use for: burger menu, theme toggle, new chat button, etc.
+                     */
+                    element.addEventListener(event, handler, options);
+                    this.listeners.push({ element, event, handler, options, type: 'global' });
+                    console.log(`➕ [EventManager] Global listener: ${event} on`, element.id || element.className);
+                }
+                
+                // ===== CONVERSATION LISTENERS (cleaned up on conversation switch) =====
+                
+                addConversation(element, event, handler, options = {}) {
+                    /**
+                     * Add a conversation-specific listener (cleaned up when switching chats).
+                     * Use for: message observers, scroll listeners, etc.
+                     */
+                    element.addEventListener(event, handler, options);
+                    this.conversationListeners.push({ element, event, handler, options });
+                    console.log(`➕ [EventManager] Conversation listener: ${event}`);
+                }
+                
+                cleanupConversationListeners() {
+                    /**
+                     * Remove all conversation-specific listeners.
+                     * Call this when switching conversations to prevent memory leaks.
+                     */
+                    console.log(`🧹 [EventManager] Cleaning up ${this.conversationListeners.length} conversation listeners`);
+                    
+                    this.conversationListeners.forEach(({ element, event, handler, options }) => {
+                        element.removeEventListener(event, handler, options);
+                    });
+                    
+                    this.conversationListeners = [];
+                }
+                
+                // ===== UTILITY =====
+                
+                getStats() {
+                    return {
+                        global: this.listeners.length,
+                        conversation: this.conversationListeners.length,
+                        total: this.listeners.length + this.conversationListeners.length
+                    };
+                }
+                
+                logStats() {
+                    const stats = this.getStats();
+                    console.log('📊 [EventManager] Stats:', stats);
+                }
+            }
+            
+            // Initialize EventManager
+            const eventManager = new EventManager();
+            console.log('✅ [INIT] EventManager created');
 
             // Folder Configuration (matches backend projects)
             const FOLDERS = [
@@ -1431,8 +1909,6 @@
             const messageInput = document.getElementById("messageInput");
             const sendBtn = document.getElementById("sendBtn");
             const stopBtn = document.getElementById("stopBtn");
-            
-            let currentAbortController = null;
             
             // ===== ASYNC STORAGE WRAPPER WITH FALLBACKS =====
             class Storage {
@@ -1888,7 +2364,7 @@
                 try {
                     // Save current conversation's scroll position before switching
                     if (conversationId && messages) {
-                        conversationScrollPositions[conversationId] = messages.scrollTop;
+                        scrollManager.savePosition(conversationId);
                     }
                     
                     conversationId = convId;
@@ -1920,9 +2396,8 @@
                     
                     // Restore previous scroll position for this conversation
                     requestAnimationFrame(() => {
-                        if (conversationScrollPositions[convId] !== undefined) {
-                            messages.scrollTop = conversationScrollPositions[convId];
-                        } else {
+                        const restored = scrollManager.restorePosition(convId);
+                        if (!restored) {
                             // New conversation, scroll to bottom
                             scrollToBottom(true);
                         }
@@ -2298,9 +2773,9 @@
 
                 // NUCLEAR SCROLL LOCK: Completely freeze scroll during message positioning
                 // This prevents ANY scroll interference (touch, mutation observer, clamp, etc.)
-                hardScrollLock = true;
-                scrollLockUntil = Date.now() + 1500; // Extended lock for iOS
-                isUserPinnedToBottom = false;
+                scrollManager.enableHardLock(SCROLL_CONFIG.HARD_LOCK_DURATION);
+                scrollManager.setTimedLock(1500); // Extended lock for iOS
+                scrollManager.state.isPinnedToBottom = false;
                 suppressScrollEvents = true;
                 
                 // Add user message to UI
@@ -2335,8 +2810,8 @@
                         
                         // Keep hard lock but much shorter - just prevent immediate touch interference
                         setTimeout(() => {
-                            hardScrollLock = false;
-                            suppressScrollEvents = false;
+                            scrollManager.disableHardLock();
+                            scrollManager.state.suppressEvents = false;
                             updateScrollPinState();
                         }, 800); // Reduced from 1500ms - iOS scrollIntoView is faster
                     }
@@ -2867,26 +3342,17 @@
                 messages.appendChild(welcomeDiv);
             }
 
-            // ===== SCROLL CLAMP (ChatGPT Pattern) =====
-            // Prevents scrolling into empty padding zone below last message
-            // iOS CSS overscroll-behavior provides the visual rubber band effect
+            // ===== LEGACY SCROLL FUNCTIONS (Wrappers for ScrollManager) =====
+            // These maintain backward compatibility while using the new ScrollManager
             
-            let lastClampScrollTop = 0;
+            let lastClampScrollTop = 0;  // Track scroll direction
             
             function clampScrollPosition() {
-                // HARD LOCK: Completely disable clamping during critical operations
-                if (hardScrollLock) {
-                    lastClampScrollTop = messages.scrollTop;
-                    return;
-                }
-                
-                // NEVER interfere with programmatic scrolls
-                if (Date.now() < scrollLockUntil || suppressScrollEvents) {
-                    lastClampScrollTop = messages.scrollTop;
-                    return;
-                }
-                
-                // DISABLE clamping during streaming (prevents old messages from appearing)
+                /**
+                 * LEGACY WRAPPER: Delegates to ScrollManager.clampPosition()
+                 * Prevents scrolling past last message with rubber band effect.
+                 */
+                // Skip if streaming (prevents old messages from appearing)
                 if (isStreaming) {
                     lastClampScrollTop = messages.scrollTop;
                     return;
@@ -2896,50 +3362,18 @@
                 const isScrollingDown = currentScrollTop > lastClampScrollTop;
                 lastClampScrollTop = currentScrollTop;
                 
-                // Only clamp downward scrolling (allow free upward scrolling)
+                // Only clamp downward scrolling
                 if (!isScrollingDown) return;
                 
-                // Find last message
-                const allMessages = messages.querySelectorAll('.message');
-                if (allMessages.length === 0) return;
-                
-                const lastMessage = allMessages[allMessages.length - 1];
-                const lastMessageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                
-                // Buffer: keeps text visible above input bar
-                const buffer = 180;
-                const maxScroll = Math.max(0, lastMessageBottom - messages.clientHeight + buffer);
-                
-                // Rubber band: Allow small overscroll (50px) before snapping back
-                const overscrollLimit = 50; // ChatGPT-style rubber band resistance
-                
-                if (currentScrollTop > maxScroll + overscrollLimit) {
-                    // Exceeded rubber band, gently return
-                    messages.scrollTo({
-                        top: maxScroll,
-                        behavior: 'smooth'
-                    });
-                }
+                scrollManager.clampPosition();
             }
 
-            // ===== SCROLL MANAGER (EVENT-DRIVEN) =====
             function updateScrollPinState() {
-                // HARD LOCK: Don't update pin state during critical operations
-                if (hardScrollLock) {
-                    return;
-                }
-                
-                // Skip updates during scroll lock (prevents race conditions)
-                if (Date.now() < scrollLockUntil) {
-                    return;
-                }
-                const threshold = 5; // PATCH 19: Reduced from 30px to 5px (industry standard)
-                const isNearBottom =
-                    messages.scrollHeight -
-                        messages.scrollTop -
-                        messages.clientHeight <
-                    threshold;
-                isUserPinnedToBottom = isNearBottom;
+                /**
+                 * LEGACY WRAPPER: Delegates to ScrollManager.updatePinState()
+                 * Tracks whether user is pinned to bottom for auto-scroll decisions.
+                 */
+                scrollManager.updatePinState();
             }
 
             // ChatGPT Pattern: Update scroll-to-bottom button visibility
@@ -2977,18 +3411,12 @@
                 });
             }
 
-            // ChatGPT Pattern: Guard auto-scroll based on streaming state and user intent
             function canAutoScroll() {
-                // HARD LOCK: No auto-scroll during critical operations
-                if (hardScrollLock) {
-                    return false;
-                }
-                
-                // Respect scroll lock (prevents race conditions during manual scroll-to-top)
-                if (Date.now() < scrollLockUntil) {
-                    return false;
-                }
-                return !isStreaming && isUserPinnedToBottom;
+                /**
+                 * LEGACY WRAPPER: Delegates to ScrollManager.canAutoScroll()
+                 * Additional check for streaming state (managed at app level, not ScrollManager level)
+                 */
+                return !isStreaming && scrollManager.canAutoScroll();
             }
 
             // ChatGPT Pattern: Promise-based streaming cleanup to prevent race conditions
@@ -3010,77 +3438,31 @@
             }
 
             function scrollToBottom(force = false) {
-                // HARD LOCK: No scroll during critical operations
-                if (hardScrollLock) {
-                    return;
-                }
-                
-                // SCROLL LOCK: Prevent interference after manual scroll-to-top
-                if (Date.now() < scrollLockUntil) {
-                    return;
-                }
-                
-                // Debug logging to identify unexpected scroll triggers
+                /**
+                 * LEGACY WRAPPER: Delegates to ScrollManager.toBottom()
+                 * Additional streaming check at app level.
+                 */
+                // Debug logging for unexpected calls during streaming
                 if (!force && isStreaming) {
                     console.error("🚨 BUG: scrollToBottom() called during streaming without force=true!");
                     console.trace("Stack trace:");
                     return;
                 }
                 
-                // Force parameter bypasses user intent check for initial loads/sends
+                // Force bypasses normal checks
                 if (!force && !canAutoScroll()) {
                     return;
                 }
-
-                // iOS-NATIVE with input bar adjustment
-                suppressScrollEvents = true;
+                
+                // Suppress events during programmatic scroll
+                scrollManager.suppressEventsTemporarily(100);
                 
                 requestAnimationFrame(() => {
-                    const allMessages = messages.querySelectorAll('.message');
-                    const lastMessage = allMessages[allMessages.length - 1];
-                    
-                    if (lastMessage) {
-                        // Scroll to end first (instant to get position)
-                        lastMessage.scrollIntoView({ 
-                            behavior: 'instant',
-                            block: 'end',
-                            inline: 'nearest'
-                        });
-                        
-                        // Calculate proper scroll position to show content above input bar
-                        requestAnimationFrame(() => {
-                            const inputBar = document.querySelector('.input-container');
-                            const inputBarHeight = inputBar ? inputBar.offsetHeight : 80;
-                            const buffer = inputBarHeight + 100; // Input bar + spacing
-                            
-                            // Get message bottom position
-                            const messageBottom = lastMessage.offsetTop + lastMessage.offsetHeight;
-                            // Calculate scroll position: show message with buffer above input
-                            const targetScroll = messageBottom - messages.clientHeight + buffer;
-                            
-                            messages.scrollTo({
-                                top: Math.max(0, targetScroll),
-                                behavior: force ? 'instant' : 'smooth'
-                            });
-                            
-                            console.log(
-                                "📜 Scrolled to last message with input offset" +
-                                    (force ? " (instant)" : " (smooth)") +
-                                    ` | buffer=${buffer}px, target=${targetScroll}px`,
-                            );
-                        });
-                    } else {
-                        // Fallback if no messages exist
-                        messages.scrollTo({
-                            top: messages.scrollHeight,
-                            behavior: force ? 'instant' : 'smooth'
-                        });
-                    }
-                    
-                    // Clear suppression flag after scroll completes
-                    requestAnimationFrame(() => {
-                        suppressScrollEvents = false;
-                    });
+                    scrollManager.toBottom(force, !force);  // force=instant, normal=smooth
+                    console.log(
+                        "📜 [LEGACY] Scrolled to bottom via ScrollManager" +
+                        (force ? " (instant)" : " (smooth)")
+                    );
                 });
             }
 
