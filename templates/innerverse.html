@@ -673,16 +673,24 @@
                 box-shadow: 0 2px 8px var(--shadow-md);
             }
 
-            /* ===== AI MESSAGES - FLAT, FULL WIDTH (CHATGPT STYLE) ===== */
+            /* ===== AI MESSAGES - LEFT-ALIGNED BUBBLE (CLAUDE/CHATGPT MOBILE STYLE) ===== */
             .message.assistant {
-                max-width: 100%;
-                padding-right: 60px; /* Space for copy button */
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start; /* Left aligned */
+                position: relative;
             }
 
             .message.assistant .message-content {
+                background: var(--bg-code); /* Light gray bubble */
+                padding: 12px 16px;
+                border-radius: 20px;
+                border-bottom-left-radius: 4px; /* Sharp corner on bottom-left */
+                max-width: 70%; /* Bubble width */
                 color: var(--text-primary);
                 line-height: 1.65;
                 font-size: 15px;
+                box-shadow: 0 1px 2px var(--shadow-sm);
             }
 
             .message.assistant .message-content h1,
@@ -801,11 +809,10 @@
             }
 
             /* Copy Button */
-            /* ===== COPY BUTTON - POLISHED ===== */
+            /* ===== COPY BUTTON - BOTTOM OF MESSAGE (CLAUDE STYLE) ===== */
             .copy-btn {
-                position: absolute;
-                top: 8px;
-                right: 8px;
+                position: relative;
+                margin-top: 6px;
                 width: 32px;
                 height: 32px;
                 background: var(--bg-button);
@@ -822,7 +829,6 @@
 
             .message:hover .copy-btn {
                 opacity: 1;
-                transform: translateY(0);
             }
 
             .copy-btn:hover {
@@ -881,17 +887,15 @@
             }
 
             /* Typing Indicator - FIXED POSITION (iOS-safe) */
+            /* ===== TYPING INDICATOR - MINIMAL BOUNCY DOTS ===== */
             .typing-indicator {
                 display: none;
                 position: fixed;
-                bottom: 85px; /* Above input bar (input ~70px + padding) */
-                left: calc(280px + 20px); /* Sidebar width (280px) + message padding (20px) */
-                padding: 10px 16px;
-                background: var(--bg-user-bubble);
-                border-radius: 20px;
-                box-shadow: 0 2px 8px var(--shadow);
-                z-index: 999; /* Below input (1000) but above messages */
-                pointer-events: none; /* Don't block clicks */
+                bottom: 85px; /* Above input bar */
+                left: calc(280px + 20px); /* Sidebar width + message padding */
+                padding: 12px;
+                z-index: 999;
+                pointer-events: none;
             }
 
             .typing-indicator.visible {
@@ -962,30 +966,29 @@
             }
 
             .typing-dots span {
-                width: 8px;
-                height: 8px;
-                background: var(--text-tertiary);
+                width: 6px;
+                height: 6px;
+                background: var(--text-secondary);
                 border-radius: 50%;
-                animation: typingDot 1.4s infinite ease-in-out;
+                animation: bouncyDot 1s infinite ease-in-out;
             }
 
             .typing-dots span:nth-child(2) {
-                animation-delay: 0.2s;
+                animation-delay: 0.15s;
             }
             .typing-dots span:nth-child(3) {
-                animation-delay: 0.4s;
+                animation-delay: 0.3s;
             }
 
-            @keyframes typingDot {
-                0%,
-                60%,
-                100% {
-                    opacity: 0.5;
-                    transform: scale(0.8);
+            /* Exaggerated bounce - Apple-style elegance */
+            @keyframes bouncyDot {
+                0%, 80%, 100% {
+                    opacity: 0.4;
+                    transform: translateY(0) scale(0.9);
                 }
-                30% {
+                40% {
                     opacity: 1;
-                    transform: scale(1.2);
+                    transform: translateY(-8px) scale(1);
                 }
             }
 
