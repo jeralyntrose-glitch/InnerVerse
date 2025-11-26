@@ -6399,11 +6399,25 @@ async def batch_full_optimize():
         failed = 0
         errors = []
         
+        skipped = 0
+        
         for doc_id, doc_data in documents.items():
             try:
                 processed += 1
                 filename = doc_data['filename']
                 old_vectors = doc_data['vectors']
+                
+                # === SKIP ALREADY OPTIMIZED DOCUMENTS ===
+                # Check if ANY vector in this document has 'optimized': True
+                already_optimized = any(
+                    vec['metadata'].get('optimized', False) 
+                    for vec in old_vectors
+                )
+                
+                if already_optimized:
+                    skipped += 1
+                    print(f"⏭️  [{processed}/{total_documents}] SKIPPING (already optimized): {filename}")
+                    continue
                 
                 print(f"{'='*80}")
                 print(f"📄 [{processed}/{total_documents}] {filename}")
@@ -6609,7 +6623,8 @@ OUTPUT FORMAT:
         print("="*80)
         print(f"📊 Summary:")
         print(f"   Total documents: {total_documents}")
-        print(f"   Successfully optimized: {processed - failed}")
+        print(f"   Already optimized (skipped): {skipped}")
+        print(f"   Newly optimized: {processed - failed - skipped}")
         print(f"   Failed: {failed}")
         print(f"   Total new vectors: {updated_vectors}")
         print(f"   Quality improvement: MAXIMUM 🔥")
@@ -6618,7 +6633,8 @@ OUTPUT FORMAT:
         return {
             "message": "Ultimate batch optimization completed!",
             "total_documents": total_documents,
-            "documents_optimized": processed - failed,
+            "documents_skipped": skipped,
+            "documents_optimized": processed - failed - skipped,
             "documents_failed": failed,
             "total_vectors_created": updated_vectors,
             "optimization_level": "MAXIMUM",
