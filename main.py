@@ -789,7 +789,7 @@ CRITICAL EXTRACTION RULES:
 - If none found, use empty array []
 
 🔥 FUNCTION POSITIONS (Priority #2):
-- Format: "{function}_{position}" (e.g., "Ni_hero", "Te_parent")
+- Format: "{{function}}_{{position}}" (e.g., "Ni_hero", "Te_parent")
 - Valid positions: hero, parent, child, inferior, nemesis, critic, trickster, demon
 - Extract ONLY explicitly mentioned function-position pairs
 - Examples: "Ni hero" → "Ni_hero", "Fe critic" → "Fe_critic"
