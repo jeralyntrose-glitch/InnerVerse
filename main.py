@@ -465,13 +465,25 @@ def extract_enriched_metadata(filename: str, text_sample: str = "") -> dict:
     Extract enriched metadata from filename and content for better filtering.
     Examples: 
     - "Season 12 Episode 45.pdf" -> {"season": "12", "episode": "45"}
+    - "[22] ENFP Octagram.pdf" -> {"season": "22"}
+    - "Season 32: INTP" -> {"season": "32"}
     - "ESTP vs INTJ.pdf" -> {"types_mentioned": ["ESTP", "INTJ"]}
     """
     import re
     metadata = {}
     
-    # Extract season/episode from filename
+    # Extract season/episode from filename - supports multiple formats:
+    # Format 1: "Season 22" or "season22"
+    # Format 2: "[22]" at start of filename  
+    # Format 3: "Season 32:" with colon
     season_match = re.search(r'[Ss]eason\s*(\d+)', filename)
+    if not season_match:
+        # Try bracket format: [22] at start
+        season_match = re.search(r'^\[(\d+)\]', filename)
+    if not season_match:
+        # Try "Season 32:" format
+        season_match = re.search(r'[Ss]eason\s*(\d+):', filename)
+    
     episode_match = re.search(r'[Ee]pisode\s*(\d+)', filename)
     
     if season_match:
@@ -722,9 +734,18 @@ async def auto_tag_document_v2_enterprise(text: str, filename: str, openai_clien
     combined_sample = "\n\n[...]\n\n".join([chunk for _, chunk in chunks_to_sample])
     sample_text = combined_sample[:6000]  # Max 6000 chars for cost control
     
-    # STEP 2: Extract season/episode from filename
+    # STEP 2: Extract season/episode from filename - supports multiple formats
     import re
+    # Try multiple season formats:
+    # Format 1: "Season 22" or "season22"
     season_match = re.search(r'[Ss]eason\s*(\d+)', filename)
+    if not season_match:
+        # Format 2: "[22]" at start of filename
+        season_match = re.search(r'^\[(\d+)\]', filename)
+    if not season_match:
+        # Format 3: "Season 32:" with colon
+        season_match = re.search(r'[Ss]eason\s*(\d+):', filename)
+    
     episode_match = re.search(r'[Ee]pisode\s*(\d+)|[Ee]p\s*(\d+)', filename)
     
     season_number = season_match.group(1) if season_match else None
@@ -8706,8 +8727,9 @@ async def get_content_atlas(
                 if not doc_id or doc_id in documents_map:
                     continue
                 
-                # Extract structured metadata (10 fields)
+                # Extract structured metadata (18 fields including Enterprise V2)
                 structured_metadata = {
+                    # Basic 10 fields
                     "content_type": metadata.get("content_type", "unknown"),
                     "difficulty": metadata.get("difficulty", "unknown"),
                     "primary_category": metadata.get("primary_category", "unknown"),
@@ -8717,7 +8739,16 @@ async def get_content_atlas(
                     "quadra": metadata.get("quadra", "unknown"),
                     "temple": metadata.get("temple", "unknown"),
                     "topics": metadata.get("topics", []),
-                    "use_case": metadata.get("use_case", [])
+                    "use_case": metadata.get("use_case", []),
+                    # Enterprise V2 fields (8 additional)
+                    "season": metadata.get("season", "unknown"),
+                    "octagram_states": metadata.get("octagram_states", []),
+                    "archetypes": metadata.get("archetypes", []),
+                    "key_concepts": metadata.get("key_concepts", []),
+                    "pair_dynamics": metadata.get("pair_dynamics", []),
+                    "content_focus": metadata.get("content_focus", "unknown"),
+                    "practical_applications": metadata.get("practical_applications", []),
+                    "optimized": metadata.get("optimized", False)
                 }
                 
                 # Build document object

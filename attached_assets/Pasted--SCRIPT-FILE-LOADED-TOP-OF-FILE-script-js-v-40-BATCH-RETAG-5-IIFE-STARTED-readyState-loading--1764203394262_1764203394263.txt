@@ -1,0 +1,49 @@
+✅ SCRIPT FILE LOADED - TOP OF FILE
+script.js?v=40-BATCH-RETAG:5 ✅ IIFE STARTED, readyState: loading
+script.js?v=40-BATCH-RETAG:7 ⏳ Waiting for DOMContentLoaded...
+script.js?v=40-BATCH-RETAG:15 ✅ INIT FUNCTION CALLED
+script.js?v=40-BATCH-RETAG:1401 🚀 Script loaded, calling updateCostTracker...
+script.js?v=40-BATCH-RETAG:1316 💰 updateCostTracker called!
+youtube-import.js:34 🎬 Initializing YouTube Import UI...
+youtube-import.js:45 ✅ YouTube Import UI initialized
+script.js?v=40-BATCH-RETAG:460 ✅ Google Picker API loaded
+uploader:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">Understand this warning
+script.js?v=40-BATCH-RETAG:1598 📚 Loading document library with 360 documents
+script.js?v=40-BATCH-RETAG:1660 ✅ Document library loaded: 360 documents
+script.js?v=40-BATCH-RETAG:1325 📊 Cost data received: {total_cost: 188.283111, last_24h_cost: 3.047701, by_operation: {…}, recent_calls: Array(10)}
+script.js?v=40-BATCH-RETAG:72 ✅ AudioContext initialized for notifications
+script.js?v=40-BATCH-RETAG:195 [Violation] 'change' handler took 7356ms
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of an INFJ.pdf Size: 0.02 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of an ISFJ.pdf Size: 0.02 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of ENFJs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of ENFPs_.pdf Size: 0.02 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the cognitive transitions of ENTJs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of ENTPs_.pdf Size: 0.02 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:1316 💰 updateCostTracker called!
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of ESFJs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of ESFPs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the cognitive transitions of ESTJs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What Are The Cognitive Transitions of ESTPs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of INFPs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of INTJs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of INTPs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of ISFPs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of ISTJs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:303 📤 Starting upload for: [22] What are the Cognitive Transitions of ISTPs_.pdf Size: 0.01 MB
+script.js?v=40-BATCH-RETAG:309 📡 Sending fetch request to /upload
+script.js?v=40-BATCH-RETAG:1325 📊 Cost data received: {total_cost: 188.283111, last_24h_cost: 3.047701, by_operation: {…}, recent_calls: Array(10)}
