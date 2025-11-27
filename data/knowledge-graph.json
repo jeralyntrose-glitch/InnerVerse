@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2025-11-06T02:54:59.689146",
+  "last_updated": "2025-11-27T01:04:14.578103",
   "nodes": [
     {
       "id": "shadow_integration",
@@ -4565,9 +4565,9 @@
       "label": "Four Sides of the Mind",
       "type": "framework",
       "category": "foundational",
-      "definition": "A framework consisting of ego, subconscious, unconscious, and super ego that represents different aspects of human psychology.",
+      "definition": "A framework describing four personas within each individual: ego, subconscious, unconscious, and superego that develop differently and control life direction.",
       "properties": {},
-      "frequency": 11,
+      "frequency": 12,
       "sources": [
         "f8f82fe0-8e1c-448a-a4c7-988ca9256b5a",
         "96bae641-a346-403d-a7ce-4bbdfae1c0ed",
@@ -4578,10 +4578,11 @@
         "e78a3aec-8c76-40a5-abdb-604f59470940",
         "4755f8ee-f3b4-46df-a3d6-0d33d285c4b9",
         "202c0cc4-99f9-4dec-a363-1690b020e918",
-        "c56ea5a9-3ab8-4e15-99d3-bdf5e6ded153"
+        "c56ea5a9-3ab8-4e15-99d3-bdf5e6ded153",
+        "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80"
       ],
       "created_at": "2025-11-05T23:13:58.885766",
-      "last_updated": "2025-11-06T00:42:03.863807"
+      "last_updated": "2025-11-27T01:04:10.226634"
     },
     {
       "id": "emulation",
@@ -55602,7 +55603,8 @@
       "fc4fa6bf-d3e9-48ad-8b4a-ee4ab45fb061",
       "b3672843-96de-46e5-8321-5f83507589c9",
       "4798f724-4afc-43d6-b894-871351834912",
-      "4617c455-eb4b-4647-85e2-42841b8b8ba1"
+      "4617c455-eb4b-4647-85e2-42841b8b8ba1",
+      "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80"
     ]
   }
 }
