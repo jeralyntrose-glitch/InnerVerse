@@ -6552,20 +6552,29 @@ def search_by_title(cursor, query):
 @app.post("/api/batch-retag")
 async def batch_retag_documents():
     """
-    Batch re-tag ALL existing Pinecone documents with new structured metadata system.
+    Batch re-tag ALL existing Pinecone documents with ENTERPRISE V2 metadata system.
     
-    ✨ NEW: Automatically fixes MBTI typos before re-tagging!
+    🚀 ENTERPRISE V2: Full 18-field metadata extraction!
+    - octagram_states (UDSF, UDUF, SDSF, SDUF)
+    - archetypes (paladin, gladiator, bard, crusader, etc.)
+    - key_concepts (semantic teaching points)
+    - function_positions (Ni_hero, Te_parent, etc.)
+    - pair_dynamics (golden_pair, pedagogue_pair, etc.)
+    - Plus all 10 original fields
+    
+    ✨ Also fixes MBTI typos before re-tagging!
     - Fixes "is FP" → "ISFP", "in TJ" → "INTJ", etc.
     - Corrects all 16 types and 8 cognitive functions
-    - Ensures proper auto-tagging for Season 1-21 transcripts
     
     Process:
     1. Query all vectors from Pinecone
     2. Group by document_id
     3. For each document, extract text and fix MBTI typos (preprocess_transcript)
-    4. Run GPT-4o-mini tagging on corrected text
-    5. Update all chunks with new structured metadata
+    4. Run ENTERPRISE V2 tagging (18 fields) with GPT-4o-mini
+    5. Update all chunks with comprehensive structured metadata
     6. Return progress updates
+    
+    NOTE: Does NOT re-chunk documents. Use /api/batch-full-optimize for full optimization.
     """
     try:
         print("\n" + "="*60)
@@ -6671,14 +6680,18 @@ async def batch_retag_documents():
                 if typo_fixes != 0:
                     print(f"   🔧 Pre-processed: fixed MBTI typos ({typo_fixes} char difference)")
                 
-                # Run auto-tagging with GPT-4o-mini (on corrected text)
-                structured_metadata = await auto_tag_document(combined_text, filename, openai_client)
+                # Run ENTERPRISE V2 auto-tagging with GPT-4o-mini (on corrected text)
+                # Uses 18-field extraction including octagram_states, archetypes, key_concepts
+                structured_metadata = await auto_tag_document_v2_enterprise(combined_text, filename, openai_client)
                 
-                print(f"   ✅ Structured metadata extracted:")
+                print(f"   ✅ Enterprise V2 metadata extracted (18 fields):")
                 print(f"      Content Type: {structured_metadata.get('content_type')}")
                 print(f"      Difficulty: {structured_metadata.get('difficulty')}")
                 print(f"      Primary Category: {structured_metadata.get('primary_category')}")
-                print(f"      Topics: {len(structured_metadata.get('topics', []))} topics")
+                print(f"      Types: {structured_metadata.get('types_discussed', [])}")
+                print(f"      Octagram: {structured_metadata.get('octagram_states', [])}")
+                print(f"      Key Concepts: {len(structured_metadata.get('key_concepts', []))} concepts")
+                print(f"      Confidence: {structured_metadata.get('tag_confidence', 0.0):.2f}")
                 
                 # Step 4: Update all chunks for this document
                 vectors_to_update = []
@@ -6693,9 +6706,10 @@ async def batch_retag_documents():
                             print(f"   ⚠️ Could not fetch vector {vec['id']} - skipping")
                             continue
                     
-                    # Keep all existing metadata, just add/update structured fields
+                    # Keep all existing metadata, add/update ENTERPRISE V2 structured fields (18 total)
                     updated_metadata = vec['metadata'].copy()
                     updated_metadata.update({
+                        # Core classification (10 fields from v1)
                         'content_type': structured_metadata.get('content_type', 'none'),
                         'difficulty': structured_metadata.get('difficulty', 'none'),
                         'primary_category': structured_metadata.get('primary_category', 'none'),
@@ -6705,7 +6719,19 @@ async def batch_retag_documents():
                         'quadra': structured_metadata.get('quadra', 'none'),
                         'temple': structured_metadata.get('temple', 'none'),
                         'topics': structured_metadata.get('topics', []),
-                        'use_case': structured_metadata.get('use_case', [])
+                        'use_case': structured_metadata.get('use_case', []),
+                        # ENTERPRISE V2: Advanced fields (8 new fields)
+                        'octagram_states': structured_metadata.get('octagram_states', []),
+                        'function_positions': structured_metadata.get('function_positions', []),
+                        'pair_dynamics': structured_metadata.get('pair_dynamics', []),
+                        'archetypes': structured_metadata.get('archetypes', []),
+                        'key_concepts': structured_metadata.get('key_concepts', []),
+                        'teaching_focus': structured_metadata.get('teaching_focus', 'none'),
+                        'target_audience': structured_metadata.get('target_audience', 'none'),
+                        'prerequisite_knowledge': structured_metadata.get('prerequisite_knowledge', []),
+                        # Metadata quality indicators
+                        'tag_confidence': structured_metadata.get('tag_confidence', 1.0),
+                        'content_density': structured_metadata.get('content_density', 'medium')
                     })
                     
                     vectors_to_update.append({
