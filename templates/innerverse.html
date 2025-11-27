@@ -1098,6 +1098,67 @@
                 stroke: #e0e0e0 !important;
             }
 
+            /* ===== VOICE BUTTON - GRAY CIRCLE WITH MIC ===== */
+            .voice-btn {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                background: var(--btn-secondary);
+                border: 1px solid var(--border-main);
+                border-radius: 50%; /* Circle like send button */
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 1px 3px var(--shadow-sm);
+            }
+
+            .voice-btn:hover {
+                background: var(--bg-button-hover);
+                transform: translateY(-1px);
+                box-shadow: 0 2px 6px var(--shadow-md);
+            }
+            
+            .voice-btn:active {
+                transform: translateY(0);
+                box-shadow: 0 1px 2px var(--shadow-sm);
+            }
+            
+            /* Recording state */
+            .voice-btn.recording {
+                background: #ef4444; /* Red when recording */
+                border-color: #dc2626;
+                animation: pulse-recording 1.5s ease-in-out infinite;
+            }
+            
+            @keyframes pulse-recording {
+                0%, 100% {
+                    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+                }
+                50% {
+                    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+                }
+            }
+
+            .voice-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            
+            .voice-btn svg path {
+                stroke: #2d2d2d; /* Dark gray in light mode */
+                transition: stroke 0.15s;
+            }
+            
+            .voice-btn.recording svg path {
+                stroke: white !important; /* White when recording */
+            }
+            
+            [data-theme="dark"] .voice-btn:not(.recording) svg path {
+                stroke: #e0e0e0; /* Light gray in dark mode */
+            }
+
             .input-wrapper {
                 flex: 1;
                 display: flex;
@@ -1439,6 +1500,19 @@
                         >
                             <svg viewBox="0 0 24 24" fill="none">
                                 <path d="M12 5v14M5 12h14" stroke="#2d2d2d" stroke-width="2.5" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+
+                        <button
+                            class="voice-btn"
+                            id="voiceBtn"
+                            title="Voice message"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" class="mic-icon">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="#2d2d2d" stroke-width="2" fill="none"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="#2d2d2d" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M12 19v4" stroke="#2d2d2d" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M8 23h8" stroke="#2d2d2d" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                         </button>
 
@@ -2740,6 +2814,118 @@
                 selectedImages = compressedFiles;
                 await showImagePreviews();
             });
+            
+            // ===== VOICE MESSAGES =====
+            let mediaRecorder = null;
+            let audioChunks = [];
+            const voiceBtn = document.getElementById('voiceBtn');
+            
+            voiceBtn.addEventListener('click', async () => {
+                try {
+                    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                        // Start recording
+                        console.log('🎤 Starting voice recording...');
+                        
+                        // Request microphone permission
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        
+                        // Create media recorder
+                        mediaRecorder = new MediaRecorder(stream);
+                        audioChunks = [];
+                        
+                        // Collect audio data
+                        mediaRecorder.ondataavailable = (event) => {
+                            if (event.data.size > 0) {
+                                audioChunks.push(event.data);
+                            }
+                        };
+                        
+                        // Handle recording stop
+                        mediaRecorder.onstop = async () => {
+                            console.log('🎤 Recording stopped, processing...');
+                            
+                            // Create audio blob
+                            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                            console.log(`📊 Audio size: ${(audioBlob.size / 1024).toFixed(2)} KB`);
+                            
+                            // Stop all audio tracks
+                            stream.getTracks().forEach(track => track.stop());
+                            
+                            // Send for transcription
+                            await transcribeAudio(audioBlob);
+                            
+                            // Reset
+                            audioChunks = [];
+                            mediaRecorder = null;
+                        };
+                        
+                        // Start recording
+                        mediaRecorder.start();
+                        voiceBtn.classList.add('recording');
+                        console.log('✅ Recording started');
+                        
+                    } else {
+                        // Stop recording
+                        console.log('⏹️ Stopping recording...');
+                        mediaRecorder.stop();
+                        voiceBtn.classList.remove('recording');
+                    }
+                } catch (error) {
+                    console.error('❌ Voice recording error:', error);
+                    voiceBtn.classList.remove('recording');
+                    
+                    if (error.name === 'NotAllowedError') {
+                        showError('Microphone access denied. Please allow microphone permission in your browser settings.');
+                    } else if (error.name === 'NotFoundError') {
+                        showError('No microphone found. Please connect a microphone and try again.');
+                    } else {
+                        showError(`Voice recording failed: ${error.message}`);
+                    }
+                }
+            });
+            
+            async function transcribeAudio(audioBlob) {
+                try {
+                    // Show loading state
+                    messageInput.value = '🎤 Transcribing...';
+                    messageInput.disabled = true;
+                    
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, 'voice-message.webm');
+                    
+                    console.log('🚀 Sending audio to Whisper API...');
+                    
+                    // Send to backend
+                    const response = await fetch('/transcribe-audio', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Transcription failed');
+                    }
+                    
+                    const result = await response.json();
+                    console.log('✅ Transcription complete:', result.text);
+                    
+                    // Fill message input with transcribed text
+                    messageInput.value = result.text;
+                    messageInput.disabled = false;
+                    messageInput.focus();
+                    
+                    // Auto-adjust textarea height
+                    messageInput.style.height = 'auto';
+                    messageInput.style.height = messageInput.scrollHeight + 'px';
+                    
+                } catch (error) {
+                    console.error('❌ Transcription error:', error);
+                    messageInput.value = '';
+                    messageInput.disabled = false;
+                    showError(`Transcription failed: ${error.message}`);
+                }
+            }
             
             // ===== DRAG AND DROP FOR IMAGES =====
             const dropZone = document.querySelector('.input-container');
