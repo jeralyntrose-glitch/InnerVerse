@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2025-11-27T14:54:01.957432",
+  "last_updated": "2025-11-27T14:54:59.182518",
   "nodes": [
     {
       "id": "shadow_integration",
@@ -4566,9 +4566,9 @@
       "label": "Four Sides of the Mind",
       "type": "framework",
       "category": "foundational",
-      "definition": "A comprehensive model consisting of ego, subconscious, unconscious, and superego that work together to form complete psychological functioning.",
+      "definition": "The complete cognitive structure consisting of ego, subconscious, unconscious, and superego that work together to influence how cognitive functions operate.",
       "properties": {},
-      "frequency": 13,
+      "frequency": 14,
       "sources": [
         "f8f82fe0-8e1c-448a-a4c7-988ca9256b5a",
         "96bae641-a346-403d-a7ce-4bbdfae1c0ed",
@@ -4581,10 +4581,11 @@
         "202c0cc4-99f9-4dec-a363-1690b020e918",
         "c56ea5a9-3ab8-4e15-99d3-bdf5e6ded153",
         "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80",
-        "ee58723e-d7fc-4116-bd3e-ef477fa37137"
+        "ee58723e-d7fc-4116-bd3e-ef477fa37137",
+        "84119346-e7d0-4f34-a143-b5051d8bcff5"
       ],
       "created_at": "2025-11-05T23:13:58.885766",
-      "last_updated": "2025-11-27T14:53:57.634931"
+      "last_updated": "2025-11-27T14:54:55.547412"
     },
     {
       "id": "emulation",
@@ -55623,7 +55624,8 @@
       "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80",
       "4070062a-2332-4a10-abe7-92346dcfd2f0",
       "14ca7c28-eb0a-4a4b-b6f5-e896f7826228",
-      "ee58723e-d7fc-4116-bd3e-ef477fa37137"
+      "ee58723e-d7fc-4116-bd3e-ef477fa37137",
+      "84119346-e7d0-4f34-a143-b5051d8bcff5"
     ]
   }
 }
