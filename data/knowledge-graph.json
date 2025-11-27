@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2025-11-27T01:22:11.322250",
+  "last_updated": "2025-11-27T14:54:01.957432",
   "nodes": [
     {
       "id": "shadow_integration",
@@ -4566,9 +4566,9 @@
       "label": "Four Sides of the Mind",
       "type": "framework",
       "category": "foundational",
-      "definition": "A framework describing four personas within each individual: ego, subconscious, unconscious, and superego that develop differently and control life direction.",
+      "definition": "A comprehensive model consisting of ego, subconscious, unconscious, and superego that work together to form complete psychological functioning.",
       "properties": {},
-      "frequency": 12,
+      "frequency": 13,
       "sources": [
         "f8f82fe0-8e1c-448a-a4c7-988ca9256b5a",
         "96bae641-a346-403d-a7ce-4bbdfae1c0ed",
@@ -4580,10 +4580,11 @@
         "4755f8ee-f3b4-46df-a3d6-0d33d285c4b9",
         "202c0cc4-99f9-4dec-a363-1690b020e918",
         "c56ea5a9-3ab8-4e15-99d3-bdf5e6ded153",
-        "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80"
+        "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80",
+        "ee58723e-d7fc-4116-bd3e-ef477fa37137"
       ],
       "created_at": "2025-11-05T23:13:58.885766",
-      "last_updated": "2025-11-27T01:04:10.226634"
+      "last_updated": "2025-11-27T14:53:57.634931"
     },
     {
       "id": "emulation",
@@ -23731,6 +23732,20 @@
       ],
       "created_at": "2025-11-06T02:48:52.601997",
       "last_updated": "2025-11-06T02:48:52.602008"
+    },
+    {
+      "id": "functional_attitudes",
+      "label": "Functional Attitudes",
+      "type": "theory",
+      "category": "foundational",
+      "definition": "The optimistic or pessimistic perspectives that each cognitive function adopts, influencing how individuals perceive and interact with the world.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "14ca7c28-eb0a-4a4b-b6f5-e896f7826228"
+      ],
+      "created_at": "2025-11-27T14:52:49.050427",
+      "last_updated": "2025-11-27T14:52:49.050438"
     }
   ],
   "edges": [
@@ -55227,7 +55242,7 @@
   ],
   "metadata": {
     "total_documents_processed": 0,
-    "total_concepts": 1632,
+    "total_concepts": 1633,
     "total_relationships": 1938,
     "processed_documents": [
       "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed",
@@ -55606,7 +55621,9 @@
       "4798f724-4afc-43d6-b894-871351834912",
       "4617c455-eb4b-4647-85e2-42841b8b8ba1",
       "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80",
-      "4070062a-2332-4a10-abe7-92346dcfd2f0"
+      "4070062a-2332-4a10-abe7-92346dcfd2f0",
+      "14ca7c28-eb0a-4a4b-b6f5-e896f7826228",
+      "ee58723e-d7fc-4116-bd3e-ef477fa37137"
     ]
   }
 }

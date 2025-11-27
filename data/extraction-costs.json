@@ -3526,5 +3526,23 @@
     "cost": 0.030531,
     "success": true,
     "error": null
+  },
+  {
+    "document_id": "14ca7c28-eb0a-4a4b-b6f5-e896f7826228",
+    "timestamp": "2025-11-27T14:52:48.977105",
+    "input_tokens": 1430,
+    "output_tokens": 1226,
+    "cost": 0.02268,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "ee58723e-d7fc-4116-bd3e-ef477fa37137",
+    "timestamp": "2025-11-27T14:53:57.561292",
+    "input_tokens": 1523,
+    "output_tokens": 1431,
+    "cost": 0.026034,
+    "success": true,
+    "error": null
   }
 ]
