@@ -6684,13 +6684,14 @@ async def batch_retag_documents():
                 # Uses 18-field extraction including octagram_states, archetypes, key_concepts
                 structured_metadata = await auto_tag_document_v2_enterprise(combined_text, filename, openai_client)
                 
-                print(f"   ✅ Enterprise V2 metadata extracted (18 fields):")
+                print(f"   ✅ Enterprise V2 metadata extracted (20 fields):")
                 print(f"      Content Type: {structured_metadata.get('content_type')}")
                 print(f"      Difficulty: {structured_metadata.get('difficulty')}")
                 print(f"      Primary Category: {structured_metadata.get('primary_category')}")
                 print(f"      Types: {structured_metadata.get('types_discussed', [])}")
                 print(f"      Octagram: {structured_metadata.get('octagram_states', [])}")
                 print(f"      Key Concepts: {len(structured_metadata.get('key_concepts', []))} concepts")
+                print(f"      Season/Episode: {structured_metadata.get('season_number', 'unknown')}/{structured_metadata.get('episode_number', 'unknown')}")
                 print(f"      Confidence: {structured_metadata.get('tag_confidence', 0.0):.2f}")
                 
                 # Step 4: Update all chunks for this document
@@ -6729,6 +6730,9 @@ async def batch_retag_documents():
                         'teaching_focus': structured_metadata.get('teaching_focus', 'none'),
                         'target_audience': structured_metadata.get('target_audience', 'none'),
                         'prerequisite_knowledge': structured_metadata.get('prerequisite_knowledge', []),
+                        # Season/Episode metadata (extracted from filename)
+                        'season_number': structured_metadata.get('season_number', 'unknown'),
+                        'episode_number': structured_metadata.get('episode_number', 'unknown'),
                         # Metadata quality indicators
                         'tag_confidence': structured_metadata.get('tag_confidence', 1.0),
                         'content_density': structured_metadata.get('content_density', 'medium')
