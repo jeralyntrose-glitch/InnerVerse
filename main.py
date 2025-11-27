@@ -7385,42 +7385,19 @@ OUTPUT FORMAT:
                     estimated_remaining = avg_time_per_doc * remaining_docs
                     
                     # Send completion for this document
-                    yield f"data: {json.dumps({
-                        'type': 'document_complete',
-                        'current': processed,
-                        'total': total_documents,
-                        'filename': filename,
-                        'old_chunks': len(old_vectors),
-                        'new_chunks': len(new_vectors),
-                        'octagram_states': structured_metadata.get('octagram_states', []),
-                        'key_concepts': structured_metadata.get('key_concepts', []),
-                        'failed': failed,
-                        'total_vectors': updated_vectors,
-                        'elapsed_seconds': int(elapsed),
-                        'estimated_remaining_seconds': int(estimated_remaining)
-                    })}\n\n"
+                    doc_complete_data = {'type': 'document_complete', 'current': processed, 'total': total_documents, 'filename': filename, 'old_chunks': len(old_vectors), 'new_chunks': len(new_vectors), 'octagram_states': structured_metadata.get('octagram_states', []), 'key_concepts': structured_metadata.get('key_concepts', []), 'failed': failed, 'total_vectors': updated_vectors, 'elapsed_seconds': int(elapsed), 'estimated_remaining_seconds': int(estimated_remaining)}
+                    yield f"data: {json.dumps(doc_complete_data)}\n\n"
                     
                 except Exception as e:
                     failed += 1
-                    yield f"data: {json.dumps({
-                        'type': 'document_error',
-                        'current': processed,
-                        'total': total_documents,
-                        'filename': filename,
-                        'error': str(e)
-                    })}\n\n"
+                    error_data = {'type': 'document_error', 'current': processed, 'total': total_documents, 'filename': filename, 'error': str(e)}
+                    yield f"data: {json.dumps(error_data)}\n\n"
                     continue
             
             # Send final completion
             total_elapsed = (datetime.now() - start_time).total_seconds()
-            yield f"data: {json.dumps({
-                'type': 'complete',
-                'total_documents': total_documents,
-                'processed': processed,
-                'failed': failed,
-                'total_vectors': updated_vectors,
-                'elapsed_seconds': int(total_elapsed)
-            })}\n\n"
+            complete_data = {'type': 'complete', 'total_documents': total_documents, 'processed': processed, 'failed': failed, 'total_vectors': updated_vectors, 'elapsed_seconds': int(total_elapsed)}
+            yield f"data: {json.dumps(complete_data)}\n\n"
             
         except Exception as e:
             # Send error event if something catastrophic happens
