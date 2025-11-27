@@ -6637,17 +6637,25 @@ async def batch_full_optimize():
                 filename = doc_data['filename']
                 old_vectors = doc_data['vectors']
                 
-                # === SKIP ALREADY OPTIMIZED DOCUMENTS ===
-                # Check if ANY vector in this document has 'optimized': True
-                already_optimized = any(
-                    vec['metadata'].get('optimized', False) 
-                    for vec in old_vectors
-                )
+                # === TEMPORARILY DISABLED - Re-process ALL docs with Enterprise V2 fixes ===
+                # CRITICAL FIX 2025-11-27: Yesterday's optimization had bugs:
+                #   - Semantic chunking created only 1 chunk (should be 2-8)
+                #   - Validator stripped Enterprise V2 fields (empty octagram, key_concepts, etc.)
+                # We MUST re-process ALL 376 documents to apply the fixes!
+                # After this batch completes, re-enable the skip logic below.
                 
-                if already_optimized:
-                    skipped += 1
-                    print(f"⏭️  [{processed}/{total_documents}] SKIPPING (already optimized): {filename}")
-                    continue
+                # already_optimized = any(
+                #     vec['metadata'].get('optimized', False) 
+                #     for vec in old_vectors
+                # )
+                # 
+                # if already_optimized:
+                #     skipped += 1
+                #     print(f"⏭️  [{processed}/{total_documents}] SKIPPING (already optimized): {filename}")
+                #     continue
+                
+                # FORCE RE-PROCESS: Apply semantic chunking + Enterprise V2 fixes to ALL docs
+                print(f"🔄 [{processed}/{total_documents}] RE-PROCESSING (applying fixes): {filename}")
                 
                 print(f"{'='*80}")
                 print(f"📄 [{processed}/{total_documents}] {filename}")
