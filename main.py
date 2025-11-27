@@ -1058,10 +1058,10 @@ async def upload_pdf_base64(data: Base64Upload):
         
         pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
         page_count = len(pdf_reader.pages)
-        text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
-        print(f"📄 Extracted {len(text)} characters from {page_count} pages")
+        raw_text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
+        print(f"📄 Extracted {len(raw_text)} characters from {page_count} pages")
 
-        # Initialize clients FIRST (CRITICAL: must be before semantic chunking!)
+        # Initialize clients FIRST (CRITICAL: must be before any GPT calls!)
         doc_id = str(uuid.uuid4())
         openai_client = get_openai_client()
         pinecone_index = get_pinecone_client()
@@ -1071,9 +1071,103 @@ async def upload_pdf_base64(data: Base64Upload):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
         
-        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection (uses openai_client)
-        print(f"🧠 Starting semantic chunking with GPT-4o-mini...")
-        chunks = await semantic_chunk_text(text, openai_client)
+        # === STAGE 1: PREPROCESSING (Typo Fixes) ===
+        print(f"🔧 Stage 1: Fixing typos (MBTI types, functions, UDSF/SDUF)...")
+        preprocessed_text = preprocess_transcript(raw_text)
+        stage1_reduction = ((len(raw_text) - len(preprocessed_text)) / len(raw_text) * 100) if len(raw_text) > 0 else 0
+        print(f"   ✅ After Stage 1: {len(preprocessed_text):,} chars ({stage1_reduction:.1f}% reduction)")
+        
+        # === STAGE 2: GPT-4O-MINI INTELLIGENT CLEANING ===
+        print(f"🤖 Stage 2: GPT-4o-mini intelligent cleaning (removing fillers, optimizing)...")
+        
+        try:
+            # Chunk for GPT processing (max 10k chars per call to stay within limits)
+            temp_chunks = []
+            current = ""
+            for para in preprocessed_text.split('\n\n'):
+                if len(current) + len(para) < 10000:
+                    current += para + "\n\n"
+                else:
+                    if current:
+                        temp_chunks.append(current)
+                    current = para + "\n\n"
+            if current:
+                temp_chunks.append(current)
+            
+            print(f"   📊 Processing {len(temp_chunks)} text chunk(s) with GPT-4o-mini...")
+            
+            cleaned_chunks = []
+            for i, chunk in enumerate(temp_chunks):
+                if len(temp_chunks) > 1:
+                    print(f"      Processing chunk {i+1}/{len(temp_chunks)}...")
+                
+                completion = openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": """You are a transcript optimization expert for RAG/vector search systems. Your goal: maximize semantic density while preserving teaching value.
+
+CRITICAL: MBTI terminology has been pre-corrected and is AUTHORITATIVE. DO NOT alter type codes, function abbreviations, or development notation (UDSF, SDUF, etc.).
+
+PRESERVE EXACTLY:
+• ALL MBTI types: INTJ, ENFP, ISFP, ESTP, etc.
+• ALL cognitive functions: Ni, Ne, Ti, Te, Fi, Fe, Si, Se
+• ALL development notation: UDSF, UDUF, SDSF, SDUF, USF, UUF, SSF, SUF
+• Function positions: Hero, Parent, Child, Inferior, Nemesis, Critic, Trickster, Demon
+• Key terms: quadras, temples, four sides, octagram, pedagogue pair, golden pair
+• Concrete examples and analogies
+• Cause-effect relationships
+• CS Joseph's voice - direct, engaging, opinionated
+
+REMOVE:
+1. ALL filler words: um, uh, like (non-comparison), you know, basically, right, okay, so, anyway, yeah, etc., etcetera
+2. Repetition: if stated 2-3 times, keep CLEAREST version only
+3. Meta-commentary: "we'll discuss later", "as I mentioned", "I've said before", "moving on"
+4. Tangents that don't support core concept
+5. Redundant examples - keep 1-2 best ones per concept
+
+OUTPUT FORMAT:
+• Fix all punctuation and grammar
+• Add paragraph breaks at MAJOR TOPIC SHIFTS (for semantic chunking)
+• Make it DENSE but not robotic - keep personality
+• Aim for 60-70% of original length without losing substance
+• Each paragraph should be self-contained concept
+• Return ONLY cleaned text, NO meta-commentary"""
+                        },
+                        {
+                            "role": "user",
+                            "content": chunk
+                        }
+                    ],
+                    temperature=0.3,
+                    max_tokens=4096,
+                    timeout=90
+                )
+                
+                cleaned_chunks.append(completion.choices[0].message.content.strip())
+                
+                # Log API usage for cost tracking
+                input_tokens = completion.usage.prompt_tokens
+                output_tokens = completion.usage.completion_tokens
+                cost = (input_tokens * 0.15 / 1000000) + (output_tokens * 0.60 / 1000000)  # GPT-4o-mini pricing
+                log_api_usage("upload_cleaning", "gpt-4o-mini", input_tokens, output_tokens, cost)
+            
+            cleaned_text = '\n\n'.join(cleaned_chunks)
+            stage2_reduction = ((len(preprocessed_text) - len(cleaned_text)) / len(preprocessed_text) * 100) if len(preprocessed_text) > 0 else 0
+            total_reduction = ((len(raw_text) - len(cleaned_text)) / len(raw_text) * 100) if len(raw_text) > 0 else 0
+            print(f"   ✅ After Stage 2: {len(cleaned_text):,} chars ({stage2_reduction:.1f}% reduction)")
+            print(f"   📊 Total optimization: {len(raw_text):,} → {len(cleaned_text):,} chars ({total_reduction:.1f}% reduction)")
+            
+        except Exception as stage2_error:
+            # If Stage 2 fails, fall back to preprocessed text (Stage 1 only)
+            print(f"   ⚠️ Stage 2 cleaning failed: {str(stage2_error)}")
+            print(f"   ↩️ Falling back to Stage 1 output (typo-fixed text)")
+            cleaned_text = preprocessed_text
+        
+        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection (uses cleaned text)
+        print(f"🧠 Semantic chunking: Creating self-contained concept chunks...")
+        chunks = await semantic_chunk_text(cleaned_text, openai_client)
         print(f"✅ Created {len(chunks)} semantic chunks (avg {sum(len(c) for c in chunks)//len(chunks) if chunks else 0} chars/chunk)")
 
         if not openai_client or not pinecone_index:
@@ -1081,11 +1175,12 @@ async def upload_pdf_base64(data: Base64Upload):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
 
-        # Auto-tag document with ENTERPRISE V2 structured metadata (18 fields)
-        structured_metadata = await auto_tag_document_v2_enterprise(text, data.filename, openai_client)
+        # Auto-tag document with ENTERPRISE V2 structured metadata (18 fields) - uses cleaned text
+        print(f"🏷️ Enterprise V2 auto-tagging (18 metadata fields)...")
+        structured_metadata = await auto_tag_document_v2_enterprise(cleaned_text, data.filename, openai_client)
         
-        # Extract enriched metadata
-        enriched_meta = extract_enriched_metadata(data.filename, text[:2000])
+        # Extract enriched metadata (uses raw text sample for filename parsing)
+        enriched_meta = extract_enriched_metadata(data.filename, raw_text[:2000])
 
         # Batch embedding + upsert with improved embeddings
         vectors_to_upsert = []
@@ -1175,10 +1270,10 @@ async def upload_pdf(file: UploadFile = File(...)):
         
         pdf_reader = PdfReader(io.BytesIO(contents))
         page_count = len(pdf_reader.pages)
-        text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
-        print(f"📄 Extracted {len(text)} characters from {page_count} pages")
+        raw_text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
+        print(f"📄 Extracted {len(raw_text)} characters from {page_count} pages")
 
-        # Initialize clients FIRST (CRITICAL: must be before semantic chunking!)
+        # Initialize clients FIRST (CRITICAL: must be before any GPT calls!)
         doc_id = str(uuid.uuid4())
         openai_client = get_openai_client()
         pinecone_index = get_pinecone_client()
@@ -1188,9 +1283,103 @@ async def upload_pdf(file: UploadFile = File(...)):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
         
-        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection (uses openai_client)
-        print(f"🧠 Starting semantic chunking with GPT-4o-mini...")
-        chunks = await semantic_chunk_text(text, openai_client)
+        # === STAGE 1: PREPROCESSING (Typo Fixes) ===
+        print(f"🔧 Stage 1: Fixing typos (MBTI types, functions, UDSF/SDUF)...")
+        preprocessed_text = preprocess_transcript(raw_text)
+        stage1_reduction = ((len(raw_text) - len(preprocessed_text)) / len(raw_text) * 100) if len(raw_text) > 0 else 0
+        print(f"   ✅ After Stage 1: {len(preprocessed_text):,} chars ({stage1_reduction:.1f}% reduction)")
+        
+        # === STAGE 2: GPT-4O-MINI INTELLIGENT CLEANING ===
+        print(f"🤖 Stage 2: GPT-4o-mini intelligent cleaning (removing fillers, optimizing)...")
+        
+        try:
+            # Chunk for GPT processing (max 10k chars per call to stay within limits)
+            temp_chunks = []
+            current = ""
+            for para in preprocessed_text.split('\n\n'):
+                if len(current) + len(para) < 10000:
+                    current += para + "\n\n"
+                else:
+                    if current:
+                        temp_chunks.append(current)
+                    current = para + "\n\n"
+            if current:
+                temp_chunks.append(current)
+            
+            print(f"   📊 Processing {len(temp_chunks)} text chunk(s) with GPT-4o-mini...")
+            
+            cleaned_chunks = []
+            for i, chunk in enumerate(temp_chunks):
+                if len(temp_chunks) > 1:
+                    print(f"      Processing chunk {i+1}/{len(temp_chunks)}...")
+                
+                completion = openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": """You are a transcript optimization expert for RAG/vector search systems. Your goal: maximize semantic density while preserving teaching value.
+
+CRITICAL: MBTI terminology has been pre-corrected and is AUTHORITATIVE. DO NOT alter type codes, function abbreviations, or development notation (UDSF, SDUF, etc.).
+
+PRESERVE EXACTLY:
+• ALL MBTI types: INTJ, ENFP, ISFP, ESTP, etc.
+• ALL cognitive functions: Ni, Ne, Ti, Te, Fi, Fe, Si, Se
+• ALL development notation: UDSF, UDUF, SDSF, SDUF, USF, UUF, SSF, SUF
+• Function positions: Hero, Parent, Child, Inferior, Nemesis, Critic, Trickster, Demon
+• Key terms: quadras, temples, four sides, octagram, pedagogue pair, golden pair
+• Concrete examples and analogies
+• Cause-effect relationships
+• CS Joseph's voice - direct, engaging, opinionated
+
+REMOVE:
+1. ALL filler words: um, uh, like (non-comparison), you know, basically, right, okay, so, anyway, yeah, etc., etcetera
+2. Repetition: if stated 2-3 times, keep CLEAREST version only
+3. Meta-commentary: "we'll discuss later", "as I mentioned", "I've said before", "moving on"
+4. Tangents that don't support core concept
+5. Redundant examples - keep 1-2 best ones per concept
+
+OUTPUT FORMAT:
+• Fix all punctuation and grammar
+• Add paragraph breaks at MAJOR TOPIC SHIFTS (for semantic chunking)
+• Make it DENSE but not robotic - keep personality
+• Aim for 60-70% of original length without losing substance
+• Each paragraph should be self-contained concept
+• Return ONLY cleaned text, NO meta-commentary"""
+                        },
+                        {
+                            "role": "user",
+                            "content": chunk
+                        }
+                    ],
+                    temperature=0.3,
+                    max_tokens=4096,
+                    timeout=90
+                )
+                
+                cleaned_chunks.append(completion.choices[0].message.content.strip())
+                
+                # Log API usage for cost tracking
+                input_tokens = completion.usage.prompt_tokens
+                output_tokens = completion.usage.completion_tokens
+                cost = (input_tokens * 0.15 / 1000000) + (output_tokens * 0.60 / 1000000)  # GPT-4o-mini pricing
+                log_api_usage("upload_cleaning", "gpt-4o-mini", input_tokens, output_tokens, cost)
+            
+            cleaned_text = '\n\n'.join(cleaned_chunks)
+            stage2_reduction = ((len(preprocessed_text) - len(cleaned_text)) / len(preprocessed_text) * 100) if len(preprocessed_text) > 0 else 0
+            total_reduction = ((len(raw_text) - len(cleaned_text)) / len(raw_text) * 100) if len(raw_text) > 0 else 0
+            print(f"   ✅ After Stage 2: {len(cleaned_text):,} chars ({stage2_reduction:.1f}% reduction)")
+            print(f"   📊 Total optimization: {len(raw_text):,} → {len(cleaned_text):,} chars ({total_reduction:.1f}% reduction)")
+            
+        except Exception as stage2_error:
+            # If Stage 2 fails, fall back to preprocessed text (Stage 1 only)
+            print(f"   ⚠️ Stage 2 cleaning failed: {str(stage2_error)}")
+            print(f"   ↩️ Falling back to Stage 1 output (typo-fixed text)")
+            cleaned_text = preprocessed_text
+        
+        # 🚀 SEMANTIC CHUNKING: AI-powered concept boundary detection (uses cleaned text)
+        print(f"🧠 Semantic chunking: Creating self-contained concept chunks...")
+        chunks = await semantic_chunk_text(cleaned_text, openai_client)
         print(f"✅ Created {len(chunks)} semantic chunks (avg {sum(len(c) for c in chunks)//len(chunks) if chunks else 0} chars/chunk)")
 
         if not openai_client or not pinecone_index:
@@ -1198,11 +1387,12 @@ async def upload_pdf(file: UploadFile = File(...)):
                 status_code=500,
                 content={"error": "OpenAI or Pinecone client not initialized"})
 
-        # Auto-tag document with ENTERPRISE V2 structured metadata (18 fields)
-        structured_metadata = await auto_tag_document_v2_enterprise(text, file.filename, openai_client)
+        # Auto-tag document with ENTERPRISE V2 structured metadata (18 fields) - uses cleaned text
+        print(f"🏷️ Enterprise V2 auto-tagging (18 metadata fields)...")
+        structured_metadata = await auto_tag_document_v2_enterprise(cleaned_text, file.filename, openai_client)
         
-        # Extract enriched metadata
-        enriched_meta = extract_enriched_metadata(file.filename, text[:2000])
+        # Extract enriched metadata (uses raw text sample for filename parsing)
+        enriched_meta = extract_enriched_metadata(file.filename, raw_text[:2000])
 
         # Batch embedding + upsert with improved embeddings
         vectors_to_upsert = []
@@ -1293,9 +1483,9 @@ async def upload_pdf(file: UploadFile = File(...)):
             processed_docs = graph.get('metadata', {}).get('processed_documents', [])
             
             if doc_id not in processed_docs:
-                # Extract concepts from document text
+                # Extract concepts from document text (uses cleaned, optimized text)
                 extracted = await extract_concepts(
-                    document_text=text,
+                    document_text=cleaned_text,
                     document_id=doc_id
                 )
                 
@@ -6891,6 +7081,309 @@ OUTPUT FORMAT:
         return JSONResponse(status_code=500, content={
             "error": f"Batch optimization failed: {str(e)}"
         })
+
+
+@app.get("/api/batch-optimize-stream")
+async def batch_optimize_stream():
+    """
+    🔴 LIVE PROGRESS MONITOR - Server-Sent Events (SSE) streaming endpoint
+    
+    Streams real-time progress updates during batch optimization to frontend.
+    Uses SSE for live updates without polling.
+    
+    SAFETY: If this endpoint fails, batch optimization still completes normally.
+    This is monitoring ONLY - doesn't affect the actual processing.
+    
+    Returns: text/event-stream with JSON progress events
+    """
+    
+    async def generate_progress_stream():
+        """Generator function that yields SSE-formatted progress updates"""
+        try:
+            # Send initial connection event
+            yield f"data: {json.dumps({'type': 'connected', 'message': 'Progress stream connected'})}\n\n"
+            
+            # Initialize clients
+            openai_client = get_openai_client()
+            if not openai_client:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'OpenAI client not initialized'})}\n\n"
+                return
+            
+            pinecone_index = get_pinecone_client()
+            if not pinecone_index:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Pinecone client not initialized'})}\n\n"
+                return
+            
+            # Send starting event
+            yield f"data: {json.dumps({'type': 'starting', 'message': 'Querying Pinecone...'})}\n\n"
+            
+            # Step 1: Query all vectors
+            dummy_query = [0.0] * 3072
+            results = pinecone_index.query(
+                vector=dummy_query,
+                top_k=10000,
+                include_metadata=True
+            )
+            
+            total_vectors = len(results.matches)
+            
+            if total_vectors == 0:
+                yield f"data: {json.dumps({'type': 'complete', 'message': 'No documents found'})}\n\n"
+                return
+            
+            # Step 2: Group by document_id
+            documents = {}
+            for match in results.matches:
+                metadata = match.metadata
+                doc_id = metadata.get('doc_id') or metadata.get('document_id')
+                
+                if not doc_id:
+                    continue
+                
+                if doc_id not in documents:
+                    documents[doc_id] = {
+                        'vectors': [],
+                        'filename': metadata.get('filename', 'Unknown'),
+                        'metadata': metadata
+                    }
+                
+                documents[doc_id]['vectors'].append({
+                    'id': match.id,
+                    'metadata': metadata
+                })
+            
+            total_documents = len(documents)
+            
+            # Send document count
+            yield f"data: {json.dumps({'type': 'initialized', 'total_documents': total_documents, 'total_vectors': total_vectors})}\n\n"
+            
+            # Step 3: Process each document
+            processed = 0
+            failed = 0
+            updated_vectors = 0
+            start_time = datetime.now()
+            
+            for doc_id, doc_data in documents.items():
+                try:
+                    processed += 1
+                    filename = doc_data['filename']
+                    old_vectors = doc_data['vectors']
+                    
+                    # Send current document status
+                    yield f"data: {json.dumps({'type': 'processing', 'current': processed, 'total': total_documents, 'filename': filename, 'stage': 'starting'})}\n\n"
+                    
+                    # Combine text
+                    combined_text = ""
+                    for vec in old_vectors:
+                        chunk_text = vec['metadata'].get('text', '')
+                        combined_text += chunk_text + "\n\n"
+                    
+                    original_length = len(combined_text)
+                    
+                    # Stage 1: Preprocessing
+                    yield f"data: {json.dumps({'type': 'processing', 'current': processed, 'total': total_documents, 'filename': filename, 'stage': 'stage1_typos'})}\n\n"
+                    
+                    preprocessed_text = preprocess_transcript(combined_text)
+                    
+                    # Stage 2: GPT cleaning
+                    yield f"data: {json.dumps({'type': 'processing', 'current': processed, 'total': total_documents, 'filename': filename, 'stage': 'stage2_cleaning'})}\n\n"
+                    
+                    # Chunk for GPT processing
+                    temp_chunks = []
+                    current = ""
+                    for para in preprocessed_text.split('\n\n'):
+                        if len(current) + len(para) < 10000:
+                            current += para + "\n\n"
+                        else:
+                            if current:
+                                temp_chunks.append(current)
+                            current = para + "\n\n"
+                    if current:
+                        temp_chunks.append(current)
+                    
+                    cleaned_chunks = []
+                    for i, chunk in enumerate(temp_chunks):
+                        completion = openai_client.chat.completions.create(
+                            model="gpt-4o-mini",
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": """You are a transcript optimization expert for RAG/vector search systems. Your goal: maximize semantic density while preserving teaching value.
+
+CRITICAL: MBTI terminology has been pre-corrected and is AUTHORITATIVE. DO NOT alter type codes, function abbreviations, or development notation (UDSF, SDUF, etc.).
+
+PRESERVE EXACTLY:
+• ALL MBTI types: INTJ, ENFP, ISFP, ESTP, etc.
+• ALL cognitive functions: Ni, Ne, Ti, Te, Fi, Fe, Si, Se
+• ALL development notation: UDSF, UDUF, SDSF, SDUF, USF, UUF, SSF, SUF
+• Function positions: Hero, Parent, Child, Inferior, Nemesis, Critic, Trickster, Demon
+• Key terms: quadras, temples, four sides, octagram, pedagogue pair, golden pair
+• Concrete examples and analogies
+• Cause-effect relationships
+• CS Joseph's voice - direct, engaging, opinionated
+
+REMOVE:
+1. ALL filler words: um, uh, like (non-comparison), you know, basically, right, okay, so, anyway, yeah, etc., etcetera
+2. Repetition: if stated 2-3 times, keep CLEAREST version only
+3. Meta-commentary: "we'll discuss later", "as I mentioned", "I've said before", "moving on"
+4. Tangents that don't support core concept
+5. Redundant examples - keep 1-2 best ones per concept
+
+OUTPUT FORMAT:
+• Fix all punctuation and grammar
+• Add paragraph breaks at MAJOR TOPIC SHIFTS (for semantic chunking)
+• Make it DENSE but not robotic - keep personality
+• Aim for 60-70% of original length without losing substance
+• Each paragraph should be self-contained concept
+• Return ONLY cleaned text, NO meta-commentary"""
+                                },
+                                {
+                                    "role": "user",
+                                    "content": chunk
+                                }
+                            ],
+                            temperature=0.3,
+                            max_tokens=4096
+                        )
+                        
+                        cleaned_chunks.append(completion.choices[0].message.content.strip())
+                    
+                    optimized_text = '\n\n'.join(cleaned_chunks)
+                    
+                    # Semantic chunking
+                    yield f"data: {json.dumps({'type': 'processing', 'current': processed, 'total': total_documents, 'filename': filename, 'stage': 'semantic_chunking'})}\n\n"
+                    
+                    semantic_chunks = await semantic_chunk_text(optimized_text, openai_client)
+                    
+                    # Enterprise V2 tagging
+                    yield f"data: {json.dumps({'type': 'processing', 'current': processed, 'total': total_documents, 'filename': filename, 'stage': 'tagging'})}\n\n"
+                    
+                    structured_metadata = await auto_tag_document_v2_enterprise(optimized_text, filename, openai_client)
+                    
+                    # Re-embedding
+                    yield f"data: {json.dumps({'type': 'processing', 'current': processed, 'total': total_documents, 'filename': filename, 'stage': 'embedding'})}\n\n"
+                    
+                    new_vectors = []
+                    for i, chunk in enumerate(semantic_chunks):
+                        embedding_response = openai_client.embeddings.create(
+                            input=chunk,
+                            model="text-embedding-3-large"
+                        )
+                        vector = embedding_response.data[0].embedding
+                        
+                        chunk_metadata = {
+                            "text": chunk,
+                            "doc_id": doc_id,
+                            "filename": filename,
+                            "upload_timestamp": doc_data['metadata'].get('upload_timestamp', datetime.now().isoformat()),
+                            "chunk_index": i,
+                            "optimized": True,
+                            "content_type": structured_metadata.get("content_type", "none"),
+                            "difficulty": structured_metadata.get("difficulty", "none"),
+                            "primary_category": structured_metadata.get("primary_category", "none"),
+                            "season": structured_metadata.get("season_number", "unknown"),
+                            "episode": structured_metadata.get("episode_number", "unknown"),
+                            "types_discussed": structured_metadata.get("types_discussed", []),
+                            "functions_covered": structured_metadata.get("functions_covered", []),
+                            "function_positions": structured_metadata.get("function_positions", []),
+                            "octagram_states": structured_metadata.get("octagram_states", []),
+                            "pair_dynamics": structured_metadata.get("pair_dynamics", []),
+                            "archetypes": structured_metadata.get("archetypes", []),
+                            "relationship_type": structured_metadata.get("relationship_type", "none"),
+                            "quadra": structured_metadata.get("quadra", "none"),
+                            "temple": structured_metadata.get("temple", "none"),
+                            "key_concepts": structured_metadata.get("key_concepts", []),
+                            "teaching_focus": structured_metadata.get("teaching_focus", "none"),
+                            "target_audience": structured_metadata.get("target_audience", "none"),
+                            "tag_confidence": structured_metadata.get("tag_confidence", 0.0),
+                            "content_density": structured_metadata.get("content_density", "unknown"),
+                            "topics": structured_metadata.get("topics", []),
+                            "use_case": structured_metadata.get("use_case", [])
+                        }
+                        
+                        if 'season' in doc_data['metadata']:
+                            chunk_metadata['season'] = doc_data['metadata']['season']
+                        if 'episode' in doc_data['metadata']:
+                            chunk_metadata['episode'] = doc_data['metadata']['episode']
+                        
+                        new_vectors.append({
+                            'id': f"{doc_id}-opt-{i}",
+                            'values': vector,
+                            'metadata': chunk_metadata
+                        })
+                    
+                    # Upload new vectors in batches
+                    yield f"data: {json.dumps({'type': 'processing', 'current': processed, 'total': total_documents, 'filename': filename, 'stage': 'uploading'})}\n\n"
+                    
+                    batch_size = 50
+                    for i in range(0, len(new_vectors), batch_size):
+                        batch = new_vectors[i:i+batch_size]
+                        pinecone_index.upsert(vectors=batch)
+                    
+                    # Delete old vectors
+                    old_ids = [vec['id'] for vec in old_vectors]
+                    if old_ids:
+                        pinecone_index.delete(ids=old_ids)
+                    
+                    updated_vectors += len(new_vectors)
+                    
+                    # Calculate stats
+                    elapsed = (datetime.now() - start_time).total_seconds()
+                    avg_time_per_doc = elapsed / processed
+                    remaining_docs = total_documents - processed
+                    estimated_remaining = avg_time_per_doc * remaining_docs
+                    
+                    # Send completion for this document
+                    yield f"data: {json.dumps({
+                        'type': 'document_complete',
+                        'current': processed,
+                        'total': total_documents,
+                        'filename': filename,
+                        'old_chunks': len(old_vectors),
+                        'new_chunks': len(new_vectors),
+                        'octagram_states': structured_metadata.get('octagram_states', []),
+                        'key_concepts': structured_metadata.get('key_concepts', []),
+                        'failed': failed,
+                        'total_vectors': updated_vectors,
+                        'elapsed_seconds': int(elapsed),
+                        'estimated_remaining_seconds': int(estimated_remaining)
+                    })}\n\n"
+                    
+                except Exception as e:
+                    failed += 1
+                    yield f"data: {json.dumps({
+                        'type': 'document_error',
+                        'current': processed,
+                        'total': total_documents,
+                        'filename': filename,
+                        'error': str(e)
+                    })}\n\n"
+                    continue
+            
+            # Send final completion
+            total_elapsed = (datetime.now() - start_time).total_seconds()
+            yield f"data: {json.dumps({
+                'type': 'complete',
+                'total_documents': total_documents,
+                'processed': processed,
+                'failed': failed,
+                'total_vectors': updated_vectors,
+                'elapsed_seconds': int(total_elapsed)
+            })}\n\n"
+            
+        except Exception as e:
+            # Send error event if something catastrophic happens
+            yield f"data: {json.dumps({'type': 'fatal_error', 'error': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        generate_progress_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # Disable nginx buffering
+        }
+    )
 
 
 # === Claude Chat Endpoints ===
