@@ -54,6 +54,16 @@ from src.services.lesson_content_generator import LessonContentGenerator
 # Reference Data Validator
 from src.services.reference_validator import VALIDATOR
 
+# Verify VALIDATOR initialized at startup
+if VALIDATOR is None:
+    print("⚠️ ═════════════════════════════════════════════════════════════")
+    print("⚠️ [CRITICAL] VALIDATOR IS NONE!")
+    print("⚠️ Enterprise V2 tagging will fail silently!")
+    print("⚠️ Check: src/data/reference_data.json exists and is valid")
+    print("⚠️ ═════════════════════════════════════════════════════════════")
+else:
+    print("✅ [VALIDATOR] Initialized successfully - Enterprise V2 tagging enabled")
+
 # Learning Paths UI Router
 from src.routes.learning_paths_routes import router as learning_paths_ui_router
 
@@ -836,7 +846,7 @@ Your response (valid JSON only, no markdown):"""
                 {"role": "user", "content": prompt}
             ],
             temperature=0.2,  # Lower for more consistent extraction
-            max_tokens=1200  # More tokens for expanded metadata
+            max_tokens=2000  # Increased from 1200 to ensure full 18-field response
         )
         
         # Track usage
@@ -852,14 +862,30 @@ Your response (valid JSON only, no markdown):"""
         # Parse response
         response_text = response.choices[0].message.content.strip()
         
-        # Remove markdown if present
-        if response_text.startswith("```"):
-            response_text = response_text.split("```")[1]
-            if response_text.startswith("json"):
-                response_text = response_text[4:]
-            response_text = response_text.strip()
+        # DEBUG: Log raw response
+        print(f"   🔍 [DEBUG] GPT response length: {len(response_text)} chars")
+        print(f"   🔍 [DEBUG] First 300 chars: {response_text[:300]}")
         
+        # Improved markdown removal
+        response_text = response_text.strip()
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]  # Remove ```json
+        elif response_text.startswith("```"):
+            response_text = response_text[3:]  # Remove ```
+        
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]  # Remove trailing ```
+        
+        response_text = response_text.strip()
+        
+        # Parse JSON
         raw_metadata = json.loads(response_text)
+        
+        # DEBUG: Log parsed metadata
+        print(f"   🔍 [DEBUG] Parsed keys: {list(raw_metadata.keys())}")
+        print(f"   🔍 [DEBUG] octagram_states from GPT: {raw_metadata.get('octagram_states')}")
+        print(f"   🔍 [DEBUG] key_concepts from GPT: {raw_metadata.get('key_concepts')}")
+        print(f"   🔍 [DEBUG] archetypes from GPT: {raw_metadata.get('archetypes')}")
         
         # STEP 5: Add confidence scoring based on data quality
         confidence_score = 1.0
@@ -895,6 +921,10 @@ Your response (valid JSON only, no markdown):"""
         if VALIDATOR:
             validated_metadata, validation_report = VALIDATOR.validate_structured_metadata(raw_metadata)
             
+            # DEBUG: Check if validation stripped values
+            print(f"   🔍 [DEBUG] After validation - octagram: {validated_metadata.get('octagram_states')}")
+            print(f"   🔍 [DEBUG] After validation - key_concepts: {validated_metadata.get('key_concepts')}")
+            
             # Log results
             print(f"   ✅ [V2] Validated metadata:")
             print(f"      📁 Content: {validated_metadata.get('content_type')} | Season {validated_metadata.get('season_number', '?')}")
@@ -908,7 +938,7 @@ Your response (valid JSON only, no markdown):"""
             
             return validated_metadata
         else:
-            print(f"   ⚠️ [V2] Validator not available - using unvalidated metadata")
+            print(f"   ⚠️ [CRITICAL] VALIDATOR is None - Enterprise V2 fields may be incomplete!")
             return raw_metadata
         
     except Exception as e:
