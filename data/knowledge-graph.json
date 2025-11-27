@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2025-11-27T01:04:14.578103",
+  "last_updated": "2025-11-27T01:22:11.322250",
   "nodes": [
     {
       "id": "shadow_integration",
@@ -3985,10 +3985,10 @@
       "id": "cognitive_transitions",
       "label": "Cognitive Transitions",
       "type": "process",
-      "category": "advanced",
-      "definition": "Changes in cognitive function usage and focus that occur due to trauma, development, or other influences on the psyche.",
+      "category": "foundational",
+      "definition": "How individuals utilize the four sides of their mind—maturely or immaturely, expediently or meaningfully. Distinguishes individuals of the same type based on their ability to transition effectively.",
       "properties": {},
-      "frequency": 18,
+      "frequency": 19,
       "sources": [
         "8a0973ee-a155-4dae-a1ba-3f3b166363a4",
         "65edb5c2-aaab-428c-b299-cf86ae4d1b20",
@@ -4005,10 +4005,11 @@
         "da9a8e9b-9eb9-4fa5-80c9-13e59448b346",
         "4122650f-2033-419b-bf8b-ac91da4a9e5b",
         "561f38ac-1438-4581-9980-161fff65ba04",
-        "e78a3aec-8c76-40a5-abdb-604f59470940"
+        "e78a3aec-8c76-40a5-abdb-604f59470940",
+        "4070062a-2332-4a10-abe7-92346dcfd2f0"
       ],
       "created_at": "2025-11-05T23:12:27.814117",
-      "last_updated": "2025-11-06T00:37:32.185152"
+      "last_updated": "2025-11-27T01:22:07.220980"
     },
     {
       "id": "science_of_typing",
@@ -55604,7 +55605,8 @@
       "b3672843-96de-46e5-8321-5f83507589c9",
       "4798f724-4afc-43d6-b894-871351834912",
       "4617c455-eb4b-4647-85e2-42841b8b8ba1",
-      "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80"
+      "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80",
+      "4070062a-2332-4a10-abe7-92346dcfd2f0"
     ]
   }
 }
