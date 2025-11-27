@@ -6761,13 +6761,11 @@ OUTPUT FORMAT:
                 # === RE-EMBEDDING ===
                 print(f"   🔄 Re-embedding {len(semantic_chunks)} chunks with text-embedding-3-large...")
                 
-                # Delete old vectors
-                old_ids = [vec['id'] for vec in old_vectors]
-                if old_ids:
-                    pinecone_index.delete(ids=old_ids)
-                    print(f"      🗑️ Deleted {len(old_ids)} old vectors")
+                # CRITICAL FIX 2025-11-27: Build new vectors FIRST (safer pattern)
+                # OLD (risky): Delete old → Build new → Upsert new (crash = data loss!)
+                # NEW (safe): Build new → Upsert new → Delete old (crash = duplicates, not loss!)
                 
-                # Create new vectors with optimized chunks
+                # Create new vectors with optimized chunks (ALL LOCALLY FIRST)
                 new_vectors = []
                 for i, chunk in enumerate(semantic_chunks):
                     # Generate embedding
@@ -6834,11 +6832,18 @@ OUTPUT FORMAT:
                         'metadata': chunk_metadata
                     })
                 
-                # Upload new vectors in batches
+                # Upload new vectors in batches (do this BEFORE deleting old ones!)
                 batch_size = 50
                 for i in range(0, len(new_vectors), batch_size):
                     batch = new_vectors[i:i+batch_size]
                     pinecone_index.upsert(vectors=batch)
+                print(f"      ✅ Uploaded {len(new_vectors)} new vectors to Pinecone")
+                
+                # NOW delete old vectors (only after new ones are safely uploaded)
+                old_ids = [vec['id'] for vec in old_vectors]
+                if old_ids:
+                    pinecone_index.delete(ids=old_ids)
+                    print(f"      🗑️ Deleted {len(old_ids)} old vectors")
                 
                 updated_vectors += len(new_vectors)
                 
