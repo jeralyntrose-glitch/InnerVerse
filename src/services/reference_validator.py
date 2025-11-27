@@ -328,9 +328,27 @@ class ReferenceValidator:
                 validated['interaction_style'] = 'none'
                 report['interaction_style'] = f"❌ {style_msg} - defaulting to 'none'"
         
-        # Pass through non-validated fields
-        for key in ['content_type', 'difficulty', 'primary_category', 'relationship_type', 
-                    'temple', 'topics', 'use_case']:
+        # Pass through non-validated fields (including ENTERPRISE V2 fields)
+        # These fields don't need validation against reference data - they're context-specific
+        for key in [
+            # Original fields
+            'content_type', 'difficulty', 'primary_category', 'relationship_type', 
+            'temple', 'topics', 'use_case',
+            # ENTERPRISE V2 FIELDS (Added 2025-11-27 - Bug Fix)
+            'octagram_states',           # CS Joseph octagram framework
+            'archetypes',                # Paladin, Gladiator, Bard, etc.
+            'key_concepts',              # Semantic concepts for RAG search
+            'pair_dynamics',             # Golden pair, Pedagogue, etc.
+            'function_positions',        # Ni_hero, Te_parent, etc.
+            'interaction_style_details', # Get things going, In charge, etc.
+            'teaching_focus',            # Theoretical, practical, case_study
+            'prerequisite_knowledge',    # Prerequisites for understanding
+            'target_audience',           # Beginner, intermediate, advanced
+            'season_number',             # Season number from filename
+            'episode_number',            # Episode number from filename
+            'tag_confidence',            # Confidence score for auto-tagging
+            'content_density'            # Content density metric
+        ]:
             if key in metadata:
                 validated[key] = metadata[key]
         

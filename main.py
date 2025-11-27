@@ -2897,18 +2897,56 @@ Where each range represents a self-contained concept/topic."""
             pass
         
         # Smart paragraph-based chunking (respects concept boundaries)
+        # FIX 2025-11-27: Handle texts without proper paragraph breaks
+        
+        # Try double newline first
         paragraphs = text.split('\n\n')
+        
+        # If we only got 1 paragraph or paragraphs are too large, try single newline
+        if len(paragraphs) == 1 or any(len(p) > 5000 for p in paragraphs):
+            print("   📝 No double newlines found or paragraphs too large, splitting on single newlines...")
+            paragraphs = text.split('\n')
+        
+        # Clean paragraphs
+        paragraphs = [p.strip() for p in paragraphs if p.strip()]
+        
+        if not paragraphs:
+            print("   ⚠️ No paragraphs found, returning full text as single chunk")
+            return [text]
+        
+        print(f"   📊 Found {len(paragraphs)} paragraphs, building semantic chunks...")
+        
         chunks = []
         current_chunk = ""
         target_chunk_size = 2000  # characters, but flexible
+        max_chunk_size = 3000     # hard limit
         
         for para in paragraphs:
-            para = para.strip()
-            if not para:
+            # If this paragraph alone is too large, force-split it
+            if len(para) > max_chunk_size:
+                print(f"   ⚠️ Large paragraph ({len(para)} chars), force-splitting...")
+                # Save current chunk if exists
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                    current_chunk = ""
+                
+                # Split large paragraph at sentence boundaries
+                sentences = para.replace('. ', '.|').replace('! ', '!|').replace('? ', '?|').split('|')
+                temp_chunk = ""
+                for sentence in sentences:
+                    if len(temp_chunk) + len(sentence) < max_chunk_size:
+                        temp_chunk += sentence + " "
+                    else:
+                        if temp_chunk:
+                            chunks.append(temp_chunk.strip())
+                        temp_chunk = sentence + " "
+                if temp_chunk:
+                    chunks.append(temp_chunk.strip())
                 continue
             
-            # If adding this paragraph keeps us under 3000 chars, add it
-            if len(current_chunk) + len(para) < 3000:
+            # Normal paragraph processing
+            # If adding this paragraph keeps us under max size, add it
+            if len(current_chunk) + len(para) < max_chunk_size:
                 current_chunk += para + "\n\n"
             else:
                 # Current chunk is complete, start new one
@@ -2919,6 +2957,20 @@ Where each range represents a self-contained concept/topic."""
         # Add final chunk
         if current_chunk:
             chunks.append(current_chunk.strip())
+        
+        # Quality check: ensure we created multiple chunks for large texts
+        if len(chunks) == 1 and len(text) > 5000:
+            print(f"   ⚠️ Only created 1 chunk for {len(text)} chars, force-splitting by character count...")
+            # Force split into ~2500 char chunks
+            chunks = []
+            for i in range(0, len(text), 2500):
+                chunk = text[i:i+2500]
+                # Try to end at a sentence boundary
+                if i + 2500 < len(text):
+                    last_period = chunk.rfind('. ')
+                    if last_period > 2000:  # Only adjust if we're still reasonably sized
+                        chunk = chunk[:last_period + 2]
+                chunks.append(chunk.strip())
         
         print(f"✅ Created {len(chunks)} semantic chunks (avg {sum(len(c) for c in chunks)//len(chunks) if chunks else 0} chars/chunk)")
         return chunks
