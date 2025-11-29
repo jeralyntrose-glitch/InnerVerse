@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2025-11-27T14:54:59.182518",
+  "last_updated": "2025-11-29T19:29:57.592199",
   "nodes": [
     {
       "id": "shadow_integration",
@@ -37,7 +37,7 @@
       "properties": {
         "description": "The eight cognitive functions in MBTI theory"
       },
-      "frequency": 29,
+      "frequency": 30,
       "sources": [
         "test_doc_002",
         "a09189e5-7958-438a-a3ba-53a12589cf1f",
@@ -64,11 +64,12 @@
         "9208d9ea-8f05-45ed-86dc-8d7ce8ac5b96",
         "dd431fab-9103-4704-bc69-eca544a805bc",
         "aa1d4cf7-bb5b-43be-be99-8564a1cd4eb2",
-        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4"
+        "21af1bfc-c4ff-4a12-9f9d-c146ba0944d4",
+        "3838b161-1340-49b6-90d8-881a7d7b3728"
       ],
       "created_at": "2025-11-05T21:56:34.775739",
-      "last_updated": "2025-11-06T02:48:51.889178",
-      "definition": "The core psychological processes in MBTI theory that determine how individuals perceive and process information, forming the basis for type identification.",
+      "last_updated": "2025-11-29T19:26:55.274711",
+      "definition": "Eight mental processes that serve as the cornerstone of personality typing, with half focusing on gathering data and half on making judgments.",
       "category": "foundational"
     },
     {
@@ -705,37 +706,39 @@
       "label": "Introverted Sensing (Si)",
       "type": "function",
       "category": "foundational",
-      "definition": "A cognitive function that processes information by comparing current experiences to past memories and established patterns.",
+      "definition": "A cognitive function focused on long-term memory awareness, duty, tradition, and stability, used by eight of the 16 personality types.",
       "properties": {},
-      "frequency": 6,
+      "frequency": 7,
       "sources": [
         "b39bf7da-5f80-4f36-8b56-1eaa607b5b22",
         "ef51f8b4-2a6c-49eb-bf63-e616da6db364",
         "4a371ca5-7c44-42e7-80de-ab966d49dda5",
         "3ebf34ca-9e18-4ed8-934b-987f31aef13b",
         "217f5148-42d5-4004-ab77-7d5655c7f610",
-        "0b260d01-0a08-411c-a996-809355b8a2d1"
+        "0b260d01-0a08-411c-a996-809355b8a2d1",
+        "d33a6e3e-fe01-4869-844f-17b78d1ad8f3"
       ],
       "created_at": "2025-11-05T23:04:51.828730",
-      "last_updated": "2025-11-06T00:23:17.561643"
+      "last_updated": "2025-11-29T19:26:00.220663"
     },
     {
       "id": "extraverted_intuition_ne",
       "label": "Extraverted Intuition (Ne)",
       "type": "function",
       "category": "foundational",
-      "definition": "A cognitive function that generates multiple future possibilities, with higher development allowing users to see more potential outcomes.",
+      "definition": "One of four perceiving cognitive functions that facilitates metaphysical awareness and investigates what might be and what is collectively possible.",
       "properties": {},
-      "frequency": 5,
+      "frequency": 6,
       "sources": [
         "b39bf7da-5f80-4f36-8b56-1eaa607b5b22",
         "1d9018cd-aa2e-4b71-bf75-64282b852850",
         "ef51f8b4-2a6c-49eb-bf63-e616da6db364",
         "8170323a-7574-4899-8f18-e2cf3250cb2d",
-        "4a371ca5-7c44-42e7-80de-ab966d49dda5"
+        "4a371ca5-7c44-42e7-80de-ab966d49dda5",
+        "9a15ef1e-bf44-4051-a555-bea385220e97"
       ],
       "created_at": "2025-11-05T23:04:51.857573",
-      "last_updated": "2025-11-05T23:31:12.601212"
+      "last_updated": "2025-11-29T19:28:37.782070"
     },
     {
       "id": "abstract_language",
@@ -1374,16 +1377,17 @@
       "id": "eight_cognitive_spectra",
       "label": "Eight Cognitive Spectra",
       "type": "framework",
-      "category": "advanced",
-      "definition": "A framework for understanding the range and variation of cognitive functions across different types.",
+      "category": "foundational",
+      "definition": "The eight cognitive function positions (hero, parent, child, inferior, nemesis, critic, trickster, demon) through which information flows simultaneously in the mind.",
       "properties": {},
-      "frequency": 3,
+      "frequency": 4,
       "sources": [
         "47648c03-c575-4856-8aa8-dd452255c3ca",
-        "2a8bef93-36ff-43bf-943c-1d4ab236ed06"
+        "2a8bef93-36ff-43bf-943c-1d4ab236ed06",
+        "5f97aa3e-dec7-409b-be83-25c3cf82e747"
       ],
       "created_at": "2025-11-05T23:06:21.143931",
-      "last_updated": "2025-11-06T00:15:22.153048"
+      "last_updated": "2025-11-29T19:24:40.503614"
     },
     {
       "id": "mind_as_radio_transceiver",
@@ -1524,20 +1528,21 @@
       "id": "cognitive_axes",
       "label": "Cognitive Axes",
       "type": "framework",
-      "category": "intermediate",
-      "definition": "The pairing of complementary cognitive functions that work together in personality structure, particularly in perception and judgment functions.",
+      "category": "foundational",
+      "definition": "The connection between two cognitive functions that work together, where introverted functions serve as source functions and extroverted functions consume information.",
       "properties": {},
-      "frequency": 7,
+      "frequency": 8,
       "sources": [
         "dacf3c93-b36a-4a22-974d-3e30b44616eb",
         "a018de7f-02a6-4d23-be38-fafb7df44bc9",
         "4b3b5fdf-76e0-4434-af2d-a46c1d419b7b",
         "217f5148-42d5-4004-ab77-7d5655c7f610",
         "e4c0c91a-7519-4a8b-958b-799ebf00bcc9",
-        "ef6cad76-acd7-4022-9619-30b689bee465"
+        "ef6cad76-acd7-4022-9619-30b689bee465",
+        "09b1c5fa-7291-4314-ab7b-e43fb67bcbdc"
       ],
       "created_at": "2025-11-05T23:06:37.730080",
-      "last_updated": "2025-11-06T00:31:14.863593"
+      "last_updated": "2025-11-29T19:23:54.203247"
     },
     {
       "id": "function_correspondence_system",
@@ -1839,9 +1844,9 @@
       "label": "Introverted Intuition",
       "type": "function",
       "category": "foundational",
-      "definition": "A cognitive function often misattributed to characters, focused on journey and process rather than outcomes.",
+      "definition": "A cognitive function that provides insight into one's future, focusing on desires, intentions, and goals with precise, sniper-like focus.",
       "properties": {},
-      "frequency": 23,
+      "frequency": 24,
       "sources": [
         "1d9018cd-aa2e-4b71-bf75-64282b852850",
         "ef51f8b4-2a6c-49eb-bf63-e616da6db364",
@@ -1854,10 +1859,11 @@
         "8df799c4-989b-40ee-8f5a-63018ff4eeb8",
         "5983813b-57c6-4e25-886c-e450dfaf32bd",
         "202c0cc4-99f9-4dec-a363-1690b020e918",
-        "b5e66586-31a0-44e9-af29-11845b4d8fe6"
+        "b5e66586-31a0-44e9-af29-11845b4d8fe6",
+        "c55355e9-135f-44fc-a587-8cdc4c71f19d"
       ],
       "created_at": "2025-11-05T23:07:23.958231",
-      "last_updated": "2025-11-06T00:45:18.916206"
+      "last_updated": "2025-11-29T19:18:26.528391"
     },
     {
       "id": "cognitive_function_compatibility",
@@ -2225,9 +2231,9 @@
       "label": "Introverted Feeling",
       "type": "function",
       "category": "foundational",
-      "definition": "A cognitive function that weighs and compares others' thoughts to form personal values and make value judgments based on internal standards.",
+      "definition": "A decision-making cognitive function that focuses on personal morals and internal value judgments rather than collective truths or external validation.",
       "properties": {},
-      "frequency": 11,
+      "frequency": 12,
       "sources": [
         "28a1d0b9-3b98-4227-887a-3b75718dda3e",
         "f7fac420-1906-449c-a42b-96408c20a80f",
@@ -2236,10 +2242,11 @@
         "926cc3b5-6e32-4f5a-a09a-17ee28d57458",
         "e4c0c91a-7519-4a8b-958b-799ebf00bcc9",
         "0b260d01-0a08-411c-a996-809355b8a2d1",
-        "aecd533f-fece-44f1-ac66-d9b8638964e2"
+        "aecd533f-fece-44f1-ac66-d9b8638964e2",
+        "1870abab-0038-45dd-98b7-ed6369eb5a0a"
       ],
       "created_at": "2025-11-05T23:08:13.569406",
-      "last_updated": "2025-11-06T00:33:39.375494"
+      "last_updated": "2025-11-29T19:29:14.604667"
     },
     {
       "id": "function_transformation",
@@ -3315,15 +3322,16 @@
       "label": "Extroverted Feeling (Fe)",
       "type": "function",
       "category": "foundational",
-      "definition": "A cognitive function focused on collective ethics and social beliefs, connected to logic where logical thoughts trigger emotional responses.",
+      "definition": "A cognitive function focused on empathizing with and absorbing the feelings of others, leading to outward displays of care and decision-making based on external emotional harmony.",
       "properties": {},
-      "frequency": 3,
+      "frequency": 4,
       "sources": [
         "f7fac420-1906-449c-a42b-96408c20a80f",
-        "e4c0c91a-7519-4a8b-958b-799ebf00bcc9"
+        "e4c0c91a-7519-4a8b-958b-799ebf00bcc9",
+        "b5a024d8-5ed2-4b64-887d-0802b8b78b4d"
       ],
       "created_at": "2025-11-05T23:11:03.394398",
-      "last_updated": "2025-11-06T00:21:02.975449"
+      "last_updated": "2025-11-29T19:22:23.534773"
     },
     {
       "id": "moral_compass",
@@ -3512,31 +3520,33 @@
       "label": "Introverted Thinking (Ti)",
       "type": "function",
       "category": "foundational",
-      "definition": "A cognitive function position that makes someone a thinker regardless of their F/T letter designation in MBTI.",
+      "definition": "Individual logic function focusing on true-false judgments based on personal beliefs about truth, distinct from collective rationale.",
       "properties": {},
-      "frequency": 3,
+      "frequency": 4,
       "sources": [
         "4df222e8-d550-4169-9439-5dbadb662c60",
-        "aeaf0027-8058-4b2a-9643-7a00b728f88f"
+        "aeaf0027-8058-4b2a-9643-7a00b728f88f",
+        "1cc59eeb-c0f7-4a1b-ad74-43993f5c121f"
       ],
       "created_at": "2025-11-05T23:11:29.912988",
-      "last_updated": "2025-11-05T23:51:34.941746"
+      "last_updated": "2025-11-29T19:29:54.239051"
     },
     {
       "id": "extraverted_thinking_te",
       "label": "Extraverted Thinking (Te)",
       "type": "function",
       "category": "foundational",
-      "definition": "A cognitive function that extracts and processes thoughts from others, operating like telepathy to gather external information for decision-making.",
+      "definition": "A cognitive function in Jungian psychology focused on rational decision-making based on external data, statistics, and reference points.",
       "properties": {},
-      "frequency": 4,
+      "frequency": 5,
       "sources": [
         "4df222e8-d550-4169-9439-5dbadb662c60",
         "3ebf34ca-9e18-4ed8-934b-987f31aef13b",
-        "aecd533f-fece-44f1-ac66-d9b8638964e2"
+        "aecd533f-fece-44f1-ac66-d9b8638964e2",
+        "4f2d8bd9-9fcd-494a-909d-8325dc982d78"
       ],
       "created_at": "2025-11-05T23:11:29.970741",
-      "last_updated": "2025-11-06T00:33:39.219561"
+      "last_updated": "2025-11-29T19:25:13.514983"
     },
     {
       "id": "ti_vs_fi_dynamic",
@@ -4566,9 +4576,9 @@
       "label": "Four Sides of the Mind",
       "type": "framework",
       "category": "foundational",
-      "definition": "The complete cognitive structure consisting of ego, subconscious, unconscious, and superego that work together to influence how cognitive functions operate.",
+      "definition": "The complete cognitive structure consisting of ego, subconscious, unconscious, and superego that work together to influence how we process information and interact with the world.",
       "properties": {},
-      "frequency": 14,
+      "frequency": 16,
       "sources": [
         "f8f82fe0-8e1c-448a-a4c7-988ca9256b5a",
         "96bae641-a346-403d-a7ce-4bbdfae1c0ed",
@@ -4582,10 +4592,12 @@
         "c56ea5a9-3ab8-4e15-99d3-bdf5e6ded153",
         "4134dfc2-0959-4c2f-bf2a-3ee7c2ec4b80",
         "ee58723e-d7fc-4116-bd3e-ef477fa37137",
-        "84119346-e7d0-4f34-a143-b5051d8bcff5"
+        "84119346-e7d0-4f34-a143-b5051d8bcff5",
+        "0188ac3e-e542-4783-b058-1852c4103fd4",
+        "8e96c73d-a5d9-4a3d-a1f7-94d8c8a2e03d"
       ],
       "created_at": "2025-11-05T23:13:58.885766",
-      "last_updated": "2025-11-27T14:54:55.547412"
+      "last_updated": "2025-11-29T19:27:56.744877"
     },
     {
       "id": "emulation",
@@ -9240,15 +9252,16 @@
       "label": "Extraverted Sensing Hero",
       "type": "function",
       "category": "foundational",
-      "definition": "A cognitive function that focuses on immediate sensory experience and present-moment awareness, demonstrated through actions like responding to emergencies.",
+      "definition": "One of eight cognitive functions characterized by living in the moment, mechanical awareness, and short-term memory access.",
       "properties": {},
-      "frequency": 2,
+      "frequency": 3,
       "sources": [
         "9e5bda57-b052-47bc-a9b2-aec14a10d316",
-        "583bd6bd-3c91-4102-9127-ae7711e81f64"
+        "583bd6bd-3c91-4102-9127-ae7711e81f64",
+        "ced7ba3c-cb37-421d-8661-a8bb0b5ded9b"
       ],
       "created_at": "2025-11-05T23:40:44.246627",
-      "last_updated": "2025-11-06T00:27:52.218379"
+      "last_updated": "2025-11-29T19:21:46.462884"
     },
     {
       "id": "critic_s_test",
@@ -14525,14 +14538,15 @@
       "label": "Jungian Analytical Psychology",
       "type": "theory",
       "category": "foundational",
-      "definition": "The foundational psychological framework developed by Carl Jung that underlies MBTI and cognitive function theory.",
+      "definition": "Carl Jung's psychological theory emphasizing cognitive functions over MBTI, presenting 16 consistent personality types as unique approaches to life.",
       "properties": {},
-      "frequency": 1,
+      "frequency": 2,
       "sources": [
-        "1a42a4ef-7ecd-44c9-9a43-b31f8341274d"
+        "1a42a4ef-7ecd-44c9-9a43-b31f8341274d",
+        "a27ef547-1aa4-4d94-afd2-4f5ddec0cb51"
       ],
       "created_at": "2025-11-06T00:01:07.435535",
-      "last_updated": "2025-11-06T00:01:07.435545"
+      "last_updated": "2025-11-29T19:21:00.062271"
     },
     {
       "id": "wisdom_development",
@@ -23739,14 +23753,29 @@
       "label": "Functional Attitudes",
       "type": "theory",
       "category": "foundational",
-      "definition": "The optimistic or pessimistic perspectives that each cognitive function adopts, influencing how individuals perceive and interact with the world.",
+      "definition": "The optimistic or pessimistic outlook inherent to each cognitive function, determining how individuals approach situations and process information.",
+      "properties": {},
+      "frequency": 2,
+      "sources": [
+        "14ca7c28-eb0a-4a4b-b6f5-e896f7826228",
+        "8fdde320-d1c3-4ef3-b7c3-78ad6373ad65"
+      ],
+      "created_at": "2025-11-27T14:52:49.050427",
+      "last_updated": "2025-11-29T19:23:04.138442"
+    },
+    {
+      "id": "functional_emulation",
+      "label": "Functional Emulation",
+      "type": "concept",
+      "category": "foundational",
+      "definition": "A technique allowing individuals to temporarily emulate cognitive functions or entire personality types to enhance compatibility and improve relationships.",
       "properties": {},
       "frequency": 1,
       "sources": [
-        "14ca7c28-eb0a-4a4b-b6f5-e896f7826228"
+        "c3d7f5cc-3ed8-4f9e-8183-f69103ae4b8a"
       ],
-      "created_at": "2025-11-27T14:52:49.050427",
-      "last_updated": "2025-11-27T14:52:49.050438"
+      "created_at": "2025-11-29T19:19:19.399588",
+      "last_updated": "2025-11-29T19:19:19.399603"
     }
   ],
   "edges": [
@@ -55243,7 +55272,7 @@
   ],
   "metadata": {
     "total_documents_processed": 0,
-    "total_concepts": 1633,
+    "total_concepts": 1634,
     "total_relationships": 1938,
     "processed_documents": [
       "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed",
@@ -55625,7 +55654,23 @@
       "4070062a-2332-4a10-abe7-92346dcfd2f0",
       "14ca7c28-eb0a-4a4b-b6f5-e896f7826228",
       "ee58723e-d7fc-4116-bd3e-ef477fa37137",
-      "84119346-e7d0-4f34-a143-b5051d8bcff5"
+      "84119346-e7d0-4f34-a143-b5051d8bcff5",
+      "c55355e9-135f-44fc-a587-8cdc4c71f19d",
+      "c3d7f5cc-3ed8-4f9e-8183-f69103ae4b8a",
+      "0188ac3e-e542-4783-b058-1852c4103fd4",
+      "a27ef547-1aa4-4d94-afd2-4f5ddec0cb51",
+      "ced7ba3c-cb37-421d-8661-a8bb0b5ded9b",
+      "b5a024d8-5ed2-4b64-887d-0802b8b78b4d",
+      "8fdde320-d1c3-4ef3-b7c3-78ad6373ad65",
+      "09b1c5fa-7291-4314-ab7b-e43fb67bcbdc",
+      "5f97aa3e-dec7-409b-be83-25c3cf82e747",
+      "4f2d8bd9-9fcd-494a-909d-8325dc982d78",
+      "d33a6e3e-fe01-4869-844f-17b78d1ad8f3",
+      "3838b161-1340-49b6-90d8-881a7d7b3728",
+      "8e96c73d-a5d9-4a3d-a1f7-94d8c8a2e03d",
+      "9a15ef1e-bf44-4051-a555-bea385220e97",
+      "1870abab-0038-45dd-98b7-ed6369eb5a0a",
+      "1cc59eeb-c0f7-4a1b-ad74-43993f5c121f"
     ]
   }
 }

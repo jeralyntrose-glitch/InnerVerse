@@ -383,14 +383,11 @@ function processFile(file) {
       clearInterval(progressInterval);
       console.error('❌ Upload error:', err);
       if (err.name === 'AbortError') {
-        // Upload was cancelled
         uploadItem.classList.add('error');
         uploadItem.querySelector('.upload-filename').textContent = `${file.name} (Cancelled)`;
       } else {
         progressBar.style.width = '100%';
-        uploadItem.classList.add('error');
         
-        // Better error message extraction
         let errorMsg = 'Upload failed';
         if (err.message) {
           errorMsg = err.message;
@@ -400,11 +397,25 @@ function processFile(file) {
           errorMsg = err.toString();
         }
         
+        try {
+          const verifyRes = await fetch(`/api/verify-upload?filename=${encodeURIComponent(file.name)}`);
+          const verifyData = await verifyRes.json();
+          
+          if (verifyData.exists) {
+            console.log(`✅ Verified: "${file.name}" actually succeeded (${verifyData.chunks} chunks)`);
+            uploadItem.classList.add('success');
+            uploadStats.completed++;
+            updateStats();
+            return;
+          }
+        } catch (verifyErr) {
+          console.warn('⚠️ Verification check failed:', verifyErr);
+        }
+        
+        uploadItem.classList.add('error');
         uploadItem.querySelector('.upload-filename').textContent = `${file.name} - ${errorMsg}`;
         uploadStats.errors++;
         updateStats();
-        
-        // Show persistent error modal
         showError(`Upload failed for "${file.name}": ${errorMsg}`);
       }
     } finally {

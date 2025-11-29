@@ -1762,6 +1762,40 @@ async def rename_document(document_id: str, request: RenameDocumentRequest):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# === Verify Document Upload (iOS Safari fix) ===
+@app.get("/api/verify-upload")
+async def verify_upload(filename: str):
+    """Check if a document with this filename exists in Pinecone (read-only)"""
+    try:
+        pinecone_index = get_pinecone_client()
+        
+        if not pinecone_index:
+            return {"exists": False, "error": "Pinecone not available"}
+        
+        dummy_vector = [0.0] * 3072
+        
+        query_response = pinecone_index.query(
+            vector=dummy_vector,
+            top_k=100,
+            include_metadata=True,
+            filter={"filename": {"$eq": filename}}
+        )
+        
+        try:
+            matches = query_response.matches
+        except AttributeError:
+            matches = query_response.get("matches", [])
+        
+        exists = len(matches) > 0
+        chunks = len(matches) if exists else 0
+        
+        return {"exists": exists, "chunks": chunks, "filename": filename}
+        
+    except Exception as e:
+        print(f"⚠️ Verify upload check failed: {str(e)}")
+        return {"exists": False, "error": str(e)}
+
+
 # === Generate Document Report ===
 @app.get("/documents/report")
 async def get_documents_report():
