@@ -3697,5 +3697,104 @@
     "cost": 0.019356,
     "success": true,
     "error": null
+  },
+  {
+    "document_id": "430e9951-39f0-42cf-9972-d7984afbdf2f",
+    "timestamp": "2025-11-29T19:55:07.223346",
+    "input_tokens": 1275,
+    "output_tokens": 1032,
+    "cost": 0.019305,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "3db1c7bf-f6cf-4a0e-b996-0ad71a507808",
+    "timestamp": "2025-11-29T19:55:51.934696",
+    "input_tokens": 1246,
+    "output_tokens": 1225,
+    "cost": 0.022113,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "fb26b06f-5dc9-4f0c-8a53-5b639d6f3a04",
+    "timestamp": "2025-11-29T19:56:42.455953",
+    "input_tokens": 1382,
+    "output_tokens": 1217,
+    "cost": 0.022401,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "5588eef6-04be-4175-ac05-533e6c0e52bb",
+    "timestamp": "2025-11-29T19:57:36.830016",
+    "input_tokens": 1622,
+    "output_tokens": 1182,
+    "cost": 0.022596,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "47d43e2b-00b0-4e06-8748-a120cc92ab18",
+    "timestamp": "2025-11-29T19:58:34.920556",
+    "input_tokens": 1459,
+    "output_tokens": 1112,
+    "cost": 0.021057,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "a5a42fdb-fb45-4154-8e39-03692b5fa605",
+    "timestamp": "2025-11-29T19:59:17.548128",
+    "input_tokens": 1279,
+    "output_tokens": 1346,
+    "cost": 0.024027,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "92abdeb1-7a22-4539-925d-a037d55af300",
+    "timestamp": "2025-11-29T20:00:18.137843",
+    "input_tokens": 1455,
+    "output_tokens": 1091,
+    "cost": 0.02073,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "7416599e-e445-48e6-8963-6e75aa33fd99",
+    "timestamp": "2025-11-29T20:01:27.038440",
+    "input_tokens": 1007,
+    "output_tokens": 982,
+    "cost": 0.017751,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "0aae5868-a6d4-4737-acf6-bc1e831c562e",
+    "timestamp": "2025-11-29T20:02:08.581792",
+    "input_tokens": 846,
+    "output_tokens": 1067,
+    "cost": 0.018543,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "c4253f21-df3d-479f-a9c5-48ff5f2463af",
+    "timestamp": "2025-11-29T20:02:52.112311",
+    "input_tokens": 1214,
+    "output_tokens": 1186,
+    "cost": 0.021432,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "f128ca22-f72d-4500-9ace-1b659ec00842",
+    "timestamp": "2025-11-29T20:04:01.111258",
+    "input_tokens": 2232,
+    "output_tokens": 1219,
+    "cost": 0.024981,
+    "success": true,
+    "error": null
   }
 ]

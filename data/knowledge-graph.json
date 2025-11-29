@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2025-11-29T19:29:57.592199",
+  "last_updated": "2025-11-29T20:04:06.358029",
   "nodes": [
     {
       "id": "shadow_integration",
@@ -789,10 +789,10 @@
       "id": "interaction_styles",
       "label": "Interaction Styles",
       "type": "concept",
-      "category": "intermediate",
-      "definition": "Observable patterns of communication and engagement that reflect underlying cognitive preferences and processing styles.",
+      "category": "foundational",
+      "definition": "A classification system that categorizes personality types based on how they initiate and engage in interactions, consisting of different approaches to movement and control.",
       "properties": {},
-      "frequency": 19,
+      "frequency": 20,
       "sources": [
         "552c5a77-11fd-4b07-a758-b925802aaa76",
         "1d7696de-a4e4-4446-8471-ba7981ed4696",
@@ -809,10 +809,11 @@
         "0d98170b-6745-424b-be1c-d5aca5756d0d",
         "4ba045f0-c06f-4a33-aad6-53ceedb19414",
         "72da10ce-fbb2-4f6f-8fe3-13041163c91e",
-        "97049bcc-6bea-4af1-a89b-cdb1271377b7"
+        "97049bcc-6bea-4af1-a89b-cdb1271377b7",
+        "47d43e2b-00b0-4e06-8748-a120cc92ab18"
       ],
       "created_at": "2025-11-05T23:05:04.146721",
-      "last_updated": "2025-11-06T00:26:51.176821"
+      "last_updated": "2025-11-29T19:58:35.004682"
     },
     {
       "id": "temperament",
@@ -1350,14 +1351,16 @@
       "label": "Four Temperaments",
       "type": "framework",
       "category": "foundational",
-      "definition": "Plato's classification system (guardian, artisan, intellectual, idealist) that provides a more comprehensive typing method than traditional MBTI.",
+      "definition": "A classification system originating from Plato's Republic dividing humanity into four archetypal groups: Guardians, Artisans, Thinkers, and Idealists based on fundamental psychological orientations.",
       "properties": {},
-      "frequency": 1,
+      "frequency": 3,
       "sources": [
-        "a33ab235-7052-48c0-bc76-1acf6ad4de28"
+        "a33ab235-7052-48c0-bc76-1acf6ad4de28",
+        "a5a42fdb-fb45-4154-8e39-03692b5fa605",
+        "c4253f21-df3d-479f-a9c5-48ff5f2463af"
       ],
       "created_at": "2025-11-05T23:06:14.922859",
-      "last_updated": "2025-11-05T23:06:14.922866"
+      "last_updated": "2025-11-29T20:02:52.209347"
     },
     {
       "id": "type_adaptation",
@@ -4976,15 +4979,16 @@
       "id": "social_moratorium",
       "label": "Social Moratorium",
       "type": "concept",
-      "category": "intermediate",
-      "definition": "Specific cultural environments like churches or small towns that may restrict certain personality types while benefiting others.",
+      "category": "foundational",
+      "definition": "Environments where traditional social rules and etiquette are suspended, leading to reduced social inhibition and altered behaviors.",
       "properties": {},
-      "frequency": 2,
+      "frequency": 3,
       "sources": [
-        "7da7b48b-e6ac-41b8-a420-1c9c76d73301"
+        "7da7b48b-e6ac-41b8-a420-1c9c76d73301",
+        "92abdeb1-7a22-4539-925d-a037d55af300"
       ],
       "created_at": "2025-11-05T23:24:47.220730",
-      "last_updated": "2025-11-05T23:24:47.728598"
+      "last_updated": "2025-11-29T20:00:18.212054"
     },
     {
       "id": "online_persona_vs_true_personality",
@@ -7991,15 +7995,16 @@
       "label": "Artisan Temperament",
       "type": "concept",
       "category": "foundational",
-      "definition": "One of the four temperaments that ISTPs belong to, characterized by being direct responding movement types.",
+      "definition": "One of the four temperaments consisting of SP types (ESTP, ESFP, ISTP, ISFP) who are freedom-based creators with mechanical awareness and live in the moment.",
       "properties": {},
-      "frequency": 2,
+      "frequency": 3,
       "sources": [
         "926cc3b5-6e32-4f5a-a09a-17ee28d57458",
-        "1eac9eae-261b-48e8-ad4b-c5cfdfc1a50e"
+        "1eac9eae-261b-48e8-ad4b-c5cfdfc1a50e",
+        "5588eef6-04be-4175-ac05-533e6c0e52bb"
       ],
       "created_at": "2025-11-05T23:36:14.394401",
-      "last_updated": "2025-11-05T23:52:50.602954"
+      "last_updated": "2025-11-29T19:57:36.889858"
     },
     {
       "id": "systematic_approach",
@@ -14962,14 +14967,15 @@
       "label": "MBTI Test Accuracy",
       "type": "concept",
       "category": "foundational",
-      "definition": "The degree to which MBTI personality tests correctly identify an individual's true personality type, which is often compromised by various factors.",
+      "definition": "The reliability and precision of MBTI personality tests in correctly identifying personality types, which is often compromised by various factors.",
       "properties": {},
-      "frequency": 1,
+      "frequency": 2,
       "sources": [
-        "7d54b52e-2e2b-4f2b-8038-99594cb40f05"
+        "7d54b52e-2e2b-4f2b-8038-99594cb40f05",
+        "7416599e-e445-48e6-8963-6e75aa33fd99"
       ],
       "created_at": "2025-11-06T00:03:22.134091",
-      "last_updated": "2025-11-06T00:03:22.134101"
+      "last_updated": "2025-11-29T20:01:27.112843"
     },
     {
       "id": "test_taker_maturity_level",
@@ -15681,14 +15687,15 @@
       "label": "Behind-the-Scenes Types",
       "type": "concept",
       "category": "foundational",
-      "definition": "Personality types (like ISFPs, ISFJs) who prefer privacy and operate indirectly, requiring context for understanding their communication.",
+      "definition": "Four MBTI types (ISFJ, ISFP, INTP, INFP) that prefer to remain in the background and are characterized by being informative, responsive, and favoring movement.",
       "properties": {},
-      "frequency": 1,
+      "frequency": 2,
       "sources": [
-        "598e58fe-b0bd-445c-bcec-73d9cbeb8ee2"
+        "598e58fe-b0bd-445c-bcec-73d9cbeb8ee2",
+        "3db1c7bf-f6cf-4a0e-b996-0ad71a507808"
       ],
       "created_at": "2025-11-06T00:06:34.921705",
-      "last_updated": "2025-11-06T00:06:34.921715"
+      "last_updated": "2025-11-29T19:55:52.035588"
     },
     {
       "id": "privacy_respect",
@@ -23776,6 +23783,62 @@
       ],
       "created_at": "2025-11-29T19:19:19.399588",
       "last_updated": "2025-11-29T19:19:19.399603"
+    },
+    {
+      "id": "see_it_through_communication_style",
+      "label": "See-It-Through Communication Style",
+      "type": "framework",
+      "category": "foundational",
+      "definition": "Communication style encompassing ISTJ, ISTP, INTJ, and INFJ types who focus on completing tasks thoroughly and efficiently, also known as 'chart the course' types.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "430e9951-39f0-42cf-9972-d7984afbdf2f"
+      ],
+      "created_at": "2025-11-29T19:55:07.326706",
+      "last_updated": "2025-11-29T19:55:07.326719"
+    },
+    {
+      "id": "intellectual_temperament",
+      "label": "Intellectual Temperament",
+      "type": "framework",
+      "category": "foundational",
+      "definition": "The NT temperament comprising ENTJ, ENTP, INTJ, and INTP types who are future thinkers focused on logic, rationale, objectivity, and theory.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "fb26b06f-5dc9-4f0c-8a53-5b639d6f3a04"
+      ],
+      "created_at": "2025-11-29T19:56:42.553800",
+      "last_updated": "2025-11-29T19:56:42.553812"
+    },
+    {
+      "id": "direct_initiating_control_dic",
+      "label": "Direct Initiating Control (DIC)",
+      "type": "framework",
+      "category": "foundational",
+      "definition": "An interaction style characterized by directness, initiating behavior, and preference for control and structure, encompassing ESTJ, ESTP, ENTJ, and ENFJ types.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "0aae5868-a6d4-4737-acf6-bc1e831c562e"
+      ],
+      "created_at": "2025-11-29T20:02:08.681461",
+      "last_updated": "2025-11-29T20:02:08.681486"
+    },
+    {
+      "id": "mbti_test_flaws",
+      "label": "MBTI Test Flaws",
+      "type": "concept",
+      "category": "foundational",
+      "definition": "Inherent problems with MBTI testing including self-awareness issues, false positives from lengthy tests, and overlooking cognitive functions.",
+      "properties": {},
+      "frequency": 1,
+      "sources": [
+        "f128ca22-f72d-4500-9ace-1b659ec00842"
+      ],
+      "created_at": "2025-11-29T20:04:01.194988",
+      "last_updated": "2025-11-29T20:04:01.195007"
     }
   ],
   "edges": [
@@ -55272,7 +55335,7 @@
   ],
   "metadata": {
     "total_documents_processed": 0,
-    "total_concepts": 1634,
+    "total_concepts": 1638,
     "total_relationships": 1938,
     "processed_documents": [
       "dda90fa2-c5f7-4feb-9bc1-62b6665a45ed",
@@ -55670,7 +55733,18 @@
       "8e96c73d-a5d9-4a3d-a1f7-94d8c8a2e03d",
       "9a15ef1e-bf44-4051-a555-bea385220e97",
       "1870abab-0038-45dd-98b7-ed6369eb5a0a",
-      "1cc59eeb-c0f7-4a1b-ad74-43993f5c121f"
+      "1cc59eeb-c0f7-4a1b-ad74-43993f5c121f",
+      "430e9951-39f0-42cf-9972-d7984afbdf2f",
+      "3db1c7bf-f6cf-4a0e-b996-0ad71a507808",
+      "fb26b06f-5dc9-4f0c-8a53-5b639d6f3a04",
+      "5588eef6-04be-4175-ac05-533e6c0e52bb",
+      "47d43e2b-00b0-4e06-8748-a120cc92ab18",
+      "a5a42fdb-fb45-4154-8e39-03692b5fa605",
+      "92abdeb1-7a22-4539-925d-a037d55af300",
+      "7416599e-e445-48e6-8963-6e75aa33fd99",
+      "0aae5868-a6d4-4737-acf6-bc1e831c562e",
+      "c4253f21-df3d-479f-a9c5-48ff5f2463af",
+      "f128ca22-f72d-4500-9ace-1b659ec00842"
     ]
   }
 }
