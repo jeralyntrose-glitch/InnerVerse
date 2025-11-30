@@ -12,6 +12,7 @@ import uuid as uuid_lib
 from pinecone import Pinecone
 import openai
 from src.services.pinecone_organizer import extract_all_metadata, organize_results_by_metadata, format_organized_context
+from src.services.query_intelligence import analyze_and_filter, rerank_results
 
 # Load reference data once at module level
 REFERENCE_DATA = {}
@@ -462,10 +463,11 @@ These types share the **{style}** interaction style in CS Joseph's system."""
     def query_pinecone_organized(self, query: str, top_k: int = 10, organize_by: str = 'primary_category') -> str:
         """
         Query Pinecone and return organized results by metadata
+        Uses query intelligence to extract season and apply metadata filters
         
         Args:
             query: User's question
-            top_k: Number of results to retrieve
+            top_k: Number of results to retrieve (will be adjusted by query intelligence)
             organize_by: Metadata field to group by
             
         Returns:
@@ -475,6 +477,20 @@ These types share the **{style}** interaction style in CS Joseph's system."""
             return ""
         
         try:
+            # Use query intelligence to analyze the query
+            # This extracts season, types, functions, etc. and builds metadata filters
+            analysis = analyze_and_filter(query)
+            
+            # Debug logging
+            entities = analysis.get('entities', {})
+            season = entities.get('season')
+            if season:
+                print(f"🔍 [CHAT] Detected season: {season}")
+            
+            # Get recommended top_k from analysis (may be higher for better recall)
+            recommended_top_k = analysis.get('recommended_top_k', top_k)
+            pinecone_filter = analysis.get('pinecone_filter', {})
+            
             # Create embedding
             response = openai.embeddings.create(
                 input=query,
@@ -482,21 +498,76 @@ These types share the **{style}** interaction style in CS Joseph's system."""
             )
             query_vector = response.data[0].embedding
             
-            # Query Pinecone with metadata
-            results = self.pinecone_index.query(
-                vector=query_vector,
-                top_k=top_k,
-                include_metadata=True
-            )
+            # Build Pinecone query parameters
+            query_params = {
+                "vector": query_vector,
+                "top_k": recommended_top_k,
+                "include_metadata": True
+            }
+            
+            # Add metadata filter if query intelligence found specific entities (like season)
+            # Pinecone filter format: {"$and": [{"season": {"$eq": "3"}}]} or just {"season": {"$eq": "3"}}
+            if pinecone_filter:
+                # If filter is a list, wrap in $and
+                if isinstance(pinecone_filter, list):
+                    query_params["filter"] = {"$and": pinecone_filter}
+                else:
+                    query_params["filter"] = pinecone_filter
+                print(f"🔍 [CHAT] Using metadata filter: {query_params['filter']}")
+            
+            # Query Pinecone with metadata filter
+            results = self.pinecone_index.query(**query_params)
+            
+            # If no results with filter and we have a season filter, try without filter as fallback
+            # This helps diagnose if Season 3 content exists but has different metadata
+            if not results.matches and pinecone_filter and season:
+                print(f"⚠️ [CHAT] No results with season filter '{season}', trying without filter to check if content exists...")
+                fallback_params = {
+                    "vector": query_vector,
+                    "top_k": recommended_top_k * 2,  # Get more results to search through
+                    "include_metadata": True
+                }
+                fallback_results = self.pinecone_index.query(**fallback_params)
+                
+                # Check if any results have season metadata matching what we're looking for
+                season_matches = []
+                for match in fallback_results.matches:
+                    match_season = str(match.metadata.get('season', ''))
+                    if match_season == season:
+                        season_matches.append(match)
+                        print(f"✅ [CHAT] Found Season {season} content: {match.metadata.get('filename', 'unknown')}")
+                
+                if season_matches:
+                    # Use the season matches we found
+                    results.matches = season_matches[:recommended_top_k]
+                    print(f"✅ [CHAT] Using {len(results.matches)} Season {season} results (metadata format may differ)")
+                else:
+                    print(f"⚠️ [CHAT] No Season {season} content found in metadata (may be stored differently)")
             
             if not results.matches:
                 return ""
             
+            # Re-rank results using query intelligence (boosts season matches, etc.)
+            ranked_matches = rerank_results(results.matches, query, analysis)
+            
+            if not ranked_matches:
+                return ""
+            
+            # Convert ranked results back to match-like objects for organizer
+            # The organizer expects matches with .metadata and .score attributes
+            class MatchLike:
+                def __init__(self, ranked_result):
+                    self.metadata = ranked_result['metadata']
+                    self.score = ranked_result['score']
+                    self.id = ranked_result['id']
+            
+            organized_matches = [MatchLike(r) for r in ranked_matches]
+            
             # Extract all metadata (including 10 enriched fields)
-            enriched_results = extract_all_metadata(results.matches)
+            enriched_results = extract_all_metadata(organized_matches)
             
             # Organize by metadata field
-            organized = organize_results_by_metadata(results.matches, organize_by=organize_by)
+            organized = organize_results_by_metadata(organized_matches, organize_by=organize_by)
             
             # Format for AI consumption
             formatted_context = format_organized_context(organized, max_chunks_per_group=2)
@@ -505,6 +576,8 @@ These types share the **{style}** interaction style in CS Joseph's system."""
             
         except Exception as e:
             print(f"Error querying Pinecone: {e}")
+            import traceback
+            traceback.print_exc()
             return ""
     
     def build_system_prompt(self, lesson_context: Dict, concepts: List[Dict], pinecone_context: str = "", reference_answer: Optional[str] = None) -> str:

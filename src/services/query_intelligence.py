@@ -241,12 +241,17 @@ class EntityExtractor:
     @classmethod
     def extract_season(cls, question: str) -> Optional[str]:
         """Extract season number from question (returns string to match Pinecone)"""
-        # Match "season 14", "Season 14", "[14]", etc.
-        match = re.search(r'season\s+(\d+)', question, re.IGNORECASE)
+        # Match "season 14", "Season 14", "season3", "S3", etc.
+        match = re.search(r'season\s*(\d+)', question, re.IGNORECASE)
         if match:
             return match.group(1)  # Return as string to match metadata
         
-        # Match bracket notation [14.1]
+        # Match "S3", "S14", etc.
+        match = re.search(r'\bS(\d+)\b', question, re.IGNORECASE)
+        if match:
+            return match.group(1)
+        
+        # Match bracket notation [14.1] or [3]
         match = re.search(r'\[(\d+)', question)
         if match:
             return match.group(1)
