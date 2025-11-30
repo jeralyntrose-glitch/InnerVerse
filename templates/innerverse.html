@@ -197,7 +197,14 @@
                 stroke-width: 2;
             }
             
-            [data-theme="dark"] .burger-menu svg {
+            .burger-menu svg path,
+            .burger-menu svg .burger-icon-path {
+                stroke: #2d2d2d !important; /* Dark gray in light mode */
+            }
+            
+            [data-theme="dark"] .burger-menu svg,
+            [data-theme="dark"] .burger-menu svg path,
+            [data-theme="dark"] .burger-menu svg .burger-icon-path {
                 stroke: #e0e0e0 !important; /* Light gray in dark mode */
             }
 
@@ -952,6 +959,10 @@
                 stroke: currentColor;
                 stroke-width: 2.5;
             }
+            
+            [data-theme="dark"] .scroll-to-bottom-btn svg {
+                stroke: #e0e0e0 !important; /* Light gray in dark mode */
+            }
 
             .typing-dots {
                 display: flex;
@@ -1094,8 +1105,15 @@
                 stroke-width: 2.5;
             }
             
-            [data-theme="dark"] .upload-btn svg {
-                stroke: #e0e0e0 !important;
+            .upload-btn svg path,
+            .upload-btn svg .upload-icon-path {
+                stroke: #2d2d2d !important; /* Dark gray in light mode */
+            }
+            
+            [data-theme="dark"] .upload-btn svg,
+            [data-theme="dark"] .upload-btn svg path,
+            [data-theme="dark"] .upload-btn svg .upload-icon-path {
+                stroke: #e0e0e0 !important; /* Light gray in dark mode */
             }
 
             /* ===== VOICE BUTTON - GRAY CIRCLE WITH MIC ===== */
@@ -1456,7 +1474,7 @@
                     <div class="header-left">
                         <button class="burger-menu" id="burgerMenu" aria-label="Toggle sidebar">
                             <svg viewBox="0 0 24 24" fill="none">
-                                <path d="M4 6h16M4 12h16M4 18h16" stroke="#2d2d2d" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M4 6h16M4 12h16M4 18h16" stroke="#2d2d2d" stroke-width="2" stroke-linecap="round" class="burger-icon-path"/>
                             </svg>
                         </button>
                     </div>
@@ -1499,7 +1517,7 @@
                             title="Upload images (max 10)"
                         >
                             <svg viewBox="0 0 24 24" fill="none">
-                                <path d="M12 5v14M5 12h14" stroke="#2d2d2d" stroke-width="2.5" stroke-linecap="round"/>
+                                <path d="M12 5v14M5 12h14" stroke="#2d2d2d" stroke-width="2.5" stroke-linecap="round" class="upload-icon-path"/>
                             </svg>
                         </button>
 
