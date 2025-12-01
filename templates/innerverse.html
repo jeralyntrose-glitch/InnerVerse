@@ -321,6 +321,12 @@
             }
 
             /* ===== FOLDERS ===== */
+            .all-chats-folder {
+                border-top: 2px solid var(--border-main);
+                margin-top: 8px;
+                padding-top: 8px;
+            }
+
             .folder {
                 margin-bottom: 4px;
             }
@@ -2229,16 +2235,125 @@
             const eventManager = new EventManager();
             console.log('✅ [INIT] EventManager created');
 
-            // Folder Configuration (matches backend projects)
-            const FOLDERS = [
-                { id: "relationship-lab", name: "💕 Relationship Lab" },
-                { id: "mbti-academy", name: "🎓 MBTI Academy" },
-                { id: "type-detective", name: "🔍 Type Detective" },
-                { id: "trading-psychology", name: "📈 Trading Psychology" },
-                { id: "pm-playbook", name: "💼 PM Playbook" },
-                { id: "quick-hits", name: "⚡ Quick Hits" },
-                { id: "brain-dump", name: "🧠 Brain Dump" },
-            ];
+            // Folder Configuration - Dynamic (loaded from localStorage, not hardcoded)
+            function loadFolders() {
+                // Default folders (only used for first-time migration)
+                const defaultFolders = [
+                    { id: "relationship-lab", name: "💕 Relationship Lab", isDefault: true },
+                    { id: "mbti-academy", name: "🎓 MBTI Academy", isDefault: true },
+                    { id: "type-detective", name: "🔍 Type Detective", isDefault: true },
+                    { id: "trading-psychology", name: "📈 Trading Psychology", isDefault: true },
+                    { id: "pm-playbook", name: "💼 PM Playbook", isDefault: true },
+                    { id: "quick-hits", name: "⚡ Quick Hits", isDefault: true },
+                    { id: "brain-dump", name: "🧠 Brain Dump", isDefault: true },
+                ];
+                
+                // Load from localStorage
+                const savedFolders = JSON.parse(localStorage.getItem('innerverse-folders') || '[]');
+                
+                // If first time (no saved folders), initialize with defaults
+                if (savedFolders.length === 0) {
+                    localStorage.setItem('innerverse-folders', JSON.stringify(defaultFolders));
+                    return defaultFolders;
+                }
+                
+                // Return saved folders (respects user deletions - no auto-restore)
+                return savedFolders;
+            }
+
+            function saveFolders(folders) {
+                localStorage.setItem('innerverse-folders', JSON.stringify(folders));
+            }
+
+            // Initialize FOLDERS dynamically (not hardcoded)
+            let FOLDERS = loadFolders();
+
+            // ===== FOLDER MANAGEMENT CRUD FUNCTIONS =====
+            async function createFolder() {
+                const name = prompt('Enter folder name:');
+                if (!name || !name.trim()) return;
+                
+                // Generate URL-safe ID
+                const folderId = name.toLowerCase()
+                    .replace(/\s+/g, '-')
+                    .replace(/[^a-z0-9-]/g, '');
+                
+                // Check if ID already exists
+                if (FOLDERS.find(f => f.id === folderId)) {
+                    alert('Folder with similar name already exists');
+                    return;
+                }
+                
+                const newFolder = {
+                    id: folderId,
+                    name: name.trim(),
+                    isDefault: false
+                };
+                
+                FOLDERS.push(newFolder);
+                saveFolders(FOLDERS);
+                await loadAllConversations();
+            }
+
+            function renameFolder(folderId) {
+                const folder = FOLDERS.find(f => f.id === folderId);
+                if (!folder) return;
+                
+                // Remove emoji if present for prompt
+                const nameWithoutEmoji = folder.name.replace(/^[^\s]+\s/, '');
+                const newName = prompt('Enter new folder name:', nameWithoutEmoji);
+                if (!newName || !newName.trim()) return;
+                
+                // Preserve emoji if user didn't change it
+                const emoji = folder.name.match(/^[^\s]+/)?.[0] || '📁';
+                folder.name = `${emoji} ${newName.trim()}`;
+                
+                saveFolders(FOLDERS);
+                renderSidebar();
+            }
+
+            async function deleteFolder(folderId) {
+                const folder = FOLDERS.find(f => f.id === folderId);
+                if (!folder) return;
+                
+                // Count conversations in this folder
+                const conversations = allConversations.filter(c => c.project === folderId);
+                const convCount = conversations.length;
+                
+                let confirmMessage;
+                if (folder.isDefault) {
+                    confirmMessage = `Delete default folder "${folder.name}"? This cannot be undone.`;
+                } else {
+                    confirmMessage = `Delete folder "${folder.name}"?`;
+                }
+                
+                if (convCount > 0) {
+                    confirmMessage += `\n\n${convCount} conversation(s) will be moved to "All Chats" (no folder).`;
+                }
+                
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+                
+                // Move conversations to null project (All Chats)
+                if (convCount > 0) {
+                    for (const conv of conversations) {
+                        try {
+                            await fetch(`/claude/conversations/${conv.id}/move`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ project: null })
+                            });
+                        } catch (error) {
+                            console.error(`Failed to move conversation ${conv.id}:`, error);
+                        }
+                    }
+                }
+                
+                FOLDERS = FOLDERS.filter(f => f.id !== folderId);
+                saveFolders(FOLDERS);
+                await loadAllConversations();
+            }
 
             // Image upload constants
             const MAX_IMAGES = 10;
@@ -2622,6 +2737,47 @@
                 searchInput.focus();
             });
 
+            // ===== FOLDER MANAGEMENT UI =====
+            // Add folder management buttons after search container
+            const folderActions = document.createElement('div');
+            folderActions.className = 'folder-actions';
+            folderActions.style.cssText = 'display: flex; gap: 8px; margin-top: 12px; padding: 0 12px;';
+            
+            const createFolderBtn = document.createElement('button');
+            createFolderBtn.innerHTML = '📁+';
+            createFolderBtn.title = 'Create folder';
+            createFolderBtn.style.cssText = 'flex: 1; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--color-text); transition: all 0.2s;';
+            createFolderBtn.addEventListener('mouseenter', () => {
+                createFolderBtn.style.background = 'var(--bg-hover)';
+            });
+            createFolderBtn.addEventListener('mouseleave', () => {
+                createFolderBtn.style.background = 'var(--bg-input)';
+            });
+            createFolderBtn.addEventListener('click', createFolder);
+            
+            const manageFoldersBtn = document.createElement('button');
+            manageFoldersBtn.innerHTML = '⚙️';
+            manageFoldersBtn.title = 'Manage folders (right-click folder headers)';
+            manageFoldersBtn.style.cssText = 'padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--color-text); transition: all 0.2s;';
+            manageFoldersBtn.addEventListener('mouseenter', () => {
+                manageFoldersBtn.style.background = 'var(--bg-hover)';
+            });
+            manageFoldersBtn.addEventListener('mouseleave', () => {
+                manageFoldersBtn.style.background = 'var(--bg-input)';
+            });
+            manageFoldersBtn.addEventListener('click', () => {
+                alert('Right-click any folder header to rename or delete it.');
+            });
+            
+            folderActions.appendChild(createFolderBtn);
+            folderActions.appendChild(manageFoldersBtn);
+            
+            // Insert after search container
+            const searchContainer = document.querySelector('.search-container');
+            if (searchContainer && searchContainer.parentElement) {
+                searchContainer.parentElement.insertBefore(folderActions, searchContainer.nextSibling);
+            }
+
             async function performSearch(query) {
                 try {
                     // Show loading state
@@ -2737,9 +2893,99 @@
                         </div>
                     `;
                     });
+
+                    // "All Chats" section at bottom (shows ALL conversations regardless of project)
+                    const isAllChatsExpanded = folderStates['all-chats'] !== false; // Default expanded
+                    html += `
+                        <div class="folder all-chats-folder ${isAllChatsExpanded ? "expanded" : ""}" data-folder="all-chats">
+                            <div class="folder-header" onclick="toggleFolder('all-chats')">
+                                <span class="folder-arrow">▶</span>
+                                <span class="folder-name">📋 All Chats</span>
+                                <span class="folder-count">${allConversations.length}</span>
+                            </div>
+                            <div class="folder-conversations">
+                                ${
+                                    allConversations.length > 0
+                                        ? allConversations
+                                              .map((c) =>
+                                                  renderConversationItem(c),
+                                              )
+                                              .join("")
+                                        : '<div class="empty-folder">No chats yet</div>'
+                                }
+                            </div>
+                        </div>
+                    `;
                 }
 
                 sidebarContent.innerHTML = html;
+
+                // Add context menu handlers for folder headers
+                document.querySelectorAll('.folder-header').forEach(header => {
+                    const folderId = header.closest('.folder')?.dataset.folder;
+                    if (folderId && folderId !== 'all-chats') { // Don't allow context menu on "All Chats"
+                        header.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            showFolderContextMenu(e.clientX, e.clientY, folderId);
+                        });
+                    }
+                });
+            }
+
+            function showFolderContextMenu(x, y, folderId) {
+                const folder = FOLDERS.find(f => f.id === folderId);
+                if (!folder) return;
+                
+                // Remove existing context menu if any
+                const existingMenu = document.querySelector('.folder-context-menu');
+                if (existingMenu) existingMenu.remove();
+                
+                const menu = document.createElement('div');
+                menu.className = 'folder-context-menu';
+                menu.style.cssText = `position: fixed; left: ${x}px; top: ${y}px; z-index: 10000; background: var(--color-page-bg, #ffffff); border: 1px solid var(--color-border, #e5e7eb); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 4px; min-width: 160px;`;
+                
+                const renameBtn = document.createElement('button');
+                renameBtn.textContent = '✏️ Rename';
+                renameBtn.style.cssText = 'width: 100%; padding: 8px 12px; text-align: left; background: none; border: none; cursor: pointer; border-radius: 4px; color: var(--color-text); transition: background 0.2s;';
+                renameBtn.addEventListener('mouseenter', () => {
+                    renameBtn.style.background = 'var(--bg-hover, #f3f4f6)';
+                });
+                renameBtn.addEventListener('mouseleave', () => {
+                    renameBtn.style.background = 'none';
+                });
+                renameBtn.onclick = () => {
+                    menu.remove();
+                    renameFolder(folderId);
+                };
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '🗑️ Delete';
+                deleteBtn.style.cssText = 'width: 100%; padding: 8px 12px; text-align: left; background: none; border: none; cursor: pointer; border-radius: 4px; color: #EF4444; transition: background 0.2s;';
+                deleteBtn.addEventListener('mouseenter', () => {
+                    deleteBtn.style.background = 'var(--bg-hover, #f3f4f6)';
+                });
+                deleteBtn.addEventListener('mouseleave', () => {
+                    deleteBtn.style.background = 'none';
+                });
+                deleteBtn.onclick = () => {
+                    menu.remove();
+                    deleteFolder(folderId);
+                };
+                
+                menu.appendChild(renameBtn);
+                menu.appendChild(deleteBtn);
+                document.body.appendChild(menu);
+                
+                // Close on outside click
+                setTimeout(() => {
+                    const closeMenu = (e) => {
+                        if (!menu.contains(e.target)) {
+                            menu.remove();
+                            document.removeEventListener('click', closeMenu);
+                        }
+                    };
+                    document.addEventListener('click', closeMenu);
+                }, 0);
             }
 
             function renderConversationItem(conv) {
@@ -2880,7 +3126,7 @@
                 updateTypingIndicatorPosition();
                 
                 // Create new conversation
-                await createNewConversation("brain-dump");
+                await createNewConversation(); // null = no folder, shows in "All Chats"
                 
                 // Auto-focus keyboard IMMEDIATELY (ChatGPT pattern)
                 setTimeout(() => {
@@ -2889,7 +3135,7 @@
             });
 
             async function createNewConversation(
-                projectId = "brain-dump",
+                projectId = null, // Default to null (no folder) - shows in "All Chats"
                 retries = 3,
             ) {
                 for (let attempt = 1; attempt <= retries; attempt++) {
@@ -2898,7 +3144,7 @@
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                project: projectId,
+                                project: projectId, // null = no folder, shows in "All Chats"
                                 name: "New Chat",
                             }),
                         });

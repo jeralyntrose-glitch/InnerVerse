@@ -8327,13 +8327,10 @@ async def delete_conversation(conversation_id: int):
 
 @app.patch("/claude/conversations/{conversation_id}/move")
 async def move_conversation(conversation_id: int, request: Request):
-    """Move a conversation to a different project"""
+    """Move a conversation to a different project (or null for no folder)"""
     try:
         data = await request.json()
-        new_project = data.get("project")
-        
-        if not new_project:
-            raise HTTPException(status_code=400, detail="Project is required")
+        new_project = data.get("project")  # Can be null for "All Chats"
         
         conn = get_db_connection()
         if not conn:
