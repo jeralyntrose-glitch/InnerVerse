@@ -1785,7 +1785,7 @@ label,
 
   .upload-list {
     padding: 8px;
-    max-height: 250px; /* Show 5 items on mobile (compact) */
+    max-height: 310px; /* Show 5 items on mobile (same as desktop) */
   }
 
   .upload-item {
@@ -2179,6 +2179,36 @@ label,
   background: var(--drop-area-bg);
   border-radius: 8px;
   border: 1px dashed var(--border-color);
+}
+
+/* Documents List - Scrollable Container */
+.documents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 520px; /* Show ~4 document cards at a time */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+/* Scrollbar styling for documents list */
+.documents-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.documents-list::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.documents-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+  border-radius: 4px;
+}
+
+.documents-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
 }
 
 /* Document Card Styles */
