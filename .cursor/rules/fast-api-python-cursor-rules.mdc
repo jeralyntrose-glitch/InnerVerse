@@ -1,0 +1,98 @@
+---
+alwaysApply: true
+---
+  You are an expert in Python, FastAPI, RAG systems, and the InnerVerse cognitive types knowledge base.
+  
+  INNERVERSE TECH STACK
+  Backend: FastAPI, OpenAI API (GPT-4o-mini, text-embedding-3-large, Whisper), Pinecone vector DB
+  Processing: PyPDF2 (PDFs), Pydub (audio), asyncio (concurrency)
+  Frontend: Vanilla JavaScript, Server-Sent Events (SSE), HTML/CSS
+  Deployment: Replit (main), GitHub (version control)
+  
+  Key Principles
+  - Write concise, technical responses with accurate Python examples.
+  - Use functional, declarative programming; avoid classes where possible.
+  - Prefer iteration and modularization over code duplication.
+  - Use descriptive variable names with auxiliary verbs (e.g., is_active, has_permission).
+  - Use lowercase with underscores for directories and files (e.g., routers/user_routes.py).
+  - Use the Receive an Object, Return an Object (RORO) pattern.
+  - ALWAYS verify function names, endpoints, and parameters exist before using them.
+  - ALWAYS check existing code patterns before implementing new features.
+  
+  Python/FastAPI
+  - Use def for pure functions and async def for asynchronous operations.
+  - Use type hints for all function signatures. Prefer Pydantic models over raw dictionaries for input validation.
+  - File structure: exported router, sub-routes, utilities, static content, types (models, schemas).
+  - Use concise, one-line syntax for simple conditional statements (e.g., if condition: do_something()).
+  - ALWAYS use async def for OpenAI API calls, Pinecone operations, and file I/O.
+  
+  INNERVERSE-SPECIFIC PATTERNS
+  
+  Document Processing Pipeline (3 Stages):
+  1. Stage 1: preprocess_transcript() - Fix typos, normalize whitespace
+  2. Stage 2: GPT-4o-mini text cleaning - Remove fillers, optimize density
+  3. Stage 3: semantic_chunk_text() - AI-powered semantic chunking
+  
+  Enterprise Metadata Extraction (18 Fields):
+  - Use auto_tag_document_v2_enterprise() for ALL document uploads
+  - Required fields: content_type, category, difficulty, season_number, episode_number
+  - Advanced fields: octagram_states, archetypes, key_concepts, function_positions
+  - ALWAYS set optimized: True flag after semantic chunking
+  - ALWAYS extract season from filename using regex: r'\[(\d+)\]|[Ss]eason\s*(\d+)'
+  
+  Pinecone Vector Operations:
+  - Namespace: "cognitive-types" (production data)
+  - Embedding model: text-embedding-3-large (3072 dimensions)
+  - ALWAYS include metadata with vectors (18+ fields)
+  - Batch operations: Build new → Insert new → Delete old (data safety pattern)
+  - NEVER delete vectors before confirming new ones are inserted
+  
+  OpenAI API Guidelines:
+  - GPT-4o-mini: Use for tagging, chunking, text cleaning (max_tokens: 2000+)
+  - text-embedding-3-large: Use for vector embeddings (3072 dimensions)
+  - Whisper: Use for audio transcription (voice messages)
+  - ALWAYS handle JSON parsing from GPT responses (strip markdown wrappers)
+  - ALWAYS log API costs and track usage with cost_tracker
+  
+  Error Handling and Validation
+  - Prioritize error handling and edge cases:
+    - Handle errors and edge cases at the beginning of functions.
+    - Use early returns for error conditions to avoid deeply nested if statements.
+    - Place the happy path last in the function for improved readability.
+    - Use guard clauses to handle preconditions and invalid states early.
+  - ALWAYS wrap OpenAI API calls in try/except blocks
+  - ALWAYS wrap Pinecone operations in try/except blocks
+  - ALWAYS log errors with context (filename, operation, error message)
+  - Use HTTPException for user-facing errors with helpful messages
+  - NEVER let GPT parsing errors crash the entire upload
+  
+  Performance Optimization
+  - Use async/await for ALL I/O operations (OpenAI, Pinecone, file reads)
+  - Batch Pinecone upserts (100 vectors at a time for optimal performance)
+  - Cache get_openai_client() and get_pinecone_client() at module level
+  - Use Server-Sent Events (SSE) for long-running operations (batch optimization)
+  - NEVER block the main thread with synchronous file I/O
+  
+  Data Safety & Integrity
+  - Batch operations order: Build → Insert → Delete (never delete first)
+  - ALWAYS verify data exists in Pinecone before deleting old versions
+  - Log vector counts before/after batch operations
+  - Use optimized: True flag to prevent duplicate processing
+  - ALWAYS include season_number and episode_number in metadata for tracking
+  
+  Frontend Integration
+  - Use Server-Sent Events (SSE) for real-time progress (batch operations)
+  - Return detailed progress objects: {status, processed, total, current_file, errors}
+  - ALWAYS return user-friendly error messages in JSON responses
+  - Cache-bust CSS/JS with versioned URLs: style.css?v=45-SCROLLABLE-LISTS
+  
+  Key Conventions
+  1. Rely on FastAPI's dependency injection system for managing state and shared resources.
+  2. Prioritize API performance metrics (response time, latency, throughput).
+  3. ALWAYS verify factual accuracy: check function names, parameters, and return types.
+  4. ALWAYS test changes with linting before committing.
+  5. Document all AI-powered features with clear comments explaining the flow.
+  6. Use descriptive commit messages with emojis: "🐛 FIX:", "✨ FEATURE:", "📦 REFACTOR:"
+  
+  Refer to FastAPI documentation for Data Models, Path Operations, and Middleware for best practices.
+  
