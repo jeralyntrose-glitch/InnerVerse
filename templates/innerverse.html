@@ -736,6 +736,128 @@
                 color: var(--text-secondary);
                 font-style: italic;
             }
+            
+            .message.assistant .message-content table {
+                border-collapse: collapse;
+                margin: 16px 0;
+                width: 100%;
+                font-size: 14px;
+            }
+            
+            .message.assistant .message-content th,
+            .message.assistant .message-content td {
+                border: 1px solid var(--border-main);
+                padding: 10px 14px;
+                text-align: left;
+            }
+            
+            .message.assistant .message-content th {
+                background: var(--bg-input);
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+            
+            .message.assistant .message-content td {
+                color: var(--text-primary);
+            }
+            
+            .message.assistant .message-content tr:hover {
+                background: var(--bg-folder-hover);
+            }
+            
+            /* ===== CITATIONS & SOURCES DISPLAY ===== */
+            .message-footer {
+                margin-top: 12px;
+                padding-top: 12px;
+                border-top: 1px solid var(--border-subtle);
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                flex-wrap: wrap;
+            }
+            
+            .confidence-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 12px;
+                color: var(--text-tertiary);
+                font-weight: 500;
+                padding: 4px 10px;
+                background: var(--bg-input);
+                border-radius: 12px;
+            }
+            
+            .confidence-badge.high {
+                color: #16a34a;
+                background: rgba(22, 163, 74, 0.1);
+            }
+            
+            .confidence-badge.medium {
+                color: #ea580c;
+                background: rgba(234, 88, 12, 0.1);
+            }
+            
+            .confidence-badge.low {
+                color: #dc2626;
+                background: rgba(220, 38, 38, 0.1);
+            }
+            
+            .sources-dropdown {
+                font-size: 13px;
+            }
+            
+            .sources-dropdown summary {
+                cursor: pointer;
+                color: var(--text-secondary);
+                user-select: none;
+                list-style: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 8px;
+                border-radius: 6px;
+                transition: background 0.2s ease;
+            }
+            
+            .sources-dropdown summary:hover {
+                background: var(--bg-folder-hover);
+            }
+            
+            .sources-dropdown summary::-webkit-details-marker {
+                display: none;
+            }
+            
+            .source-list {
+                margin-top: 8px;
+                padding: 12px;
+                background: var(--bg-input);
+                border-radius: 8px;
+                list-style: none;
+            }
+            
+            .source-list li {
+                padding: 6px 8px;
+                font-size: 12px;
+                color: var(--text-secondary);
+                border-bottom: 1px solid var(--border-subtle);
+            }
+            
+            .source-list li:last-child {
+                border-bottom: none;
+            }
+            
+            .source-list li strong {
+                color: var(--text-primary);
+                font-weight: 600;
+            }
+            
+            .source-match-score {
+                float: right;
+                color: var(--text-tertiary);
+                font-family: monospace;
+                font-size: 11px;
+            }
 
             .message.assistant .message-content code {
                 background: var(--bg-code);
@@ -3053,6 +3175,7 @@
                     return;
 
                 messageInput.value = "";
+                messageInput.style.height = "auto"; // Reset textarea height
                 isStreaming = true;
                 sendBtn.disabled = true;
                 
@@ -3225,6 +3348,12 @@
                                                         "a",
                                                         "hr",
                                                         "span",
+                                                        "table",
+                                                        "thead",
+                                                        "tbody",
+                                                        "tr",
+                                                        "th",
+                                                        "td",
                                                     ],
                                                     ALLOWED_ATTR: [
                                                         "href",
@@ -3260,7 +3389,30 @@
                                     }
 
                                     if (data.done) {
-                                        // Stream complete
+                                        // Stream complete - add citations if available
+                                        if (assistantDiv) {
+                                            const messageDiv = assistantDiv.closest('.message.assistant');
+                                            
+                                            // TODO: Replace with real citations from RAG backend (Phase 1)
+                                            // For now, using mock data to demonstrate UI
+                                            const mockCitations = {
+                                                confidence: {
+                                                    level: "high",
+                                                    score: 0.89,
+                                                    stars: "⭐⭐⭐⭐",
+                                                    reasoning: "5 highly relevant sources"
+                                                },
+                                                sources: [
+                                                    { season: "1", filename: "Shadow Integration.pdf", score: 0.92 },
+                                                    { season: "22", filename: "ENFP Cognitive Development.pdf", score: 0.89 },
+                                                    { season: "3", filename: "Four Sides Framework.pdf", score: 0.85 }
+                                                ]
+                                            };
+                                            
+                                            // Add citations footer
+                                            // When RAG backend ready, replace mockCitations with: data.citations
+                                            addCitationsFooter(messageDiv, mockCitations);
+                                        }
                                     }
                                 } catch (e) {
                                     console.error("SSE parsing error:", e);
@@ -3383,6 +3535,13 @@
             }
 
             // ===== PLATFORM-AWARE ENTER KEY HANDLING =====
+            // Auto-expand textarea (ChatGPT style)
+            messageInput.addEventListener("input", () => {
+                messageInput.style.height = "auto";
+                const newHeight = Math.min(messageInput.scrollHeight, 144); // Max 6 lines (~24px each)
+                messageInput.style.height = newHeight + "px";
+            });
+            
             messageInput.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") {
                     // Don't interrupt IME composition (Asian languages)
@@ -3557,6 +3716,72 @@
                 return contentDiv;
             }
 
+            function addCitationsFooter(messageDiv, citationsData) {
+                /**
+                 * Add citations/sources footer to AI message
+                 * 
+                 * Expected data structure:
+                 * {
+                 *   confidence: {
+                 *     level: "high|medium|low",
+                 *     score: 0.89,
+                 *     stars: "⭐⭐⭐⭐",
+                 *     reasoning: "5 highly relevant sources"
+                 *   },
+                 *   sources: [
+                 *     { season: "1", filename: "Shadow Integration.pdf", score: 0.92 },
+                 *     ...
+                 *   ]
+                 * }
+                 */
+                if (!citationsData || !messageDiv) return;
+                
+                const footer = document.createElement("div");
+                footer.className = "message-footer";
+                
+                // Confidence badge
+                if (citationsData.confidence) {
+                    const conf = citationsData.confidence;
+                    const badge = document.createElement("div");
+                    badge.className = `confidence-badge ${conf.level}`;
+                    badge.textContent = `${conf.stars} ${conf.level.charAt(0).toUpperCase() + conf.level.slice(1)} Confidence`;
+                    footer.appendChild(badge);
+                }
+                
+                // Sources dropdown
+                if (citationsData.sources && citationsData.sources.length > 0) {
+                    const details = document.createElement("details");
+                    details.className = "sources-dropdown";
+                    
+                    const summary = document.createElement("summary");
+                    summary.textContent = `📚 ${citationsData.sources.length} Source${citationsData.sources.length > 1 ? 's' : ''}`;
+                    details.appendChild(summary);
+                    
+                    const ul = document.createElement("ul");
+                    ul.className = "source-list";
+                    
+                    citationsData.sources.forEach(source => {
+                        const li = document.createElement("li");
+                        li.innerHTML = `
+                            <strong>Season ${source.season}:</strong> ${source.filename.replace('.pdf', '')}
+                            <span class="source-match-score">${source.score.toFixed(2)}</span>
+                        `;
+                        ul.appendChild(li);
+                    });
+                    
+                    details.appendChild(ul);
+                    footer.appendChild(details);
+                }
+                
+                // Insert footer before copy button
+                const copyBtn = messageDiv.querySelector('.copy-btn');
+                if (copyBtn) {
+                    messageDiv.insertBefore(footer, copyBtn);
+                } else {
+                    messageDiv.appendChild(footer);
+                }
+            }
+            
             function createCopyButton(content) {
                 const btn = document.createElement("button");
                 btn.className = "copy-btn";
