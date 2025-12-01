@@ -484,6 +484,97 @@ Return as JSON array of strings:"""
         return [original_query]
 
 
+def rerank_with_gpt(query: str, chunks: list, top_k: int = 10) -> list:
+    """
+    Re-rank chunks using GPT-4o-mini cross-encoder style scoring.
+    
+    Args:
+        query: User's query
+        chunks: Retrieved chunks with scores (10-30 chunks)
+        top_k: How many to return after re-ranking
+        
+    Returns:
+        Re-ranked chunks (top_k) with hybrid scores
+    """
+    if not OPENAI_API_KEY or not chunks:
+        return chunks[:top_k]
+    
+    try:
+        openai.api_key = OPENAI_API_KEY
+        
+        # Build prompt with query and chunk texts
+        prompt = f"""You are an expert at judging document relevance for MBTI/Jungian typology questions.
+
+Question: "{query}"
+
+Rank these chunks by relevance (1-10 scale, 10 = perfect match):
+
+"""
+        
+        for i, chunk in enumerate(chunks[:20], 1):  # Limit to top 20 for GPT context
+            text = chunk.get('text', '')[:500]  # First 500 chars per chunk
+            prompt += f"Chunk {i}:\n{text}\n\n"
+        
+        prompt += "Your response (JSON array of scores, e.g., [8, 5, 9, 2, ...]):"
+        
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Rank document relevance. Return JSON array of scores."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=100
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        
+        # Try to extract JSON if wrapped in markdown
+        if "```json" in response_text:
+            json_start = response_text.find("```json") + 7
+            json_end = response_text.find("```", json_start)
+            response_text = response_text[json_start:json_end].strip()
+        elif "```" in response_text:
+            json_start = response_text.find("```") + 3
+            json_end = response_text.find("```", json_start)
+            response_text = response_text[json_start:json_end].strip()
+        
+        scores = json.loads(response_text)
+        
+        # Validate it's a list of numbers
+        if not isinstance(scores, list):
+            print(f"⚠️ [RE-RANK] GPT returned non-list: {type(scores)}")
+            return chunks[:top_k]
+        
+        # Combine with original similarity scores (weighted average)
+        chunks_to_rank = chunks[:min(len(scores), len(chunks))]
+        for i, chunk in enumerate(chunks_to_rank):
+            if i < len(scores):
+                gpt_score = scores[i]
+                similarity_score = chunk.get('score', chunk.get('boosted_score', 0.0))
+                
+                # Hybrid score: 40% similarity + 60% GPT relevance
+                chunk['rerank_score'] = gpt_score
+                chunk['hybrid_score'] = (similarity_score * 0.4) + (gpt_score / 10 * 0.6)
+            else:
+                # No GPT score for this chunk, use original
+                chunk['hybrid_score'] = chunk.get('score', chunk.get('boosted_score', 0.0))
+        
+        # Sort by hybrid score
+        reranked = sorted(chunks_to_rank, key=lambda x: x.get('hybrid_score', 0), reverse=True)
+        
+        print(f"⚡ [RE-RANK] Re-ranked {len(chunks_to_rank)} chunks, top hybrid score: {reranked[0].get('hybrid_score', 0):.3f}")
+        
+        return reranked[:top_k]
+        
+    except json.JSONDecodeError as e:
+        print(f"⚠️ [RE-RANK] JSON parsing failed: {e}")
+        return chunks[:top_k]
+    except Exception as e:
+        print(f"⚠️ [RE-RANK] Re-ranking failed: {e}")
+        return chunks[:top_k]
+
+
 def query_innerverse_local(question: str) -> str:
     """
     IMPROVED HYBRID SEARCH for MBTI content:
@@ -594,7 +685,11 @@ def query_innerverse_local(question: str) -> str:
         
         # Apply intelligent re-ranking
         reranked_chunks = rerank_chunks_with_metadata(sorted_chunks, question)
-        final_chunks = reranked_chunks[:12]  # Take top 12 after re-ranking
+        
+        # FEATURE #5: GPT-powered re-ranking for final precision boost
+        print(f"⚡ [CLAUDE DEBUG] Applying GPT-powered re-ranking to top 20 chunks...")
+        gpt_reranked_chunks = rerank_with_gpt(question, reranked_chunks[:20], top_k=12)
+        final_chunks = gpt_reranked_chunks  # Top 12 after GPT re-ranking
         
         # Log boost details
         boosted_count = sum(1 for c in final_chunks if c.get('boost_applied', 0) > 0)
