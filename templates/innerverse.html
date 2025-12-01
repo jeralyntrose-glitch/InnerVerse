@@ -3039,6 +3039,15 @@
                 await showImagePreviews();
             });
             
+            // ===== TEXTAREA AUTO-EXPAND FUNCTION =====
+            function adjustTextareaHeight() {
+                messageInput.style.height = "auto"; // Reset to auto to get accurate scrollHeight
+                const scrollHeight = messageInput.scrollHeight;
+                const maxHeight = 200; // Match CSS max-height
+                const newHeight = Math.min(scrollHeight, maxHeight);
+                messageInput.style.height = newHeight + "px";
+            }
+            
             // ===== VOICE MESSAGES =====
             let mediaRecorder = null;
             let audioChunks = [];
@@ -3154,8 +3163,7 @@
                     messageInput.focus();
                     
                     // Auto-adjust textarea height
-                    messageInput.style.height = 'auto';
-                    messageInput.style.height = messageInput.scrollHeight + 'px';
+                    adjustTextareaHeight();
                     
                 } catch (error) {
                     console.error('❌ Transcription error:', error);
@@ -3273,7 +3281,7 @@
                     return;
 
                 messageInput.value = "";
-                messageInput.style.height = "auto"; // Reset textarea height
+                adjustTextareaHeight(); // Reset and adjust textarea height
                 isStreaming = true;
                 sendBtn.disabled = true;
                 
@@ -3499,9 +3507,7 @@
                                                     messageInput.value = followUpMatch[1];
                                                     messageInput.focus();
                                                     // Trigger auto-expand
-                                                    messageInput.style.height = "auto";
-                                                    const newHeight = Math.min(messageInput.scrollHeight, 144);
-                                                    messageInput.style.height = newHeight + "px";
+                                                    adjustTextareaHeight();
                                                 };
                                                 
                                                 chipsContainer.appendChild(chip);
@@ -3674,12 +3680,16 @@
             }
 
             // ===== PLATFORM-AWARE ENTER KEY HANDLING =====
-            // Auto-expand textarea (ChatGPT style)
-            messageInput.addEventListener("input", () => {
-                messageInput.style.height = "auto";
-                const newHeight = Math.min(messageInput.scrollHeight, 144); // Max 6 lines (~24px each)
-                messageInput.style.height = newHeight + "px";
+            // Auto-expand on input (function already defined above)
+            messageInput.addEventListener("input", adjustTextareaHeight);
+            
+            // Also adjust on paste
+            messageInput.addEventListener("paste", () => {
+                setTimeout(adjustTextareaHeight, 0); // Wait for paste to complete
             });
+            
+            // Initial height adjustment
+            adjustTextareaHeight();
             
             messageInput.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") {
