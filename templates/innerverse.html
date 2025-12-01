@@ -858,6 +858,37 @@
                 font-family: monospace;
                 font-size: 11px;
             }
+            
+            /* ===== FOLLOW-UP QUESTIONS - CLEAN ELEGANT STYLE ===== */
+            .follow-up-question {
+                margin-top: 20px;
+                padding: 14px 16px;
+                background: var(--bg-input);
+                border-left: 3px solid var(--text-tertiary);
+                border-radius: 8px;
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .follow-up-icon {
+                font-size: 16px;
+                line-height: 1.5;
+                flex-shrink: 0;
+            }
+            
+            .follow-up-question em {
+                font-style: italic;
+                color: var(--text-secondary);
+                font-size: 14px;
+                line-height: 1.6;
+                flex: 1;
+            }
+            
+            [data-theme="dark"] .follow-up-question {
+                background: rgba(255, 255, 255, 0.05);
+                border-left-color: rgba(255, 255, 255, 0.3);
+            }
 
             .message.assistant .message-content code {
                 background: var(--bg-code);
@@ -3370,6 +3401,15 @@
                                                     Prism.highlightElement(block);
                                                 });
                                             }
+                                            
+                                            // Clean up follow-up formatting
+                                            // Replace [FOLLOW-UP: Question?] with styled version
+                                            let htmlContent = assistantDiv.innerHTML;
+                                            htmlContent = htmlContent.replace(
+                                                /\[FOLLOW-UP:\s*(.*?)\]/gi,
+                                                '<div class="follow-up-question"><span class="follow-up-icon">💡</span><em>$1</em></div>'
+                                            );
+                                            assistantDiv.innerHTML = htmlContent;
                                         } else {
                                             assistantDiv.textContent =
                                                 fullResponse;
