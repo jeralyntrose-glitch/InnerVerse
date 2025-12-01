@@ -411,6 +411,79 @@ Your response (JSON only):"""
         return {}
 
 
+def expand_query(original_query: str) -> list:
+    """
+    Generate multiple query variations for better recall using GPT-4o-mini.
+    
+    Args:
+        original_query: User's original question
+        
+    Returns:
+        List of query variations (including original)
+    """
+    if not OPENAI_API_KEY:
+        return [original_query]
+    
+    try:
+        openai.api_key = OPENAI_API_KEY
+        
+        prompt = f"""You are an expert in CS Joseph's MBTI/Jungian typology system.
+Generate 3-4 alternative phrasings of this question to improve search recall.
+Use different terminology, synonyms, and related concepts.
+
+Original Question: "{original_query}"
+
+Rules:
+- Keep the core intent
+- Use CS Joseph terminology (shadow, subconscious, octagram, etc.)
+- Include related concepts (e.g., "ENFP development" → "ENFP Si inferior growth")
+- Vary specificity (broader and narrower versions)
+
+Return as JSON array of strings:"""
+        
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Generate query variations for MBTI search. Return JSON array."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,  # Some creativity but consistent
+            max_tokens=300
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        
+        # Try to extract JSON if wrapped in markdown
+        if "```json" in response_text:
+            json_start = response_text.find("```json") + 7
+            json_end = response_text.find("```", json_start)
+            response_text = response_text[json_start:json_end].strip()
+        elif "```" in response_text:
+            json_start = response_text.find("```") + 3
+            json_end = response_text.find("```", json_start)
+            response_text = response_text[json_start:json_end].strip()
+        
+        variations = json.loads(response_text)
+        
+        # Validate it's a list
+        if not isinstance(variations, list):
+            print(f"⚠️ [QUERY-EXPANSION] GPT returned non-list: {type(variations)}")
+            return [original_query]
+        
+        # Add original query
+        all_queries = [original_query] + variations
+        print(f"🔍 [QUERY-EXPANSION] Expanded to {len(all_queries)} queries: {all_queries}")
+        
+        return all_queries[:5]  # Cap at 5 total (original + 4 variations)
+        
+    except json.JSONDecodeError as e:
+        print(f"⚠️ [QUERY-EXPANSION] JSON parsing failed: {e}")
+        return [original_query]
+    except Exception as e:
+        print(f"⚠️ [QUERY-EXPANSION] Query expansion failed: {e}")
+        return [original_query]
+
+
 def query_innerverse_local(question: str) -> str:
     """
     IMPROVED HYBRID SEARCH for MBTI content:
@@ -441,42 +514,10 @@ def query_innerverse_local(question: str) -> str:
         # FEATURE #1: Extract metadata filters from query
         metadata_filters = extract_filters_from_query(question)
         
-        # IMPROVEMENT 1: Smart Query Rewriting with MBTI Ontology
-        search_queries = [question]  # Start with original
-        question_lower = question.lower()
+        # FEATURE #2: GPT-powered query expansion for better recall
+        search_queries = expand_query(question)
         
-        # MBTI type synonyms and related concepts
-        mbti_types = {
-            'ESTP': ['Se-Ti', 'extraverted sensing', 'dominant Se', 'ESTP behavior'],
-            'INTJ': ['Ni-Te', 'introverted intuition', 'dominant Ni', 'INTJ patterns'],
-            'ENFP': ['Ne-Fi', 'extraverted intuition', 'dominant Ne', 'ENFP traits'],
-            'INFJ': ['Ni-Fe', 'introverted intuition', 'Fe harmony', 'INFJ personality'],
-            'ENTP': ['Ne-Ti', 'extraverted intuition', 'Ti logic', 'ENTP characteristics'],
-            'ISFJ': ['Si-Fe', 'introverted sensing', 'Fe care', 'ISFJ guardian'],
-            'ISTJ': ['Si-Te', 'introverted sensing', 'Te structure', 'ISTJ duty'],
-            'ESFP': ['Se-Fi', 'extraverted sensing', 'Fi values', 'ESFP performer']
-        }
-        
-        # Detect MBTI type and add enriched query
-        for mbti_type, synonyms in mbti_types.items():
-            if mbti_type.lower() in question_lower:
-                # Add cognitive function-based query
-                search_queries.append(f"{mbti_type} {' '.join(synonyms[:2])}")
-                break
-        
-        # Negative behavior queries get enhanced context
-        negative_keywords = ['narcis', 'toxic', 'manipulat', 'selfish', 'unhealthy', 'immature']
-        if any(word in question_lower for word in negative_keywords):
-            search_queries.append(f"{question} shadow functions negative traits unhealthy behavior")
-        
-        # Relationship queries
-        if any(word in question_lower for word in ['relationship', 'compatibility', 'golden pair', 'dating']):
-            search_queries.append(f"{question} type dynamics compatibility interaction styles")
-        
-        # Limit to top 3 query variations
-        search_queries = search_queries[:3]
-        
-        print(f"🔍 [CLAUDE DEBUG] Hybrid search with {len(search_queries)} optimized queries:")
+        print(f"🔍 [QUERY-EXPANSION] Generated {len(search_queries)} query variations:")
         for i, q in enumerate(search_queries, 1):
             print(f"   {i}. '{q}'")
         
