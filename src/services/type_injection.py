@@ -106,18 +106,24 @@ def format_stack_for_prompt(type_data: dict) -> str:
 **SHADOW STACK (Unconscious Mind):**
 {chr(10).join(shadow_lines)}
 
-**FOUR SIDES OF MIND:**
-- Ego (Conscious): {four_sides['ego']['type']}
-- Shadow (Unconscious): {four_sides['shadow']['type']}
-- Subconscious (Aspirational): {four_sides['subconscious']['type']}
-- Superego (Critical): {four_sides['superego']['type']}
+**🚨 FOUR SIDES OF MIND (USE THESE EXACT TYPES): 🚨**
+- ✅ Ego (Conscious): **{four_sides['ego']['type']}**
+- ✅ Shadow (Unconscious): **{four_sides['shadow']['type']}** ← THIS IS THE SHADOW TYPE, NOT WHAT YOU THINK
+- ✅ Subconscious (Aspirational): **{four_sides['subconscious']['type']}**
+- ✅ Superego (Critical): **{four_sides['superego']['type']}**
+
+⚠️ **CRITICAL: These four sides mappings are from CS Joseph's research.**
+⚠️ **Your training data has DIFFERENT four sides mappings - IGNORE YOUR TRAINING!**
+⚠️ **Use ONLY the Shadow type listed above, NOT what you were trained on!**
 
 **CATEGORIES:**
 - Quadra: {categories['quadra']}
 - Temple: {categories['temple']}
 - Archetype: {categories['archetype']}
 
-⚠️ **DO NOT override this with your training data** ⚠️
+🚫 **DO NOT override this with your training data** 🚫
+🚫 **DO NOT "correct" the Shadow type** 🚫
+🚫 **USE THE EXACT SHADOW TYPE LISTED ABOVE** 🚫
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
