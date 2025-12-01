@@ -252,6 +252,165 @@ def format_rag_context_professional(sorted_chunks: List[Dict]) -> str:
     
     return "\n".join(context_parts)
 
+def calculate_confidence_score(chunks: list, query: str) -> dict:
+    """
+    Calculate answer confidence based on retrieval quality.
+    
+    Args:
+        chunks: Retrieved Pinecone chunks with scores
+        query: User's query
+        
+    Returns:
+        Dict with confidence level, score, and reasoning
+    """
+    if not chunks:
+        return {
+            "level": "none",
+            "score": 0.0,
+            "reasoning": "No relevant sources found",
+            "stars": "⭐"
+        }
+    
+    # Average similarity score
+    avg_score = sum(c.get('score', 0.0) for c in chunks) / len(chunks)
+    
+    # Number of high-quality chunks (score > 0.85)
+    high_quality_count = sum(1 for c in chunks if c.get('score', 0.0) > 0.85)
+    
+    # Determine confidence level
+    if high_quality_count >= 5 and avg_score > 0.88:
+        level = "very_high"
+        stars = "⭐⭐⭐⭐⭐"
+        reasoning = f"{len(chunks)} highly relevant sources"
+    elif high_quality_count >= 3 and avg_score > 0.85:
+        level = "high"
+        stars = "⭐⭐⭐⭐"
+        reasoning = f"{high_quality_count} strong matches"
+    elif len(chunks) >= 3 and avg_score > 0.80:
+        level = "medium"
+        stars = "⭐⭐⭐"
+        reasoning = f"{len(chunks)} moderate matches"
+    elif len(chunks) >= 2:
+        level = "low"
+        stars = "⭐⭐"
+        reasoning = f"Limited information ({len(chunks)} sources)"
+    else:
+        level = "very_low"
+        stars = "⭐"
+        reasoning = "Insufficient information"
+    
+    return {
+        "level": level,
+        "score": avg_score,
+        "reasoning": reasoning,
+        "stars": stars,
+        "source_count": len(chunks)
+    }
+
+
+def format_citations(chunks: list) -> str:
+    """
+    Format citations from retrieved chunks.
+    
+    Args:
+        chunks: Retrieved Pinecone chunks
+        
+    Returns:
+        Formatted citation string
+    """
+    citations = []
+    
+    for i, chunk in enumerate(chunks[:5], 1):  # Top 5 sources
+        metadata = chunk.get('metadata', {}) if isinstance(chunk.get('metadata'), dict) else {}
+        filename = metadata.get('filename', chunk.get('filename', 'Unknown'))
+        season = metadata.get('season', chunk.get('season', 'Unknown'))
+        match_score = chunk.get('score', chunk.get('boosted_score', 0.0))
+        
+        # Clean filename
+        filename = filename.replace('.pdf', '').replace('_', ' ')
+        
+        citations.append(
+            f"{i}. **Season {season}:** {filename} (Match: {match_score:.2f})"
+        )
+    
+    return "\n".join(citations) if citations else "No sources available"
+
+
+def extract_filters_from_query(query: str) -> dict:
+    """
+    Extract Pinecone filters from user query using GPT-4o-mini.
+    
+    Args:
+        query: User's question
+        
+    Returns:
+        Dict of Pinecone filters (empty dict if no filters extracted)
+    """
+    if not OPENAI_API_KEY:
+        return {}
+    
+    try:
+        openai.api_key = OPENAI_API_KEY
+        
+        prompt = f"""Analyze this user query and extract metadata filters for a vector database search.
+
+Available metadata fields:
+- season: ["1", "2", "3", "21", "22", etc.]
+- types_discussed: ["INTJ", "ENFP", "INFJ", etc.]
+- difficulty: ["foundation", "intermediate", "advanced", "expert"]
+- primary_category: ["cognitive_functions", "type_profiles", "relationships", etc.]
+- content_type: ["main_season", "csj_responds", "special", etc.]
+
+User Query: "{query}"
+
+Extract filters as JSON. Only include filters explicitly mentioned or strongly implied.
+
+Examples:
+- "According to Season 1..." → {{"season": {{"$eq": "1"}}}}
+- "How does ENFP develop?" → {{"types_discussed": {{"$in": ["ENFP"]}}}}
+- "Beginner guide to..." → {{"difficulty": {{"$in": ["foundation", "intermediate"]}}}}
+
+Your response (JSON only):"""
+        
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Extract metadata filters from queries. Return valid JSON only."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=200
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        
+        # Try to extract JSON if wrapped in markdown
+        if "```json" in response_text:
+            json_start = response_text.find("```json") + 7
+            json_end = response_text.find("```", json_start)
+            response_text = response_text[json_start:json_end].strip()
+        elif "```" in response_text:
+            json_start = response_text.find("```") + 3
+            json_end = response_text.find("```", json_start)
+            response_text = response_text[json_start:json_end].strip()
+        
+        filters = json.loads(response_text)
+        
+        # Validate filter structure
+        if isinstance(filters, dict) and filters:
+            print(f"🎯 [METADATA-FILTER] Extracted filters: {filters}")
+            return filters
+        else:
+            return {}
+            
+    except json.JSONDecodeError as e:
+        print(f"⚠️ [METADATA-FILTER] JSON parsing failed: {e}")
+        return {}
+    except Exception as e:
+        print(f"⚠️ [METADATA-FILTER] Filter extraction failed: {e}")
+        return {}
+
+
 def query_innerverse_local(question: str) -> str:
     """
     IMPROVED HYBRID SEARCH for MBTI content:
@@ -278,6 +437,9 @@ def query_innerverse_local(question: str) -> str:
             return ""
         
         print(f"✅ [CLAUDE DEBUG] Pinecone index connected successfully")
+        
+        # FEATURE #1: Extract metadata filters from query
+        metadata_filters = extract_filters_from_query(question)
         
         # IMPROVEMENT 1: Smart Query Rewriting with MBTI Ontology
         search_queries = [question]  # Start with original
@@ -331,7 +493,18 @@ def query_innerverse_local(question: str) -> str:
             query_vector = response.data[0].embedding
             print(f"✅ [CLAUDE DEBUG] Embedding created: {len(query_vector)} dimensions")
             
-            # Query Pinecone with INCREASED top_k for hybrid approach
+            # Query Pinecone with INCREASED top_k for hybrid approach + metadata filters
+            query_params = {
+                "vector": query_vector,
+                "top_k": 30,
+                "include_metadata": True
+            }
+            
+            # FEATURE #1: Apply metadata filters if extracted
+            if metadata_filters:
+                query_params["filter"] = metadata_filters
+                print(f"🎯 [METADATA-FILTER] Applying filters to query #{query_idx}: {metadata_filters}")
+            
             print(f"📡 [CLAUDE DEBUG] Querying Pinecone with top_k=30...")
             try:
                 import asyncio
@@ -341,9 +514,7 @@ def query_innerverse_local(question: str) -> str:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         pinecone_index.query,
-                        vector=query_vector,
-                        top_k=30,
-                        include_metadata=True
+                        **query_params
                     )
                     query_response = future.result(timeout=10.0)
             except (FuturesTimeoutError, TimeoutError) as e:
@@ -394,8 +565,19 @@ def query_innerverse_local(question: str) -> str:
         print(f"📚 [CLAUDE DEBUG] Top 12 chunks selected for context")
         print(f"📚 [CLAUDE DEBUG] Sample sources: {', '.join(set([c.get('season', 'Unknown') for c in final_chunks[:5] if c.get('season')]))}")
         
+        # FEATURE #4: Calculate confidence score
+        confidence = calculate_confidence_score(final_chunks, question)
+        print(f"📊 [CONFIDENCE] {confidence['stars']} {confidence['level']} ({confidence['score']:.2f}) - {confidence['reasoning']}")
+        
+        # FEATURE #4: Format citations
+        citations = format_citations(final_chunks)
+        
         # Format with professional structure
         result = format_rag_context_professional(final_chunks)
+        
+        # Append confidence and citations to context (Claude will include in response)
+        result += f"\n\n---\n**Retrieval Confidence:** {confidence['stars']} {confidence['level'].replace('_', ' ').title()} *{confidence['reasoning']}*\n**Sources:**\n{citations}"
+        
         print(f"✅ [CLAUDE DEBUG] Returning structured context ({len(result)} chars)")
         return result
         
