@@ -275,6 +275,8 @@ def init_database_tables():
         role VARCHAR(20) NOT NULL,
         content TEXT NOT NULL,
         status VARCHAR(20) DEFAULT 'completed',
+        follow_up_question TEXT,
+        citations JSONB,
         input_tokens INTEGER,
         output_tokens INTEGER,
         cost DECIMAL(10, 6),

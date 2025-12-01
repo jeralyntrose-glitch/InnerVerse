@@ -2797,10 +2797,36 @@
                     if (data.messages.length === 0) {
                         showWelcomeMessage();
                     } else {
-                        data.messages.forEach((msg) => {
+                        data.messages.forEach((msg, index) => {
                             // Defensive check: skip messages with missing content
                             if (msg && msg.content) {
-                                addMessage(msg.role, msg.content);
+                                const messageElement = addMessage(msg.role, msg.content);
+                                
+                                // Reconstruct citations and follow-up for last 3 messages only
+                                if (msg.role === "assistant" && index >= data.messages.length - 6) {
+                                    const messageDiv = messageElement.closest('.message.assistant');
+                                    
+                                    // Add citations if available
+                                    if (msg.citations) {
+                                        try {
+                                            const citationsData = typeof msg.citations === 'string' 
+                                                ? JSON.parse(msg.citations) 
+                                                : msg.citations;
+                                            if (citationsData && messageDiv) {
+                                                addCitationsFooter(messageDiv, citationsData);
+                                            }
+                                        } catch (e) {
+                                            console.error("Error parsing citations:", e);
+                                        }
+                                    }
+                                    
+                                    // Add follow-up chip if available
+                                    if (msg.follow_up_question) {
+                                        if (messageDiv) {
+                                            addFollowUpChip(messageDiv, msg.follow_up_question);
+                                        }
+                                    }
+                                }
                             }
                         });
                     }
@@ -3793,6 +3819,11 @@
                 contentDiv.className = "message-content";
 
                 if (content) {
+                    // Strip [FOLLOW-UP: ...] brackets from content (for older messages)
+                    if (role === "assistant") {
+                        content = content.replace(/\[FOLLOW-UP:\s*.*?\]/gi, '').trim();
+                    }
+                    
                     if (
                         role === "assistant" &&
                         typeof marked !== "undefined" &&
@@ -3944,6 +3975,48 @@
                     messageDiv.insertBefore(footer, copyBtn);
                 } else {
                     messageDiv.appendChild(footer);
+                }
+            }
+            
+            function addFollowUpChip(messageDiv, followUpQuestion) {
+                /**
+                 * Add follow-up question chip to AI message
+                 * Makes the question clickable to populate input
+                 */
+                if (!followUpQuestion || !messageDiv) return;
+                
+                // Create suggested questions container
+                const suggestedContainer = document.createElement('div');
+                suggestedContainer.className = 'suggested-questions';
+                
+                const label = document.createElement('div');
+                label.className = 'suggested-label';
+                label.textContent = 'Suggested:';
+                suggestedContainer.appendChild(label);
+                
+                const chipsContainer = document.createElement('div');
+                chipsContainer.className = 'question-chips';
+                
+                // Create clickable chip
+                const chip = document.createElement('button');
+                chip.className = 'question-chip';
+                chip.textContent = followUpQuestion;
+                chip.onclick = () => {
+                    messageInput.value = followUpQuestion;
+                    messageInput.focus();
+                    // Trigger auto-expand
+                    adjustTextareaHeight();
+                };
+                
+                chipsContainer.appendChild(chip);
+                suggestedContainer.appendChild(chipsContainer);
+                
+                // Insert before copy button
+                const copyBtn = messageDiv.querySelector('.copy-btn');
+                if (copyBtn) {
+                    messageDiv.insertBefore(suggestedContainer, copyBtn);
+                } else {
+                    messageDiv.appendChild(suggestedContainer);
                 }
             }
             

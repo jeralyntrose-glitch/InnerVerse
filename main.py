@@ -7626,7 +7626,7 @@ async def get_conversation_detail(conversation_id: int):
             raise HTTPException(status_code=404, detail="Conversation not found")
         
         cursor.execute("""
-            SELECT id, role, content, created_at, status, follow_up_question
+            SELECT id, role, content, created_at, status, follow_up_question, citations
             FROM messages
             WHERE conversation_id = %s
             ORDER BY created_at ASC
@@ -7819,12 +7819,13 @@ async def send_message_streaming(conversation_id: int, request: Request):
             import json  # Import at function scope to avoid scoping issues
             full_response = []
             follow_up_question = None
+            citations_data = None
             
             try:
                 for chunk in chat_with_claude_streaming(claude_messages, conversation_id):
                     yield chunk
                     
-                    # Collect text chunks and follow-up for database storage
+                    # Collect text chunks, follow-up, and citations for database storage
                     if '"chunk"' in chunk:
                         try:
                             chunk_data = json.loads(chunk.replace("data: ", ""))
@@ -7833,11 +7834,13 @@ async def send_message_streaming(conversation_id: int, request: Request):
                         except:
                             pass
                     elif '"done"' in chunk:
-                        # Extract follow-up question from done event
+                        # Extract follow-up question and citations from done event
                         try:
                             done_data = json.loads(chunk.replace("data: ", ""))
                             if "follow_up" in done_data:
                                 follow_up_question = done_data.get("follow_up")
+                            if "citations" in done_data:
+                                citations_data = done_data.get("citations")
                         except:
                             pass
                 
@@ -7848,13 +7851,30 @@ async def send_message_streaming(conversation_id: int, request: Request):
                     if save_conn:
                         try:
                             save_cursor = save_conn.cursor()
+                            # Save citations as JSON
+                            citations_json = json.dumps(citations_data) if citations_data else None
                             save_cursor.execute("""
-                                INSERT INTO messages (conversation_id, role, content, follow_up_question)
-                                VALUES (%s, 'assistant', %s, %s)
-                            """, (conversation_id, assistant_text, follow_up_question))
+                                INSERT INTO messages (conversation_id, role, content, follow_up_question, citations)
+                                VALUES (%s, 'assistant', %s, %s, %s)
+                            """, (conversation_id, assistant_text, follow_up_question, citations_json))
                             save_cursor.execute("""
                                 UPDATE conversations SET updated_at = NOW() WHERE id = %s
                             """, (conversation_id,))
+                            
+                            # Cleanup: Clear citations/follow-up from older messages (keep last 6 only)
+                            # This prevents database bloat while keeping recent messages enhanced
+                            save_cursor.execute("""
+                                UPDATE messages
+                                SET citations = NULL, follow_up_question = NULL
+                                WHERE conversation_id = %s
+                                AND role = 'assistant'
+                                AND id NOT IN (
+                                    SELECT id FROM messages
+                                    WHERE conversation_id = %s AND role = 'assistant'
+                                    ORDER BY created_at DESC
+                                    LIMIT 6
+                                )
+                            """, (conversation_id, conversation_id))
                             save_conn.commit()
                             save_cursor.close()
                         except Exception as db_error:
