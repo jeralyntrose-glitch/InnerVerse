@@ -859,35 +859,62 @@
                 font-size: 11px;
             }
             
-            /* ===== FOLLOW-UP QUESTIONS - CLEAN ELEGANT STYLE ===== */
-            .follow-up-question {
-                margin-top: 20px;
-                padding: 14px 16px;
-                background: var(--bg-input);
-                border-left: 3px solid var(--text-tertiary);
-                border-radius: 8px;
+            /* ===== SUGGESTED QUESTIONS - CHATGPT CHIP STYLE ===== */
+            .suggested-questions {
+                margin-top: 16px;
+                padding-bottom: 8px;
+            }
+            
+            .suggested-label {
+                font-size: 12px;
+                color: var(--text-tertiary);
+                margin-bottom: 8px;
+                font-weight: 500;
+            }
+            
+            .question-chips {
                 display: flex;
-                align-items: flex-start;
-                gap: 10px;
+                flex-wrap: wrap;
+                gap: 8px;
             }
             
-            .follow-up-icon {
-                font-size: 16px;
-                line-height: 1.5;
-                flex-shrink: 0;
-            }
-            
-            .follow-up-question em {
-                font-style: italic;
+            .question-chip {
+                background: var(--bg-button);
+                border: 1px solid var(--border-main);
+                border-radius: 16px;
+                padding: 8px 14px;
+                font-size: 13px;
                 color: var(--text-secondary);
-                font-size: 14px;
-                line-height: 1.6;
-                flex: 1;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-family: inherit;
+                line-height: 1.4;
+                text-align: left;
+                max-width: 100%;
+                word-wrap: break-word;
             }
             
-            [data-theme="dark"] .follow-up-question {
+            .question-chip:hover {
+                background: var(--bg-button-hover);
+                border-color: var(--text-tertiary);
+                color: var(--text-primary);
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px var(--shadow-sm);
+            }
+            
+            .question-chip:active {
+                transform: translateY(0);
+                box-shadow: 0 1px 3px var(--shadow-sm);
+            }
+            
+            [data-theme="dark"] .question-chip {
                 background: rgba(255, 255, 255, 0.05);
-                border-left-color: rgba(255, 255, 255, 0.3);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            [data-theme="dark"] .question-chip:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.2);
             }
 
             .message.assistant .message-content code {
@@ -1444,8 +1471,15 @@
                 stroke-width: 2.5;
             }
             
-            [data-theme="dark"] .send-btn svg {
-                stroke: #e0e0e0 !important;
+            .send-btn svg path,
+            .send-btn svg .send-icon-path {
+                stroke: #2d2d2d !important; /* Dark gray in light mode */
+            }
+            
+            [data-theme="dark"] .send-btn svg,
+            [data-theme="dark"] .send-btn svg path,
+            [data-theme="dark"] .send-btn svg .send-icon-path {
+                stroke: #e0e0e0 !important; /* Light gray in dark mode */
             }
             
             .stop-btn {
@@ -1713,6 +1747,7 @@
                                     stroke-width="2.5"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
+                                    class="send-icon-path"
                                 />
                             </svg>
                         </button>
@@ -2735,6 +2770,13 @@
             // ===== LOAD CONVERSATION =====
             async function loadConversation(convId) {
                 try {
+                    // Close sidebar on mobile when switching chats
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.add("closed");
+                        sidebarOverlay.classList.remove("visible");
+                        updateTypingIndicatorPosition();
+                    }
+                    
                     // Save current conversation's scroll position before switching
                     if (conversationId && messages) {
                         scrollManager.savePosition(conversationId);
@@ -2790,11 +2832,19 @@
                     
                     // Update typing indicator position after loading conversation (mobile)
                     updateTypingIndicatorPosition();
+                    
+                    // Focus input after switching chats
+                    setTimeout(() => {
+                        messageInput.focus();
+                    }, 100);
                 } catch (error) {
                     console.error("Load conversation error:", error);
                     showError("Failed to load conversation. Please try again.");
                 }
             }
+            
+            // Expose loadConversation to global scope for onclick handlers
+            window.loadConversation = loadConversation;
 
             // ===== NEW CHAT - CHATGPT STYLE (FAST & SMOOTH) =====
             newChatBtn.addEventListener("click", async () => {
@@ -2847,6 +2897,9 @@
                         clearMessages();
                         showWelcomeMessage();
                         await loadAllConversations();
+                        
+                        // Ensure sidebar shows new conversation as active
+                        renderSidebar();
 
                         // Save new conversation as last viewed
                         localStorage.setItem("lastConversationId", data.id);
@@ -2990,6 +3043,7 @@
             let mediaRecorder = null;
             let audioChunks = [];
             const voiceBtn = document.getElementById('voiceBtn');
+            let audioStream = null; // Store stream globally so onstop can access it
             
             voiceBtn.addEventListener('click', async () => {
                 try {
@@ -2998,10 +3052,10 @@
                         console.log('🎤 Starting voice recording...');
                         
                         // Request microphone permission
-                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         
                         // Create media recorder
-                        mediaRecorder = new MediaRecorder(stream);
+                        mediaRecorder = new MediaRecorder(audioStream);
                         audioChunks = [];
                         
                         // Collect audio data
@@ -3019,8 +3073,11 @@
                             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                             console.log(`📊 Audio size: ${(audioBlob.size / 1024).toFixed(2)} KB`);
                             
-                            // Stop all audio tracks
-                            stream.getTracks().forEach(track => track.stop());
+                            // Stop all audio tracks (use stored stream)
+                            if (audioStream) {
+                                audioStream.getTracks().forEach(track => track.stop());
+                                audioStream = null;
+                            }
                             
                             // Send for transcription
                             await transcribeAudio(audioBlob);
@@ -3038,12 +3095,22 @@
                     } else {
                         // Stop recording
                         console.log('⏹️ Stopping recording...');
-                        mediaRecorder.stop();
+                        if (mediaRecorder.state !== 'inactive') {
+                            mediaRecorder.stop();
+                        }
                         voiceBtn.classList.remove('recording');
                     }
                 } catch (error) {
                     console.error('❌ Voice recording error:', error);
                     voiceBtn.classList.remove('recording');
+                    
+                    // Clean up on error
+                    if (audioStream) {
+                        audioStream.getTracks().forEach(track => track.stop());
+                        audioStream = null;
+                    }
+                    mediaRecorder = null;
+                    audioChunks = [];
                     
                     if (error.name === 'NotAllowedError') {
                         showError('Microphone access denied. Please allow microphone permission in your browser settings.');
@@ -3403,13 +3470,57 @@
                                             }
                                             
                                             // Clean up follow-up formatting
-                                            // Replace [FOLLOW-UP: Question?] with styled version
+                                            // Parse [FOLLOW-UP: Question?] and create clickable chips
                                             let htmlContent = assistantDiv.innerHTML;
-                                            htmlContent = htmlContent.replace(
-                                                /\[FOLLOW-UP:\s*(.*?)\]/gi,
-                                                '<div class="follow-up-question"><span class="follow-up-icon">💡</span><em>$1</em></div>'
-                                            );
-                                            assistantDiv.innerHTML = htmlContent;
+                                            const followUpMatch = htmlContent.match(/\[FOLLOW-UP:\s*(.*?)\]/i);
+                                            
+                                            if (followUpMatch) {
+                                                // Remove the [FOLLOW-UP: ...] from main content
+                                                htmlContent = htmlContent.replace(/\[FOLLOW-UP:\s*(.*?)\]/gi, '');
+                                                assistantDiv.innerHTML = htmlContent;
+                                                
+                                                // Create suggested questions container
+                                                const suggestedContainer = document.createElement('div');
+                                                suggestedContainer.className = 'suggested-questions';
+                                                
+                                                const label = document.createElement('div');
+                                                label.className = 'suggested-label';
+                                                label.textContent = 'Suggested:';
+                                                suggestedContainer.appendChild(label);
+                                                
+                                                const chipsContainer = document.createElement('div');
+                                                chipsContainer.className = 'question-chips';
+                                                
+                                                // Create clickable chip
+                                                const chip = document.createElement('button');
+                                                chip.className = 'question-chip';
+                                                chip.textContent = followUpMatch[1];
+                                                chip.onclick = () => {
+                                                    messageInput.value = followUpMatch[1];
+                                                    messageInput.focus();
+                                                    // Trigger auto-expand
+                                                    messageInput.style.height = "auto";
+                                                    const newHeight = Math.min(messageInput.scrollHeight, 144);
+                                                    messageInput.style.height = newHeight + "px";
+                                                };
+                                                
+                                                chipsContainer.appendChild(chip);
+                                                suggestedContainer.appendChild(chipsContainer);
+                                                
+                                                // Add to message (get parent message div)
+                                                const messageDiv = assistantDiv.closest('.message.assistant');
+                                                if (messageDiv) {
+                                                    // Insert before copy button
+                                                    const copyBtn = messageDiv.querySelector('.copy-btn');
+                                                    if (copyBtn) {
+                                                        messageDiv.insertBefore(suggestedContainer, copyBtn);
+                                                    } else {
+                                                        messageDiv.appendChild(suggestedContainer);
+                                                    }
+                                                }
+                                            } else {
+                                                assistantDiv.innerHTML = htmlContent;
+                                            }
                                         } else {
                                             assistantDiv.textContent =
                                                 fullResponse;
