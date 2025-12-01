@@ -2,16 +2,164 @@
 
 **Purpose**: Centralized reference for bug fixes, solutions, and patterns to help solve future issues faster.
 
-**Last Updated**: 2025-01-XX
+**Last Updated**: 2025-12-01
 
 ---
 
 ## 📋 Table of Contents
 
+- [UnboundLocalError with Import Statements](#unboundlocalerror-with-import-statements)
 - [CSS Scrolling Issues](#css-scrolling-issues)
 - [Season Search Problems](#season-search-problems)
 - [Dark Mode Icon Visibility](#dark-mode-icon-visibility)
 - [Patterns & Best Practices](#patterns--best-practices)
+
+---
+
+## UnboundLocalError with Import Statements
+
+### Problem
+Functions crash with `UnboundLocalError: cannot access local variable 'X' where it is not associated with a value` where X is a module name (e.g., `json`, `openai_client`).
+
+### Root Cause
+Python's variable scoping rules create this error when:
+1. A variable/module is **used** in a function
+2. Then **imported/assigned** later in the SAME function
+3. Python sees the future import/assignment and treats the name as LOCAL throughout the entire function
+4. When the code tries to use it before the import/assignment, it's "unbound" (not yet assigned)
+
+**Example that causes the bug:**
+```python
+def my_function():
+    # Line 50: Uses json (but Python knows json will be imported at line 100)
+    data = json.dumps({"status": "searching"})  # ❌ UnboundLocalError!
+    
+    # ... 50 lines of code ...
+    
+    # Line 100: Import happens too late
+    import json  # Python marks 'json' as LOCAL from here
+```
+
+### Solution Pattern
+
+**Move all imports to the TOP of the function:**
+
+```python
+def my_function():
+    import json  # ✅ Import FIRST, before any usage
+    
+    # Now safe to use json anywhere in the function
+    data = json.dumps({"status": "searching"})  # ✅ Works!
+    
+    # ... rest of function ...
+```
+
+**For module-level objects (like clients), initialize at module level:**
+
+```python
+# At top of file (module level)
+from openai import OpenAI
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+# In function
+def my_function():
+    # Use the module-level client directly
+    response = openai_client.embeddings.create(...)  # ✅ Works!
+```
+
+### Real Examples Fixed
+
+**1. `claude_api.py` - `chat_with_claude_streaming()` function:**
+
+❌ **Before (broken):**
+```python
+def chat_with_claude_streaming(...):
+    # Line 989: Uses json
+    yield "data: " + '{"error": "..."}\n\n'
+    
+    # Line 1057: Uses json.dumps()
+    yield "data: " + json.dumps({"error": error_msg}) + "\n\n"
+    
+    # Line 1083: Import happens here (TOO LATE)
+    import json
+    yield "data: " + json.dumps({"chunk": text}) + "\n\n"
+```
+
+✅ **After (fixed):**
+```python
+def chat_with_claude_streaming(...):
+    import json  # 🐛 FIX: Import at function top
+    
+    # Now all uses of json work correctly
+    yield "data: " + '{"error": "..."}\n\n'
+    yield "data: " + json.dumps({"error": error_msg}) + "\n\n"
+    yield "data: " + json.dumps({"chunk": text}) + "\n\n"
+```
+
+**2. `claude_api.py` - `query_innerverse_local()` function:**
+
+❌ **Before (broken):**
+```python
+def query_innerverse_local(question: str, top_k: int = 20):
+    # Line 1379: Uses openai_client
+    embedding_response = openai_client.embeddings.create(...)
+    
+    # Line 1470: Reassigns openai_client (TOO LATE)
+    openai_client = get_openai_client()  # ❌ Makes it LOCAL
+```
+
+✅ **After (fixed):**
+```python
+# Module-level initialization (at top of file)
+from services.openai_client import get_openai_client
+openai_client = get_openai_client()
+
+def query_innerverse_local(question: str, top_k: int = 20):
+    # Use module-level client directly
+    embedding_response = openai_client.embeddings.create(...)  # ✅ Works!
+```
+
+### Key Learnings
+
+1. **Always import at the TOP** of functions (or module level)
+2. **Never import in the MIDDLE** of a function after using the module
+3. **Python scoping is function-wide** - An assignment anywhere makes a name LOCAL everywhere
+4. **Module-level initialization** is better for clients/connections that are reused
+5. **Check for duplicate imports** - Remove redundant imports after fixing
+
+### How to Detect This Bug
+
+**Error message pattern:**
+```
+UnboundLocalError: cannot access local variable 'X' where it is not associated with a value
+```
+
+**Where X is:**
+- `json` - Most common
+- `openai_client` - Client objects
+- Any module name
+
+**How to find it:**
+1. Search for the variable name in the function
+2. Find where it's FIRST used
+3. Find where it's IMPORTED/ASSIGNED
+4. If import/assignment comes AFTER usage → BUG!
+
+### Prevention Checklist
+
+✅ **Always:**
+- Import modules at the TOP of functions (or module level)
+- Initialize clients at module level when possible
+- Test functions thoroughly after adding imports
+
+❌ **Never:**
+- Import in the middle of a function
+- Import inside try/except blocks unless necessary
+- Re-assign module-level variables inside functions
+
+### Related Files
+- `claude_api.py` - `chat_with_claude_streaming()` function (lines 982-1222)
+- `claude_api.py` - `query_innerverse_local()` function (lines 1290-1545)
 
 ---
 

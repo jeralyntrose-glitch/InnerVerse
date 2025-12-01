@@ -985,6 +985,8 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     Yields chunks as they arrive from Claude
     RETURNS: Yields SSE events, final event includes follow-up question if present
     """
+    import json  # 🐛 FIX: Import at function top to prevent UnboundLocalError
+    
     if not ANTHROPIC_API_KEY:
         yield "data: " + '{"error": "ANTHROPIC_API_KEY not set"}\n\n'
         return
@@ -1080,7 +1082,6 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                     elif event.type == "content_block_delta":
                         if hasattr(event.delta, "text"):
                             # Stream text chunks to frontend immediately (no batching for max speed)
-                            import json
                             text_chunk = event.delta.text
                             full_response_text.append(text_chunk)  # Accumulate for follow-up extraction
                             yield "data: " + json.dumps({"chunk": text_chunk}) + "\n\n"
@@ -1208,7 +1209,6 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                             return
     
         # Max iterations reached - send done with follow-up
-        import json
         follow_up = extract_follow_up_question("".join(full_response_text))
         done_payload = {"done": True, "follow_up": follow_up}
         if citations_data:
@@ -1216,7 +1216,6 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
         yield "data: " + json.dumps(done_payload) + "\n\n"
     
     except Exception as e:
-        import json
         error_msg = str(e)
         print(f"❌ Claude streaming error: {error_msg}")
         yield "data: " + json.dumps({"error": f"Sorry, I encountered an error: {error_msg}. Please try again."}) + "\n\n"
