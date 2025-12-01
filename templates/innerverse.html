@@ -3386,6 +3386,7 @@
                 let fullResponse = "";
 
                 try {
+                    console.log("🚀 [STREAMING DEBUG] Sending message to:", `/claude/conversations/${conversationId}/message/stream`);
                     const response = await fetch(
                         `/claude/conversations/${conversationId}/message/stream`,
                         {
@@ -3396,26 +3397,35 @@
                         },
                     );
 
+                    console.log("📡 [STREAMING DEBUG] Response received:", response.status, response.ok);
                     if (!response.ok) throw new Error("Failed to send message");
 
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
+                    console.log("📖 [STREAMING DEBUG] Starting to read stream...");
 
                     while (true) {
                         const { done, value } = await reader.read();
-                        if (done) break;
+                        if (done) {
+                            console.log("✅ [STREAMING DEBUG] Stream complete");
+                            break;
+                        }
 
                         const chunk = decoder.decode(value);
+                        console.log("📦 [STREAMING DEBUG] Raw chunk received:", chunk.substring(0, 100));
                         const lines = chunk.split("\n");
 
                         for (const line of lines) {
                             if (line.startsWith("data: ")) {
                                 try {
                                     const data = JSON.parse(line.slice(6));
+                                    console.log("🔍 [STREAMING DEBUG] Received data:", data);
 
                                     if (data.chunk) {
+                                        console.log("✅ [STREAMING DEBUG] Got chunk:", data.chunk.substring(0, 50));
                                         // Hide typing, create message div if needed
                                         if (!assistantDiv) {
+                                            console.log("📝 [STREAMING DEBUG] Creating assistant div");
                                             typingIndicator.classList.remove(
                                                 "visible",
                                             );
@@ -3423,9 +3433,11 @@
                                                 "assistant",
                                                 "",
                                             );
+                                            console.log("✅ [STREAMING DEBUG] Assistant div created:", assistantDiv);
                                         }
 
                                         fullResponse += data.chunk;
+                                        console.log("📊 [STREAMING DEBUG] Full response length:", fullResponse.length);
 
                                         // Render markdown with syntax highlighting
                                         if (
@@ -3468,7 +3480,9 @@
                                                         "class",
                                                     ],
                                                 });
+                                            console.log("🎨 [STREAMING DEBUG] Setting innerHTML, cleanHTML length:", cleanHTML.length);
                                             assistantDiv.innerHTML = cleanHTML;
+                                            console.log("✅ [STREAMING DEBUG] innerHTML set successfully");
                                             
                                             // Apply syntax highlighting to code blocks
                                             if (typeof Prism !== "undefined") {
@@ -3525,9 +3539,11 @@
                                                     }
                                                 }
                                             } else {
+                                                console.log("📝 [STREAMING DEBUG] No follow-up, setting innerHTML directly");
                                                 assistantDiv.innerHTML = htmlContent;
                                             }
                                         } else {
+                                            console.log("⚠️ [STREAMING DEBUG] marked/DOMPurify not loaded, using textContent");
                                             assistantDiv.textContent =
                                                 fullResponse;
                                         }
