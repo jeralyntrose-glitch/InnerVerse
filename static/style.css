@@ -2057,6 +2057,12 @@ label,
   display: block;
 }
 
+/* Documents section container - ensure it doesn't prevent scrolling */
+.documents-section {
+  position: relative;
+  width: 100%;
+}
+
 .tag-library-description {
   color: var(--text-secondary);
   font-size: 14px;
@@ -2182,33 +2188,44 @@ label,
 }
 
 /* Documents List - Scrollable Container */
-.documents-list {
+.documents-list,
+#tagged-documents-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 520px; /* Show ~4 document cards at a time */
-  overflow-y: auto;
+  max-height: 520px !important; /* Show ~4 document cards at a time */
+  overflow-y: auto !important;
   overflow-x: hidden;
   padding-right: 8px;
+  position: relative;
 }
 
 /* Scrollbar styling for documents list */
-.documents-list::-webkit-scrollbar {
+.documents-list::-webkit-scrollbar,
+#tagged-documents-list::-webkit-scrollbar {
   width: 8px;
 }
 
-.documents-list::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+.documents-list::-webkit-scrollbar-track,
+#tagged-documents-list::-webkit-scrollbar-track {
+  background: #f0f0f0;
   border-radius: 4px;
 }
 
-.documents-list::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+[data-theme="dark"] .documents-list::-webkit-scrollbar-track,
+[data-theme="dark"] #tagged-documents-list::-webkit-scrollbar-track {
+  background: #2a2a2a;
+}
+
+.documents-list::-webkit-scrollbar-thumb,
+#tagged-documents-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
   border-radius: 4px;
 }
 
-.documents-list::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+.documents-list::-webkit-scrollbar-thumb:hover,
+#tagged-documents-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
 }
 
 /* Document Card Styles */
