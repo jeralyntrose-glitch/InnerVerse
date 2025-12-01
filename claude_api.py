@@ -569,17 +569,37 @@ def query_innerverse_local(question: str) -> str:
         confidence = calculate_confidence_score(final_chunks, question)
         print(f"📊 [CONFIDENCE] {confidence['stars']} {confidence['level']} ({confidence['score']:.2f}) - {confidence['reasoning']}")
         
-        # FEATURE #4: Format citations
-        citations = format_citations(final_chunks)
+        # FEATURE #4: Format citations for display
+        citations_text = format_citations(final_chunks)
+        
+        # Build structured citations data for frontend
+        citations_data = {
+            "sources": [
+                {
+                    "season": chunk.get('season', chunk.get('metadata', {}).get('season', 'Unknown')),
+                    "filename": chunk.get('filename', chunk.get('metadata', {}).get('filename', 'Unknown')),
+                    "score": chunk.get('score', chunk.get('boosted_score', 0.0))
+                }
+                for chunk in final_chunks[:5]  # Top 5 sources
+            ],
+            "confidence": {
+                "level": confidence['level'],
+                "score": confidence['score'],
+                "stars": confidence['stars'],
+                "reasoning": confidence['reasoning']
+            }
+        }
         
         # Format with professional structure
         result = format_rag_context_professional(final_chunks)
         
         # Append confidence and citations to context (Claude will include in response)
-        result += f"\n\n---\n**Retrieval Confidence:** {confidence['stars']} {confidence['level'].replace('_', ' ').title()} *{confidence['reasoning']}*\n**Sources:**\n{citations}"
+        result += f"\n\n---\n**Retrieval Confidence:** {confidence['stars']} {confidence['level'].replace('_', ' ').title()} *{confidence['reasoning']}*\n**Sources:**\n{citations_text}"
         
         print(f"✅ [CLAUDE DEBUG] Returning structured context ({len(result)} chars)")
-        return result
+        
+        # Return tuple: (context_string, citations_data)
+        return result, citations_data
         
     except Exception as e:
         print(f"❌ [CLAUDE DEBUG] Pinecone query error: {str(e)}")
@@ -895,7 +915,12 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
                         question = tool_input.get("question", "")
                         print(f"🔍 Querying InnerVerse Pinecone (local) for: {question}")
                         
-                        backend_result = query_innerverse_local(question)
+                        result = query_innerverse_local(question)
+                        # Handle tuple return (context, citations_data) or string (backwards compat)
+                        if isinstance(result, tuple):
+                            backend_result, _ = result  # Citations not used in non-streaming mode
+                        else:
+                            backend_result = result
                         
                         tool_use_details.append({
                             "tool": "query_innerverse_backend",
@@ -966,6 +991,7 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     full_response_text = []  # Accumulate response for follow-up extraction
+    citations_data = None  # Store citations from RAG query
     
     tools = [
         {
@@ -1104,7 +1130,14 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                                         
                                         # Query Pinecone locally (FAST!)
                                         yield "data: " + '{"status": "searching_pinecone"}\n\n'
-                                        backend_result = query_innerverse_local(question)
+                                        result = query_innerverse_local(question)
+                                        
+                                        # Handle tuple return (context, citations_data) or string (backwards compat)
+                                        if isinstance(result, tuple):
+                                            backend_result, citations_data = result
+                                        else:
+                                            backend_result = result
+                                            citations_data = None
                                         
                                         # Add tool result to messages and continue streaming
                                         messages.append({
@@ -1168,13 +1201,19 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                                     print(f"⚠️ Could not log streaming Claude usage: {e}")
                             
                             follow_up = extract_follow_up_question("".join(full_response_text))
-                            yield "data: " + json.dumps({"done": True, "follow_up": follow_up}) + "\n\n"
+                            done_payload = {"done": True, "follow_up": follow_up}
+                            if citations_data:
+                                done_payload["citations"] = citations_data
+                            yield "data: " + json.dumps(done_payload) + "\n\n"
                             return
     
         # Max iterations reached - send done with follow-up
         import json
         follow_up = extract_follow_up_question("".join(full_response_text))
-        yield "data: " + json.dumps({"done": True, "follow_up": follow_up}) + "\n\n"
+        done_payload = {"done": True, "follow_up": follow_up}
+        if citations_data:
+            done_payload["citations"] = citations_data
+        yield "data: " + json.dumps(done_payload) + "\n\n"
     
     except Exception as e:
         import json

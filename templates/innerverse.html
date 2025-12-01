@@ -3433,25 +3433,13 @@
                                         if (assistantDiv) {
                                             const messageDiv = assistantDiv.closest('.message.assistant');
                                             
-                                            // TODO: Replace with real citations from RAG backend (Phase 1)
-                                            // For now, using mock data to demonstrate UI
-                                            const mockCitations = {
-                                                confidence: {
-                                                    level: "high",
-                                                    score: 0.89,
-                                                    stars: "⭐⭐⭐⭐",
-                                                    reasoning: "5 highly relevant sources"
-                                                },
-                                                sources: [
-                                                    { season: "1", filename: "Shadow Integration.pdf", score: 0.92 },
-                                                    { season: "22", filename: "ENFP Cognitive Development.pdf", score: 0.89 },
-                                                    { season: "3", filename: "Four Sides Framework.pdf", score: 0.85 }
-                                                ]
-                                            };
-                                            
-                                            // Add citations footer
-                                            // When RAG backend ready, replace mockCitations with: data.citations
-                                            addCitationsFooter(messageDiv, mockCitations);
+                                            // ✅ PHASE 1: Use real citations from RAG backend
+                                            if (data.citations) {
+                                                console.log("📊 Citations received from backend:", data.citations);
+                                                addCitationsFooter(messageDiv, data.citations);
+                                            } else {
+                                                console.log("⚠️ No citations data from backend");
+                                            }
                                         }
                                     }
                                 } catch (e) {
