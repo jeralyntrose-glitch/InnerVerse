@@ -271,6 +271,48 @@ class ReferenceValidator:
         
         return valid_functions, validation_log
     
+    def get_full_function_stack(self, type_code: str) -> Optional[List[str]]:
+        """
+        Get the full 8-function stack (ego + shadow) for a type
+        
+        Args:
+            type_code: MBTI type code (e.g., "ENFP")
+            
+        Returns:
+            List of function-position pairs (e.g., ["Ne_hero", "Fi_parent", ...])
+            Returns None if type not found
+        """
+        if not type_code or type_code not in self.reference_data.get('mbti_types', {}):
+            return None
+        
+        type_data = self.reference_data['mbti_types'][type_code]
+        four_sides = type_data.get('four_sides', {})
+        
+        # Extract ego functions (Hero, Parent, Child, Inferior)
+        ego_functions = four_sides.get('ego', {}).get('functions', [])
+        # Extract shadow functions (Nemesis, Critic, Trickster, Demon)
+        shadow_functions = four_sides.get('shadow', {}).get('functions', [])
+        
+        full_stack = []
+        
+        # Process ego functions
+        for func_obj in ego_functions:
+            if isinstance(func_obj, dict):
+                function = func_obj.get('function', '')
+                position = func_obj.get('position', '').lower()
+                if function and position:
+                    full_stack.append(f"{function}_{position}")
+        
+        # Process shadow functions
+        for func_obj in shadow_functions:
+            if isinstance(func_obj, dict):
+                function = func_obj.get('function', '')
+                position = func_obj.get('position', '').lower()
+                if function and position:
+                    full_stack.append(f"{function}_{position}")
+        
+        return full_stack if len(full_stack) == 8 else None
+    
     def validate_structured_metadata(self, metadata: Dict) -> Tuple[Dict, Dict]:
         """
         Validate complete structured metadata from auto-tagging
@@ -297,6 +339,46 @@ class ReferenceValidator:
             valid_funcs, func_log = self.validate_functions_list(metadata['functions_covered'])
             validated['functions_covered'] = valid_funcs
             report['functions_covered'] = func_log
+        
+        # ENRICH function_positions with full 8-function stack if incomplete
+        # This ensures we always have ego + shadow functions for each type
+        if 'function_positions' in metadata:
+            current_positions = metadata['function_positions']
+            
+            # Check if incomplete (< 8 functions)
+            if isinstance(current_positions, list) and len(current_positions) < 8:
+                # Try to determine primary type
+                primary_type = None
+                types_discussed = metadata.get('types_discussed', [])
+                
+                # If only one type discussed, use it as primary
+                if len(types_discussed) == 1:
+                    primary_type = types_discussed[0]
+                
+                # Attempt enrichment if we have a primary type
+                if primary_type:
+                    full_stack = self.get_full_function_stack(primary_type)
+                    if full_stack:
+                        # Merge: Keep GPT's entries, add missing ones from reference
+                        existing_funcs = set(current_positions)
+                        for func_pos in full_stack:
+                            if func_pos not in existing_funcs:
+                                current_positions.append(func_pos)
+                        
+                        print(f"   🔧 [ENRICHMENT] Added shadow functions for {primary_type}: "
+                              f"{len(current_positions)} total (was {len(existing_funcs)})")
+                        report['function_positions'] = (
+                            f"✅ Enriched from {len(existing_funcs)} → {len(current_positions)} "
+                            f"using {primary_type} reference data"
+                        )
+                    else:
+                        print(f"   ⚠️ [ENRICHMENT] Could not find full stack for {primary_type}")
+                        report['function_positions'] = f"⚠️ Incomplete ({len(current_positions)}/8), no reference data found"
+                else:
+                    print(f"   ⚠️ [ENRICHMENT] Cannot enrich - multiple or no types discussed: {types_discussed}")
+                    report['function_positions'] = f"⚠️ Incomplete ({len(current_positions)}/8), no primary type"
+            else:
+                report['function_positions'] = f"✅ Complete ({len(current_positions)} positions)"
         
         # Validate quadra
         if 'quadra' in metadata:
