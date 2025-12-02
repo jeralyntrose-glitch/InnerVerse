@@ -3896,16 +3896,20 @@
                 typingIndicator.classList.add("visible");
                 
                 // iOS-NATIVE: Let iOS handle scroll positioning
-                // scrollIntoView is iOS-optimized and respects safe areas
+                // Use manual scroll calculation to account for header + safe area
                 requestAnimationFrame(() => {
                     const userMessages = messages.querySelectorAll('.message.user');
                     const lastUserMessage = userMessages[userMessages.length - 1];
                     if (lastUserMessage) {
-                        // Native iOS scroll - smooth, reliable, respects all constraints
-                        lastUserMessage.scrollIntoView({ 
-                            behavior: 'instant',  // Instant for immediate user action
-                            block: 'start',       // Position at top of viewport
-                            inline: 'nearest'     // Don't scroll horizontally
+                        // Calculate scroll position with offset for header + safe area
+                        // This prevents the message from going under the notch/Dynamic Island
+                        const headerOffset = 90; // Header height + some breathing room
+                        const messageTop = lastUserMessage.offsetTop;
+                        const scrollTarget = messageTop - headerOffset;
+                        
+                        messages.scrollTo({
+                            top: Math.max(0, scrollTarget),
+                            behavior: 'instant'
                         });
                         
                         // Keep hard lock but much shorter - just prevent immediate touch interference
@@ -3913,7 +3917,7 @@
                             scrollManager.disableHardLock();
                             scrollManager.state.suppressEvents = false;
                             updateScrollPinState();
-                        }, 800); // Reduced from 1500ms - iOS scrollIntoView is faster
+                        }, 800);
                     }
                 });
 
