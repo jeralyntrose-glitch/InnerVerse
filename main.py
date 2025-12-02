@@ -7814,38 +7814,71 @@ async def send_message_streaming(conversation_id: int, request: Request):
                 "content": user_message
             })
         
-        # Create ASYNC generator for streaming (prevents blocking event loop)
+        # Create ASYNC generator for streaming
+        # CRITICAL FIX: Use queue-based approach to properly stream from sync generator
         async def generate():
             import json  # Import at function scope to avoid scoping issues
             import asyncio
+            from concurrent.futures import ThreadPoolExecutor
+            import queue
+            import threading
+            
             full_response = []
             follow_up_question = None
             citations_data = None
             
+            # Use a thread-safe queue to pass chunks from sync generator to async generator
+            chunk_queue = queue.Queue()
+            generator_done = threading.Event()
+            
+            def run_sync_generator():
+                """Run the sync generator in a thread and put chunks in queue"""
+                try:
+                    for chunk in chat_with_claude_streaming(claude_messages, conversation_id):
+                        chunk_queue.put(chunk)
+                except Exception as e:
+                    chunk_queue.put(f'data: {{"error": "{str(e)}"}}\n\n')
+                finally:
+                    generator_done.set()
+            
+            # Start the sync generator in a background thread
+            executor = ThreadPoolExecutor(max_workers=1)
+            future = executor.submit(run_sync_generator)
+            
             try:
-                for chunk in chat_with_claude_streaming(claude_messages, conversation_id):
-                    yield chunk
-                    # Allow event loop to process other tasks (enables real streaming)
-                    await asyncio.sleep(0)
-                    
-                    # Collect text chunks, follow-up, and citations for database storage
-                    if '"chunk"' in chunk:
-                        try:
-                            chunk_data = json.loads(chunk.replace("data: ", ""))
-                            if "chunk" in chunk_data:
-                                full_response.append(chunk_data["chunk"])
-                        except:
-                            pass
-                    elif '"done"' in chunk:
-                        # Extract follow-up question and citations from done event
-                        try:
-                            done_data = json.loads(chunk.replace("data: ", ""))
-                            if "follow_up" in done_data:
-                                follow_up_question = done_data.get("follow_up")
-                            if "citations" in done_data:
-                                citations_data = done_data.get("citations")
-                        except:
-                            pass
+                # Yield chunks as they arrive (non-blocking)
+                while not generator_done.is_set() or not chunk_queue.empty():
+                    try:
+                        # Non-blocking get with small timeout
+                        chunk = chunk_queue.get(timeout=0.05)
+                        yield chunk
+                        
+                        # Collect text chunks, follow-up, and citations for database storage
+                        if '"chunk"' in chunk:
+                            try:
+                                chunk_data = json.loads(chunk.replace("data: ", ""))
+                                if "chunk" in chunk_data:
+                                    full_response.append(chunk_data["chunk"])
+                            except:
+                                pass
+                        elif '"done"' in chunk:
+                            # Extract follow-up question and citations from done event
+                            try:
+                                done_data = json.loads(chunk.replace("data: ", ""))
+                                if "follow_up" in done_data:
+                                    follow_up_question = done_data.get("follow_up")
+                                if "citations" in done_data:
+                                    citations_data = done_data.get("citations")
+                            except:
+                                pass
+                    except queue.Empty:
+                        # No chunk available, yield control to event loop
+                        await asyncio.sleep(0.01)
+                        continue
+                
+                # Wait for thread to complete and cleanup
+                future.result(timeout=5.0)
+                executor.shutdown(wait=False)
                 
                 # Save assistant response to database (need new connection in generator)
                 if full_response:

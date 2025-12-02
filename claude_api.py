@@ -612,7 +612,8 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
         # ENTERPRISE MODE: Skip GPT re-ranking entirely (saves 8-10s)
         # Metadata boosting provides 80% of the quality benefit at zero latency cost
         # GPT re-ranking was adding 8-10s for marginal improvement
-        final_chunks = reranked_chunks[:12]  # Use metadata-boosted chunks directly
+        # SPEED OPTIMIZATION: Reduced from 12 to 8 chunks (saves ~5s Claude processing)
+        final_chunks = reranked_chunks[:8]  # Use metadata-boosted chunks directly
         top_3_avg_score = sum(c.get('boosted_score', c.get('score', 0.0)) for c in final_chunks[:3]) / 3
         print(f"⚡ [CLAUDE DEBUG] Using metadata-boosted chunks (avg score: {top_3_avg_score:.3f}) - GPT re-ranking disabled for speed")
         
@@ -623,7 +624,7 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
             avg_boost = sum(c.get('boost_applied', 0) for c in final_chunks) / len(final_chunks)
             print(f"📈 [CLAUDE DEBUG] Average boost: +{avg_boost:.3f}")
         
-        print(f"📚 [CLAUDE DEBUG] Top 12 chunks selected for context")
+        print(f"📚 [CLAUDE DEBUG] Top 8 chunks selected for context")
         print(f"📚 [CLAUDE DEBUG] Sample sources: {', '.join(set([c.get('season', 'Unknown') for c in final_chunks[:5] if c.get('season')]))}")
         
         # FEATURE #4: Calculate confidence score
@@ -1181,7 +1182,7 @@ grounded responses about MBTI and cognitive functions.
                 yield "data: " + '{"status": "searching"}\n\n'
             
             with client.messages.stream(
-                model="claude-sonnet-4-20250514",
+                model="claude-3-5-sonnet-20241022",  # Faster than Sonnet 4 for large contexts
                 max_tokens=4096,
                 system=system_message,
                 tools=tools,
@@ -1281,7 +1282,7 @@ grounded responses about MBTI and cognitive functions.
                                 
                                 try:
                                     from main import log_api_usage
-                                    log_api_usage("claude_chat_stream", "claude-sonnet-4", input_tokens, output_tokens, cost)
+                                    log_api_usage("claude_chat_stream", "claude-3-5-sonnet", input_tokens, output_tokens, cost)
                                     print(f"💰 Logged streaming Claude usage: ${cost:.6f}")
                                 except Exception as e:
                                     print(f"⚠️ Could not log streaming Claude usage: {e}")
