@@ -1182,7 +1182,7 @@ grounded responses about MBTI and cognitive functions.
                 yield "data: " + '{"status": "searching"}\n\n'
             
             with client.messages.stream(
-                model="claude-3-5-sonnet-20241022",  # Faster than Sonnet 4 for large contexts
+                model="claude-sonnet-4-20250514",  # Back to Sonnet 4 (3.5 deprecated)
                 max_tokens=4096,
                 system=system_message,
                 tools=tools,
@@ -1282,7 +1282,7 @@ grounded responses about MBTI and cognitive functions.
                                 
                                 try:
                                     from main import log_api_usage
-                                    log_api_usage("claude_chat_stream", "claude-3-5-sonnet", input_tokens, output_tokens, cost)
+                                    log_api_usage("claude_chat_stream", "claude-sonnet-4", input_tokens, output_tokens, cost)
                                     print(f"💰 Logged streaming Claude usage: ${cost:.6f}")
                                 except Exception as e:
                                     print(f"⚠️ Could not log streaming Claude usage: {e}")
