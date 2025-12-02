@@ -175,80 +175,23 @@ def rerank_chunks_with_metadata(chunks: List[Dict], user_question: str) -> List[
 
 def format_rag_context_professional(sorted_chunks: List[Dict]) -> str:
     """
-    Format RAG chunks with metadata, citations, and confidence indicators.
-    Makes it CRYSTAL CLEAR to Claude what's authoritative vs. uncertain.
+    Format RAG chunks - SIMPLIFIED for speed.
     
-    This structured format helps Claude:
-    1. Prioritize high-confidence results
-    2. Cite sources accurately
-    3. Cross-reference multiple excerpts
-    4. Flag when content is moderate confidence
+    PERFORMANCE FIX: Removed verbose metadata headers, confidence indicators per chunk,
+    and decorative separators. Claude doesn't need all that - just the content.
+    This reduces context size by ~30% = faster Claude processing.
     """
     if not sorted_chunks:
         return "No relevant content found in the knowledge base."
     
     context_parts = []
-    context_parts.append("=" * 80)
-    context_parts.append("📚 KNOWLEDGE BASE RESULTS")
-    context_parts.append(f"Retrieved {len(sorted_chunks)} relevant excerpts from CS Joseph transcripts")
-    context_parts.append("=" * 80)
-    context_parts.append("")
     
     for i, chunk in enumerate(sorted_chunks, 1):
-        score = chunk.get('boosted_score', chunk.get('score', 0.0))
-        
-        # Confidence tiers
-        if score >= 0.85:
-            confidence = "HIGH"
-            emoji = "🟢"
-        elif score >= 0.75:
-            confidence = "MEDIUM"
-            emoji = "🟡"
-        else:
-            confidence = "MODERATE"
-            emoji = "🟠"
-        
-        # Extract enriched metadata
-        filename = chunk.get('filename', 'Unknown')
-        content_type = chunk.get('content_type', '')
         season = chunk.get('season', '')
-        types_discussed = chunk.get('types_discussed', [])
-        functions = chunk.get('functions_covered', [])
-        difficulty = chunk.get('difficulty', '')
-        
-        # Build metadata line
-        metadata_parts = []
-        if season:
-            metadata_parts.append(f"Season {season}")
-        if content_type:
-            metadata_parts.append(content_type.replace('_', ' ').title())
-        if types_discussed:
-            metadata_parts.append(f"Types: {', '.join(types_discussed[:4])}")
-        if not metadata_parts:
-            # Fallback to filename if no metadata
-            metadata_parts.append(filename)
-        
-        metadata_str = " | ".join(metadata_parts)
-        
-        # Format chunk with structure
-        context_parts.append(f"{emoji} [EXCERPT #{i} - {confidence} CONFIDENCE]")
-        context_parts.append(f"Score: {score:.3f}")
-        context_parts.append(f"Source: {metadata_str}")
-        
-        if functions:
-            context_parts.append(f"Functions Covered: {', '.join(functions[:6])}")
-        
-        if difficulty:
-            context_parts.append(f"Difficulty: {difficulty.capitalize()}")
-        
-        context_parts.append("-" * 80)
+        source = f"[Source {i}: Season {season}]" if season else f"[Source {i}]"
+        context_parts.append(source)
         context_parts.append(chunk['text'])
-        context_parts.append("")
-    
-    context_parts.append("=" * 80)
-    context_parts.append("END OF KNOWLEDGE BASE RESULTS")
-    context_parts.append(f"Total Excerpts: {len(sorted_chunks)}")
-    context_parts.append("=" * 80)
+        context_parts.append("")  # Blank line between chunks
     
     return "\n".join(context_parts)
 
@@ -341,7 +284,10 @@ def format_citations(chunks: list) -> str:
 
 def extract_filters_from_query(query: str) -> dict:
     """
-    Extract Pinecone filters from user query using GPT-4o-mini.
+    Extract Pinecone filters from user query using FAST regex (no GPT call).
+    
+    PERFORMANCE FIX: Replaced GPT-4o-mini call with instant regex matching.
+    GPT call was adding 1-2s latency on EVERY query for minimal benefit.
     
     Args:
         query: User's question
@@ -349,69 +295,26 @@ def extract_filters_from_query(query: str) -> dict:
     Returns:
         Dict of Pinecone filters (empty dict if no filters extracted)
     """
-    if not OPENAI_API_KEY:
-        return {}
+    import re
     
-    try:
-        openai.api_key = OPENAI_API_KEY
-        
-        prompt = f"""Analyze this user query and extract metadata filters for a vector database search.
-
-Available metadata fields:
-- season: ["1", "2", "3", "21", "22", etc.]
-- types_discussed: ["INTJ", "ENFP", "INFJ", etc.]
-- difficulty: ["foundation", "intermediate", "advanced", "expert"]
-- primary_category: ["cognitive_functions", "type_profiles", "relationships", etc.]
-- content_type: ["main_season", "csj_responds", "special", etc.]
-
-User Query: "{query}"
-
-Extract filters as JSON. Only include filters explicitly mentioned or strongly implied.
-
-Examples:
-- "According to Season 1..." → {{"season": {{"$eq": "1"}}}}
-- "How does ENFP develop?" → {{"types_discussed": {{"$in": ["ENFP"]}}}}
-- "Beginner guide to..." → {{"difficulty": {{"$in": ["foundation", "intermediate"]}}}}
-
-Your response (JSON only):"""
-        
-        response = openai.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "Extract metadata filters from queries. Return valid JSON only."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,
-            max_tokens=200
-        )
-        
-        response_text = response.choices[0].message.content.strip()
-        
-        # Try to extract JSON if wrapped in markdown
-        if "```json" in response_text:
-            json_start = response_text.find("```json") + 7
-            json_end = response_text.find("```", json_start)
-            response_text = response_text[json_start:json_end].strip()
-        elif "```" in response_text:
-            json_start = response_text.find("```") + 3
-            json_end = response_text.find("```", json_start)
-            response_text = response_text[json_start:json_end].strip()
-        
-        filters = json.loads(response_text)
-        
-        # Validate filter structure
-        if isinstance(filters, dict) and filters:
-            print(f"🎯 [METADATA-FILTER] Extracted filters: {filters}")
-            return filters
-        else:
-            return {}
-            
-    except json.JSONDecodeError as e:
-        print(f"⚠️ [METADATA-FILTER] JSON parsing failed: {e}")
-        return {}
-    except Exception as e:
-        print(f"⚠️ [METADATA-FILTER] Filter extraction failed: {e}")
-        return {}
+    filters = {}
+    query_upper = query.upper()
+    
+    # Extract MBTI types mentioned (instant regex, no API call)
+    mbti_types = re.findall(r'\b(INTJ|INTP|ENTJ|ENTP|INFJ|INFP|ENFJ|ENFP|ISTJ|ISFJ|ESTJ|ESFJ|ISTP|ISFP|ESTP|ESFP)\b', query_upper)
+    if mbti_types:
+        # Deduplicate while preserving order
+        unique_types = list(dict.fromkeys(mbti_types))
+        filters["types_discussed"] = {"$in": unique_types}
+        print(f"🎯 [FAST-FILTER] Detected types: {unique_types}")
+    
+    # Extract season if explicitly mentioned
+    season_match = re.search(r'season\s*(\d+)', query, re.IGNORECASE)
+    if season_match:
+        filters["season"] = {"$eq": season_match.group(1)}
+        print(f"🎯 [FAST-FILTER] Detected season: {season_match.group(1)}")
+    
+    return filters
 
 
 def expand_query(original_query: str) -> list:
