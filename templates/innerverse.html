@@ -3895,30 +3895,22 @@
                 // Show typing indicator
                 typingIndicator.classList.add("visible");
                 
-                // iOS-NATIVE: Let iOS handle scroll positioning
-                // Use manual scroll calculation to account for header + safe area
+                // Scroll to show typing indicator (bottom of chat)
+                // This naturally positions user message above it with proper spacing
                 requestAnimationFrame(() => {
-                    const userMessages = messages.querySelectorAll('.message.user');
-                    const lastUserMessage = userMessages[userMessages.length - 1];
-                    if (lastUserMessage) {
-                        // Calculate scroll position with offset for header + safe area
-                        // This prevents the message from going under the notch/Dynamic Island
-                        const headerOffset = 90; // Header height + some breathing room
-                        const messageTop = lastUserMessage.offsetTop;
-                        const scrollTarget = messageTop - headerOffset;
-                        
-                        messages.scrollTo({
-                            top: Math.max(0, scrollTarget),
-                            behavior: 'instant'
-                        });
-                        
-                        // Keep hard lock but much shorter - just prevent immediate touch interference
-                        setTimeout(() => {
-                            scrollManager.disableHardLock();
-                            scrollManager.state.suppressEvents = false;
-                            updateScrollPinState();
-                        }, 800);
-                    }
+                    // Scroll to bottom to show typing indicator
+                    // User message will be visible above it
+                    messages.scrollTo({
+                        top: messages.scrollHeight,
+                        behavior: 'instant'
+                    });
+                    
+                    // Release scroll lock after positioning
+                    setTimeout(() => {
+                        scrollManager.disableHardLock();
+                        scrollManager.state.suppressEvents = false;
+                        updateScrollPinState();
+                    }, 800);
                 });
 
                 let assistantDiv = null;
