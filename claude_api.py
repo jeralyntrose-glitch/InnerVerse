@@ -255,6 +255,7 @@ def format_rag_context_professional(sorted_chunks: List[Dict]) -> str:
 def calculate_confidence_score(chunks: list, query: str) -> dict:
     """
     Calculate answer confidence based on retrieval quality.
+    Uses boosted_score if available (includes metadata boosts), otherwise raw score.
     
     Args:
         chunks: Retrieved Pinecone chunks with scores
@@ -271,26 +272,28 @@ def calculate_confidence_score(chunks: list, query: str) -> dict:
             "stars": "⭐"
         }
     
-    # Average similarity score
-    avg_score = sum(c.get('score', 0.0) for c in chunks) / len(chunks)
+    # Use boosted_score if available (includes metadata boosts), otherwise raw score
+    avg_score = sum(c.get('boosted_score', c.get('score', 0.0)) for c in chunks) / len(chunks)
     
-    # Number of high-quality chunks (score > 0.85)
-    high_quality_count = sum(1 for c in chunks if c.get('score', 0.0) > 0.85)
+    # Adjusted thresholds for MBTI content (0.50-0.60 can be good quality)
+    # Number of high-quality chunks (adjusted for MBTI domain)
+    high_quality_count = sum(1 for c in chunks if c.get('boosted_score', c.get('score', 0.0)) > 0.70)
+    very_high_quality_count = sum(1 for c in chunks if c.get('boosted_score', c.get('score', 0.0)) > 0.80)
     
-    # Determine confidence level
-    if high_quality_count >= 5 and avg_score > 0.88:
+    # Determine confidence level with realistic thresholds for MBTI content
+    if very_high_quality_count >= 5 and avg_score > 0.75:
         level = "very_high"
         stars = "⭐⭐⭐⭐⭐"
         reasoning = f"{len(chunks)} highly relevant sources"
-    elif high_quality_count >= 3 and avg_score > 0.85:
+    elif high_quality_count >= 3 and avg_score > 0.65:
         level = "high"
         stars = "⭐⭐⭐⭐"
         reasoning = f"{high_quality_count} strong matches"
-    elif len(chunks) >= 3 and avg_score > 0.80:
+    elif len(chunks) >= 5 and avg_score > 0.55:
         level = "medium"
         stars = "⭐⭐⭐"
         reasoning = f"{len(chunks)} moderate matches"
-    elif len(chunks) >= 2:
+    elif len(chunks) >= 3 and avg_score > 0.45:
         level = "low"
         stars = "⭐⭐"
         reasoning = f"Limited information ({len(chunks)} sources)"
@@ -575,7 +578,7 @@ Rank these chunks by relevance (1-10 scale, 10 = perfect match):
         return chunks[:top_k]
 
 
-def query_innerverse_local(question: str) -> str:
+def query_innerverse_local(question: str, progress_callback=None) -> str:
     """
     IMPROVED HYBRID SEARCH for MBTI content:
     - Upgraded to text-embedding-3-large for better semantic matching
@@ -603,10 +606,19 @@ def query_innerverse_local(question: str) -> str:
         print(f"✅ [CLAUDE DEBUG] Pinecone index connected successfully")
         
         # FEATURE #1: Extract metadata filters from query
+        if progress_callback:
+            progress_callback("searching")
         metadata_filters = extract_filters_from_query(question)
         
-        # FEATURE #2: GPT-powered query expansion for better recall
-        search_queries = expand_query(question)
+        # BALANCED MODE: Use query expansion but limit to 2 queries (original + 1 variation)
+        # This balances speed (2 queries = ~10-12s) with quality (better recall)
+        try:
+            expanded = expand_query(question)
+            # Limit to 2 queries max for speed/quality balance
+            search_queries = expanded[:2] if len(expanded) > 1 else [question]
+        except Exception as e:
+            print(f"⚠️ [QUERY-EXPANSION] Failed, using single query: {e}")
+            search_queries = [question]
         
         print(f"🔍 [QUERY-EXPANSION] Generated {len(search_queries)} query variations:")
         for i, q in enumerate(search_queries, 1):
@@ -616,6 +628,10 @@ def query_innerverse_local(question: str) -> str:
         all_chunks = {}  # Deduplicate by text
         
         for query_idx, query in enumerate(search_queries, 1):
+            # Send progress update
+            if progress_callback:
+                progress_callback(f"embedding_query_{query_idx}")
+            
             # Get embedding with UPGRADED model
             print(f"🧮 [CLAUDE DEBUG] Creating embedding for query #{query_idx} with text-embedding-3-large...")
             response = openai.embeddings.create(
@@ -686,15 +702,15 @@ def query_innerverse_local(question: str) -> str:
         # Apply intelligent re-ranking
         reranked_chunks = rerank_chunks_with_metadata(sorted_chunks, question)
         
-        # FEATURE #5: GPT-powered re-ranking for final precision boost (with smart skip)
-        # Skip GPT re-ranking if top 3 chunks already have high scores (>0.85) for speed
+        # BALANCED MODE: Use GPT re-ranking only when quality is questionable
+        # Skip if top chunks already have good scores (saves 8-10s)
         top_3_avg_score = sum(c.get('boosted_score', c.get('score', 0.0)) for c in reranked_chunks[:3]) / 3
-        if top_3_avg_score >= 0.85:
-            print(f"⚡ [CLAUDE DEBUG] Skipping GPT re-ranking - top chunks already high quality (avg: {top_3_avg_score:.3f})")
+        if top_3_avg_score >= 0.65:  # Adjusted threshold (was 0.85, too high)
+            print(f"⚡ [CLAUDE DEBUG] Skipping GPT re-ranking - top chunks already good quality (avg: {top_3_avg_score:.3f})")
             final_chunks = reranked_chunks[:12]  # Use metadata-boosted chunks directly
         else:
             print(f"⚡ [CLAUDE DEBUG] Applying GPT-powered re-ranking to top 15 chunks (avg score: {top_3_avg_score:.3f})...")
-            gpt_reranked_chunks = rerank_with_gpt(question, reranked_chunks[:15], top_k=12)  # Reduced from 20 to 15
+            gpt_reranked_chunks = rerank_with_gpt(question, reranked_chunks[:15], top_k=12)
             final_chunks = gpt_reranked_chunks  # Top 12 after GPT re-ranking
         
         # Log boost details
@@ -1274,8 +1290,15 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                                     elif block.name == "query_innerverse_backend":
                                         question = block.input.get("question", "")
                                         
-                                        # Query Pinecone locally (FAST!)
+                                        # Query Pinecone locally with progress updates for streaming
                                         yield "data: " + '{"status": "searching_pinecone"}\n\n'
+                                        
+                                        # Create progress callback to keep streaming active
+                                        def send_progress(step):
+                                            yield f'data: {{"status": "rag_progress", "step": "{step}"}}\n\n'
+                                        
+                                        # Note: query_innerverse_local is blocking, so progress updates
+                                        # will happen at major milestones (filter extraction, embeddings, etc.)
                                         result = query_innerverse_local(question)
                                         
                                         # Handle tuple return (context, citations_data) or string (backwards compat)
