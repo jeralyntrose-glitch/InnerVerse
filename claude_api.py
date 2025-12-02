@@ -428,7 +428,7 @@ def expand_query(original_query: str) -> list:
         openai.api_key = OPENAI_API_KEY
         
         prompt = f"""You are an expert in CS Joseph's MBTI/Jungian typology system.
-Generate 3-4 alternative phrasings of this question to improve search recall.
+Generate 2-3 alternative phrasings of this question to improve search recall.
 Use different terminology, synonyms, and related concepts.
 
 Original Question: "{original_query}"
@@ -439,7 +439,7 @@ Rules:
 - Include related concepts (e.g., "ENFP development" → "ENFP Si inferior growth")
 - Vary specificity (broader and narrower versions)
 
-Return as JSON array of strings:"""
+Return as JSON array of strings (2-3 variations only):"""
         
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
@@ -448,7 +448,7 @@ Return as JSON array of strings:"""
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,  # Some creativity but consistent
-            max_tokens=300
+            max_tokens=200  # Reduced for faster response
         )
         
         response_text = response.choices[0].message.content.strip()
@@ -474,7 +474,7 @@ Return as JSON array of strings:"""
         all_queries = [original_query] + variations
         print(f"🔍 [QUERY-EXPANSION] Expanded to {len(all_queries)} queries: {all_queries}")
         
-        return all_queries[:5]  # Cap at 5 total (original + 4 variations)
+        return all_queries[:3]  # Cap at 3 total (original + 2 variations) for faster processing
         
     except json.JSONDecodeError as e:
         print(f"⚠️ [QUERY-EXPANSION] JSON parsing failed: {e}")
@@ -511,8 +511,8 @@ Rank these chunks by relevance (1-10 scale, 10 = perfect match):
 
 """
         
-        for i, chunk in enumerate(chunks[:20], 1):  # Limit to top 20 for GPT context
-            text = chunk.get('text', '')[:500]  # First 500 chars per chunk
+        for i, chunk in enumerate(chunks[:15], 1):  # Limit to top 15 for GPT context (reduced for speed)
+            text = chunk.get('text', '')[:400]  # Reduced from 500 to 400 chars for faster processing
             prompt += f"Chunk {i}:\n{text}\n\n"
         
         prompt += "Your response (JSON array of scores, e.g., [8, 5, 9, 2, ...]):"
@@ -686,10 +686,16 @@ def query_innerverse_local(question: str) -> str:
         # Apply intelligent re-ranking
         reranked_chunks = rerank_chunks_with_metadata(sorted_chunks, question)
         
-        # FEATURE #5: GPT-powered re-ranking for final precision boost
-        print(f"⚡ [CLAUDE DEBUG] Applying GPT-powered re-ranking to top 20 chunks...")
-        gpt_reranked_chunks = rerank_with_gpt(question, reranked_chunks[:20], top_k=12)
-        final_chunks = gpt_reranked_chunks  # Top 12 after GPT re-ranking
+        # FEATURE #5: GPT-powered re-ranking for final precision boost (with smart skip)
+        # Skip GPT re-ranking if top 3 chunks already have high scores (>0.85) for speed
+        top_3_avg_score = sum(c.get('boosted_score', c.get('score', 0.0)) for c in reranked_chunks[:3]) / 3
+        if top_3_avg_score >= 0.85:
+            print(f"⚡ [CLAUDE DEBUG] Skipping GPT re-ranking - top chunks already high quality (avg: {top_3_avg_score:.3f})")
+            final_chunks = reranked_chunks[:12]  # Use metadata-boosted chunks directly
+        else:
+            print(f"⚡ [CLAUDE DEBUG] Applying GPT-powered re-ranking to top 15 chunks (avg score: {top_3_avg_score:.3f})...")
+            gpt_reranked_chunks = rerank_with_gpt(question, reranked_chunks[:15], top_k=12)  # Reduced from 20 to 15
+            final_chunks = gpt_reranked_chunks  # Top 12 after GPT re-ranking
         
         # Log boost details
         boosted_count = sum(1 for c in final_chunks if c.get('boost_applied', 0) > 0)
