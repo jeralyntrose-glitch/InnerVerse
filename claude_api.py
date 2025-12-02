@@ -491,7 +491,7 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
     """
     IMPROVED HYBRID SEARCH for MBTI content:
     - Upgraded to text-embedding-3-large for better semantic matching
-    - Increased top_k from 10 to 30 for broader initial retrieval
+    - Optimized top_k to 15 for speed (only need 12 chunks + small buffer)
     - Smart query rewriting with MBTI ontology
     - Metadata filtering for type-specific queries
     - Re-ranking for relevance
@@ -519,21 +519,13 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
             progress_callback("searching")
         metadata_filters = extract_filters_from_query(question)
         
-        # BALANCED MODE: Use query expansion but limit to 2 queries (original + 1 variation)
-        # This balances speed (2 queries = ~10-12s) with quality (better recall)
-        try:
-            expanded = expand_query(question)
-            # Limit to 2 queries max for speed/quality balance
-            search_queries = expanded[:2] if len(expanded) > 1 else [question]
-        except Exception as e:
-            print(f"⚠️ [QUERY-EXPANSION] Failed, using single query: {e}")
-            search_queries = [question]
+        # SPEED MODE: Skip query expansion entirely for fastest response
+        # Query expansion adds ~15-20s (GPT call + extra embeddings + extra Pinecone queries)
+        # Metadata filtering + boosting provides good quality without the latency
+        search_queries = [question]
+        print(f"⚡ [SPEED MODE] Using single query (no expansion) for fastest response")
         
-        print(f"🔍 [QUERY-EXPANSION] Generated {len(search_queries)} query variations:")
-        for i, q in enumerate(search_queries, 1):
-            print(f"   {i}. '{q}'")
-        
-        # IMPROVEMENT 2: Broader initial retrieval (top_k=30) for better coverage
+        # IMPROVEMENT 2: Optimized retrieval (top_k=15) - we only use 12 chunks, 3 extra for filtering buffer
         all_chunks = {}  # Deduplicate by text
         
         for query_idx, query in enumerate(search_queries, 1):
@@ -553,7 +545,7 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
             # Query Pinecone with INCREASED top_k for hybrid approach + metadata filters
             query_params = {
                 "vector": query_vector,
-                "top_k": 30,
+                "top_k": 15,
                 "include_metadata": True
             }
             
@@ -562,7 +554,7 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
                 query_params["filter"] = metadata_filters
                 print(f"🎯 [METADATA-FILTER] Applying filters to query #{query_idx}: {metadata_filters}")
             
-            print(f"📡 [CLAUDE DEBUG] Querying Pinecone with top_k=30...")
+            print(f"📡 [CLAUDE DEBUG] Querying Pinecone with top_k=15...")
             try:
                 import asyncio
                 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
