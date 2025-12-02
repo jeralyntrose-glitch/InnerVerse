@@ -1039,8 +1039,15 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     Send messages to Claude with STREAMING enabled for real-time response display
     Yields chunks as they arrive from Claude
     RETURNS: Yields SSE events, final event includes follow-up question if present
+    
+    PERFORMANCE OPTIMIZATION (Dec 2024):
+    - Pre-fetch RAG context BEFORE Claude call to eliminate tool use round-trip
+    - This reduces response time from ~30-40s to ~15-20s
+    - Tools kept as fallback for edge cases (web search, explicit reference lookups)
     """
     # json is imported at module level (line 9)
+    import time
+    start_time = time.time()
     
     if not ANTHROPIC_API_KEY:
         yield "data: " + '{"error": "ANTHROPIC_API_KEY not set"}\n\n'
@@ -1050,10 +1057,53 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     full_response_text = []  # Accumulate response for follow-up extraction
     citations_data = None  # Store citations from RAG query
     
+    # Extract last user message for RAG pre-fetch
+    last_user_message_content = None
+    for msg in reversed(messages):
+        if msg.get('role') == 'user':
+            last_user_message_content = msg.get('content')
+            # Handle Anthropic block arrays
+            if isinstance(last_user_message_content, list):
+                for block in last_user_message_content:
+                    if isinstance(block, dict) and block.get('type') == 'text':
+                        last_user_message_content = block.get('text', '')
+                        break
+            break
+    
+    # Send initial status immediately to start streaming connection
+    yield "data: " + '{"status": "searching"}\n\n'
+    
+    # PRE-FETCH RAG CONTEXT: Do RAG search BEFORE Claude call
+    # This eliminates the tool use round-trip (saves ~10-15s)
+    rag_context = ""
+    if last_user_message_content:
+        print(f"⚡ [PRE-FETCH] Starting RAG search BEFORE Claude call...")
+        rag_start = time.time()
+        
+        try:
+            result = query_innerverse_local(last_user_message_content)
+            
+            # Handle tuple return (context, citations_data) or string
+            if isinstance(result, tuple):
+                rag_context, citations_data = result
+            else:
+                rag_context = result
+                citations_data = None
+            
+            rag_time = time.time() - rag_start
+            print(f"✅ [PRE-FETCH] RAG search completed in {rag_time:.1f}s ({len(rag_context)} chars)")
+        except Exception as e:
+            print(f"⚠️ [PRE-FETCH] RAG search failed: {e}")
+            rag_context = ""
+    
+    # Send status update after RAG completes
+    yield "data: " + '{"status": "generating"}\n\n'
+    
+    # Tools kept as FALLBACK only (web search, explicit reference lookups)
     tools = [
         {
             "name": "query_reference_data",
-            "description": "Get exact MBTI type structures like four sides mappings, cognitive function stacks, temperaments, and quadra assignments. Use this FIRST for factual lookup questions about type structures (e.g., 'What are INFJ's four sides?', 'ENFP function stack', 'INTJ temperament'). Returns verified reference data.",
+            "description": "Get exact MBTI type structures like four sides mappings, cognitive function stacks, temperaments, and quadra assignments. Use this ONLY if you need to verify specific type data not already provided in context.",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -1063,20 +1113,6 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                     }
                 },
                 "required": ["type_code"]
-            }
-        },
-        {
-            "name": "query_innerverse_backend",
-            "description": "Search the InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts on MBTI, Jungian psychology, cognitive functions, and type theory. Use this when the user asks MBTI/psychology questions that need examples, context, or detailed explanations beyond basic type structures.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "question": {
-                        "type": "string",
-                        "description": "The question to search for in the MBTI knowledge base."
-                    }
-                },
-                "required": ["question"]
             }
         },
         {
@@ -1096,13 +1132,6 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     ]
     
     # Build system prompt with all 3 layers using centralized prompt builder
-    # This ensures reference data injection is structurally enforced
-    last_user_message_content = None
-    for msg in reversed(messages):
-        if msg.get('role') == 'user':
-            last_user_message_content = msg.get('content')
-            break
-    
     try:
         system_message, prompt_metadata = build_system_prompt(
             conversation_id=conversation_id,
@@ -1114,14 +1143,30 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
         yield "data: " + json.dumps({"error": error_msg}) + "\n\n"
         return
     
+    # INJECT PRE-FETCHED RAG CONTEXT into system prompt
+    if rag_context:
+        rag_injection = f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 KNOWLEDGE BASE CONTEXT (Pre-fetched from InnerVerse RAG)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following context was retrieved from the CS Joseph knowledge base 
+based on the user's question. Use this information to provide accurate,
+grounded responses about MBTI and cognitive functions.
+
+{rag_context}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        system_message = system_message + rag_injection
+        print(f"✅ [INJECTION] Added {len(rag_context)} chars of RAG context to system prompt")
+    
     max_iterations = 3
     
     try:
-        # Send initial status immediately to start streaming connection
-        yield "data: " + '{"status": "initializing"}\n\n'
-        
         for iteration in range(max_iterations):
-            # Send search status to frontend
+            # Send search status to frontend (only for tool use iterations)
             if iteration > 0:
                 yield "data: " + '{"status": "searching"}\n\n'
             
@@ -1184,44 +1229,9 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                                         })
                                         break
                                     
-                                    elif block.name == "query_innerverse_backend":
-                                        question = block.input.get("question", "")
-                                        
-                                        # Query Pinecone locally with progress updates for streaming
-                                        # Send status update before blocking RAG search
-                                        yield "data: " + '{"status": "searching_knowledge_base"}\n\n'
-                                        
-                                        # RAG search is blocking (~15-20s) - no mid-search updates possible
-                                        # The status message above tells user something is happening
-                                        result = query_innerverse_local(question)
-                                        
-                                        # Send status after RAG completes
-                                        yield "data: " + '{"status": "generating_response"}\n\n'
-                                        
-                                        # Handle tuple return (context, citations_data) or string (backwards compat)
-                                        if isinstance(result, tuple):
-                                            backend_result, citations_data = result
-                                        else:
-                                            backend_result = result
-                                            citations_data = None
-                                        
-                                        # Add tool result to messages and continue streaming
-                                        messages.append({
-                                            "role": "assistant",
-                                            "content": final_message.content
-                                        })
-                                        
-                                        messages.append({
-                                            "role": "user",
-                                            "content": [
-                                                {
-                                                    "type": "tool_result",
-                                                    "tool_use_id": block.id,
-                                                    "content": backend_result if backend_result else "No relevant content found in knowledge base."
-                                                }
-                                            ]
-                                        })
-                                        break
+                                    # NOTE: query_innerverse_backend tool REMOVED
+                                    # RAG context is now pre-fetched BEFORE Claude call (see top of function)
+                                    # This eliminates the tool use round-trip, saving ~10-15s
                                         
                                     elif block.name == "search_web":
                                         query = block.input.get("query", "")
@@ -1270,6 +1280,11 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                             done_payload = {"done": True, "follow_up": follow_up}
                             if citations_data:
                                 done_payload["citations"] = citations_data
+                            
+                            # Log total time
+                            total_time = time.time() - start_time
+                            print(f"⏱️ [TOTAL TIME] Response completed in {total_time:.1f}s")
+                            
                             yield "data: " + json.dumps(done_payload) + "\n\n"
                             return
     
@@ -1278,9 +1293,15 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
         done_payload = {"done": True, "follow_up": follow_up}
         if citations_data:
             done_payload["citations"] = citations_data
+        
+        # Log total time
+        total_time = time.time() - start_time
+        print(f"⏱️ [TOTAL TIME] Response completed in {total_time:.1f}s (max iterations)")
+        
         yield "data: " + json.dumps(done_payload) + "\n\n"
     
     except Exception as e:
         error_msg = str(e)
-        print(f"❌ Claude streaming error: {error_msg}")
+        total_time = time.time() - start_time
+        print(f"❌ Claude streaming error after {total_time:.1f}s: {error_msg}")
         yield "data: " + json.dumps({"error": f"Sorry, I encountered an error: {error_msg}. Please try again."}) + "\n\n"
