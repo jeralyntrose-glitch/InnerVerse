@@ -397,6 +397,7 @@
                 border-radius: 6px;
                 cursor: pointer;
                 transition: background 0.2s;
+                position: relative; /* For menu positioning */
             }
 
             .conversation-item:hover {
@@ -419,6 +420,60 @@
             .conversation-item.active .conversation-title {
                 color: var(--text-primary);
                 font-weight: 500;
+            }
+
+            .conversation-menu-btn {
+                padding: 4px 8px;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                color: var(--text-secondary);
+                font-size: 18px;
+                line-height: 1;
+                opacity: 0;
+                transition: opacity 0.2s;
+                border-radius: 4px;
+                flex-shrink: 0;
+            }
+
+            .conversation-item:hover .conversation-menu-btn {
+                opacity: 1;
+            }
+
+            .conversation-menu {
+                position: absolute;
+                right: 8px;
+                top: 100%;
+                margin-top: 4px;
+                background: var(--color-page-bg, #ffffff);
+                border: 1px solid var(--color-border, #e5e7eb);
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                padding: 4px;
+                min-width: 180px;
+                z-index: 1000;
+                display: none;
+            }
+
+            .conversation-menu.show {
+                display: block;
+            }
+
+            .conversation-menu .menu-item {
+                padding: 8px 12px;
+                cursor: pointer;
+                border-radius: 4px;
+                color: var(--color-text);
+                transition: background 0.2s;
+                font-size: 14px;
+            }
+
+            .conversation-menu .menu-item:hover {
+                background: var(--bg-hover, #f3f4f6);
+            }
+
+            .conversation-menu .menu-item.danger {
+                color: #EF4444;
             }
 
             .empty-folder {
@@ -2997,8 +3052,207 @@
                 return `
                 <div class="conversation-item ${isActive ? "active" : ""}" data-conv-id="${conv.id}" onclick="loadConversation(${conv.id})">
                     <span class="conversation-title">${escapeHTML(displayTitle)}</span>
+                    <button class="conversation-menu-btn" onclick="event.stopPropagation(); showConversationMenu(${conv.id}, event)">⋮</button>
+                    <div class="conversation-menu" id="conv-menu-${conv.id}">
+                        <div class="menu-item" onclick="event.stopPropagation(); renameConversation(${conv.id})">✏️ Rename</div>
+                        <div class="menu-item" onclick="event.stopPropagation(); showMoveConversation(${conv.id})">📁 Move to Folder</div>
+                        <div class="menu-item danger" onclick="event.stopPropagation(); deleteConversation(${conv.id})">🗑️ Delete</div>
+                    </div>
                 </div>
             `;
+            }
+
+            // ===== CONVERSATION MANAGEMENT FUNCTIONS =====
+            let currentConversationMenu = null;
+
+            function showConversationMenu(convId, event) {
+                event.stopPropagation();
+                
+                // Close any open menu
+                if (currentConversationMenu) {
+                    currentConversationMenu.classList.remove('show');
+                }
+                
+                const menu = document.getElementById(`conv-menu-${convId}`);
+                if (!menu) return;
+                
+                // Position menu relative to button
+                const button = event.target;
+                const rect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = `${rect.bottom + 4}px`;
+                menu.style.right = `${window.innerWidth - rect.right}px`;
+                
+                menu.classList.add('show');
+                currentConversationMenu = menu;
+                
+                // Close on outside click
+                setTimeout(() => {
+                    const closeMenu = (e) => {
+                        if (!menu.contains(e.target) && !button.contains(e.target)) {
+                            menu.classList.remove('show');
+                            currentConversationMenu = null;
+                            document.removeEventListener('click', closeMenu);
+                        }
+                    };
+                    document.addEventListener('click', closeMenu);
+                }, 0);
+            }
+
+            async function renameConversation(convId) {
+                if (currentConversationMenu) {
+                    currentConversationMenu.classList.remove('show');
+                    currentConversationMenu = null;
+                }
+                
+                const conv = allConversations.find(c => c.id === convId);
+                if (!conv) return;
+                
+                const currentTitle = conv.name || "Untitled Chat";
+                const newTitle = prompt('Enter new name:', currentTitle);
+                
+                if (!newTitle || !newTitle.trim() || newTitle === currentTitle) return;
+                
+                try {
+                    const response = await fetch(`/claude/conversations/${convId}/rename`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: newTitle.trim() })
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to rename conversation');
+                    
+                    // Update local state
+                    conv.name = newTitle.trim();
+                    await loadAllConversations();
+                } catch (error) {
+                    console.error('Error renaming conversation:', error);
+                    alert('Failed to rename conversation. Please try again.');
+                }
+            }
+
+            function showMoveConversation(convId) {
+                if (currentConversationMenu) {
+                    currentConversationMenu.classList.remove('show');
+                    currentConversationMenu = null;
+                }
+                
+                const conv = allConversations.find(c => c.id === convId);
+                if (!conv) return;
+                
+                // Create modal for folder selection
+                const modal = document.createElement('div');
+                modal.className = 'move-conversation-modal';
+                modal.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;';
+                
+                const modalContent = document.createElement('div');
+                modalContent.style.cssText = 'background: var(--color-page-bg, #ffffff); border-radius: 12px; padding: 24px; min-width: 300px; max-width: 90vw; box-shadow: 0 8px 24px rgba(0,0,0,0.2);';
+                
+                modalContent.innerHTML = `
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--color-text);">Move to Folder</h3>
+                    <div id="moveFolderList" style="max-height: 300px; overflow-y: auto;">
+                        <div class="move-folder-option" data-folder-id="null" style="padding: 12px; cursor: pointer; border-radius: 6px; margin-bottom: 4px; transition: background 0.2s;">
+                            📋 All Chats (no folder)
+                        </div>
+                        ${FOLDERS.map(folder => `
+                            <div class="move-folder-option" data-folder-id="${folder.id}" style="padding: 12px; cursor: pointer; border-radius: 6px; margin-bottom: 4px; transition: background 0.2s;">
+                                ${escapeHTML(folder.name)}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button id="moveCancelBtn" style="margin-top: 16px; padding: 8px 16px; background: var(--bg-input); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer; color: var(--color-text);">Cancel</button>
+                `;
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // Add hover effects
+                modalContent.querySelectorAll('.move-folder-option').forEach(option => {
+                    option.addEventListener('mouseenter', () => {
+                        option.style.background = 'var(--bg-hover, #f3f4f6)';
+                    });
+                    option.addEventListener('mouseleave', () => {
+                        option.style.background = 'transparent';
+                    });
+                    option.addEventListener('click', async () => {
+                        const folderId = option.dataset.folderId === 'null' ? null : option.dataset.folderId;
+                        await moveConversation(convId, folderId);
+                        modal.remove();
+                    });
+                });
+                
+                modalContent.querySelector('#moveCancelBtn').addEventListener('click', () => {
+                    modal.remove();
+                });
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+            }
+
+            async function moveConversation(convId, folderId) {
+                try {
+                    const response = await fetch(`/claude/conversations/${convId}/move`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ project: folderId })
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to move conversation');
+                    
+                    // Update local state
+                    const conv = allConversations.find(c => c.id === convId);
+                    if (conv) {
+                        conv.project = folderId;
+                    }
+                    
+                    await loadAllConversations();
+                } catch (error) {
+                    console.error('Error moving conversation:', error);
+                    alert('Failed to move conversation. Please try again.');
+                }
+            }
+
+            async function deleteConversation(convId) {
+                if (currentConversationMenu) {
+                    currentConversationMenu.classList.remove('show');
+                    currentConversationMenu = null;
+                }
+                
+                const conv = allConversations.find(c => c.id === convId);
+                if (!conv) return;
+                
+                const confirmDelete = confirm(`Delete "${conv.name || 'Untitled Chat'}"? This action cannot be undone.`);
+                if (!confirmDelete) return;
+                
+                try {
+                    const response = await fetch(`/claude/conversations/${convId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to delete conversation');
+                    
+                    // Remove from local state
+                    allConversations = allConversations.filter(c => c.id !== convId);
+                    
+                    // If this was the active conversation, clear chat
+                    if (conversationId === convId) {
+                        conversationId = null;
+                        if (messages) messages.innerHTML = '';
+                        
+                        // Load most recent conversation if available
+                        if (allConversations.length > 0) {
+                            await loadConversation(allConversations[0].id);
+                        }
+                    }
+                    
+                    await loadAllConversations();
+                } catch (error) {
+                    console.error('Error deleting conversation:', error);
+                    alert('Failed to delete conversation. Please try again.');
+                }
             }
 
             window.toggleFolder = function (folderId) {
