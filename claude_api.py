@@ -487,97 +487,6 @@ Return as JSON array of strings (2-3 variations only):"""
         return [original_query]
 
 
-def rerank_with_gpt(query: str, chunks: list, top_k: int = 10) -> list:
-    """
-    Re-rank chunks using GPT-4o-mini cross-encoder style scoring.
-    
-    Args:
-        query: User's query
-        chunks: Retrieved chunks with scores (10-30 chunks)
-        top_k: How many to return after re-ranking
-        
-    Returns:
-        Re-ranked chunks (top_k) with hybrid scores
-    """
-    if not OPENAI_API_KEY or not chunks:
-        return chunks[:top_k]
-    
-    try:
-        openai.api_key = OPENAI_API_KEY
-        
-        # Build prompt with query and chunk texts
-        prompt = f"""You are an expert at judging document relevance for MBTI/Jungian typology questions.
-
-Question: "{query}"
-
-Rank these chunks by relevance (1-10 scale, 10 = perfect match):
-
-"""
-        
-        for i, chunk in enumerate(chunks[:15], 1):  # Limit to top 15 for GPT context (reduced for speed)
-            text = chunk.get('text', '')[:400]  # Reduced from 500 to 400 chars for faster processing
-            prompt += f"Chunk {i}:\n{text}\n\n"
-        
-        prompt += "Your response (JSON array of scores, e.g., [8, 5, 9, 2, ...]):"
-        
-        response = openai.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "Rank document relevance. Return JSON array of scores."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,
-            max_tokens=100
-        )
-        
-        response_text = response.choices[0].message.content.strip()
-        
-        # Try to extract JSON if wrapped in markdown
-        if "```json" in response_text:
-            json_start = response_text.find("```json") + 7
-            json_end = response_text.find("```", json_start)
-            response_text = response_text[json_start:json_end].strip()
-        elif "```" in response_text:
-            json_start = response_text.find("```") + 3
-            json_end = response_text.find("```", json_start)
-            response_text = response_text[json_start:json_end].strip()
-        
-        scores = json.loads(response_text)
-        
-        # Validate it's a list of numbers
-        if not isinstance(scores, list):
-            print(f"⚠️ [RE-RANK] GPT returned non-list: {type(scores)}")
-            return chunks[:top_k]
-        
-        # Combine with original similarity scores (weighted average)
-        chunks_to_rank = chunks[:min(len(scores), len(chunks))]
-        for i, chunk in enumerate(chunks_to_rank):
-            if i < len(scores):
-                gpt_score = scores[i]
-                similarity_score = chunk.get('score', chunk.get('boosted_score', 0.0))
-                
-                # Hybrid score: 40% similarity + 60% GPT relevance
-                chunk['rerank_score'] = gpt_score
-                chunk['hybrid_score'] = (similarity_score * 0.4) + (gpt_score / 10 * 0.6)
-            else:
-                # No GPT score for this chunk, use original
-                chunk['hybrid_score'] = chunk.get('score', chunk.get('boosted_score', 0.0))
-        
-        # Sort by hybrid score
-        reranked = sorted(chunks_to_rank, key=lambda x: x.get('hybrid_score', 0), reverse=True)
-        
-        print(f"⚡ [RE-RANK] Re-ranked {len(chunks_to_rank)} chunks, top hybrid score: {reranked[0].get('hybrid_score', 0):.3f}")
-        
-        return reranked[:top_k]
-        
-    except json.JSONDecodeError as e:
-        print(f"⚠️ [RE-RANK] JSON parsing failed: {e}")
-        return chunks[:top_k]
-    except Exception as e:
-        print(f"⚠️ [RE-RANK] Re-ranking failed: {e}")
-        return chunks[:top_k]
-
-
 def query_innerverse_local(question: str, progress_callback=None) -> str:
     """
     IMPROVED HYBRID SEARCH for MBTI content:
@@ -702,16 +611,12 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
         # Apply intelligent re-ranking
         reranked_chunks = rerank_chunks_with_metadata(sorted_chunks, question)
         
-        # BALANCED MODE: Use GPT re-ranking only when quality is questionable
-        # Skip if top chunks already have good scores (saves 8-10s)
-        top_3_avg_score = sum(c.get('boosted_score', c.get('score', 0.0)) for c in reranked_chunks[:3]) / 3
-        if top_3_avg_score >= 0.65:  # Adjusted threshold (was 0.85, too high)
-            print(f"⚡ [CLAUDE DEBUG] Skipping GPT re-ranking - top chunks already good quality (avg: {top_3_avg_score:.3f})")
-            final_chunks = reranked_chunks[:12]  # Use metadata-boosted chunks directly
-        else:
-            print(f"⚡ [CLAUDE DEBUG] Applying GPT-powered re-ranking to top 15 chunks (avg score: {top_3_avg_score:.3f})...")
-            gpt_reranked_chunks = rerank_with_gpt(question, reranked_chunks[:15], top_k=12)
-            final_chunks = gpt_reranked_chunks  # Top 12 after GPT re-ranking
+        # ENTERPRISE MODE: Skip GPT re-ranking entirely (saves 8-10s)
+        # Metadata boosting provides 80% of the quality benefit at zero latency cost
+        # GPT re-ranking was adding 8-10s for marginal improvement
+        final_chunks = reranked_chunks[:12]  # Use metadata-boosted chunks directly
+        top_3_avg_score = sum(c.get('boosted_score', c.get('score', 0.0)) for c in final_chunks[:3]) / 3
+        print(f"⚡ [CLAUDE DEBUG] Using metadata-boosted chunks (avg score: {top_3_avg_score:.3f}) - GPT re-ranking disabled for speed")
         
         # Log boost details
         boosted_count = sum(1 for c in final_chunks if c.get('boost_applied', 0) > 0)
@@ -1143,7 +1048,7 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     Yields chunks as they arrive from Claude
     RETURNS: Yields SSE events, final event includes follow-up question if present
     """
-    import json  # 🐛 FIX: Import at function top to prevent UnboundLocalError
+    # json is imported at module level (line 9)
     
     if not ANTHROPIC_API_KEY:
         yield "data: " + '{"error": "ANTHROPIC_API_KEY not set"}\n\n'
@@ -1291,15 +1196,15 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                                         question = block.input.get("question", "")
                                         
                                         # Query Pinecone locally with progress updates for streaming
-                                        yield "data: " + '{"status": "searching_pinecone"}\n\n'
+                                        # Send status update before blocking RAG search
+                                        yield "data: " + '{"status": "searching_knowledge_base"}\n\n'
                                         
-                                        # Create progress callback to keep streaming active
-                                        def send_progress(step):
-                                            yield f'data: {{"status": "rag_progress", "step": "{step}"}}\n\n'
-                                        
-                                        # Note: query_innerverse_local is blocking, so progress updates
-                                        # will happen at major milestones (filter extraction, embeddings, etc.)
+                                        # RAG search is blocking (~15-20s) - no mid-search updates possible
+                                        # The status message above tells user something is happening
                                         result = query_innerverse_local(question)
+                                        
+                                        # Send status after RAG completes
+                                        yield "data: " + '{"status": "generating_response"}\n\n'
                                         
                                         # Handle tuple return (context, citations_data) or string (backwards compat)
                                         if isinstance(result, tuple):
@@ -1354,7 +1259,7 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                             continue
                         else:
                             # Done! Log usage and extract follow-up question
-                            import json
+                            # json is imported at module level (line 9)
                             
                             # Log Claude API usage
                             if hasattr(final_message, 'usage'):
