@@ -528,19 +528,23 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
         # IMPROVEMENT 2: Optimized retrieval (top_k=15) - we only use 12 chunks, 3 extra for filtering buffer
         all_chunks = {}  # Deduplicate by text
         
+        import time as _time  # Local import for timing
+        
         for query_idx, query in enumerate(search_queries, 1):
             # Send progress update
             if progress_callback:
                 progress_callback(f"embedding_query_{query_idx}")
             
             # Get embedding with UPGRADED model
+            embed_start = _time.time()
             print(f"🧮 [CLAUDE DEBUG] Creating embedding for query #{query_idx} with text-embedding-3-large...")
             response = openai.embeddings.create(
                 input=query,
                 model="text-embedding-3-large"  # UPGRADED from ada-002
             )
             query_vector = response.data[0].embedding
-            print(f"✅ [CLAUDE DEBUG] Embedding created: {len(query_vector)} dimensions")
+            embed_time = _time.time() - embed_start
+            print(f"✅ [CLAUDE DEBUG] Embedding created: {len(query_vector)} dimensions in {embed_time:.2f}s")
             
             # Query Pinecone with INCREASED top_k for hybrid approach + metadata filters
             query_params = {
@@ -554,9 +558,9 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
                 query_params["filter"] = metadata_filters
                 print(f"🎯 [METADATA-FILTER] Applying filters to query #{query_idx}: {metadata_filters}")
             
+            pinecone_start = _time.time()
             print(f"📡 [CLAUDE DEBUG] Querying Pinecone with top_k=15...")
             try:
-                import asyncio
                 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
                 
                 # Wrap Pinecone query with 10-second timeout
@@ -566,6 +570,8 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
                         **query_params
                     )
                     query_response = future.result(timeout=10.0)
+                pinecone_time = _time.time() - pinecone_start
+                print(f"⏱️ [TIMING] Pinecone query took {pinecone_time:.2f}s")
             except (FuturesTimeoutError, TimeoutError) as e:
                 print(f"⏱️ [CLAUDE DEBUG] Pinecone query #{query_idx} timed out after 10 seconds")
                 continue  # Skip this query and try next one
@@ -1044,6 +1050,10 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     - Pre-fetch RAG context BEFORE Claude call to eliminate tool use round-trip
     - This reduces response time from ~30-40s to ~15-20s
     - Tools kept as fallback for edge cases (web search, explicit reference lookups)
+    
+    STREAMING FIX (Dec 2024):
+    - Use async RAG search to prevent blocking
+    - Send heartbeat events to keep connection alive and show progress
     """
     # json is imported at module level (line 9)
     import time
@@ -1070,7 +1080,7 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
                         break
             break
     
-    # Send initial status immediately to start streaming connection
+    # Send initial status immediately - this MUST be yielded first to establish SSE connection
     yield "data: " + '{"status": "searching"}\n\n'
     
     # PRE-FETCH RAG CONTEXT: Do RAG search BEFORE Claude call

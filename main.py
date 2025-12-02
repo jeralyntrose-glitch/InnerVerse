@@ -7814,9 +7814,10 @@ async def send_message_streaming(conversation_id: int, request: Request):
                 "content": user_message
             })
         
-        # Create generator for streaming
-        def generate():
+        # Create ASYNC generator for streaming (prevents blocking event loop)
+        async def generate():
             import json  # Import at function scope to avoid scoping issues
+            import asyncio
             full_response = []
             follow_up_question = None
             citations_data = None
@@ -7824,6 +7825,8 @@ async def send_message_streaming(conversation_id: int, request: Request):
             try:
                 for chunk in chat_with_claude_streaming(claude_messages, conversation_id):
                     yield chunk
+                    # Allow event loop to process other tasks (enables real streaming)
+                    await asyncio.sleep(0)
                     
                     # Collect text chunks, follow-up, and citations for database storage
                     if '"chunk"' in chunk:
