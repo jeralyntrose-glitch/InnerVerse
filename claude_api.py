@@ -1204,6 +1204,9 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     max_iterations = 3
     
     try:
+        # Send initial status immediately to start streaming connection
+        yield "data: " + '{"status": "initializing"}\n\n'
+        
         for iteration in range(max_iterations):
             # Send search status to frontend
             if iteration > 0:
