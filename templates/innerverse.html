@@ -3896,21 +3896,20 @@
                 typingIndicator.classList.add("visible");
                 
                 // Scroll to show typing indicator (bottom of chat)
-                // This naturally positions user message above it with proper spacing
+                // ChatGPT-style: Smooth float upward, not instant snap
                 requestAnimationFrame(() => {
-                    // Scroll to bottom to show typing indicator
-                    // User message will be visible above it
+                    // Smooth scroll to bottom - elegant float like ChatGPT
                     messages.scrollTo({
                         top: messages.scrollHeight,
-                        behavior: 'instant'
+                        behavior: 'smooth'  // Smooth animation, not instant
                     });
                     
-                    // Release scroll lock after positioning
+                    // Release scroll lock after animation completes
                     setTimeout(() => {
                         scrollManager.disableHardLock();
                         scrollManager.state.suppressEvents = false;
                         updateScrollPinState();
-                    }, 800);
+                    }, 600);  // Slightly shorter since smooth scroll takes time
                 });
 
                 let assistantDiv = null;
