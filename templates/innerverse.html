@@ -3895,21 +3895,52 @@
                 // Show typing indicator
                 typingIndicator.classList.add("visible");
                 
-                // Scroll to show typing indicator (bottom of chat)
-                // ChatGPT-style: Smooth float upward, not instant snap
+                // Smart scroll positioning for user message visibility
+                // iPhone 14 Pro: Show user message below header, not cut off
                 requestAnimationFrame(() => {
-                    // Smooth scroll to bottom - elegant float like ChatGPT
-                    messages.scrollTo({
-                        top: messages.scrollHeight,
-                        behavior: 'smooth'  // Smooth animation, not instant
-                    });
+                    const userMessages = messages.querySelectorAll('.message.user');
+                    const lastUserMessage = userMessages[userMessages.length - 1];
+                    
+                    if (lastUserMessage) {
+                        const messageHeight = lastUserMessage.offsetHeight;
+                        
+                        // Verified CSS values:
+                        // - line-height: 15px * 1.5 = 22.5px
+                        // - 4 lines + padding (12px*2) = ~114px threshold
+                        const fourLinesThreshold = 114;
+                        const fourLinesHeight = 90;   // Just the 4 lines of text
+                        const headerOffset = 100;     // Safe offset for iPhone 14 Pro header
+                        const bottomBreathing = 20;   // Space below visible content
+                        
+                        let scrollTarget;
+                        
+                        if (messageHeight <= fourLinesThreshold) {
+                            // SHORT message: Show full message below header
+                            scrollTarget = lastUserMessage.offsetTop - headerOffset;
+                        } else {
+                            // LONG message: Show last 4 lines with breathing room
+                            scrollTarget = lastUserMessage.offsetTop + messageHeight - fourLinesHeight - bottomBreathing - headerOffset;
+                        }
+                        
+                        messages.scrollTo({
+                            top: Math.max(0, scrollTarget),
+                            behavior: 'smooth'
+                        });
+                    } else {
+                        // Fallback: scroll to bottom
+                        messages.scrollTo({
+                            top: messages.scrollHeight,
+                            behavior: 'smooth'
+                        });
+                    }
                     
                     // Release scroll lock after animation completes
                     setTimeout(() => {
                         scrollManager.disableHardLock();
                         scrollManager.state.suppressEvents = false;
-                        updateScrollPinState();
-                    }, 600);  // Slightly shorter since smooth scroll takes time
+                        // CRITICAL: Force pinned so streaming auto-scroll works
+                        scrollManager.state.isPinnedToBottom = true;
+                    }, 600);
                 });
 
                 let assistantDiv = null;
