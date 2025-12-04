@@ -32,6 +32,25 @@ except Exception as e:
     print(f"⚠️ [REFERENCE DATA] Error loading reference_data.json: {e}")
     REFERENCE_DATA = {}
 
+# ===== EMBEDDING CACHE (RAG Optimization) =====
+# Stores embeddings for repeated questions to avoid re-computation
+# Bounded to prevent memory bloat
+_embedding_cache = {}
+_EMBEDDING_CACHE_MAX_SIZE = 100  # Max entries before eviction
+
+def get_cached_embedding(text: str) -> list | None:
+    """Get embedding from cache if exists."""
+    return _embedding_cache.get(text)
+
+def cache_embedding(text: str, embedding: list) -> None:
+    """Cache embedding with LRU-style eviction when at capacity."""
+    if len(_embedding_cache) >= _EMBEDDING_CACHE_MAX_SIZE:
+        # Remove oldest entry (first key in dict - Python 3.7+ maintains insertion order)
+        oldest_key = next(iter(_embedding_cache))
+        del _embedding_cache[oldest_key]
+        print(f"🗑️ [CACHE] Evicted oldest entry, cache size: {len(_embedding_cache)}")
+    _embedding_cache[text] = embedding
+
 PROJECTS = [
     {"id": "relationship-lab", "name": "💕 Relationship Lab", "emoji": "💕", "description": "Deep focus on golden pairs, compatibility, relationship dynamics"},
     {"id": "mbti-academy", "name": "🎓 MBTI Academy", "emoji": "🎓", "description": "Structured learning on cognitive functions and type theory"},
@@ -227,7 +246,7 @@ def format_rag_context_professional(sorted_chunks: List[Dict]) -> str:
 def calculate_confidence_score(chunks: list, query: str) -> dict:
     """
     Calculate answer confidence based on retrieval quality.
-    Uses boosted_score if available (includes metadata boosts), otherwise raw score.
+    OPTIMIZED: Single-pass calculation with simplified thresholds.
     
     Args:
         chunks: Retrieved Pinecone chunks with scores
@@ -241,37 +260,30 @@ def calculate_confidence_score(chunks: list, query: str) -> dict:
             "level": "none",
             "score": 0.0,
             "reasoning": "No relevant sources found",
-            "stars": "⭐"
+            "stars": "⭐",
+            "source_count": 0
         }
     
-    # Use boosted_score if available (includes metadata boosts), otherwise raw score
-    avg_score = sum(c.get('boosted_score', c.get('score', 0.0)) for c in chunks) / len(chunks)
+    # Single pass: calculate avg_score (uses boosted_score if available)
+    chunk_count = len(chunks)
+    avg_score = sum(c.get('boosted_score', c.get('score', 0.0)) for c in chunks) / chunk_count
     
-    # Adjusted thresholds for MBTI content (0.50-0.60 can be good quality)
-    # Number of high-quality chunks (adjusted for MBTI domain)
-    high_quality_count = sum(1 for c in chunks if c.get('boosted_score', c.get('score', 0.0)) > 0.70)
-    very_high_quality_count = sum(1 for c in chunks if c.get('boosted_score', c.get('score', 0.0)) > 0.80)
-    
-    # Determine confidence level with realistic thresholds for MBTI content
-    if very_high_quality_count >= 5 and avg_score > 0.75:
-        level = "very_high"
-        stars = "⭐⭐⭐⭐⭐"
-        reasoning = f"{len(chunks)} highly relevant sources"
-    elif high_quality_count >= 3 and avg_score > 0.65:
-        level = "high"
-        stars = "⭐⭐⭐⭐"
-        reasoning = f"{high_quality_count} strong matches"
-    elif len(chunks) >= 5 and avg_score > 0.55:
-        level = "medium"
-        stars = "⭐⭐⭐"
-        reasoning = f"{len(chunks)} moderate matches"
-    elif len(chunks) >= 3 and avg_score > 0.45:
-        level = "low"
-        stars = "⭐⭐"
-        reasoning = f"Limited information ({len(chunks)} sources)"
+    # Simplified thresholds - avg_score is primary indicator
+    # MBTI domain: 0.50-0.60 can be good quality due to semantic complexity
+    if avg_score >= 0.75:
+        level, stars = "very_high", "⭐⭐⭐⭐⭐"
+        reasoning = f"{chunk_count} highly relevant sources"
+    elif avg_score >= 0.65:
+        level, stars = "high", "⭐⭐⭐⭐"
+        reasoning = f"{chunk_count} strong matches"
+    elif avg_score >= 0.55:
+        level, stars = "medium", "⭐⭐⭐"
+        reasoning = f"{chunk_count} moderate matches"
+    elif avg_score >= 0.45:
+        level, stars = "low", "⭐⭐"
+        reasoning = f"Limited information ({chunk_count} sources)"
     else:
-        level = "very_low"
-        stars = "⭐"
+        level, stars = "very_low", "⭐"
         reasoning = "Insufficient information"
     
     return {
@@ -279,7 +291,7 @@ def calculate_confidence_score(chunks: list, query: str) -> dict:
         "score": avg_score,
         "reasoning": reasoning,
         "stars": stars,
-        "source_count": len(chunks)
+        "source_count": chunk_count
     }
 
 
@@ -446,37 +458,65 @@ def query_innerverse_local(question: str, progress_callback=None) -> str:
         
         print(f"✅ [CLAUDE DEBUG] Pinecone index connected successfully")
         
-        # FEATURE #1: Extract metadata filters from query
         if progress_callback:
             progress_callback("searching")
-        metadata_filters = extract_filters_from_query(question)
-        
-        # SPEED MODE: Skip query expansion entirely for fastest response
-        # Query expansion adds ~15-20s (GPT call + extra embeddings + extra Pinecone queries)
-        # Metadata filtering + boosting provides good quality without the latency
-        search_queries = [question]
-        print(f"⚡ [SPEED MODE] Using single query (no expansion) for fastest response")
-        
-        # IMPROVEMENT 2: Optimized retrieval (top_k=15) - we only use 12 chunks, 3 extra for filtering buffer
-        all_chunks = {}  # Deduplicate by text
         
         import time as _time  # Local import for timing
+        from concurrent.futures import ThreadPoolExecutor
         
-        for query_idx, query in enumerate(search_queries, 1):
-            # Send progress update
-            if progress_callback:
-                progress_callback(f"embedding_query_{query_idx}")
+        # Check embedding cache first
+        cached_embedding = get_cached_embedding(question)
+        
+        # RAG OPTIMIZATION: Parallel filter extraction + embedding creation (on cache miss)
+        parallel_start = _time.time()
+        
+        if cached_embedding:
+            # Cache hit: Only need filter extraction (fast)
+            query_vector = cached_embedding
+            metadata_filters = extract_filters_from_query(question)
+            print(f"⚡ [CACHE HIT] Using cached embedding, filters extracted in {_time.time() - parallel_start:.3f}s")
+        else:
+            # Cache miss: Run filter extraction + embedding in PARALLEL
+            print(f"🔄 [PARALLEL] Running filter extraction + embedding concurrently...")
             
-            # Get embedding with UPGRADED model
-            embed_start = _time.time()
-            print(f"🧮 [CLAUDE DEBUG] Creating embedding for query #{query_idx} with text-embedding-3-large...")
-            response = openai.embeddings.create(
-                input=query,
-                model="text-embedding-3-large"  # UPGRADED from ada-002
-            )
-            query_vector = response.data[0].embedding
-            embed_time = _time.time() - embed_start
-            print(f"✅ [CLAUDE DEBUG] Embedding created: {len(query_vector)} dimensions in {embed_time:.2f}s")
+            def create_embedding():
+                response = openai.embeddings.create(
+                    input=question,
+                    model="text-embedding-3-large"
+                )
+                return response.data[0].embedding
+            
+            try:
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    filter_future = executor.submit(extract_filters_from_query, question)
+                    embed_future = executor.submit(create_embedding)
+                    
+                    # Collect results (waits for both to complete)
+                    metadata_filters = filter_future.result(timeout=5.0)  # Filters should be instant
+                    query_vector = embed_future.result(timeout=30.0)  # Embedding might take longer
+                
+                # Cache the embedding for future use
+                cache_embedding(question, query_vector)
+                parallel_time = _time.time() - parallel_start
+                print(f"✅ [PARALLEL] Completed in {parallel_time:.2f}s (filter + embedding concurrent)")
+            except Exception as e:
+                # Fallback to sequential on parallel failure
+                print(f"⚠️ [PARALLEL] Failed ({e}), falling back to sequential...")
+                metadata_filters = extract_filters_from_query(question)
+                response = openai.embeddings.create(input=question, model="text-embedding-3-large")
+                query_vector = response.data[0].embedding
+                cache_embedding(question, query_vector)
+        
+        # Single query mode (no expansion for speed)
+        print(f"⚡ [SPEED MODE] Using single query (no expansion) for fastest response")
+        
+        # Optimized retrieval (top_k=15) - we only use 8 chunks, buffer for filtering
+        all_chunks = {}  # Deduplicate by text
+        
+        # Process the single query
+        for query_idx, query in enumerate([question], 1):
+            if progress_callback:
+                progress_callback(f"searching_pinecone")
             
             # Query Pinecone with INCREASED top_k for hybrid approach + metadata filters
             query_params = {
