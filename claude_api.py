@@ -175,11 +175,10 @@ def rerank_chunks_with_metadata(chunks: List[Dict], user_question: str) -> List[
 
 def format_rag_context_professional(sorted_chunks: List[Dict]) -> str:
     """
-    Format RAG chunks - SIMPLIFIED for speed.
+    Format RAG chunks with full metadata for Claude accuracy.
     
-    PERFORMANCE FIX: Removed verbose metadata headers, confidence indicators per chunk,
-    and decorative separators. Claude doesn't need all that - just the content.
-    This reduces context size by ~30% = faster Claude processing.
+    Includes critical metadata (types, functions, category, score) in clean single-line format.
+    This helps Claude understand context relevance without verbose decorative bloat.
     """
     if not sorted_chunks:
         return "No relevant content found in the knowledge base."
@@ -187,9 +186,39 @@ def format_rag_context_professional(sorted_chunks: List[Dict]) -> str:
     context_parts = []
     
     for i, chunk in enumerate(sorted_chunks, 1):
+        # Build metadata line - clean, single-line format
+        meta_parts = [f"[Source {i}]"]
+        
+        # Season (recency/authority)
         season = chunk.get('season', '')
-        source = f"[Source {i}: Season {season}]" if season else f"[Source {i}]"
-        context_parts.append(source)
+        if season:
+            meta_parts.append(f"Season:{season}")
+        
+        # Types discussed (CRITICAL for function stack accuracy)
+        types_discussed = chunk.get('types_discussed', [])
+        if types_discussed:
+            types_str = ','.join(types_discussed[:4]) if isinstance(types_discussed, list) else str(types_discussed)
+            meta_parts.append(f"Types:{types_str}")
+        
+        # Functions covered (CRITICAL for function stack accuracy - full 8-function stack)
+        functions_covered = chunk.get('functions_covered', [])
+        if functions_covered:
+            funcs_str = ','.join(functions_covered[:8]) if isinstance(functions_covered, list) else str(functions_covered)
+            meta_parts.append(f"Functions:{funcs_str}")
+        
+        # Category (helps Claude understand content type)
+        category = chunk.get('primary_category', '')
+        if category and category != 'unknown':
+            meta_parts.append(f"Category:{category}")
+        
+        # Score (relevance indicator)
+        score = chunk.get('boosted_score', chunk.get('score', 0.0))
+        if score:
+            meta_parts.append(f"Score:{score:.2f}")
+        
+        # Join with pipe separator for clean readability
+        metadata_line = " | ".join(meta_parts)
+        context_parts.append(metadata_line)
         context_parts.append(chunk['text'])
         context_parts.append("")  # Blank line between chunks
     
@@ -1061,17 +1090,10 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     if rag_context:
         rag_injection = f"""
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 KNOWLEDGE BASE CONTEXT (Pre-fetched from InnerVerse RAG)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-The following context was retrieved from the CS Joseph knowledge base 
-based on the user's question. Use this information to provide accurate,
-grounded responses about MBTI and cognitive functions.
+KNOWLEDGE BASE EXCERPTS
+Priority: For cognitive function stacks and four sides mappings, ALWAYS use the AUTHORITATIVE REFERENCE DATA above. Use these excerpts for context and examples only.
 
 {rag_context}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
         system_message = system_message + rag_injection
         print(f"✅ [INJECTION] Added {len(rag_context)} chars of RAG context to system prompt")
