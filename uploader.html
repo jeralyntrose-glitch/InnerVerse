@@ -1640,7 +1640,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.7);
       z-index: 10000;
       display: flex;
       align-items: center;
@@ -1656,12 +1656,13 @@
       width: 100%;
       max-width: 900px;
       max-height: 90vh;
-      background: var(--bg-primary);
+      background: #1f2937;
       border-radius: 16px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      border: 1px solid var(--border-color);
+      border: 1px solid #374151;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
     
     .training-review-header {
@@ -1669,8 +1670,12 @@
       justify-content: space-between;
       align-items: flex-start;
       padding: 20px 24px;
-      border-bottom: 1px solid var(--border-color);
-      background: var(--bg-secondary);
+      border-bottom: 1px solid #374151;
+      background: #111827;
+    }
+    
+    .training-review-header h2 {
+      color: #f9fafb;
     }
     
     .training-review-title h2 {
@@ -1689,21 +1694,21 @@
       border: none;
       font-size: 28px;
       cursor: pointer;
-      color: var(--text-secondary);
+      color: #9ca3af;
       padding: 0;
       line-height: 1;
     }
     
     .training-review-close:hover {
-      color: var(--text-primary);
+      color: #f9fafb;
     }
     
     .training-review-stats {
       display: flex;
       gap: 24px;
       padding: 16px 24px;
-      background: var(--bg-tertiary);
-      border-bottom: 1px solid var(--border-color);
+      background: #111827;
+      border-bottom: 1px solid #374151;
     }
     
     .training-review-stat {
@@ -1720,25 +1725,28 @@
     .training-review-stat .stat-value {
       font-weight: 600;
       font-size: 14px;
+      color: #f9fafb;
     }
     
     .training-review-actions-top {
       padding: 16px 24px;
-      border-bottom: 1px solid var(--border-color);
+      border-bottom: 1px solid #374151;
+      background: #111827;
     }
     
     .btn-training-copy {
       padding: 10px 20px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
+      background: #374151;
+      border: 1px solid #4b5563;
       border-radius: 8px;
       cursor: pointer;
       font-size: 14px;
       transition: all 0.2s;
+      color: #f9fafb;
     }
     
     .btn-training-copy:hover {
-      background: var(--bg-tertiary);
+      background: #4b5563;
     }
     
     .training-review-pairs {
@@ -1748,6 +1756,7 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+      background: #1f2937;
     }
     
     .training-pairs-loading {
@@ -1757,8 +1766,8 @@
     }
     
     .training-pair-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
+      background: #111827;
+      border: 1px solid #374151;
       border-radius: 12px;
       overflow: hidden;
     }
@@ -1768,14 +1777,14 @@
       justify-content: space-between;
       align-items: center;
       padding: 12px 16px;
-      background: var(--bg-tertiary);
+      background: #1f2937;
       border-bottom: 1px solid var(--border-color);
     }
     
     .training-pair-number {
       font-weight: 600;
       font-size: 14px;
-      color: var(--primary-color);
+      color: #14b8a6;
     }
     
     .training-pair-actions {
@@ -1788,22 +1797,24 @@
       border-radius: 6px;
       font-size: 12px;
       cursor: pointer;
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
+      border: 1px solid #4b5563;
+      background: #374151;
+      color: #f9fafb;
       transition: all 0.2s;
     }
     
     .btn-pair-edit:hover {
-      background: var(--bg-hover);
+      background: #4b5563;
     }
     
     .btn-pair-delete {
       color: #ef4444;
-      border-color: rgba(239, 68, 68, 0.3);
+      border-color: rgba(239, 68, 68, 0.4);
+      background: transparent;
     }
     
     .btn-pair-delete:hover {
-      background: rgba(239, 68, 68, 0.1);
+      background: rgba(239, 68, 68, 0.15);
     }
     
     .training-pair-content {
@@ -1830,19 +1841,20 @@
     .training-pair-text {
       font-size: 14px;
       line-height: 1.6;
-      color: var(--text-primary);
+      color: #e5e7eb;
     }
     
     .training-pair-question .training-pair-text {
       font-weight: 500;
+      color: #f9fafb;
     }
     
     .training-review-footer {
       display: flex;
       justify-content: space-between;
       padding: 20px 24px;
-      border-top: 1px solid var(--border-color);
-      background: var(--bg-secondary);
+      border-top: 1px solid #374151;
+      background: #111827;
     }
     
     .btn-review-cancel, .btn-review-approve {
@@ -1856,13 +1868,13 @@
     }
     
     .btn-review-cancel {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
+      background: #374151;
+      color: #f9fafb;
+      border: 1px solid #4b5563;
     }
     
     .btn-review-cancel:hover {
-      background: var(--bg-hover);
+      background: #4b5563;
     }
     
     .btn-review-approve {
