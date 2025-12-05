@@ -3450,28 +3450,39 @@ QA_GENERATION_PROMPT = """Turn this content into 15-20 Q&A training pairs for fi
 FORMAT: Each pair must be valid JSON on its own line:
 {{"messages": [{{"role": "user", "content": "question"}}, {{"role": "assistant", "content": "answer"}}]}}
 
-RULES FOR QUESTIONS:
+QUESTIONS:
 - Ask what someone learning cognitive typology would actually ask
-- Include: "what is", "how does", "why", "explain", "what's the difference"
-- Cover types, cognitive functions, interactions, practical applications
-- Mix basic and advanced questions
-- Ask about real patterns and behaviors, not just definitions
+- Mix "what is", "how does", "why", "what's the difference", practical questions
+- Cover types, functions, interactions, real behaviors
+- Both basic and advanced
 
-RULES FOR ANSWERS:
-- 2-5 sentences typically (longer for complex topics)
-- Direct and confident tone - no hedging
-- NEVER say "I think", "perhaps", "might be", "could be"
-- NEVER reference sources: no "according to", "CS Joseph says", "in season X", "in this video"
-- Just STATE the knowledge as fact
-- Sound like a knowledgeable friend, not a textbook
-- Can be casual, real, even blunt when appropriate
-- Give concrete examples when helpful
+VOICE & STYLE FOR ANSWERS:
+- Talk like a smart friend explaining something they know deeply - not a professor, not a textbook
+- Be DIRECT. State things confidently. No "this can often potentially maybe..."
+- Short sentences. Punch. Break it up.
+- Use "you" and "your" - talk TO the person
+- Use dashes for emphasis - like this
+- Analogies and examples make concepts land
+- It's okay to be a little blunt or funny when it fits
+- Light cursing is fine if it adds emphasis (damn, shit, hell)
+- Warm but not soft. Real talk energy.
+- 2-4 sentences usually. More only if the concept truly needs it.
 
-GOOD ANSWER EXAMPLE:
-"Ni hero means the person is laser-focused on what they want. Their willpower is insane - they lock onto a vision and pursue it relentlessly. This is why INTJs and INFJs can seem stubborn. That desire IS them."
+NEVER DO THIS:
+- Academic language ("refers to the process by which...")
+- Hedging words (can, may, might, often, typically, generally)
+- Overly formal structure
+- Repeating the question in the answer
+- Generic filler phrases ("it's important to note that...")
+- Reference sources: no "according to", "CS Joseph says", "in season X"
 
-BAD ANSWER EXAMPLE (never do this):
-"According to the material, Ni hero might potentially be described as perhaps focusing on desires. CS Joseph explains in Season 4 that this could mean..."
+BAD EXAMPLE:
+"A cognitive transition refers to the process by which an individual shifts between the four sides of their mind. This can happen voluntarily or involuntarily, impacting how one processes information."
+
+GOOD EXAMPLE:
+"A cognitive transition is when you flip from your ego into another side of your mind - your subconscious, unconscious, or superego. Most people do this without realizing it. But once you learn how, you can do it on purpose. That's where real growth happens."
+
+The vibe: brilliant friend who breaks down complex shit simply, gives you the real answer, and actually wants you to get it.
 
 CONTENT TO PROCESS:
 {content}
