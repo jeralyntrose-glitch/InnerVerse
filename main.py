@@ -3507,10 +3507,14 @@ Generate 15-20 Q&A pairs now. Output ONLY valid JSON lines, no other text:
 def parse_qa_response(response_text: str) -> list[dict]:
     """
     Parse JSON lines from AI response.
-    Handles common issues like trailing commas, markdown wrappers.
+    Handles common issues like trailing commas, markdown wrappers, JSON arrays.
     Returns list of valid Q&A pairs.
     """
     pairs = []
+    
+    # Log raw response for debugging
+    print(f"   📝 Raw response length: {len(response_text)} chars")
+    print(f"   📝 First 200 chars: {response_text[:200]}...")
     
     # Remove markdown code block wrappers if present
     text = response_text.strip()
@@ -3524,6 +3528,24 @@ def parse_qa_response(response_text: str) -> list[dict]:
             text = text[:-3]
         text = text.strip()
     
+    # Try parsing as JSON array first (Claude sometimes returns arrays)
+    if text.startswith('['):
+        try:
+            array = json.loads(text)
+            if isinstance(array, list):
+                for item in array:
+                    if isinstance(item, dict) and 'messages' in item:
+                        messages = item['messages']
+                        if len(messages) >= 2:
+                            if messages[0].get('role') == 'user' and messages[1].get('role') == 'assistant':
+                                if messages[0].get('content') and messages[1].get('content'):
+                                    pairs.append(item)
+                print(f"   📝 Parsed as JSON array: {len(pairs)} pairs")
+                return pairs
+        except json.JSONDecodeError:
+            print(f"   ⚠️ JSON array parse failed, trying line-by-line")
+    
+    # Line-by-line parsing
     for line in text.split('\n'):
         line = line.strip()
         
@@ -3585,15 +3607,21 @@ def generate_qa_pairs_haiku(chunk: str) -> list[dict]:
         
         response_text = message.content[0].text
         
+        # Debug: log full response if short
+        if len(response_text) < 2000:
+            print(f"   📝 Full Haiku response:\n{response_text}")
+        
         # Log API usage for cost tracking
         # Haiku pricing: $0.25/1M input, $1.25/1M output
         input_tokens = message.usage.input_tokens
         output_tokens = message.usage.output_tokens
         cost = (input_tokens * 0.25 / 1000000) + (output_tokens * 1.25 / 1000000)
         log_api_usage("training_pair_generation", "claude-3-haiku", input_tokens, output_tokens, cost)
+        print(f"   📊 Tokens: {input_tokens} in, {output_tokens} out (${cost:.6f})")
         
         # Parse the response
         pairs = parse_qa_response(response_text)
+        print(f"   📝 Parsed {len(pairs)} pairs from response")
         return pairs
         
     except Exception as e:
