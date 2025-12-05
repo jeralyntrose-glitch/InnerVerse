@@ -8,6 +8,8 @@ import csv
 import tempfile
 import subprocess
 import secrets
+import shutil
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from collections import deque
 from contextlib import asynccontextmanager
@@ -3086,6 +3088,1060 @@ def preprocess_transcript(text: str) -> str:
     text = text.strip()
     
     return text
+
+
+# =============================================================================
+# TRAINING PAIR GENERATOR: Phase 1 Infrastructure
+# =============================================================================
+# Purpose: Generate Q&A training pairs from PDFs for fine-tuning AI models
+# Pipeline: PDF → Extract → Typo Fix (preprocess_transcript) → Chunk → Q&A Gen → Review → Approve
+# =============================================================================
+
+# Storage paths for training pair generator
+TRAINING_PAIRS_PATH = Path("./data/training_pairs")
+TRAINING_IN_PROGRESS_PATH = TRAINING_PAIRS_PATH / "in_progress"
+TRAINING_PENDING_PATH = TRAINING_PAIRS_PATH / "pending_review"
+TRAINING_APPROVED_PATH = TRAINING_PAIRS_PATH / "approved"
+TRAINING_INDEX_PATH = TRAINING_PAIRS_PATH / "index.json"
+
+
+def ensure_training_pairs_storage():
+    """Create training pairs folder structure if it doesn't exist"""
+    TRAINING_PAIRS_PATH.mkdir(parents=True, exist_ok=True)
+    TRAINING_IN_PROGRESS_PATH.mkdir(exist_ok=True)
+    TRAINING_PENDING_PATH.mkdir(exist_ok=True)
+    TRAINING_APPROVED_PATH.mkdir(exist_ok=True)
+    
+    # Create index if doesn't exist
+    if not TRAINING_INDEX_PATH.exists():
+        initial_index = {
+            "files": [],
+            "total_files": 0,
+            "total_pairs": 0,
+            "last_updated": None
+        }
+        with open(TRAINING_INDEX_PATH, 'w') as f:
+            json.dump(initial_index, f, indent=2)
+    
+    print("✅ Training pairs storage initialized")
+
+
+def chunk_text_for_training(text: str, max_words: int = 2000, min_words: int = 500) -> list[str]:
+    """
+    Split long text into chunks for Q&A generation.
+    
+    - Splits at paragraph breaks (never mid-sentence)
+    - Each chunk is ~1500-2000 words
+    - Short content (<2000 words) stays as single chunk
+    - Merges tiny final chunks with previous
+    
+    Returns list of text chunks.
+    """
+    words = text.split()
+    total_words = len(words)
+    
+    # Short content - no chunking needed
+    if total_words <= max_words:
+        print(f"   📄 Text is {total_words} words - no chunking needed")
+        return [text]
+    
+    # Split into paragraphs
+    paragraphs = text.split('\n\n')
+    paragraphs = [p.strip() for p in paragraphs if p.strip()]
+    
+    if not paragraphs:
+        print(f"   ⚠️ No paragraphs found, returning as single chunk")
+        return [text]
+    
+    chunks = []
+    current_chunk = []
+    current_word_count = 0
+    
+    for para in paragraphs:
+        para_word_count = len(para.split())
+        
+        # If adding this paragraph exceeds max, save current chunk
+        if current_word_count + para_word_count > max_words and current_chunk:
+            chunks.append('\n\n'.join(current_chunk))
+            current_chunk = [para]
+            current_word_count = para_word_count
+        else:
+            current_chunk.append(para)
+            current_word_count += para_word_count
+    
+    # Handle final chunk
+    if current_chunk:
+        final_chunk = '\n\n'.join(current_chunk)
+        final_word_count = len(final_chunk.split())
+        
+        # Merge tiny final chunk with previous
+        if final_word_count < min_words and chunks:
+            chunks[-1] = chunks[-1] + '\n\n' + final_chunk
+            print(f"   📎 Merged small final chunk ({final_word_count} words) with previous")
+        else:
+            chunks.append(final_chunk)
+    
+    # Log chunk info
+    print(f"   📦 Split into {len(chunks)} chunks:")
+    for i, chunk in enumerate(chunks):
+        word_count = len(chunk.split())
+        print(f"      Chunk {i+1}: {word_count} words")
+    
+    return chunks
+
+
+def sanitize_filename_for_training(filename: str) -> str:
+    """Create safe filename for storage"""
+    base_name = os.path.splitext(filename)[0]
+    safe_name = "".join(c if c.isalnum() or c in "._- " else "_" for c in base_name)
+    return safe_name.replace(" ", "_")
+
+
+# === Progress Tracking (Crash Recovery) ===
+
+def start_training_processing(source_filename: str, chunks: list[str]) -> tuple[Path, Path]:
+    """
+    Initialize progress tracking for a new file.
+    Returns (progress_file_path, partial_output_path)
+    """
+    ensure_training_pairs_storage()
+    
+    safe_name = sanitize_filename_for_training(source_filename)
+    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
+    partial_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_partial.jsonl"
+    
+    progress = {
+        "source_file": source_filename,
+        "status": "in_progress",
+        "total_chunks": len(chunks),
+        "completed_chunks": 0,
+        "total_pairs_generated": 0,
+        "chunks": [
+            {"index": i, "status": "pending", "pairs_generated": 0}
+            for i in range(len(chunks))
+        ],
+        "started_at": datetime.now().isoformat(),
+        "last_updated": datetime.now().isoformat()
+    }
+    
+    with open(progress_file, 'w') as f:
+        json.dump(progress, f, indent=2)
+    
+    # Create empty partial file
+    partial_file.touch()
+    
+    print(f"📝 Started tracking: {source_filename} ({len(chunks)} chunks)")
+    return progress_file, partial_file
+
+
+def save_training_chunk_progress(source_filename: str, chunk_index: int, pairs: list[dict]) -> dict:
+    """
+    Save progress after each chunk completes - CRITICAL for crash recovery.
+    Appends pairs to partial file and updates progress JSON.
+    """
+    safe_name = sanitize_filename_for_training(source_filename)
+    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
+    partial_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_partial.jsonl"
+    
+    # Append pairs to partial file immediately
+    with open(partial_file, 'a') as f:
+        for pair in pairs:
+            f.write(json.dumps(pair) + '\n')
+    
+    # Update progress
+    with open(progress_file, 'r') as f:
+        progress = json.load(f)
+    
+    progress["chunks"][chunk_index]["status"] = "complete"
+    progress["chunks"][chunk_index]["pairs_generated"] = len(pairs)
+    progress["completed_chunks"] += 1
+    progress["total_pairs_generated"] += len(pairs)
+    progress["last_updated"] = datetime.now().isoformat()
+    
+    # Check if all done
+    if progress["completed_chunks"] == progress["total_chunks"]:
+        progress["status"] = "complete"
+    
+    with open(progress_file, 'w') as f:
+        json.dump(progress, f, indent=2)
+    
+    print(f"   💾 Saved chunk {chunk_index + 1}: {len(pairs)} pairs")
+    return progress
+
+
+def get_in_progress_training_files() -> list[dict]:
+    """Get list of files that can be resumed (were interrupted)"""
+    ensure_training_pairs_storage()
+    
+    resumable = []
+    for filepath in TRAINING_IN_PROGRESS_PATH.glob("*_progress.json"):
+        try:
+            with open(filepath) as f:
+                progress = json.load(f)
+            
+            if progress["status"] == "in_progress":
+                resumable.append({
+                    "source_file": progress["source_file"],
+                    "completed": progress["completed_chunks"],
+                    "total": progress["total_chunks"],
+                    "pairs_so_far": progress["total_pairs_generated"],
+                    "last_updated": progress["last_updated"]
+                })
+        except Exception as e:
+            print(f"⚠️ Error reading progress file {filepath}: {e}")
+    
+    return resumable
+
+
+def get_resume_info(source_filename: str) -> dict:
+    """Get info needed to resume processing an interrupted file"""
+    safe_name = sanitize_filename_for_training(source_filename)
+    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
+    
+    if not progress_file.exists():
+        return None
+    
+    with open(progress_file) as f:
+        progress = json.load(f)
+    
+    # Find first incomplete chunk
+    next_chunk = None
+    for chunk in progress["chunks"]:
+        if chunk["status"] == "pending":
+            next_chunk = chunk["index"]
+            break
+    
+    return {
+        "progress": progress,
+        "resume_from_chunk": next_chunk
+    }
+
+
+def finalize_training_processing(source_filename: str) -> Path:
+    """Move completed file from in_progress to pending_review"""
+    safe_name = sanitize_filename_for_training(source_filename)
+    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
+    partial_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_partial.jsonl"
+    dest_file = TRAINING_PENDING_PATH / f"{safe_name}.jsonl"
+    
+    # Get final stats before cleanup
+    with open(progress_file) as f:
+        progress = json.load(f)
+    
+    # Move partial to pending_review
+    shutil.move(str(partial_file), str(dest_file))
+    
+    # Remove progress file
+    progress_file.unlink()
+    
+    print(f"✅ Finalized: {source_filename} → pending_review/")
+    print(f"   Total pairs: {progress['total_pairs_generated']}")
+    
+    return dest_file
+
+
+def discard_training_progress(source_filename: str):
+    """Discard an in-progress file (user chose to start over or abandon)"""
+    safe_name = sanitize_filename_for_training(source_filename)
+    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
+    partial_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_partial.jsonl"
+    
+    if progress_file.exists():
+        progress_file.unlink()
+    if partial_file.exists():
+        partial_file.unlink()
+    
+    print(f"🗑️ Discarded progress for: {source_filename}")
+
+
+# === Index Management ===
+
+def load_training_index() -> dict:
+    """Load training pairs master index"""
+    ensure_training_pairs_storage()
+    
+    if TRAINING_INDEX_PATH.exists():
+        with open(TRAINING_INDEX_PATH) as f:
+            return json.load(f)
+    
+    return {
+        "files": [],
+        "total_files": 0,
+        "total_pairs": 0,
+        "last_updated": None
+    }
+
+
+def save_training_index(index: dict):
+    """Save training pairs master index"""
+    index["last_updated"] = datetime.now().isoformat()
+    with open(TRAINING_INDEX_PATH, 'w') as f:
+        json.dump(index, f, indent=2)
+
+
+# === File Listing Functions ===
+
+def get_pending_training_files() -> list[dict]:
+    """Get list of files waiting for review"""
+    ensure_training_pairs_storage()
+    
+    files = []
+    for filepath in TRAINING_PENDING_PATH.glob("*.jsonl"):
+        try:
+            pair_count = sum(1 for _ in open(filepath))
+            files.append({
+                'filename': filepath.name,
+                'pair_count': pair_count,
+                'status': 'pending_review',
+                'path': str(filepath)
+            })
+        except Exception as e:
+            print(f"⚠️ Error reading {filepath}: {e}")
+    
+    return files
+
+
+def get_approved_training_files() -> list[dict]:
+    """Get list of approved files in collection"""
+    ensure_training_pairs_storage()
+    
+    files = []
+    for filepath in TRAINING_APPROVED_PATH.glob("*.jsonl"):
+        try:
+            pair_count = sum(1 for _ in open(filepath))
+            files.append({
+                'filename': filepath.name,
+                'pair_count': pair_count,
+                'status': 'approved',
+                'path': str(filepath)
+            })
+        except Exception as e:
+            print(f"⚠️ Error reading {filepath}: {e}")
+    
+    return files
+
+
+def get_training_stats() -> dict:
+    """Get overall training pair statistics"""
+    pending = get_pending_training_files()
+    approved = get_approved_training_files()
+    in_progress = get_in_progress_training_files()
+    
+    pending_pairs = sum(f['pair_count'] for f in pending)
+    approved_pairs = sum(f['pair_count'] for f in approved)
+    
+    return {
+        "in_progress_files": len(in_progress),
+        "pending_files": len(pending),
+        "pending_pairs": pending_pairs,
+        "approved_files": len(approved),
+        "approved_pairs": approved_pairs,
+        "total_pairs": pending_pairs + approved_pairs
+    }
+
+
+# =============================================================================
+# TRAINING PAIR GENERATOR: Phase 2 - Q&A Generation
+# =============================================================================
+
+# The prompt for generating Q&A training pairs
+QA_GENERATION_PROMPT = """Turn this content into 15-20 Q&A training pairs for fine-tuning an AI.
+
+FORMAT: Each pair must be valid JSON on its own line:
+{{"messages": [{{"role": "user", "content": "question"}}, {{"role": "assistant", "content": "answer"}}]}}
+
+RULES FOR QUESTIONS:
+- Ask what someone learning cognitive typology would actually ask
+- Include: "what is", "how does", "why", "explain", "what's the difference"
+- Cover types, cognitive functions, interactions, practical applications
+- Mix basic and advanced questions
+- Ask about real patterns and behaviors, not just definitions
+
+RULES FOR ANSWERS:
+- 2-5 sentences typically (longer for complex topics)
+- Direct and confident tone - no hedging
+- NEVER say "I think", "perhaps", "might be", "could be"
+- NEVER reference sources: no "according to", "CS Joseph says", "in season X", "in this video"
+- Just STATE the knowledge as fact
+- Sound like a knowledgeable friend, not a textbook
+- Can be casual, real, even blunt when appropriate
+- Give concrete examples when helpful
+
+GOOD ANSWER EXAMPLE:
+"Ni hero means the person is laser-focused on what they want. Their willpower is insane - they lock onto a vision and pursue it relentlessly. This is why INTJs and INFJs can seem stubborn. That desire IS them."
+
+BAD ANSWER EXAMPLE (never do this):
+"According to the material, Ni hero might potentially be described as perhaps focusing on desires. CS Joseph explains in Season 4 that this could mean..."
+
+CONTENT TO PROCESS:
+{content}
+
+Generate 15-20 Q&A pairs now. Output ONLY valid JSON lines, no other text:
+"""
+
+
+def parse_qa_response(response_text: str) -> list[dict]:
+    """
+    Parse JSON lines from AI response.
+    Handles common issues like trailing commas, markdown wrappers.
+    Returns list of valid Q&A pairs.
+    """
+    pairs = []
+    
+    # Remove markdown code block wrappers if present
+    text = response_text.strip()
+    if text.startswith("```"):
+        # Find the end of the first line (```json or ```)
+        first_newline = text.find('\n')
+        if first_newline != -1:
+            text = text[first_newline + 1:]
+        # Remove closing ```
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+    
+    for line in text.split('\n'):
+        line = line.strip()
+        
+        # Skip empty lines or non-JSON
+        if not line or not line.startswith('{'):
+            continue
+        
+        # Try to parse JSON
+        try:
+            pair = json.loads(line)
+            
+            # Validate structure
+            if 'messages' in pair:
+                messages = pair['messages']
+                if len(messages) >= 2:
+                    if messages[0].get('role') == 'user' and messages[1].get('role') == 'assistant':
+                        if messages[0].get('content') and messages[1].get('content'):
+                            pairs.append(pair)
+                            continue
+        except json.JSONDecodeError:
+            pass
+        
+        # Try to fix common JSON issues
+        try:
+            # Remove trailing comma
+            fixed = line.rstrip(',')
+            pair = json.loads(fixed)
+            if 'messages' in pair and len(pair['messages']) >= 2:
+                pairs.append(pair)
+        except json.JSONDecodeError:
+            # Log but don't crash
+            print(f"   ⚠️ Could not parse line: {line[:80]}...")
+            continue
+    
+    return pairs
+
+
+def generate_qa_pairs_gpt_mini(chunk: str, openai_client) -> list[dict]:
+    """
+    Generate Q&A pairs from a text chunk using GPT-4o-mini.
+    Returns list of parsed Q&A pairs, or empty list on failure.
+    """
+    prompt = QA_GENERATION_PROMPT.format(content=chunk)
+    
+    try:
+        completion = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,  # Slightly creative for varied questions
+            max_tokens=4000,
+            timeout=120
+        )
+        
+        response_text = completion.choices[0].message.content
+        
+        # Log API usage for cost tracking
+        input_tokens = completion.usage.prompt_tokens
+        output_tokens = completion.usage.completion_tokens
+        cost = (input_tokens * 0.15 / 1000000) + (output_tokens * 0.60 / 1000000)
+        log_api_usage("training_pair_generation", "gpt-4o-mini", input_tokens, output_tokens, cost)
+        
+        # Parse the response
+        pairs = parse_qa_response(response_text)
+        return pairs
+        
+    except Exception as e:
+        print(f"   ❌ GPT-4o-mini API error: {str(e)}")
+        return []
+
+
+async def process_all_chunks_for_training(
+    chunks: list[str],
+    source_filename: str,
+    openai_client,
+    resume_from: int = 0
+) -> tuple[Path, list[int]]:
+    """
+    Process all chunks to generate Q&A training pairs.
+    
+    CRITICAL: Saves progress after EACH chunk for crash recovery.
+    Can resume from any chunk if interrupted.
+    
+    Args:
+        chunks: List of text chunks to process
+        source_filename: Original PDF filename
+        openai_client: Initialized OpenAI client
+        resume_from: Chunk index to resume from (0 = start fresh)
+    
+    Returns:
+        (final_output_path, list_of_failed_chunk_indices)
+    """
+    import time
+    
+    failed_chunks = []
+    total_pairs = 0
+    
+    # Initialize progress tracking if starting fresh
+    if resume_from == 0:
+        start_training_processing(source_filename, chunks)
+        print(f"📝 Starting Q&A generation: {source_filename}")
+        print(f"   Total chunks: {len(chunks)}")
+    else:
+        print(f"📝 Resuming Q&A generation: {source_filename}")
+        print(f"   Resuming from chunk {resume_from + 1} of {len(chunks)}")
+    
+    # Process each chunk
+    for i in range(resume_from, len(chunks)):
+        chunk = chunks[i]
+        chunk_word_count = len(chunk.split())
+        print(f"\n🔄 Processing chunk {i + 1}/{len(chunks)} ({chunk_word_count} words)...")
+        
+        # Try up to 3 times per chunk
+        pairs = []
+        for attempt in range(3):
+            pairs = generate_qa_pairs_gpt_mini(chunk, openai_client)
+            
+            if pairs:
+                # SUCCESS: Save immediately (crash recovery)
+                progress = save_training_chunk_progress(source_filename, i, pairs)
+                total_pairs += len(pairs)
+                print(f"   ✅ Generated {len(pairs)} pairs (total: {total_pairs})")
+                break
+            else:
+                if attempt < 2:
+                    print(f"   ⚠️ Retry {attempt + 2}/3 in 5 seconds...")
+                    time.sleep(5)
+                else:
+                    print(f"   ❌ Failed after 3 attempts")
+                    failed_chunks.append(i + 1)  # 1-indexed for display
+                    # Still save progress (with 0 pairs) so we don't retry this chunk
+                    save_training_chunk_progress(source_filename, i, [])
+        
+        # Rate limiting between chunks (except after last chunk)
+        if i < len(chunks) - 1:
+            time.sleep(1.5)
+    
+    # All chunks processed - finalize
+    final_path = finalize_training_processing(source_filename)
+    
+    print(f"\n{'=' * 50}")
+    print(f"✅ Q&A GENERATION COMPLETE: {source_filename}")
+    print(f"   Total pairs generated: {total_pairs}")
+    print(f"   Output: {final_path}")
+    if failed_chunks:
+        print(f"   ⚠️ Failed chunks: {failed_chunks}")
+    print(f"{'=' * 50}")
+    
+    return final_path, failed_chunks
+
+
+def process_chunks_for_training_sync(
+    chunks: list[str],
+    source_filename: str,
+    openai_client,
+    resume_from: int = 0
+) -> tuple[Path, list[int]]:
+    """
+    Synchronous version of process_all_chunks_for_training.
+    Use this when not in an async context.
+    """
+    import time
+    
+    failed_chunks = []
+    total_pairs = 0
+    
+    if resume_from == 0:
+        start_training_processing(source_filename, chunks)
+        print(f"📝 Starting Q&A generation: {source_filename}")
+        print(f"   Total chunks: {len(chunks)}")
+    else:
+        print(f"📝 Resuming Q&A generation: {source_filename}")
+        print(f"   Resuming from chunk {resume_from + 1} of {len(chunks)}")
+    
+    for i in range(resume_from, len(chunks)):
+        chunk = chunks[i]
+        chunk_word_count = len(chunk.split())
+        print(f"\n🔄 Processing chunk {i + 1}/{len(chunks)} ({chunk_word_count} words)...")
+        
+        pairs = []
+        for attempt in range(3):
+            pairs = generate_qa_pairs_gpt_mini(chunk, openai_client)
+            
+            if pairs:
+                progress = save_training_chunk_progress(source_filename, i, pairs)
+                total_pairs += len(pairs)
+                print(f"   ✅ Generated {len(pairs)} pairs (total: {total_pairs})")
+                break
+            else:
+                if attempt < 2:
+                    print(f"   ⚠️ Retry {attempt + 2}/3 in 5 seconds...")
+                    time.sleep(5)
+                else:
+                    print(f"   ❌ Failed after 3 attempts")
+                    failed_chunks.append(i + 1)
+                    save_training_chunk_progress(source_filename, i, [])
+        
+        if i < len(chunks) - 1:
+            time.sleep(1.5)
+    
+    final_path = finalize_training_processing(source_filename)
+    
+    print(f"\n{'=' * 50}")
+    print(f"✅ Q&A GENERATION COMPLETE: {source_filename}")
+    print(f"   Total pairs generated: {total_pairs}")
+    print(f"   Output: {final_path}")
+    if failed_chunks:
+        print(f"   ⚠️ Failed chunks: {failed_chunks}")
+    print(f"{'=' * 50}")
+    
+    return final_path, failed_chunks
+
+
+# =============================================================================
+# TRAINING PAIR GENERATOR: Phase 3 - Storage & Collection
+# =============================================================================
+
+import random
+
+
+def get_training_file_path(filename: str, status: str = "pending") -> Path:
+    """
+    Get the full path to a training file by filename and status.
+    
+    Args:
+        filename: The .jsonl filename
+        status: "pending", "approved", or "in_progress"
+    
+    Returns:
+        Full Path to the file
+    """
+    if status == "pending":
+        return TRAINING_PENDING_PATH / filename
+    elif status == "approved":
+        return TRAINING_APPROVED_PATH / filename
+    elif status == "in_progress":
+        return TRAINING_IN_PROGRESS_PATH / filename
+    else:
+        raise ValueError(f"Invalid status: {status}")
+
+
+def get_pairs_for_review(filename: str) -> list[dict]:
+    """
+    Load all Q&A pairs from a pending file for the review UI.
+    
+    Returns list of dicts with index, question, answer, and status.
+    """
+    filepath = TRAINING_PENDING_PATH / filename
+    
+    if not filepath.exists():
+        print(f"❌ File not found: {filepath}")
+        return []
+    
+    pairs = []
+    with open(filepath) as f:
+        for i, line in enumerate(f):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                pair = json.loads(line)
+                pairs.append({
+                    'index': i,
+                    'question': pair['messages'][0]['content'],
+                    'answer': pair['messages'][1]['content'],
+                    'status': 'unchanged'  # Track edits in UI
+                })
+            except (json.JSONDecodeError, KeyError, IndexError) as e:
+                print(f"   ⚠️ Error parsing pair {i}: {e}")
+                pairs.append({
+                    'index': i,
+                    'question': '[PARSE ERROR]',
+                    'answer': str(line)[:100],
+                    'status': 'error'
+                })
+    
+    print(f"📋 Loaded {len(pairs)} pairs from {filename}")
+    return pairs
+
+
+def update_training_pair(filename: str, pair_index: int, new_question: str, new_answer: str) -> bool:
+    """
+    Update a specific Q&A pair in a pending_review file.
+    
+    Args:
+        filename: The .jsonl filename in pending_review
+        pair_index: Index of the pair to update (0-based)
+        new_question: New question text
+        new_answer: New answer text
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    filepath = TRAINING_PENDING_PATH / filename
+    
+    if not filepath.exists():
+        print(f"❌ File not found: {filepath}")
+        return False
+    
+    # Read all pairs
+    pairs = []
+    with open(filepath) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    pairs.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pairs.append(None)  # Preserve position
+    
+    # Validate index
+    if pair_index < 0 or pair_index >= len(pairs):
+        print(f"❌ Invalid pair index: {pair_index} (file has {len(pairs)} pairs)")
+        return False
+    
+    # Update the specific pair
+    pairs[pair_index] = {
+        "messages": [
+            {"role": "user", "content": new_question},
+            {"role": "assistant", "content": new_answer}
+        ]
+    }
+    
+    # Write back all pairs
+    with open(filepath, 'w') as f:
+        for pair in pairs:
+            if pair:
+                f.write(json.dumps(pair) + '\n')
+    
+    print(f"✅ Updated pair {pair_index} in {filename}")
+    return True
+
+
+def delete_training_pair(filename: str, pair_index: int) -> bool:
+    """
+    Delete a specific Q&A pair from a pending_review file.
+    
+    Args:
+        filename: The .jsonl filename in pending_review
+        pair_index: Index of the pair to delete (0-based)
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    filepath = TRAINING_PENDING_PATH / filename
+    
+    if not filepath.exists():
+        print(f"❌ File not found: {filepath}")
+        return False
+    
+    # Read all pairs
+    pairs = []
+    with open(filepath) as f:
+        for i, line in enumerate(f):
+            line = line.strip()
+            if line and i != pair_index:
+                try:
+                    pairs.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass  # Skip malformed lines
+    
+    # Write back (without the deleted pair)
+    with open(filepath, 'w') as f:
+        for pair in pairs:
+            f.write(json.dumps(pair) + '\n')
+    
+    print(f"🗑️ Deleted pair {pair_index} from {filename}")
+    return True
+
+
+def approve_training_file(filename: str) -> Path:
+    """
+    Move a file from pending_review to approved.
+    This marks it as quality-checked and ready for training.
+    
+    Args:
+        filename: The .jsonl filename in pending_review
+    
+    Returns:
+        Path to the approved file, or None if failed
+    """
+    source = TRAINING_PENDING_PATH / filename
+    dest = TRAINING_APPROVED_PATH / filename
+    
+    if not source.exists():
+        print(f"❌ File not found: {source}")
+        return None
+    
+    # Move the file
+    shutil.move(str(source), str(dest))
+    
+    # Update index
+    index = load_training_index()
+    
+    # Count pairs in the approved file
+    pair_count = sum(1 for _ in open(dest))
+    
+    # Add to index
+    index["files"].append({
+        "filename": filename,
+        "status": "approved",
+        "pair_count": pair_count,
+        "approved_at": datetime.now().isoformat()
+    })
+    index["total_files"] = len([f for f in index["files"] if f.get("status") == "approved"])
+    index["total_pairs"] = sum(f.get("pair_count", 0) for f in index["files"] if f.get("status") == "approved")
+    
+    save_training_index(index)
+    
+    print(f"✅ Approved: {filename} ({pair_count} pairs)")
+    print(f"   Moved to: {dest}")
+    return dest
+
+
+def unapprove_training_file(filename: str) -> Path:
+    """
+    Move a file back from approved to pending_review.
+    Use this if you need to make more edits.
+    
+    Args:
+        filename: The .jsonl filename in approved
+    
+    Returns:
+        Path to the pending file, or None if failed
+    """
+    source = TRAINING_APPROVED_PATH / filename
+    dest = TRAINING_PENDING_PATH / filename
+    
+    if not source.exists():
+        print(f"❌ File not found: {source}")
+        return None
+    
+    # Move the file
+    shutil.move(str(source), str(dest))
+    
+    # Update index - remove from approved
+    index = load_training_index()
+    index["files"] = [f for f in index["files"] if f.get("filename") != filename]
+    index["total_files"] = len([f for f in index["files"] if f.get("status") == "approved"])
+    index["total_pairs"] = sum(f.get("pair_count", 0) for f in index["files"] if f.get("status") == "approved")
+    
+    save_training_index(index)
+    
+    print(f"↩️ Unapproved: {filename}")
+    print(f"   Moved back to: {dest}")
+    return dest
+
+
+def combine_approved_training_files() -> dict:
+    """
+    Combine ALL approved files into one master training_data.jsonl file.
+    
+    Features:
+    - Removes duplicate questions (case-insensitive)
+    - Shuffles the order (better for training)
+    - Reports statistics
+    
+    Returns:
+        Dict with path, total_pairs, duplicates_removed, errors
+    """
+    ensure_training_pairs_storage()
+    
+    all_pairs = []
+    seen_questions = set()
+    duplicates_removed = 0
+    errors = []
+    files_processed = 0
+    
+    print("📦 Combining approved training files...")
+    
+    # Read all approved .jsonl files
+    for filepath in TRAINING_APPROVED_PATH.glob("*.jsonl"):
+        files_processed += 1
+        file_pairs = 0
+        file_dupes = 0
+        
+        try:
+            with open(filepath) as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    try:
+                        pair = json.loads(line)
+                        question = pair['messages'][0]['content'].strip().lower()
+                        
+                        # Check for duplicate
+                        if question in seen_questions:
+                            file_dupes += 1
+                            duplicates_removed += 1
+                            continue
+                        
+                        seen_questions.add(question)
+                        all_pairs.append(pair)
+                        file_pairs += 1
+                        
+                    except (json.JSONDecodeError, KeyError, IndexError) as e:
+                        errors.append(f"{filepath.name} line {line_num}: {str(e)[:50]}")
+            
+            print(f"   ✅ {filepath.name}: {file_pairs} pairs ({file_dupes} duplicates)")
+            
+        except Exception as e:
+            errors.append(f"{filepath.name}: {str(e)}")
+            print(f"   ❌ {filepath.name}: {str(e)}")
+    
+    if not all_pairs:
+        print("⚠️ No pairs found in approved files!")
+        return {
+            "path": None,
+            "total_pairs": 0,
+            "duplicates_removed": 0,
+            "files_processed": files_processed,
+            "errors": errors
+        }
+    
+    # Shuffle for better training (topics mixed together)
+    random.shuffle(all_pairs)
+    print(f"🔀 Shuffled {len(all_pairs)} pairs")
+    
+    # Write combined file
+    output_path = TRAINING_PAIRS_PATH / "training_data.jsonl"
+    with open(output_path, 'w') as f:
+        for pair in all_pairs:
+            f.write(json.dumps(pair) + '\n')
+    
+    print(f"\n{'=' * 50}")
+    print(f"✅ COMBINED TRAINING FILE CREATED")
+    print(f"   Path: {output_path}")
+    print(f"   Total pairs: {len(all_pairs)}")
+    print(f"   Duplicates removed: {duplicates_removed}")
+    print(f"   Files processed: {files_processed}")
+    if errors:
+        print(f"   Errors: {len(errors)}")
+    print(f"{'=' * 50}")
+    
+    return {
+        "path": str(output_path),
+        "total_pairs": len(all_pairs),
+        "duplicates_removed": duplicates_removed,
+        "files_processed": files_processed,
+        "errors": errors
+    }
+
+
+def format_pairs_for_clipboard(filename: str) -> str:
+    """
+    Format all Q&A pairs from a file for copying to Claude for review.
+    
+    Returns a clean text format that's easy to paste into Claude:
+    
+    PAIR 1:
+    Q: Why do ENFPs struggle with entitlement?
+    A: ENFPs can develop entitlement when...
+    
+    PAIR 2:
+    Q: What do ENFPs need from their parents?
+    A: ENFPs need a balance of love AND criticism...
+    """
+    pairs = get_pairs_for_review(filename)
+    
+    if not pairs:
+        return f"No pairs found in {filename}"
+    
+    output = []
+    for pair in pairs:
+        if pair['status'] == 'error':
+            continue
+        output.append(f"PAIR {pair['index'] + 1}:")
+        output.append(f"Q: {pair['question']}")
+        output.append(f"A: {pair['answer']}")
+        output.append("")  # Blank line between pairs
+    
+    return '\n'.join(output)
+
+
+def delete_training_file(filename: str, status: str = "pending") -> bool:
+    """
+    Delete a training file entirely.
+    
+    Args:
+        filename: The .jsonl filename
+        status: "pending" or "approved"
+    
+    Returns:
+        True if deleted, False otherwise
+    """
+    if status == "pending":
+        filepath = TRAINING_PENDING_PATH / filename
+    elif status == "approved":
+        filepath = TRAINING_APPROVED_PATH / filename
+        # Also remove from index
+        index = load_training_index()
+        index["files"] = [f for f in index["files"] if f.get("filename") != filename]
+        index["total_files"] = len([f for f in index["files"] if f.get("status") == "approved"])
+        index["total_pairs"] = sum(f.get("pair_count", 0) for f in index["files"] if f.get("status") == "approved")
+        save_training_index(index)
+    else:
+        print(f"❌ Invalid status: {status}")
+        return False
+    
+    if not filepath.exists():
+        print(f"❌ File not found: {filepath}")
+        return False
+    
+    filepath.unlink()
+    print(f"🗑️ Deleted: {filepath}")
+    return True
+
+
+def get_combined_training_file_path() -> Path:
+    """Get the path to the combined training_data.jsonl file."""
+    return TRAINING_PAIRS_PATH / "training_data.jsonl"
+
+
+def get_combined_training_stats() -> dict:
+    """Get statistics about the combined training file."""
+    filepath = get_combined_training_file_path()
+    
+    if not filepath.exists():
+        return {
+            "exists": False,
+            "path": str(filepath),
+            "pair_count": 0,
+            "file_size_kb": 0
+        }
+    
+    pair_count = sum(1 for _ in open(filepath))
+    file_size = filepath.stat().st_size / 1024  # KB
+    
+    return {
+        "exists": True,
+        "path": str(filepath),
+        "pair_count": pair_count,
+        "file_size_kb": round(file_size, 2)
+    }
+
+
+# =============================================================================
+# END: Training Pair Generator Phase 1 + Phase 2 + Phase 3
+# =============================================================================
 
 
 # === Semantic Chunking Function ===
@@ -8597,6 +9653,332 @@ async def get_usage_stats():
             "by_operation": {},
             "recent_calls": []
         }
+
+
+# =============================================================================
+# TRAINING PAIR GENERATOR: API Endpoints
+# =============================================================================
+
+class TrainingPairProcessRequest(BaseModel):
+    """Request model for processing a PDF for training pairs"""
+    pass  # File is sent via form data
+
+
+@app.get("/api/training-pairs/stats")
+async def get_training_pairs_stats():
+    """Get overall statistics for training pairs"""
+    try:
+        stats = get_training_stats()
+        combined = get_combined_training_stats()
+        return {
+            **stats,
+            "combined_file": combined
+        }
+    except Exception as e:
+        print(f"❌ Error getting training stats: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/training-pairs/in-progress")
+async def get_training_in_progress():
+    """Get list of files that can be resumed"""
+    try:
+        files = get_in_progress_training_files()
+        return {"files": files}
+    except Exception as e:
+        print(f"❌ Error getting in-progress files: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/training-pairs/pending")
+async def get_training_pending():
+    """Get list of files in pending_review"""
+    try:
+        files = get_pending_training_files()
+        return {"files": files}
+    except Exception as e:
+        print(f"❌ Error getting pending files: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/training-pairs/approved")
+async def get_training_approved():
+    """Get list of approved files"""
+    try:
+        files = get_approved_training_files()
+        return {"files": files}
+    except Exception as e:
+        print(f"❌ Error getting approved files: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/training-pairs/process")
+async def process_training_pairs(file: UploadFile = File(...)):
+    """
+    Process a PDF to generate Q&A training pairs.
+    
+    Pipeline:
+    1. Extract text from PDF
+    2. Fix typos (preprocess_transcript)
+    3. Chunk if long
+    4. Generate Q&A pairs
+    5. Save to pending_review
+    """
+    try:
+        print(f"\n{'=' * 50}")
+        print(f"🎓 TRAINING PAIR GENERATION: {file.filename}")
+        print(f"{'=' * 50}")
+        
+        # Read PDF
+        contents = await file.read()
+        pdf_reader = PdfReader(io.BytesIO(contents))
+        raw_text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
+        
+        print(f"📄 Extracted {len(raw_text)} characters from {len(pdf_reader.pages)} pages")
+        
+        if len(raw_text) < 100:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "PDF has insufficient text content"}
+            )
+        
+        # Fix typos using existing preprocess_transcript
+        print(f"🔧 Fixing MBTI typos...")
+        cleaned_text = preprocess_transcript(raw_text)
+        print(f"   ✅ After typo fix: {len(cleaned_text)} characters")
+        
+        # Chunk for Q&A generation
+        print(f"📦 Chunking text...")
+        chunks = chunk_text_for_training(cleaned_text)
+        
+        # Get OpenAI client
+        openai_client = get_openai_client()
+        if not openai_client:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "OpenAI client not initialized"}
+            )
+        
+        # Process all chunks (synchronous version)
+        print(f"🤖 Generating Q&A pairs...")
+        final_path, failed_chunks = process_chunks_for_training_sync(
+            chunks=chunks,
+            source_filename=file.filename,
+            openai_client=openai_client,
+            resume_from=0
+        )
+        
+        # Count pairs in output
+        pair_count = sum(1 for _ in open(final_path))
+        
+        return {
+            "success": True,
+            "filename": file.filename,
+            "output_file": final_path.name,
+            "chunks_processed": len(chunks),
+            "pairs_generated": pair_count,
+            "failed_chunks": failed_chunks,
+            "status": "pending_review"
+        }
+        
+    except Exception as e:
+        print(f"❌ Training pair generation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/training-pairs/resume")
+async def resume_training_processing(filename: str):
+    """Resume processing an interrupted file"""
+    try:
+        # Get resume info
+        resume_info = get_resume_info(filename)
+        if not resume_info:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"No in-progress file found for {filename}"}
+            )
+        
+        resume_from = resume_info["resume_from_chunk"]
+        progress = resume_info["progress"]
+        
+        print(f"\n📝 Resuming: {filename} from chunk {resume_from + 1}")
+        
+        # We need to re-process the file to get the chunks
+        # This is a limitation - we'd need to store chunks to truly resume
+        return JSONResponse(
+            status_code=501,
+            content={
+                "error": "Resume requires re-uploading the PDF. Use 'Start Over' or re-upload the file.",
+                "progress": progress
+            }
+        )
+        
+    except Exception as e:
+        print(f"❌ Resume error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.delete("/api/training-pairs/discard/{filename}")
+async def discard_training_file(filename: str):
+    """Discard an in-progress file"""
+    try:
+        discard_training_progress(filename)
+        return {"success": True, "message": f"Discarded {filename}"}
+    except Exception as e:
+        print(f"❌ Discard error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/training-pairs/review/{filename}")
+async def get_training_pairs_for_review(filename: str):
+    """Get all pairs from a pending file for review"""
+    try:
+        pairs = get_pairs_for_review(filename)
+        return {"filename": filename, "pairs": pairs, "total": len(pairs)}
+    except Exception as e:
+        print(f"❌ Review error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.patch("/api/training-pairs/pair/{filename}")
+async def update_training_pair_endpoint(filename: str, pair_index: int, question: str, answer: str):
+    """Update a specific Q&A pair"""
+    try:
+        success = update_training_pair(filename, pair_index, question, answer)
+        if success:
+            return {"success": True, "message": f"Updated pair {pair_index}"}
+        else:
+            return JSONResponse(status_code=400, content={"error": "Failed to update pair"})
+    except Exception as e:
+        print(f"❌ Update error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.delete("/api/training-pairs/pair/{filename}/{pair_index}")
+async def delete_training_pair_endpoint(filename: str, pair_index: int):
+    """Delete a specific Q&A pair"""
+    try:
+        success = delete_training_pair(filename, pair_index)
+        if success:
+            return {"success": True, "message": f"Deleted pair {pair_index}"}
+        else:
+            return JSONResponse(status_code=400, content={"error": "Failed to delete pair"})
+    except Exception as e:
+        print(f"❌ Delete error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/training-pairs/approve/{filename}")
+async def approve_training_file_endpoint(filename: str):
+    """Approve a file and move to approved folder"""
+    try:
+        dest = approve_training_file(filename)
+        if dest:
+            return {"success": True, "message": f"Approved {filename}", "path": str(dest)}
+        else:
+            return JSONResponse(status_code=400, content={"error": "Failed to approve file"})
+    except Exception as e:
+        print(f"❌ Approve error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/training-pairs/unapprove/{filename}")
+async def unapprove_training_file_endpoint(filename: str):
+    """Move a file back from approved to pending for more edits"""
+    try:
+        dest = unapprove_training_file(filename)
+        if dest:
+            return {"success": True, "message": f"Unapproved {filename}", "path": str(dest)}
+        else:
+            return JSONResponse(status_code=400, content={"error": "Failed to unapprove file"})
+    except Exception as e:
+        print(f"❌ Unapprove error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/training-pairs/combine")
+async def combine_training_files_endpoint():
+    """Combine all approved files into master training_data.jsonl"""
+    try:
+        result = combine_approved_training_files()
+        return result
+    except Exception as e:
+        print(f"❌ Combine error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/training-pairs/download/{filename}")
+async def download_training_file(filename: str, status: str = "pending"):
+    """Download a specific training file"""
+    try:
+        filepath = get_training_file_path(filename, status)
+        if not filepath.exists():
+            return JSONResponse(status_code=404, content={"error": "File not found"})
+        
+        return FileResponse(
+            path=str(filepath),
+            filename=filename,
+            media_type="application/x-jsonlines"
+        )
+    except Exception as e:
+        print(f"❌ Download error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/training-pairs/download-all")
+async def download_combined_training_file():
+    """Download the combined training_data.jsonl file"""
+    try:
+        # First combine to ensure it's up to date
+        result = combine_approved_training_files()
+        
+        if not result.get("path"):
+            return JSONResponse(status_code=404, content={"error": "No approved files to combine"})
+        
+        filepath = Path(result["path"])
+        if not filepath.exists():
+            return JSONResponse(status_code=404, content={"error": "Combined file not found"})
+        
+        return FileResponse(
+            path=str(filepath),
+            filename="training_data.jsonl",
+            media_type="application/x-jsonlines"
+        )
+    except Exception as e:
+        print(f"❌ Download all error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/training-pairs/clipboard/{filename}")
+async def get_clipboard_format(filename: str):
+    """Get pairs formatted for clipboard (to paste into Claude for review)"""
+    try:
+        text = format_pairs_for_clipboard(filename)
+        return {"text": text}
+    except Exception as e:
+        print(f"❌ Clipboard error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.delete("/api/training-pairs/file/{filename}")
+async def delete_training_file_endpoint(filename: str, status: str = "pending"):
+    """Delete an entire training file"""
+    try:
+        success = delete_training_file(filename, status)
+        if success:
+            return {"success": True, "message": f"Deleted {filename}"}
+        else:
+            return JSONResponse(status_code=400, content={"error": "Failed to delete file"})
+    except Exception as e:
+        print(f"❌ Delete file error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# =============================================================================
+# END: Training Pair Generator API Endpoints
+# =============================================================================
 
 
 # === Content Atlas API ===

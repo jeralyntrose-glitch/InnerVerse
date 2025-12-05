@@ -427,6 +427,120 @@
       </div>
     </div>
 
+    <!-- 🎓 Training Pair Generator Section -->
+    <div class="training-pairs-section">
+      <button class="training-pairs-toggle" id="training-pairs-toggle">
+        <div class="training-pairs-toggle-content">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+          </svg>
+          <span>🎓 Training Pair Generator</span>
+        </div>
+        <svg class="training-pairs-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      
+      <div class="training-pairs-content" id="training-pairs-content">
+        <!-- Stats Overview -->
+        <div class="training-stats-overview" id="training-stats-overview">
+          <div class="training-stat-item">
+            <div class="training-stat-value" id="training-stat-pending">0</div>
+            <div class="training-stat-label">Pending Review</div>
+          </div>
+          <div class="training-stat-item">
+            <div class="training-stat-value" id="training-stat-approved">0</div>
+            <div class="training-stat-label">Approved</div>
+          </div>
+          <div class="training-stat-item">
+            <div class="training-stat-value" id="training-stat-pairs">0</div>
+            <div class="training-stat-label">Total Pairs</div>
+          </div>
+        </div>
+        
+        <!-- Resume Section (shows if interrupted files exist) -->
+        <div class="training-resume-section hidden" id="training-resume-section">
+          <div class="training-resume-header">
+            <span>⚠️ Interrupted Processing</span>
+          </div>
+          <div class="training-resume-list" id="training-resume-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        
+        <!-- Upload Section -->
+        <div class="training-upload-section">
+          <p class="training-description">
+            Upload a PDF to generate Q&A training pairs for fine-tuning. Works with transcripts and books of any length.
+          </p>
+          <div class="training-upload-row">
+            <label for="training-file-input" class="btn-training-upload">
+              📄 Choose PDF
+            </label>
+            <input type="file" id="training-file-input" accept="application/pdf" style="display: none;" />
+            <span class="training-file-name" id="training-file-name">No file selected</span>
+            <button id="training-process-btn" class="btn-training-process" disabled>
+              🤖 Generate Pairs
+            </button>
+          </div>
+        </div>
+        
+        <!-- Processing Progress -->
+        <div class="training-progress-section hidden" id="training-progress-section">
+          <div class="training-progress-header">
+            <h4>🔄 Processing: <span id="training-progress-filename">file.pdf</span></h4>
+          </div>
+          <div class="training-progress-stats">
+            <div class="training-progress-stat">
+              <span class="training-progress-label">Chunks:</span>
+              <span class="training-progress-value" id="training-progress-chunks">0 / 0</span>
+            </div>
+            <div class="training-progress-stat">
+              <span class="training-progress-label">Pairs Generated:</span>
+              <span class="training-progress-value" id="training-progress-pairs">0</span>
+            </div>
+          </div>
+          <div class="training-progress-bar-container">
+            <div class="training-progress-bar" id="training-progress-bar"></div>
+          </div>
+          <div class="training-progress-status" id="training-progress-status">
+            Initializing...
+          </div>
+        </div>
+        
+        <!-- Pending Files List -->
+        <div class="training-files-section">
+          <div class="training-files-header">
+            <h4>📋 Pending Review</h4>
+            <button class="btn-refresh-training" id="btn-refresh-training" title="Refresh">🔄</button>
+          </div>
+          <div class="training-files-list" id="training-pending-list">
+            <div class="training-files-placeholder">No files pending review</div>
+          </div>
+        </div>
+        
+        <!-- Approved Files List -->
+        <div class="training-files-section">
+          <div class="training-files-header">
+            <h4>✅ Approved</h4>
+          </div>
+          <div class="training-files-list" id="training-approved-list">
+            <div class="training-files-placeholder">No approved files yet</div>
+          </div>
+        </div>
+        
+        <!-- Download Section -->
+        <div class="training-download-section">
+          <button id="training-combine-btn" class="btn-training-combine">
+            📦 Combine All & Download
+          </button>
+          <p class="training-download-note">
+            Combines all approved files into training_data.jsonl with duplicates removed and shuffled.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- 💰 Cost Tracker Section -->
     <div class="cost-tracker-section">
       <button class="cost-tracker-toggle" id="cost-tracker-toggle">
@@ -509,6 +623,78 @@
       <div id="error-modal-message" class="error-modal-message"></div>
       <div class="error-modal-buttons">
         <button id="error-modal-ok" class="error-modal-btn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🎓 Training Pair Review Modal -->
+  <div id="training-review-modal" class="training-review-modal hidden">
+    <div class="training-review-container">
+      <div class="training-review-header">
+        <div class="training-review-title">
+          <h2>📝 Review Training Pairs</h2>
+          <span id="training-review-filename" class="training-review-filename">filename.jsonl</span>
+        </div>
+        <button id="training-review-close" class="training-review-close">×</button>
+      </div>
+      
+      <div class="training-review-stats">
+        <div class="training-review-stat">
+          <span class="stat-label">Total Pairs:</span>
+          <span id="training-review-total" class="stat-value">0</span>
+        </div>
+        <div class="training-review-stat">
+          <span class="stat-label">Edited:</span>
+          <span id="training-review-edited" class="stat-value">0</span>
+        </div>
+        <div class="training-review-stat">
+          <span class="stat-label">Deleted:</span>
+          <span id="training-review-deleted" class="stat-value">0</span>
+        </div>
+      </div>
+      
+      <div class="training-review-actions-top">
+        <button id="training-copy-all-btn" class="btn-training-copy">
+          📋 Copy All for Claude Review
+        </button>
+      </div>
+      
+      <div class="training-review-pairs" id="training-review-pairs">
+        <!-- Pairs will be loaded here -->
+        <div class="training-pairs-loading">Loading pairs...</div>
+      </div>
+      
+      <div class="training-review-footer">
+        <button id="training-review-cancel" class="btn-review-cancel">Cancel</button>
+        <button id="training-review-approve" class="btn-review-approve">
+          ✅ Approve & Add to Collection
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🎓 Training Pair Edit Modal -->
+  <div id="training-edit-modal" class="training-edit-modal hidden">
+    <div class="training-edit-container">
+      <div class="training-edit-header">
+        <h3>✏️ Edit Pair <span id="training-edit-index">#1</span></h3>
+        <button id="training-edit-close" class="training-edit-close">×</button>
+      </div>
+      
+      <div class="training-edit-form">
+        <div class="training-edit-field">
+          <label for="training-edit-question">Question:</label>
+          <textarea id="training-edit-question" rows="3" placeholder="Enter the question..."></textarea>
+        </div>
+        <div class="training-edit-field">
+          <label for="training-edit-answer">Answer:</label>
+          <textarea id="training-edit-answer" rows="6" placeholder="Enter the answer..."></textarea>
+        </div>
+      </div>
+      
+      <div class="training-edit-footer">
+        <button id="training-edit-cancel" class="btn-edit-cancel">Cancel</button>
+        <button id="training-edit-save" class="btn-edit-save">💾 Save Changes</button>
       </div>
     </div>
   </div>
@@ -1041,6 +1227,1407 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+    
+    /* === Training Pair Generator Styles === */
+    .training-pairs-section {
+      margin-top: 20px;
+    }
+    
+    .training-pairs-toggle {
+      width: 100%;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.1));
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+    
+    .training-pairs-toggle:hover {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(6, 182, 212, 0.15));
+    }
+    
+    .training-pairs-toggle-content {
+      display: flex;
+      align-items: center;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    
+    .training-pairs-chevron {
+      transition: transform 0.3s;
+    }
+    
+    .training-pairs-toggle.collapsed .training-pairs-chevron {
+      transform: rotate(-90deg);
+    }
+    
+    .training-pairs-content {
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      background: var(--bg-secondary);
+    }
+    
+    .training-pairs-content.collapsed {
+      display: none;
+    }
+    
+    /* Stats Overview */
+    .training-stats-overview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .training-stat-item {
+      text-align: center;
+      padding: 16px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .training-stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+    
+    .training-stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    /* Resume Section */
+    .training-resume-section {
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .training-resume-header {
+      font-weight: 600;
+      color: #eab308;
+      margin-bottom: 12px;
+    }
+    
+    .training-resume-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: var(--bg-primary);
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    
+    .training-resume-info {
+      flex: 1;
+    }
+    
+    .training-resume-filename {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    
+    .training-resume-progress {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .training-resume-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-resume, .btn-discard {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .btn-resume {
+      background: #14b8a6;
+      color: white;
+    }
+    
+    .btn-discard {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    
+    /* Upload Section */
+    .training-upload-section {
+      margin-bottom: 20px;
+    }
+    
+    .training-description {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+    
+    .training-upload-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .btn-training-upload {
+      padding: 12px 24px;
+      background: var(--primary-color);
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    
+    .btn-training-upload:hover {
+      opacity: 0.9;
+    }
+    
+    .training-file-name {
+      flex: 1;
+      color: var(--text-secondary);
+      font-size: 14px;
+      min-width: 150px;
+    }
+    
+    .btn-training-process {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .btn-training-process:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+    
+    .btn-training-process:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* Progress Section */
+    .training-progress-section {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .training-progress-header h4 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+    }
+    
+    .training-progress-stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+    
+    .training-progress-stat {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .training-progress-label {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    
+    .training-progress-value {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .training-progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    
+    .training-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .training-progress-status {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    /* Files Lists */
+    .training-files-section {
+      margin-bottom: 20px;
+    }
+    
+    .training-files-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .training-files-header h4 {
+      margin: 0;
+      font-size: 15px;
+    }
+    
+    .btn-refresh-training {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    .btn-refresh-training:hover {
+      background: var(--bg-tertiary);
+    }
+    
+    .training-files-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .training-files-placeholder {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      border: 1px dashed var(--border-color);
+    }
+    
+    .training-file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    
+    .training-file-item:hover {
+      background: var(--bg-hover);
+    }
+    
+    .training-file-info {
+      flex: 1;
+    }
+    
+    .training-file-name-display {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    
+    .training-file-meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .training-file-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-training-action {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.2s;
+    }
+    
+    .btn-training-action:hover {
+      background: var(--bg-tertiary);
+    }
+    
+    .btn-training-action.primary {
+      background: #14b8a6;
+      color: white;
+      border-color: #14b8a6;
+    }
+    
+    .btn-training-action.primary:hover {
+      background: #0d9488;
+    }
+    
+    .btn-training-action.danger {
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    
+    .btn-training-action.danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+    
+    /* Download Section */
+    .training-download-section {
+      text-align: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .btn-training-combine {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+    
+    .btn-training-combine:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+    
+    .training-download-note {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 12px;
+    }
+    
+    /* === Training Pair Review Modal === */
+    .training-review-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .training-review-modal.hidden {
+      display: none;
+    }
+    
+    .training-review-container {
+      width: 100%;
+      max-width: 900px;
+      max-height: 90vh;
+      background: var(--bg-primary);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+    
+    .training-review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+    
+    .training-review-title h2 {
+      margin: 0 0 4px 0;
+      font-size: 20px;
+    }
+    
+    .training-review-filename {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-family: monospace;
+    }
+    
+    .training-review-close {
+      background: none;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 0;
+      line-height: 1;
+    }
+    
+    .training-review-close:hover {
+      color: var(--text-primary);
+    }
+    
+    .training-review-stats {
+      display: flex;
+      gap: 24px;
+      padding: 16px 24px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .training-review-stat {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .training-review-stat .stat-label {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    
+    .training-review-stat .stat-value {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .training-review-actions-top {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .btn-training-copy {
+      padding: 10px 20px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .btn-training-copy:hover {
+      background: var(--bg-tertiary);
+    }
+    
+    .training-review-pairs {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .training-pairs-loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+    
+    .training-pair-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .training-pair-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .training-pair-number {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--primary-color);
+    }
+    
+    .training-pair-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-pair-edit, .btn-pair-delete {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      transition: all 0.2s;
+    }
+    
+    .btn-pair-edit:hover {
+      background: var(--bg-hover);
+    }
+    
+    .btn-pair-delete {
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    
+    .btn-pair-delete:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .training-pair-content {
+      padding: 16px;
+    }
+    
+    .training-pair-question, .training-pair-answer {
+      margin-bottom: 12px;
+    }
+    
+    .training-pair-question:last-child, .training-pair-answer:last-child {
+      margin-bottom: 0;
+    }
+    
+    .training-pair-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+    
+    .training-pair-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-primary);
+    }
+    
+    .training-pair-question .training-pair-text {
+      font-weight: 500;
+    }
+    
+    .training-review-footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+    
+    .btn-review-cancel, .btn-review-approve {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .btn-review-cancel {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    
+    .btn-review-cancel:hover {
+      background: var(--bg-hover);
+    }
+    
+    .btn-review-approve {
+      background: linear-gradient(135deg, #10b981, #14b8a6);
+      color: white;
+    }
+    
+    .btn-review-approve:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    /* === Training Pair Edit Modal === */
+    .training-edit-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .training-edit-modal.hidden {
+      display: none;
+    }
+    
+    .training-edit-container {
+      width: 100%;
+      max-width: 600px;
+      background: var(--bg-primary);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+    
+    .training-edit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+    
+    .training-edit-header h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    
+    .training-edit-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 0;
+      line-height: 1;
+    }
+    
+    .training-edit-close:hover {
+      color: var(--text-primary);
+    }
+    
+    .training-edit-form {
+      padding: 24px;
+    }
+    
+    .training-edit-field {
+      margin-bottom: 20px;
+    }
+    
+    .training-edit-field:last-child {
+      margin-bottom: 0;
+    }
+    
+    .training-edit-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+    }
+    
+    .training-edit-field textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+      font-family: inherit;
+    }
+    
+    .training-edit-field textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+    
+    .training-edit-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 20px 24px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+    
+    .btn-edit-cancel, .btn-edit-save {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .btn-edit-cancel {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    
+    .btn-edit-cancel:hover {
+      background: var(--bg-hover);
+    }
+    
+    .btn-edit-save {
+      background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+      color: white;
+    }
+    
+    .btn-edit-save:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+    
+    /* Deleted pair styling */
+    .training-pair-card.deleted {
+      opacity: 0.5;
+      background: rgba(239, 68, 68, 0.05);
+    }
+    
+    .training-pair-card.deleted .training-pair-header {
+      background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .training-pair-card.edited .training-pair-header {
+      background: rgba(139, 92, 246, 0.1);
+    }
+    
+    .training-pair-card.edited .training-pair-number::after {
+      content: " (edited)";
+      font-size: 11px;
+      color: #8b5cf6;
+      font-weight: normal;
+    }
   </style>
+  
+  <!-- Training Pair Generator JavaScript -->
+  <script>
+  (function() {
+    // === Training Pair Generator ===
+    const trainingToggle = document.getElementById('training-pairs-toggle');
+    const trainingContent = document.getElementById('training-pairs-content');
+    const trainingFileInput = document.getElementById('training-file-input');
+    const trainingFileName = document.getElementById('training-file-name');
+    const trainingProcessBtn = document.getElementById('training-process-btn');
+    const trainingProgressSection = document.getElementById('training-progress-section');
+    const trainingResumeSection = document.getElementById('training-resume-section');
+    const trainingPendingList = document.getElementById('training-pending-list');
+    const trainingApprovedList = document.getElementById('training-approved-list');
+    const trainingCombineBtn = document.getElementById('training-combine-btn');
+    const refreshBtn = document.getElementById('btn-refresh-training');
+    
+    let selectedFile = null;
+    
+    // Toggle collapse
+    if (trainingToggle && trainingContent) {
+      trainingToggle.classList.add('collapsed');
+      trainingContent.classList.add('collapsed');
+      
+      trainingToggle.addEventListener('click', () => {
+        trainingToggle.classList.toggle('collapsed');
+        trainingContent.classList.toggle('collapsed');
+        
+        // Load data when opened
+        if (!trainingContent.classList.contains('collapsed')) {
+          loadTrainingData();
+        }
+      });
+    }
+    
+    // File input handler
+    if (trainingFileInput) {
+      trainingFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type === 'application/pdf') {
+          selectedFile = file;
+          trainingFileName.textContent = file.name;
+          trainingProcessBtn.disabled = false;
+        } else {
+          selectedFile = null;
+          trainingFileName.textContent = 'Please select a PDF file';
+          trainingProcessBtn.disabled = true;
+        }
+      });
+    }
+    
+    // Process button handler
+    if (trainingProcessBtn) {
+      trainingProcessBtn.addEventListener('click', async () => {
+        if (!selectedFile) return;
+        
+        trainingProcessBtn.disabled = true;
+        trainingProcessBtn.textContent = '⏳ Processing...';
+        trainingProgressSection.classList.remove('hidden');
+        
+        document.getElementById('training-progress-filename').textContent = selectedFile.name;
+        document.getElementById('training-progress-status').textContent = 'Uploading PDF...';
+        document.getElementById('training-progress-bar').style.width = '10%';
+        
+        try {
+          const formData = new FormData();
+          formData.append('file', selectedFile);
+          
+          document.getElementById('training-progress-status').textContent = 'Extracting text and generating Q&A pairs...';
+          document.getElementById('training-progress-bar').style.width = '30%';
+          
+          const response = await fetch('/api/training-pairs/process', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            document.getElementById('training-progress-bar').style.width = '100%';
+            document.getElementById('training-progress-status').textContent = 
+              `✅ Complete! Generated ${result.pairs_generated} pairs from ${result.chunks_processed} chunks.`;
+            document.getElementById('training-progress-chunks').textContent = 
+              `${result.chunks_processed} / ${result.chunks_processed}`;
+            document.getElementById('training-progress-pairs').textContent = result.pairs_generated;
+            
+            // Refresh lists
+            loadTrainingData();
+            
+            // Reset form
+            setTimeout(() => {
+              trainingProgressSection.classList.add('hidden');
+              trainingFileName.textContent = 'No file selected';
+              trainingFileInput.value = '';
+              selectedFile = null;
+              trainingProcessBtn.textContent = '🤖 Generate Pairs';
+              trainingProcessBtn.disabled = true;
+            }, 3000);
+          } else {
+            throw new Error(result.error || 'Processing failed');
+          }
+        } catch (error) {
+          console.error('Training pair error:', error);
+          document.getElementById('training-progress-status').textContent = `❌ Error: ${error.message}`;
+          document.getElementById('training-progress-bar').style.width = '100%';
+          document.getElementById('training-progress-bar').style.background = '#ef4444';
+          
+          trainingProcessBtn.disabled = false;
+          trainingProcessBtn.textContent = '🤖 Generate Pairs';
+        }
+      });
+    }
+    
+    // Refresh button
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', loadTrainingData);
+    }
+    
+    // Combine button
+    if (trainingCombineBtn) {
+      trainingCombineBtn.addEventListener('click', async () => {
+        trainingCombineBtn.disabled = true;
+        trainingCombineBtn.textContent = '⏳ Combining...';
+        
+        try {
+          const response = await fetch('/api/training-pairs/download-all');
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'training_data.jsonl';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            trainingCombineBtn.textContent = '✅ Downloaded!';
+            setTimeout(() => {
+              trainingCombineBtn.textContent = '📦 Combine All & Download';
+              trainingCombineBtn.disabled = false;
+            }, 2000);
+          } else {
+            const error = await response.json();
+            throw new Error(error.error || 'Download failed');
+          }
+        } catch (error) {
+          console.error('Download error:', error);
+          alert('Download failed: ' + error.message);
+          trainingCombineBtn.textContent = '📦 Combine All & Download';
+          trainingCombineBtn.disabled = false;
+        }
+      });
+    }
+    
+    // Load training data
+    async function loadTrainingData() {
+      try {
+        // Load stats
+        const statsRes = await fetch('/api/training-pairs/stats');
+        const stats = await statsRes.json();
+        
+        document.getElementById('training-stat-pending').textContent = stats.pending_files || 0;
+        document.getElementById('training-stat-approved').textContent = stats.approved_files || 0;
+        document.getElementById('training-stat-pairs').textContent = stats.total_pairs || 0;
+        
+        // Load in-progress files
+        const inProgressRes = await fetch('/api/training-pairs/in-progress');
+        const inProgress = await inProgressRes.json();
+        
+        if (inProgress.files && inProgress.files.length > 0) {
+          trainingResumeSection.classList.remove('hidden');
+          document.getElementById('training-resume-list').innerHTML = inProgress.files.map(f => `
+            <div class="training-resume-item">
+              <div class="training-resume-info">
+                <div class="training-resume-filename">${f.source_file}</div>
+                <div class="training-resume-progress">${f.completed} / ${f.total} chunks • ${f.pairs_so_far || 0} pairs</div>
+              </div>
+              <div class="training-resume-actions">
+                <button class="btn-discard" onclick="discardTraining('${f.source_file}')">Discard</button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          trainingResumeSection.classList.add('hidden');
+        }
+        
+        // Load pending files
+        const pendingRes = await fetch('/api/training-pairs/pending');
+        const pending = await pendingRes.json();
+        
+        if (pending.files && pending.files.length > 0) {
+          trainingPendingList.innerHTML = pending.files.map(f => `
+            <div class="training-file-item">
+              <div class="training-file-info">
+                <div class="training-file-name-display">${f.filename}</div>
+                <div class="training-file-meta">${f.pair_count} pairs</div>
+              </div>
+              <div class="training-file-actions">
+                <button class="btn-training-action primary" onclick="openReviewModal('${f.filename}')">👁️ Review</button>
+                <button class="btn-training-action" onclick="copyForReview('${f.filename}')">📋 Copy</button>
+                <button class="btn-training-action danger" onclick="deleteTrainingFile('${f.filename}', 'pending')">🗑️</button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          trainingPendingList.innerHTML = '<div class="training-files-placeholder">No files pending review</div>';
+        }
+        
+        // Load approved files
+        const approvedRes = await fetch('/api/training-pairs/approved');
+        const approved = await approvedRes.json();
+        
+        if (approved.files && approved.files.length > 0) {
+          trainingApprovedList.innerHTML = approved.files.map(f => `
+            <div class="training-file-item">
+              <div class="training-file-info">
+                <div class="training-file-name-display">${f.filename}</div>
+                <div class="training-file-meta">${f.pair_count} pairs</div>
+              </div>
+              <div class="training-file-actions">
+                <button class="btn-training-action" onclick="downloadFile('${f.filename}', 'approved')">📥 Download</button>
+                <button class="btn-training-action" onclick="unapproveFile('${f.filename}')">↩️ Edit</button>
+                <button class="btn-training-action danger" onclick="deleteTrainingFile('${f.filename}', 'approved')">🗑️</button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          trainingApprovedList.innerHTML = '<div class="training-files-placeholder">No approved files yet</div>';
+        }
+        
+      } catch (error) {
+        console.error('Error loading training data:', error);
+      }
+    }
+    
+    // Global functions for buttons
+    window.discardTraining = async function(filename) {
+      if (!confirm(`Discard progress for "${filename}"?`)) return;
+      
+      try {
+        const response = await fetch(`/api/training-pairs/discard/${encodeURIComponent(filename)}`, {
+          method: 'DELETE'
+        });
+        if (response.ok) {
+          loadTrainingData();
+        } else {
+          const error = await response.json();
+          alert('Error: ' + error.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+    
+    window.copyForReview = async function(filename) {
+      try {
+        const response = await fetch(`/api/training-pairs/clipboard/${encodeURIComponent(filename)}`);
+        const data = await response.json();
+        
+        await navigator.clipboard.writeText(data.text);
+        alert('Copied to clipboard! Paste into Claude for review.');
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+    
+    window.approveFile = async function(filename) {
+      try {
+        const response = await fetch(`/api/training-pairs/approve/${encodeURIComponent(filename)}`, {
+          method: 'POST'
+        });
+        if (response.ok) {
+          loadTrainingData();
+        } else {
+          const error = await response.json();
+          alert('Error: ' + error.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+    
+    window.unapproveFile = async function(filename) {
+      try {
+        const response = await fetch(`/api/training-pairs/unapprove/${encodeURIComponent(filename)}`, {
+          method: 'POST'
+        });
+        if (response.ok) {
+          loadTrainingData();
+        } else {
+          const error = await response.json();
+          alert('Error: ' + error.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+    
+    window.downloadFile = async function(filename, status) {
+      try {
+        const response = await fetch(`/api/training-pairs/download/${encodeURIComponent(filename)}?status=${status}`);
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } else {
+          const error = await response.json();
+          alert('Error: ' + error.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+    
+    window.deleteTrainingFile = async function(filename, status) {
+      if (!confirm(`Delete "${filename}"? This cannot be undone.`)) return;
+      
+      try {
+        const response = await fetch(`/api/training-pairs/file/${encodeURIComponent(filename)}?status=${status}`, {
+          method: 'DELETE'
+        });
+        if (response.ok) {
+          loadTrainingData();
+        } else {
+          const error = await response.json();
+          alert('Error: ' + error.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+    
+    // ========================================
+    // Phase 5: Review & Edit Modal Functions
+    // ========================================
+    
+    let currentReviewFilename = null;
+    let currentReviewPairs = [];
+    let editedPairs = new Set();
+    let deletedPairs = new Set();
+    let currentEditIndex = null;
+    
+    // Get modal elements
+    const reviewModal = document.getElementById('training-review-modal');
+    const editModal = document.getElementById('training-edit-modal');
+    
+    // Open Review Modal
+    window.openReviewModal = async function(filename) {
+      currentReviewFilename = filename;
+      editedPairs.clear();
+      deletedPairs.clear();
+      
+      // Show modal
+      reviewModal.classList.remove('hidden');
+      document.getElementById('training-review-filename').textContent = filename;
+      document.getElementById('training-review-pairs').innerHTML = '<div class="training-pairs-loading">Loading pairs...</div>';
+      
+      // Load pairs
+      await loadPairsForReview(filename);
+    };
+    
+    // Load pairs for review
+    async function loadPairsForReview(filename) {
+      try {
+        const response = await fetch(`/api/training-pairs/review/${encodeURIComponent(filename)}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to load pairs');
+        }
+        
+        currentReviewPairs = data.pairs;
+        renderReviewPairs();
+        updateReviewStats();
+        
+      } catch (error) {
+        console.error('Error loading pairs:', error);
+        document.getElementById('training-review-pairs').innerHTML = 
+          `<div class="training-pairs-loading">Error: ${error.message}</div>`;
+      }
+    }
+    
+    // Render all pairs
+    function renderReviewPairs() {
+      const container = document.getElementById('training-review-pairs');
+      
+      if (currentReviewPairs.length === 0) {
+        container.innerHTML = '<div class="training-pairs-loading">No pairs found</div>';
+        return;
+      }
+      
+      container.innerHTML = currentReviewPairs.map((pair, index) => {
+        const isDeleted = deletedPairs.has(index);
+        const isEdited = editedPairs.has(index);
+        const cardClass = isDeleted ? 'deleted' : (isEdited ? 'edited' : '');
+        
+        return `
+          <div class="training-pair-card ${cardClass}" data-index="${index}">
+            <div class="training-pair-header">
+              <span class="training-pair-number">Pair ${index + 1}</span>
+              <div class="training-pair-actions">
+                ${!isDeleted ? `
+                  <button class="btn-pair-edit" onclick="openEditModal(${index})">✏️ Edit</button>
+                  <button class="btn-pair-delete" onclick="deletePairFromReview(${index})">🗑️ Delete</button>
+                ` : `
+                  <button class="btn-pair-edit" onclick="undoDeletePair(${index})">↩️ Undo</button>
+                `}
+              </div>
+            </div>
+            <div class="training-pair-content">
+              <div class="training-pair-question">
+                <div class="training-pair-label">Question</div>
+                <div class="training-pair-text">${escapeHtml(pair.question)}</div>
+              </div>
+              <div class="training-pair-answer">
+                <div class="training-pair-label">Answer</div>
+                <div class="training-pair-text">${escapeHtml(pair.answer)}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Update stats display
+    function updateReviewStats() {
+      document.getElementById('training-review-total').textContent = currentReviewPairs.length;
+      document.getElementById('training-review-edited').textContent = editedPairs.size;
+      document.getElementById('training-review-deleted').textContent = deletedPairs.size;
+    }
+    
+    // Open Edit Modal
+    window.openEditModal = function(index) {
+      currentEditIndex = index;
+      const pair = currentReviewPairs[index];
+      
+      document.getElementById('training-edit-index').textContent = `#${index + 1}`;
+      document.getElementById('training-edit-question').value = pair.question;
+      document.getElementById('training-edit-answer').value = pair.answer;
+      
+      editModal.classList.remove('hidden');
+    };
+    
+    // Save edited pair
+    async function saveEditedPair() {
+      const newQuestion = document.getElementById('training-edit-question').value.trim();
+      const newAnswer = document.getElementById('training-edit-answer').value.trim();
+      
+      if (!newQuestion || !newAnswer) {
+        alert('Both question and answer are required');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/training-pairs/pair/${encodeURIComponent(currentReviewFilename)}?pair_index=${currentEditIndex}&question=${encodeURIComponent(newQuestion)}&answer=${encodeURIComponent(newAnswer)}`, {
+          method: 'PATCH'
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to save');
+        }
+        
+        // Update local data
+        currentReviewPairs[currentEditIndex].question = newQuestion;
+        currentReviewPairs[currentEditIndex].answer = newAnswer;
+        editedPairs.add(currentEditIndex);
+        
+        // Close edit modal and re-render
+        editModal.classList.add('hidden');
+        renderReviewPairs();
+        updateReviewStats();
+        
+      } catch (error) {
+        alert('Error saving: ' + error.message);
+      }
+    }
+    
+    // Delete pair from review
+    window.deletePairFromReview = async function(index) {
+      try {
+        const response = await fetch(`/api/training-pairs/pair/${encodeURIComponent(currentReviewFilename)}/${index}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to delete');
+        }
+        
+        // Mark as deleted locally (we'll re-fetch to get updated indices)
+        deletedPairs.add(index);
+        renderReviewPairs();
+        updateReviewStats();
+        
+        // Reload pairs to get correct indices
+        await loadPairsForReview(currentReviewFilename);
+        
+      } catch (error) {
+        alert('Error deleting: ' + error.message);
+      }
+    };
+    
+    // Undo delete (note: this only works visually before reload)
+    window.undoDeletePair = function(index) {
+      deletedPairs.delete(index);
+      renderReviewPairs();
+      updateReviewStats();
+    };
+    
+    // Copy all pairs for Claude review
+    async function copyAllForReview() {
+      try {
+        const response = await fetch(`/api/training-pairs/clipboard/${encodeURIComponent(currentReviewFilename)}`);
+        const data = await response.json();
+        
+        await navigator.clipboard.writeText(data.text);
+        
+        const btn = document.getElementById('training-copy-all-btn');
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = originalText, 2000);
+        
+      } catch (error) {
+        alert('Error copying: ' + error.message);
+      }
+    }
+    
+    // Approve file and close modal
+    async function approveAndClose() {
+      try {
+        const response = await fetch(`/api/training-pairs/approve/${encodeURIComponent(currentReviewFilename)}`, {
+          method: 'POST'
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to approve');
+        }
+        
+        // Close modal and refresh
+        closeReviewModal();
+        loadTrainingData();
+        
+      } catch (error) {
+        alert('Error approving: ' + error.message);
+      }
+    }
+    
+    // Close review modal
+    function closeReviewModal() {
+      reviewModal.classList.add('hidden');
+      currentReviewFilename = null;
+      currentReviewPairs = [];
+      editedPairs.clear();
+      deletedPairs.clear();
+    }
+    
+    // Close edit modal
+    function closeEditModal() {
+      editModal.classList.add('hidden');
+      currentEditIndex = null;
+    }
+    
+    // Escape HTML for safe rendering
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Event listeners for modals
+    if (reviewModal) {
+      document.getElementById('training-review-close').addEventListener('click', closeReviewModal);
+      document.getElementById('training-review-cancel').addEventListener('click', closeReviewModal);
+      document.getElementById('training-review-approve').addEventListener('click', approveAndClose);
+      document.getElementById('training-copy-all-btn').addEventListener('click', copyAllForReview);
+      
+      // Close on background click
+      reviewModal.addEventListener('click', (e) => {
+        if (e.target === reviewModal) closeReviewModal();
+      });
+    }
+    
+    if (editModal) {
+      document.getElementById('training-edit-close').addEventListener('click', closeEditModal);
+      document.getElementById('training-edit-cancel').addEventListener('click', closeEditModal);
+      document.getElementById('training-edit-save').addEventListener('click', saveEditedPair);
+      
+      // Close on background click
+      editModal.addEventListener('click', (e) => {
+        if (e.target === editModal) closeEditModal();
+      });
+    }
+    
+  })();
+  </script>
 </body>
 </html>
