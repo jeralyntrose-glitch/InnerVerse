@@ -1771,6 +1771,7 @@
       border: 1px solid #374151;
       border-radius: 12px;
       overflow: hidden;
+      min-height: 120px;
     }
     
     .training-pair-header {
@@ -1819,12 +1820,12 @@
     }
     
     .training-pair-content {
-      padding: 16px;
-      background: #111827;
+      padding: 20px;
+      background: #0f172a;
     }
     
     .training-pair-question, .training-pair-answer {
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
     
     .training-pair-question:last-child, .training-pair-answer:last-child {
@@ -1832,27 +1833,29 @@
     }
     
     .training-pair-label {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
       color: #9ca3af;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
       color: #6b7280;
       margin-bottom: 6px;
       letter-spacing: 0.5px;
     }
     
     .training-pair-text {
-      font-size: 14px;
-      line-height: 1.6;
+      font-size: 15px;
+      line-height: 1.7;
       color: #e5e7eb;
       white-space: pre-wrap;
       word-break: break-word;
     }
     
     .training-pair-question .training-pair-text {
-      font-weight: 500;
+      font-weight: 600;
       color: #f9fafb;
+      font-size: 16px;
     }
     
     .training-pair-text:empty::after {
@@ -1906,7 +1909,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.95);
       z-index: 10001;
       display: flex;
       align-items: center;
@@ -1920,11 +1923,12 @@
     
     .training-edit-container {
       width: 100%;
-      max-width: 600px;
-      background: var(--bg-primary);
+      max-width: 650px;
+      background: #1f2937;
       border-radius: 16px;
       overflow: hidden;
-      border: 1px solid var(--border-color);
+      border: 1px solid #374151;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
     
     .training-edit-header {
@@ -1932,8 +1936,12 @@
       justify-content: space-between;
       align-items: center;
       padding: 20px 24px;
-      border-bottom: 1px solid var(--border-color);
-      background: var(--bg-secondary);
+      border-bottom: 1px solid #374151;
+      background: #111827;
+    }
+    
+    .training-edit-header h3 {
+      color: #f9fafb;
     }
     
     .training-edit-header h3 {
@@ -1957,6 +1965,7 @@
     
     .training-edit-form {
       padding: 24px;
+      background: #1f2937;
     }
     
     .training-edit-field {
@@ -1972,25 +1981,29 @@
       font-size: 13px;
       font-weight: 600;
       margin-bottom: 8px;
-      color: #6b7280;
+      color: #d1d5db;
     }
     
     .training-edit-field textarea {
       width: 100%;
       padding: 12px;
-      border: 1px solid var(--border-color);
+      border: 1px solid #374151;
       border-radius: 8px;
-      background: var(--bg-secondary);
-      color: var(--text-primary);
+      background: #111827;
+      color: #f9fafb;
       font-size: 14px;
-      line-height: 1.5;
+      line-height: 1.6;
       resize: vertical;
       font-family: inherit;
     }
     
     .training-edit-field textarea:focus {
       outline: none;
-      border-color: var(--primary-color);
+      border-color: #14b8a6;
+    }
+    
+    .training-edit-field textarea::placeholder {
+      color: #6b7280;
     }
     
     .training-edit-footer {
@@ -1998,8 +2011,8 @@
       justify-content: flex-end;
       gap: 12px;
       padding: 20px 24px;
-      border-top: 1px solid var(--border-color);
-      background: var(--bg-secondary);
+      border-top: 1px solid #374151;
+      background: #111827;
     }
     
     .btn-edit-cancel, .btn-edit-save {
@@ -2013,13 +2026,13 @@
     }
     
     .btn-edit-cancel {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
+      background: #374151;
+      color: #f9fafb;
+      border: 1px solid #4b5563;
     }
     
     .btn-edit-cancel:hover {
-      background: var(--bg-hover);
+      background: #4b5563;
     }
     
     .btn-edit-save {
