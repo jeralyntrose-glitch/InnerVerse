@@ -3561,10 +3561,53 @@ def parse_qa_response(response_text: str) -> list[dict]:
     return pairs
 
 
+def generate_qa_pairs_haiku(chunk: str) -> list[dict]:
+    """
+    Generate Q&A pairs from a text chunk using Claude Haiku.
+    Returns list of parsed Q&A pairs, or empty list on failure.
+    """
+    prompt = QA_GENERATION_PROMPT.format(content=chunk)
+    
+    if not ANTHROPIC_API_KEY:
+        print("   ❌ ANTHROPIC_API_KEY not set")
+        return []
+    
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        
+        message = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=4000,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        
+        response_text = message.content[0].text
+        
+        # Log API usage for cost tracking
+        # Haiku pricing: $0.25/1M input, $1.25/1M output
+        input_tokens = message.usage.input_tokens
+        output_tokens = message.usage.output_tokens
+        cost = (input_tokens * 0.25 / 1000000) + (output_tokens * 1.25 / 1000000)
+        log_api_usage("training_pair_generation", "claude-3-haiku", input_tokens, output_tokens, cost)
+        
+        # Parse the response
+        pairs = parse_qa_response(response_text)
+        return pairs
+        
+    except Exception as e:
+        print(f"   ❌ Claude Haiku API error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+
 def generate_qa_pairs_gpt_mini(chunk: str, openai_client) -> list[dict]:
     """
     Generate Q&A pairs from a text chunk using GPT-4o-mini.
     Returns list of parsed Q&A pairs, or empty list on failure.
+    DEPRECATED: Use generate_qa_pairs_haiku() instead.
     """
     prompt = QA_GENERATION_PROMPT.format(content=chunk)
     
@@ -3599,11 +3642,10 @@ def generate_qa_pairs_gpt_mini(chunk: str, openai_client) -> list[dict]:
 async def process_all_chunks_for_training(
     chunks: list[str],
     source_filename: str,
-    openai_client,
     resume_from: int = 0
 ) -> tuple[Path, list[int]]:
     """
-    Process all chunks to generate Q&A training pairs.
+    Process all chunks to generate Q&A training pairs using Claude Haiku.
     
     CRITICAL: Saves progress after EACH chunk for crash recovery.
     Can resume from any chunk if interrupted.
@@ -3611,7 +3653,6 @@ async def process_all_chunks_for_training(
     Args:
         chunks: List of text chunks to process
         source_filename: Original PDF filename
-        openai_client: Initialized OpenAI client
         resume_from: Chunk index to resume from (0 = start fresh)
     
     Returns:
@@ -3640,7 +3681,7 @@ async def process_all_chunks_for_training(
         # Try up to 3 times per chunk
         pairs = []
         for attempt in range(3):
-            pairs = generate_qa_pairs_gpt_mini(chunk, openai_client)
+            pairs = generate_qa_pairs_haiku(chunk)  # Using Claude Haiku
             
             if pairs:
                 # SUCCESS: Save immediately (crash recovery)
@@ -3679,12 +3720,11 @@ async def process_all_chunks_for_training(
 def process_chunks_for_training_sync(
     chunks: list[str],
     source_filename: str,
-    openai_client,
     resume_from: int = 0
 ) -> tuple[Path, list[int]]:
     """
     Synchronous version of process_all_chunks_for_training.
-    Use this when not in an async context.
+    Uses Claude Haiku for Q&A generation.
     """
     import time
     
@@ -3693,7 +3733,7 @@ def process_chunks_for_training_sync(
     
     if resume_from == 0:
         start_training_processing(source_filename, chunks)
-        print(f"📝 Starting Q&A generation: {source_filename}")
+        print(f"📝 Starting Q&A generation (Claude Haiku): {source_filename}")
         print(f"   Total chunks: {len(chunks)}")
     else:
         print(f"📝 Resuming Q&A generation: {source_filename}")
@@ -3706,7 +3746,7 @@ def process_chunks_for_training_sync(
         
         pairs = []
         for attempt in range(3):
-            pairs = generate_qa_pairs_gpt_mini(chunk, openai_client)
+            pairs = generate_qa_pairs_haiku(chunk)  # Using Claude Haiku
             
             if pairs:
                 progress = save_training_chunk_progress(source_filename, i, pairs)
@@ -3728,7 +3768,7 @@ def process_chunks_for_training_sync(
     final_path = finalize_training_processing(source_filename)
     
     print(f"\n{'=' * 50}")
-    print(f"✅ Q&A GENERATION COMPLETE: {source_filename}")
+    print(f"✅ Q&A GENERATION COMPLETE (Claude Haiku): {source_filename}")
     print(f"   Total pairs generated: {total_pairs}")
     print(f"   Output: {final_path}")
     if failed_chunks:
@@ -9775,20 +9815,18 @@ async def process_training_pairs(file: UploadFile = File(...)):
         print(f"📦 Chunking text...")
         chunks = chunk_text_for_training(cleaned_text)
         
-        # Get OpenAI client
-        openai_client = get_openai_client()
-        if not openai_client:
+        # Check for Anthropic API key (using Claude Haiku)
+        if not ANTHROPIC_API_KEY:
             return JSONResponse(
                 status_code=500,
-                content={"error": "OpenAI client not initialized"}
+                content={"error": "ANTHROPIC_API_KEY not configured"}
             )
         
-        # Process all chunks (synchronous version)
-        print(f"🤖 Generating Q&A pairs...")
+        # Process all chunks using Claude Haiku
+        print(f"🤖 Generating Q&A pairs with Claude Haiku...")
         final_path, failed_chunks = process_chunks_for_training_sync(
             chunks=chunks,
             source_filename=file.filename,
-            openai_client=openai_client,
             resume_from=0
         )
         
