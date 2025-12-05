@@ -370,7 +370,7 @@
             .folder-name {
                 flex: 1;
                 font-size: 14px;
-                font-weight: 400;
+                font-weight: 600;
                 color: var(--text-primary);
             }
 
@@ -2303,13 +2303,13 @@
             function loadFolders() {
                 // Default folders (only used for first-time migration)
                 const defaultFolders = [
-                    { id: "relationship-lab", name: "💕 Relationship Lab", isDefault: true },
-                    { id: "mbti-academy", name: "🎓 MBTI Academy", isDefault: true },
-                    { id: "type-detective", name: "🔍 Type Detective", isDefault: true },
-                    { id: "trading-psychology", name: "📈 Trading Psychology", isDefault: true },
-                    { id: "pm-playbook", name: "💼 PM Playbook", isDefault: true },
-                    { id: "quick-hits", name: "⚡ Quick Hits", isDefault: true },
-                    { id: "brain-dump", name: "🧠 Brain Dump", isDefault: true },
+                    { id: "relationship-lab", name: "Relationship Lab", isDefault: true },
+                    { id: "mbti-academy", name: "MBTI Academy", isDefault: true },
+                    { id: "type-detective", name: "Type Detective", isDefault: true },
+                    { id: "trading-psychology", name: "Trading Psychology", isDefault: true },
+                    { id: "pm-playbook", name: "PM Playbook", isDefault: true },
+                    { id: "quick-hits", name: "Quick Hits", isDefault: true },
+                    { id: "brain-dump", name: "Brain Dump", isDefault: true },
                 ];
                 
                 // Load from localStorage
@@ -2802,44 +2802,28 @@
             });
 
             // ===== FOLDER MANAGEMENT UI =====
-            // Add folder management buttons after search container
-            const folderActions = document.createElement('div');
-            folderActions.className = 'folder-actions';
-            folderActions.style.cssText = 'display: flex; gap: 8px; margin-top: 12px; padding: 0 12px;';
-            
-            const createFolderBtn = document.createElement('button');
-            createFolderBtn.innerHTML = '📁+';
-            createFolderBtn.title = 'Create folder';
-            createFolderBtn.style.cssText = 'flex: 1; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--color-text); transition: all 0.2s;';
-            createFolderBtn.addEventListener('mouseenter', () => {
-                createFolderBtn.style.background = 'var(--bg-hover)';
+            // ChatGPT-style "New project" text link above folders
+            const newProjectRow = document.createElement('div');
+            newProjectRow.className = 'new-project-row';
+            newProjectRow.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; color: var(--text-primary); transition: background 0.2s; border-radius: 6px; margin: 8px 12px;';
+            newProjectRow.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                <span style="font-size: 14px; font-weight: 500;">New project</span>
+            `;
+            newProjectRow.addEventListener('mouseenter', () => {
+                newProjectRow.style.background = 'var(--bg-hover, rgba(0,0,0,0.05))';
             });
-            createFolderBtn.addEventListener('mouseleave', () => {
-                createFolderBtn.style.background = 'var(--bg-input)';
+            newProjectRow.addEventListener('mouseleave', () => {
+                newProjectRow.style.background = 'transparent';
             });
-            createFolderBtn.addEventListener('click', createFolder);
-            
-            const manageFoldersBtn = document.createElement('button');
-            manageFoldersBtn.innerHTML = '⚙️';
-            manageFoldersBtn.title = 'Manage folders (right-click folder headers)';
-            manageFoldersBtn.style.cssText = 'padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--color-text); transition: all 0.2s;';
-            manageFoldersBtn.addEventListener('mouseenter', () => {
-                manageFoldersBtn.style.background = 'var(--bg-hover)';
-            });
-            manageFoldersBtn.addEventListener('mouseleave', () => {
-                manageFoldersBtn.style.background = 'var(--bg-input)';
-            });
-            manageFoldersBtn.addEventListener('click', () => {
-                alert('Right-click any folder header to rename or delete it.');
-            });
-            
-            folderActions.appendChild(createFolderBtn);
-            folderActions.appendChild(manageFoldersBtn);
+            newProjectRow.addEventListener('click', createFolder);
             
             // Insert after search container
             const searchContainer = document.querySelector('.search-container');
             if (searchContainer && searchContainer.parentElement) {
-                searchContainer.parentElement.insertBefore(folderActions, searchContainer.nextSibling);
+                searchContainer.parentElement.insertBefore(newProjectRow, searchContainer.nextSibling);
             }
 
             async function performSearch(query) {
@@ -2964,7 +2948,7 @@
                         <div class="folder all-chats-folder ${isAllChatsExpanded ? "expanded" : ""}" data-folder="all-chats">
                             <div class="folder-header" onclick="toggleFolder('all-chats')">
                                 <span class="folder-arrow">▶</span>
-                                <span class="folder-name">📋 All Chats</span>
+                                <span class="folder-name">All Chats</span>
                                 <span class="folder-count">${allConversations.length}</span>
                             </div>
                             <div class="folder-conversations">
@@ -3268,7 +3252,10 @@
                 const folderStates = JSON.parse(
                     localStorage.getItem("innerverse-folder-states") || "{}",
                 );
-                folderStates[folderId] = !folderStates[folderId];
+                // FIXED: Match render logic - undefined means expanded (true)
+                // This fixes the double-tap bug on fresh load
+                const currentlyExpanded = folderStates[folderId] !== false;
+                folderStates[folderId] = !currentlyExpanded;
                 localStorage.setItem(
                     "innerverse-folder-states",
                     JSON.stringify(folderStates),
@@ -3909,7 +3896,9 @@
                         // - 4 lines + padding (12px*2) = ~114px threshold
                         const fourLinesThreshold = 114;
                         const fourLinesHeight = 90;   // Just the 4 lines of text
-                        const headerOffset = 100;     // Safe offset for iPhone 14 Pro header
+                        // iPhone 14 Pro: 56px header + 59px Dynamic Island = 115px
+                        // Adding 25px breathing room = 140px total
+                        const headerOffset = 140;     // Safe offset for iPhone 14 Pro header + breathing room
                         const bottomBreathing = 20;   // Space below visible content
                         
                         let scrollTarget;
