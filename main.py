@@ -3600,10 +3600,6 @@ def validate_qa_pair(item: dict) -> bool:
     if not messages[0].get('content') or not messages[1].get('content'):
         return False
     return True
-            print(f"   ⚠️ Could not parse line: {line[:80]}...")
-            continue
-    
-    return pairs
 
 
 def generate_qa_pairs_haiku(chunk: str) -> list[dict]:
