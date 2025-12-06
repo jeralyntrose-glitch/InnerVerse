@@ -3107,6 +3107,7 @@ class TrainingPairStorage:
     """
     Storage abstraction for training pairs.
     Automatically uses Replit Object Storage on Replit, local files otherwise.
+    Falls back gracefully to local storage if Object Storage isn't configured.
     """
     
     def __init__(self):
@@ -3116,6 +3117,7 @@ class TrainingPairStorage:
             os.environ.get('REPL_SLUG')
         )
         self.object_storage_client = None
+        self.use_object_storage = False  # Track if Object Storage is actually working
         self.local_base_path = Path("./data/training_pairs")
         self.storage_prefix = "training_pairs"  # Prefix for Object Storage paths
         
@@ -3123,15 +3125,35 @@ class TrainingPairStorage:
             try:
                 from replit.object_storage import Client
                 self.object_storage_client = Client()
-                print("[TrainingPairStorage] ✅ Replit Object Storage initialized")
+                # Test if the bucket is configured by trying a simple operation
+                try:
+                    # Try to read a non-existent file - if bucket is configured, we get "not found"
+                    # If bucket is NOT configured, we get "no default bucket" error
+                    self.object_storage_client.download_as_text("_test_bucket_check")
+                except Exception as test_error:
+                    error_msg = str(test_error).lower()
+                    if "no default bucket" in error_msg or "bucket" in error_msg and "configured" in error_msg:
+                        print("[TrainingPairStorage] ⚠️ Object Storage bucket not configured, falling back to local storage")
+                        print("[TrainingPairStorage] 💡 To enable: Create a bucket in Replit's App Storage tool")
+                        self.use_object_storage = False
+                    else:
+                        # Bucket is configured (we got a "not found" error which is expected)
+                        self.use_object_storage = True
+                        print("[TrainingPairStorage] ✅ Replit Object Storage initialized and bucket configured")
             except ImportError:
                 print("[TrainingPairStorage] ⚠️ replit package not found, falling back to local storage")
-                self.is_replit = False
+                self.use_object_storage = False
             except Exception as e:
                 print(f"[TrainingPairStorage] ⚠️ Object Storage init failed: {e}, falling back to local")
-                self.is_replit = False
-        else:
+                self.use_object_storage = False
+        
+        if not self.use_object_storage:
             print(f"[TrainingPairStorage] 📁 Using local storage: {self.local_base_path}")
+            # Ensure local directories exist
+            self.local_base_path.mkdir(parents=True, exist_ok=True)
+            (self.local_base_path / "in_progress").mkdir(exist_ok=True)
+            (self.local_base_path / "pending_review").mkdir(exist_ok=True)
+            (self.local_base_path / "approved").mkdir(exist_ok=True)
     
     def _get_storage_path(self, relative_path: str) -> str:
         """Convert relative path to storage path (with prefix for Object Storage)"""
@@ -3143,7 +3165,7 @@ class TrainingPairStorage:
     
     def ensure_directories(self):
         """Create directory structure (only needed for local storage)"""
-        if not self.is_replit:
+        if not self.use_object_storage:
             self.local_base_path.mkdir(parents=True, exist_ok=True)
             (self.local_base_path / "in_progress").mkdir(exist_ok=True)
             (self.local_base_path / "pending_review").mkdir(exist_ok=True)
@@ -3151,7 +3173,7 @@ class TrainingPairStorage:
     
     def read_file(self, relative_path: str) -> str | None:
         """Read a file and return its content, or None if not found"""
-        if self.is_replit:
+        if self.use_object_storage:
             try:
                 storage_path = self._get_storage_path(relative_path)
                 content = self.object_storage_client.download_as_text(storage_path)
@@ -3170,7 +3192,7 @@ class TrainingPairStorage:
     
     def write_file(self, relative_path: str, content: str):
         """Write content to a file"""
-        if self.is_replit:
+        if self.use_object_storage:
             try:
                 storage_path = self._get_storage_path(relative_path)
                 self.object_storage_client.upload_from_text(storage_path, content)
@@ -3190,7 +3212,7 @@ class TrainingPairStorage:
     
     def delete_file(self, relative_path: str) -> bool:
         """Delete a file, returns True if successful"""
-        if self.is_replit:
+        if self.use_object_storage:
             try:
                 storage_path = self._get_storage_path(relative_path)
                 self.object_storage_client.delete(storage_path)
@@ -3207,7 +3229,7 @@ class TrainingPairStorage:
     
     def exists(self, relative_path: str) -> bool:
         """Check if a file exists"""
-        if self.is_replit:
+        if self.use_object_storage:
             content = self.read_file(relative_path)
             return content is not None
         else:
@@ -3227,7 +3249,7 @@ class TrainingPairStorage:
         List files in a folder. Uses index for Object Storage.
         Returns list of filenames (not full paths).
         """
-        if self.is_replit:
+        if self.use_object_storage:
             # Use index to track files since Object Storage may not have list
             index = self._load_file_index()
             return index.get(folder, [])
@@ -3252,8 +3274,8 @@ class TrainingPairStorage:
         self.write_file("_file_index.json", json.dumps(index, indent=2))
     
     def add_to_index(self, folder: str, filename: str):
-        """Add a file to the index"""
-        if self.is_replit:
+        """Add a file to the index (only needed for Object Storage)"""
+        if self.use_object_storage:
             index = self._load_file_index()
             if folder not in index:
                 index[folder] = []
@@ -3262,16 +3284,16 @@ class TrainingPairStorage:
             self._save_file_index(index)
     
     def remove_from_index(self, folder: str, filename: str):
-        """Remove a file from the index"""
-        if self.is_replit:
+        """Remove a file from the index (only needed for Object Storage)"""
+        if self.use_object_storage:
             index = self._load_file_index()
             if folder in index and filename in index[folder]:
                 index[folder].remove(filename)
             self._save_file_index(index)
     
     def move_in_index(self, filename: str, from_folder: str, to_folder: str):
-        """Move a file between folders in the index"""
-        if self.is_replit:
+        """Move a file between folders in the index (only needed for Object Storage)"""
+        if self.use_object_storage:
             index = self._load_file_index()
             if from_folder in index and filename in index[from_folder]:
                 index[from_folder].remove(filename)
