@@ -3639,9 +3639,9 @@ def validate_qa_pair(item: dict) -> bool:
     return True
 
 
-def generate_qa_pairs_haiku(chunk: str) -> list[dict]:
+def generate_qa_pairs_sonnet(chunk: str) -> list[dict]:
     """
-    Generate Q&A pairs from a text chunk using Claude Haiku.
+    Generate Q&A pairs from a text chunk using Claude 3.5 Sonnet.
     Returns list of parsed Q&A pairs, or empty list on failure.
     """
     prompt = QA_GENERATION_PROMPT.format(content=chunk)
@@ -3654,7 +3654,7 @@ def generate_qa_pairs_haiku(chunk: str) -> list[dict]:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         
         message = client.messages.create(
-            model="claude-3-haiku-20240307",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=4000,
             messages=[
                 {"role": "user", "content": prompt}
@@ -3665,14 +3665,14 @@ def generate_qa_pairs_haiku(chunk: str) -> list[dict]:
         
         # Debug: log full response if short
         if len(response_text) < 2000:
-            print(f"   📝 Full Haiku response:\n{response_text}")
+            print(f"   📝 Full Sonnet response:\n{response_text}")
         
         # Log API usage for cost tracking
-        # Haiku pricing: $0.25/1M input, $1.25/1M output
+        # Sonnet 3.5 pricing: $3/1M input, $15/1M output
         input_tokens = message.usage.input_tokens
         output_tokens = message.usage.output_tokens
-        cost = (input_tokens * 0.25 / 1000000) + (output_tokens * 1.25 / 1000000)
-        log_api_usage("training_pair_generation", "claude-3-haiku", input_tokens, output_tokens, cost)
+        cost = (input_tokens * 3.0 / 1000000) + (output_tokens * 15.0 / 1000000)
+        log_api_usage("training_pair_generation", "claude-3.5-sonnet", input_tokens, output_tokens, cost)
         print(f"   📊 Tokens: {input_tokens} in, {output_tokens} out (${cost:.6f})")
         
         # Parse the response
@@ -3681,7 +3681,7 @@ def generate_qa_pairs_haiku(chunk: str) -> list[dict]:
         return pairs
         
     except Exception as e:
-        print(f"   ❌ Claude Haiku API error: {str(e)}")
+        print(f"   ❌ Claude Sonnet API error: {str(e)}")
         import traceback
         traceback.print_exc()
         return []
@@ -3691,7 +3691,7 @@ def generate_qa_pairs_gpt_mini(chunk: str, openai_client) -> list[dict]:
     """
     Generate Q&A pairs from a text chunk using GPT-4o-mini.
     Returns list of parsed Q&A pairs, or empty list on failure.
-    DEPRECATED: Use generate_qa_pairs_haiku() instead.
+    DEPRECATED: Use generate_qa_pairs_sonnet() instead.
     """
     prompt = QA_GENERATION_PROMPT.format(content=chunk)
     
@@ -3729,7 +3729,7 @@ async def process_all_chunks_for_training(
     resume_from: int = 0
 ) -> tuple[Path, list[int]]:
     """
-    Process all chunks to generate Q&A training pairs using Claude Haiku.
+    Process all chunks to generate Q&A training pairs using Claude Sonnet.
     
     CRITICAL: Saves progress after EACH chunk for crash recovery.
     Can resume from any chunk if interrupted.
@@ -3765,7 +3765,7 @@ async def process_all_chunks_for_training(
         # Try up to 3 times per chunk
         pairs = []
         for attempt in range(3):
-            pairs = generate_qa_pairs_haiku(chunk)  # Using Claude Haiku
+            pairs = generate_qa_pairs_sonnet(chunk)  # Using Claude Sonnet
             
             if pairs:
                 # SUCCESS: Save immediately (crash recovery)
@@ -3808,7 +3808,7 @@ def process_chunks_for_training_sync(
 ) -> tuple[Path, list[int]]:
     """
     Synchronous version of process_all_chunks_for_training.
-    Uses Claude Haiku for Q&A generation.
+    Uses Claude Sonnet for Q&A generation.
     """
     import time
     
@@ -3817,7 +3817,7 @@ def process_chunks_for_training_sync(
     
     if resume_from == 0:
         start_training_processing(source_filename, chunks)
-        print(f"📝 Starting Q&A generation (Claude Haiku): {source_filename}")
+        print(f"📝 Starting Q&A generation (Claude Sonnet): {source_filename}")
         print(f"   Total chunks: {len(chunks)}")
     else:
         print(f"📝 Resuming Q&A generation: {source_filename}")
@@ -3830,7 +3830,7 @@ def process_chunks_for_training_sync(
         
         pairs = []
         for attempt in range(3):
-            pairs = generate_qa_pairs_haiku(chunk)  # Using Claude Haiku
+            pairs = generate_qa_pairs_sonnet(chunk)  # Using Claude Sonnet
             
             if pairs:
                 progress = save_training_chunk_progress(source_filename, i, pairs)
@@ -3852,7 +3852,7 @@ def process_chunks_for_training_sync(
     final_path = finalize_training_processing(source_filename)
     
     print(f"\n{'=' * 50}")
-    print(f"✅ Q&A GENERATION COMPLETE (Claude Haiku): {source_filename}")
+    print(f"✅ Q&A GENERATION COMPLETE (Claude Sonnet): {source_filename}")
     print(f"   Total pairs generated: {total_pairs}")
     print(f"   Output: {final_path}")
     if failed_chunks:
@@ -9899,15 +9899,15 @@ async def process_training_pairs(file: UploadFile = File(...)):
         print(f"📦 Chunking text...")
         chunks = chunk_text_for_training(cleaned_text)
         
-        # Check for Anthropic API key (using Claude Haiku)
+        # Check for Anthropic API key (using Claude Sonnet)
         if not ANTHROPIC_API_KEY:
             return JSONResponse(
                 status_code=500,
                 content={"error": "ANTHROPIC_API_KEY not configured"}
             )
         
-        # Process all chunks using Claude Haiku
-        print(f"🤖 Generating Q&A pairs with Claude Haiku...")
+        # Process all chunks using Claude Sonnet
+        print(f"🤖 Generating Q&A pairs with Claude Sonnet...")
         final_path, failed_chunks = process_chunks_for_training_sync(
             chunks=chunks,
             source_filename=file.filename,
