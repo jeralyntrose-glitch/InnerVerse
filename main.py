@@ -3097,38 +3097,196 @@ def preprocess_transcript(text: str) -> str:
 # Pipeline: PDF → Extract → Typo Fix (preprocess_transcript) → Chunk → Q&A Gen → Review → Approve
 # =============================================================================
 
-# Storage paths for training pair generator
-# Uses persistent storage on Replit to survive restarts/deploys
+# =============================================================================
+# TRAINING PAIR STORAGE ABSTRACTION
+# =============================================================================
+# Uses Replit Object Storage on Replit (persists across deploys)
+# Falls back to local file system for development
 
-def get_training_pairs_base_path() -> Path:
+class TrainingPairStorage:
     """
-    Get the base path for training pairs storage.
-    Uses persistent storage on Replit, local path for development.
-    
-    Priority:
-    1. TRAINING_DATA_PATH environment variable (custom override)
-    2. Replit persistent storage (/home/runner/innerverse_data/training_pairs)
-    3. Local development path (./data/training_pairs)
+    Storage abstraction for training pairs.
+    Automatically uses Replit Object Storage on Replit, local files otherwise.
     """
-    # Check for custom path override
-    custom_path = os.environ.get('TRAINING_DATA_PATH')
-    if custom_path:
-        print(f"[Training Pairs] Using custom path: {custom_path}")
-        return Path(custom_path)
     
-    # Detect Replit environment (works for both dev and production)
-    if os.environ.get('REPL_ID') or os.environ.get('REPLIT') or os.environ.get('REPL_SLUG'):
-        persistent_path = Path("/home/runner/innerverse_data/training_pairs")
-        print(f"[Training Pairs] Replit detected - using persistent path: {persistent_path}")
-        return persistent_path
+    def __init__(self):
+        self.is_replit = bool(
+            os.environ.get('REPL_ID') or 
+            os.environ.get('REPLIT') or 
+            os.environ.get('REPL_SLUG')
+        )
+        self.object_storage_client = None
+        self.local_base_path = Path("./data/training_pairs")
+        self.storage_prefix = "training_pairs"  # Prefix for Object Storage paths
+        
+        if self.is_replit:
+            try:
+                from replit.object_storage import Client
+                self.object_storage_client = Client()
+                print("[TrainingPairStorage] ✅ Replit Object Storage initialized")
+            except ImportError:
+                print("[TrainingPairStorage] ⚠️ replit package not found, falling back to local storage")
+                self.is_replit = False
+            except Exception as e:
+                print(f"[TrainingPairStorage] ⚠️ Object Storage init failed: {e}, falling back to local")
+                self.is_replit = False
+        else:
+            print(f"[TrainingPairStorage] 📁 Using local storage: {self.local_base_path}")
     
-    # Local development - use relative path
-    local_path = Path("./data/training_pairs")
-    print(f"[Training Pairs] Local dev - using path: {local_path}")
-    return local_path
+    def _get_storage_path(self, relative_path: str) -> str:
+        """Convert relative path to storage path (with prefix for Object Storage)"""
+        return f"{self.storage_prefix}/{relative_path}"
+    
+    def _get_local_path(self, relative_path: str) -> Path:
+        """Convert relative path to local filesystem path"""
+        return self.local_base_path / relative_path
+    
+    def ensure_directories(self):
+        """Create directory structure (only needed for local storage)"""
+        if not self.is_replit:
+            self.local_base_path.mkdir(parents=True, exist_ok=True)
+            (self.local_base_path / "in_progress").mkdir(exist_ok=True)
+            (self.local_base_path / "pending_review").mkdir(exist_ok=True)
+            (self.local_base_path / "approved").mkdir(exist_ok=True)
+    
+    def read_file(self, relative_path: str) -> str | None:
+        """Read a file and return its content, or None if not found"""
+        if self.is_replit:
+            try:
+                storage_path = self._get_storage_path(relative_path)
+                content = self.object_storage_client.download_as_text(storage_path)
+                return content
+            except Exception as e:
+                if "not found" in str(e).lower() or "404" in str(e):
+                    return None
+                print(f"[Storage] Error reading {relative_path}: {e}")
+                return None
+        else:
+            local_path = self._get_local_path(relative_path)
+            if local_path.exists():
+                with open(local_path, 'r') as f:
+                    return f.read()
+            return None
+    
+    def write_file(self, relative_path: str, content: str):
+        """Write content to a file"""
+        if self.is_replit:
+            try:
+                storage_path = self._get_storage_path(relative_path)
+                self.object_storage_client.upload_from_text(storage_path, content)
+            except Exception as e:
+                print(f"[Storage] Error writing {relative_path}: {e}")
+                raise
+        else:
+            local_path = self._get_local_path(relative_path)
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(local_path, 'w') as f:
+                f.write(content)
+    
+    def append_file(self, relative_path: str, content: str):
+        """Append content to a file (read + write for Object Storage)"""
+        existing = self.read_file(relative_path) or ""
+        self.write_file(relative_path, existing + content)
+    
+    def delete_file(self, relative_path: str) -> bool:
+        """Delete a file, returns True if successful"""
+        if self.is_replit:
+            try:
+                storage_path = self._get_storage_path(relative_path)
+                self.object_storage_client.delete(storage_path)
+                return True
+            except Exception as e:
+                print(f"[Storage] Error deleting {relative_path}: {e}")
+                return False
+        else:
+            local_path = self._get_local_path(relative_path)
+            if local_path.exists():
+                local_path.unlink()
+                return True
+            return False
+    
+    def exists(self, relative_path: str) -> bool:
+        """Check if a file exists"""
+        if self.is_replit:
+            content = self.read_file(relative_path)
+            return content is not None
+        else:
+            return self._get_local_path(relative_path).exists()
+    
+    def move_file(self, from_path: str, to_path: str) -> bool:
+        """Move a file from one location to another"""
+        content = self.read_file(from_path)
+        if content is None:
+            return False
+        self.write_file(to_path, content)
+        self.delete_file(from_path)
+        return True
+    
+    def list_files(self, folder: str) -> list[str]:
+        """
+        List files in a folder. Uses index for Object Storage.
+        Returns list of filenames (not full paths).
+        """
+        if self.is_replit:
+            # Use index to track files since Object Storage may not have list
+            index = self._load_file_index()
+            return index.get(folder, [])
+        else:
+            folder_path = self._get_local_path(folder)
+            if folder_path.exists():
+                return [f.name for f in folder_path.glob("*") if f.is_file()]
+            return []
+    
+    def _load_file_index(self) -> dict:
+        """Load the file index (tracks what files exist in each folder)"""
+        content = self.read_file("_file_index.json")
+        if content:
+            try:
+                return json.loads(content)
+            except:
+                pass
+        return {"in_progress": [], "pending_review": [], "approved": []}
+    
+    def _save_file_index(self, index: dict):
+        """Save the file index"""
+        self.write_file("_file_index.json", json.dumps(index, indent=2))
+    
+    def add_to_index(self, folder: str, filename: str):
+        """Add a file to the index"""
+        if self.is_replit:
+            index = self._load_file_index()
+            if folder not in index:
+                index[folder] = []
+            if filename not in index[folder]:
+                index[folder].append(filename)
+            self._save_file_index(index)
+    
+    def remove_from_index(self, folder: str, filename: str):
+        """Remove a file from the index"""
+        if self.is_replit:
+            index = self._load_file_index()
+            if folder in index and filename in index[folder]:
+                index[folder].remove(filename)
+            self._save_file_index(index)
+    
+    def move_in_index(self, filename: str, from_folder: str, to_folder: str):
+        """Move a file between folders in the index"""
+        if self.is_replit:
+            index = self._load_file_index()
+            if from_folder in index and filename in index[from_folder]:
+                index[from_folder].remove(filename)
+            if to_folder not in index:
+                index[to_folder] = []
+            if filename not in index[to_folder]:
+                index[to_folder].append(filename)
+            self._save_file_index(index)
 
-# Initialize paths using the dynamic base path
-TRAINING_PAIRS_PATH = get_training_pairs_base_path()
+
+# Initialize the global storage instance
+training_storage = TrainingPairStorage()
+
+# Legacy path constants (for backwards compatibility, but functions should use storage class)
+TRAINING_PAIRS_PATH = Path("./data/training_pairs")
 TRAINING_IN_PROGRESS_PATH = TRAINING_PAIRS_PATH / "in_progress"
 TRAINING_PENDING_PATH = TRAINING_PAIRS_PATH / "pending_review"
 TRAINING_APPROVED_PATH = TRAINING_PAIRS_PATH / "approved"
@@ -3137,21 +3295,18 @@ TRAINING_INDEX_PATH = TRAINING_PAIRS_PATH / "index.json"
 
 def ensure_training_pairs_storage():
     """Create training pairs folder structure if it doesn't exist"""
-    TRAINING_PAIRS_PATH.mkdir(parents=True, exist_ok=True)
-    TRAINING_IN_PROGRESS_PATH.mkdir(exist_ok=True)
-    TRAINING_PENDING_PATH.mkdir(exist_ok=True)
-    TRAINING_APPROVED_PATH.mkdir(exist_ok=True)
+    # For local storage, create directories
+    training_storage.ensure_directories()
     
     # Create index if doesn't exist
-    if not TRAINING_INDEX_PATH.exists():
+    if not training_storage.exists("index.json"):
         initial_index = {
             "files": [],
             "total_files": 0,
             "total_pairs": 0,
             "last_updated": None
         }
-        with open(TRAINING_INDEX_PATH, 'w') as f:
-            json.dump(initial_index, f, indent=2)
+        training_storage.write_file("index.json", json.dumps(initial_index, indent=2))
     
     print("✅ Training pairs storage initialized")
 
@@ -3229,16 +3384,16 @@ def sanitize_filename_for_training(filename: str) -> str:
 
 # === Progress Tracking (Crash Recovery) ===
 
-def start_training_processing(source_filename: str, chunks: list[str]) -> tuple[Path, Path]:
+def start_training_processing(source_filename: str, chunks: list[str]) -> tuple[str, str]:
     """
     Initialize progress tracking for a new file.
-    Returns (progress_file_path, partial_output_path)
+    Returns (progress_file_path, partial_output_path) as relative paths
     """
     ensure_training_pairs_storage()
     
     safe_name = sanitize_filename_for_training(source_filename)
-    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
-    partial_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_partial.jsonl"
+    progress_path = f"in_progress/{safe_name}_progress.json"
+    partial_path = f"in_progress/{safe_name}_partial.jsonl"
     
     progress = {
         "source_file": source_filename,
@@ -3254,14 +3409,17 @@ def start_training_processing(source_filename: str, chunks: list[str]) -> tuple[
         "last_updated": datetime.now().isoformat()
     }
     
-    with open(progress_file, 'w') as f:
-        json.dump(progress, f, indent=2)
+    training_storage.write_file(progress_path, json.dumps(progress, indent=2))
     
     # Create empty partial file
-    partial_file.touch()
+    training_storage.write_file(partial_path, "")
+    
+    # Track in index for Object Storage
+    training_storage.add_to_index("in_progress", f"{safe_name}_progress.json")
+    training_storage.add_to_index("in_progress", f"{safe_name}_partial.jsonl")
     
     print(f"📝 Started tracking: {source_filename} ({len(chunks)} chunks)")
-    return progress_file, partial_file
+    return progress_path, partial_path
 
 
 def save_training_chunk_progress(source_filename: str, chunk_index: int, pairs: list[dict]) -> dict:
@@ -3270,17 +3428,18 @@ def save_training_chunk_progress(source_filename: str, chunk_index: int, pairs: 
     Appends pairs to partial file and updates progress JSON.
     """
     safe_name = sanitize_filename_for_training(source_filename)
-    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
-    partial_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_partial.jsonl"
+    progress_path = f"in_progress/{safe_name}_progress.json"
+    partial_path = f"in_progress/{safe_name}_partial.jsonl"
     
     # Append pairs to partial file immediately
-    with open(partial_file, 'a') as f:
-        for pair in pairs:
-            f.write(json.dumps(pair) + '\n')
+    pairs_text = '\n'.join(json.dumps(pair) for pair in pairs)
+    if pairs_text:
+        pairs_text += '\n'
+    training_storage.append_file(partial_path, pairs_text)
     
     # Update progress
-    with open(progress_file, 'r') as f:
-        progress = json.load(f)
+    progress_content = training_storage.read_file(progress_path)
+    progress = json.loads(progress_content)
     
     progress["chunks"][chunk_index]["status"] = "complete"
     progress["chunks"][chunk_index]["pairs_generated"] = len(pairs)
@@ -3292,8 +3451,7 @@ def save_training_chunk_progress(source_filename: str, chunk_index: int, pairs: 
     if progress["completed_chunks"] == progress["total_chunks"]:
         progress["status"] = "complete"
     
-    with open(progress_file, 'w') as f:
-        json.dump(progress, f, indent=2)
+    training_storage.write_file(progress_path, json.dumps(progress, indent=2))
     
     print(f"   💾 Saved chunk {chunk_index + 1}: {len(pairs)} pairs")
     return progress
@@ -3304,21 +3462,25 @@ def get_in_progress_training_files() -> list[dict]:
     ensure_training_pairs_storage()
     
     resumable = []
-    for filepath in TRAINING_IN_PROGRESS_PATH.glob("*_progress.json"):
+    files = training_storage.list_files("in_progress")
+    
+    for filename in files:
+        if not filename.endswith("_progress.json"):
+            continue
         try:
-            with open(filepath) as f:
-                progress = json.load(f)
-            
-            if progress["status"] == "in_progress":
-                resumable.append({
-                    "source_file": progress["source_file"],
-                    "completed": progress["completed_chunks"],
-                    "total": progress["total_chunks"],
-                    "pairs_so_far": progress["total_pairs_generated"],
-                    "last_updated": progress["last_updated"]
-                })
+            content = training_storage.read_file(f"in_progress/{filename}")
+            if content:
+                progress = json.loads(content)
+                if progress["status"] == "in_progress":
+                    resumable.append({
+                        "source_file": progress["source_file"],
+                        "completed": progress["completed_chunks"],
+                        "total": progress["total_chunks"],
+                        "pairs_so_far": progress["total_pairs_generated"],
+                        "last_updated": progress["last_updated"]
+                    })
         except Exception as e:
-            print(f"⚠️ Error reading progress file {filepath}: {e}")
+            print(f"⚠️ Error reading progress file {filename}: {e}")
     
     return resumable
 
@@ -3326,13 +3488,13 @@ def get_in_progress_training_files() -> list[dict]:
 def get_resume_info(source_filename: str) -> dict:
     """Get info needed to resume processing an interrupted file"""
     safe_name = sanitize_filename_for_training(source_filename)
-    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
+    progress_path = f"in_progress/{safe_name}_progress.json"
     
-    if not progress_file.exists():
+    content = training_storage.read_file(progress_path)
+    if not content:
         return None
     
-    with open(progress_file) as f:
-        progress = json.load(f)
+    progress = json.loads(content)
     
     # Find first incomplete chunk
     next_chunk = None
@@ -3347,39 +3509,46 @@ def get_resume_info(source_filename: str) -> dict:
     }
 
 
-def finalize_training_processing(source_filename: str) -> Path:
+def finalize_training_processing(source_filename: str) -> str:
     """Move completed file from in_progress to pending_review"""
     safe_name = sanitize_filename_for_training(source_filename)
-    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
-    partial_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_partial.jsonl"
-    dest_file = TRAINING_PENDING_PATH / f"{safe_name}.jsonl"
+    progress_path = f"in_progress/{safe_name}_progress.json"
+    partial_path = f"in_progress/{safe_name}_partial.jsonl"
+    dest_path = f"pending_review/{safe_name}.jsonl"
     
     # Get final stats before cleanup
-    with open(progress_file) as f:
-        progress = json.load(f)
+    progress_content = training_storage.read_file(progress_path)
+    progress = json.loads(progress_content)
     
     # Move partial to pending_review
-    shutil.move(str(partial_file), str(dest_file))
+    training_storage.move_file(partial_path, dest_path)
     
     # Remove progress file
-    progress_file.unlink()
+    training_storage.delete_file(progress_path)
+    
+    # Update index
+    training_storage.remove_from_index("in_progress", f"{safe_name}_progress.json")
+    training_storage.remove_from_index("in_progress", f"{safe_name}_partial.jsonl")
+    training_storage.add_to_index("pending_review", f"{safe_name}.jsonl")
     
     print(f"✅ Finalized: {source_filename} → pending_review/")
     print(f"   Total pairs: {progress['total_pairs_generated']}")
     
-    return dest_file
+    return dest_path
 
 
 def discard_training_progress(source_filename: str):
     """Discard an in-progress file (user chose to start over or abandon)"""
     safe_name = sanitize_filename_for_training(source_filename)
-    progress_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_progress.json"
-    partial_file = TRAINING_IN_PROGRESS_PATH / f"{safe_name}_partial.jsonl"
+    progress_path = f"in_progress/{safe_name}_progress.json"
+    partial_path = f"in_progress/{safe_name}_partial.jsonl"
     
-    if progress_file.exists():
-        progress_file.unlink()
-    if partial_file.exists():
-        partial_file.unlink()
+    training_storage.delete_file(progress_path)
+    training_storage.delete_file(partial_path)
+    
+    # Update index
+    training_storage.remove_from_index("in_progress", f"{safe_name}_progress.json")
+    training_storage.remove_from_index("in_progress", f"{safe_name}_partial.jsonl")
     
     print(f"🗑️ Discarded progress for: {source_filename}")
 
@@ -3390,9 +3559,12 @@ def load_training_index() -> dict:
     """Load training pairs master index"""
     ensure_training_pairs_storage()
     
-    if TRAINING_INDEX_PATH.exists():
-        with open(TRAINING_INDEX_PATH) as f:
-            return json.load(f)
+    content = training_storage.read_file("index.json")
+    if content:
+        try:
+            return json.loads(content)
+        except:
+            pass
     
     return {
         "files": [],
@@ -3405,8 +3577,7 @@ def load_training_index() -> dict:
 def save_training_index(index: dict):
     """Save training pairs master index"""
     index["last_updated"] = datetime.now().isoformat()
-    with open(TRAINING_INDEX_PATH, 'w') as f:
-        json.dump(index, f, indent=2)
+    training_storage.write_file("index.json", json.dumps(index, indent=2))
 
 
 # === File Listing Functions ===
@@ -3416,17 +3587,23 @@ def get_pending_training_files() -> list[dict]:
     ensure_training_pairs_storage()
     
     files = []
-    for filepath in TRAINING_PENDING_PATH.glob("*.jsonl"):
+    file_list = training_storage.list_files("pending_review")
+    
+    for filename in file_list:
+        if not filename.endswith(".jsonl"):
+            continue
         try:
-            pair_count = sum(1 for _ in open(filepath))
-            files.append({
-                'filename': filepath.name,
-                'pair_count': pair_count,
-                'status': 'pending_review',
-                'path': str(filepath)
-            })
+            content = training_storage.read_file(f"pending_review/{filename}")
+            if content:
+                pair_count = len([line for line in content.strip().split('\n') if line.strip()])
+                files.append({
+                    'filename': filename,
+                    'pair_count': pair_count,
+                    'status': 'pending_review',
+                    'path': f"pending_review/{filename}"
+                })
         except Exception as e:
-            print(f"⚠️ Error reading {filepath}: {e}")
+            print(f"⚠️ Error reading {filename}: {e}")
     
     return files
 
@@ -3436,17 +3613,23 @@ def get_approved_training_files() -> list[dict]:
     ensure_training_pairs_storage()
     
     files = []
-    for filepath in TRAINING_APPROVED_PATH.glob("*.jsonl"):
+    file_list = training_storage.list_files("approved")
+    
+    for filename in file_list:
+        if not filename.endswith(".jsonl"):
+            continue
         try:
-            pair_count = sum(1 for _ in open(filepath))
-            files.append({
-                'filename': filepath.name,
-                'pair_count': pair_count,
-                'status': 'approved',
-                'path': str(filepath)
-            })
+            content = training_storage.read_file(f"approved/{filename}")
+            if content:
+                pair_count = len([line for line in content.strip().split('\n') if line.strip()])
+                files.append({
+                    'filename': filename,
+                    'pair_count': pair_count,
+                    'status': 'approved',
+                    'path': f"approved/{filename}"
+                })
         except Exception as e:
-            print(f"⚠️ Error reading {filepath}: {e}")
+            print(f"⚠️ Error reading {filename}: {e}")
     
     return files
 
@@ -3899,25 +4082,40 @@ def process_chunks_for_training_sync(
 import random
 
 
-def get_training_file_path(filename: str, status: str = "pending") -> Path:
+def get_training_file_path(filename: str, status: str = "pending") -> str:
     """
-    Get the full path to a training file by filename and status.
+    Get the storage path to a training file by filename and status.
     
     Args:
         filename: The .jsonl filename
         status: "pending", "approved", or "in_progress"
     
     Returns:
-        Full Path to the file
+        Relative storage path to the file
     """
     if status == "pending":
-        return TRAINING_PENDING_PATH / filename
+        return f"pending_review/{filename}"
     elif status == "approved":
-        return TRAINING_APPROVED_PATH / filename
+        return f"approved/{filename}"
     elif status == "in_progress":
-        return TRAINING_IN_PROGRESS_PATH / filename
+        return f"in_progress/{filename}"
     else:
         raise ValueError(f"Invalid status: {status}")
+
+
+def get_training_file_content(filename: str, status: str = "pending") -> str | None:
+    """
+    Get the content of a training file.
+    
+    Args:
+        filename: The .jsonl filename
+        status: "pending", "approved", or "in_progress"
+    
+    Returns:
+        File content as string, or None if not found
+    """
+    path = get_training_file_path(filename, status)
+    return training_storage.read_file(path)
 
 
 def get_pairs_for_review(filename: str) -> list[dict]:
@@ -3926,45 +4124,46 @@ def get_pairs_for_review(filename: str) -> list[dict]:
     
     Returns list of dicts with index, question, answer, and status.
     """
-    filepath = TRAINING_PENDING_PATH / filename
+    content = training_storage.read_file(f"pending_review/{filename}")
     
-    if not filepath.exists():
-        print(f"❌ File not found: {filepath}")
+    if not content:
+        print(f"❌ File not found: pending_review/{filename}")
         return []
     
     pairs = []
-    with open(filepath) as f:
-        for i, line in enumerate(f):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                pair = json.loads(line)
-                # Debug: print first pair structure
-                if i == 0:
-                    print(f"📋 First pair raw structure: {json.dumps(pair, indent=2)[:500]}")
-                
-                question = pair['messages'][0]['content'] if 'messages' in pair else ''
-                answer = pair['messages'][1]['content'] if 'messages' in pair and len(pair['messages']) > 1 else ''
-                
-                # Debug: print extracted values
-                if i == 0:
-                    print(f"📋 Extracted - Q: {question[:100]}... A: {answer[:100]}...")
-                
-                pairs.append({
-                    'index': i,
-                    'question': question,
-                    'answer': answer,
-                    'status': 'unchanged'  # Track edits in UI
-                })
-            except (json.JSONDecodeError, KeyError, IndexError) as e:
-                print(f"   ⚠️ Error parsing pair {i}: {e}")
-                pairs.append({
-                    'index': i,
-                    'question': '[PARSE ERROR]',
-                    'answer': str(line)[:100],
-                    'status': 'error'
-                })
+    lines = content.strip().split('\n')
+    
+    for i, line in enumerate(lines):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            pair = json.loads(line)
+            # Debug: print first pair structure
+            if i == 0:
+                print(f"📋 First pair raw structure: {json.dumps(pair, indent=2)[:500]}")
+            
+            question = pair['messages'][0]['content'] if 'messages' in pair else ''
+            answer = pair['messages'][1]['content'] if 'messages' in pair and len(pair['messages']) > 1 else ''
+            
+            # Debug: print extracted values
+            if i == 0:
+                print(f"📋 Extracted - Q: {question[:100]}... A: {answer[:100]}...")
+            
+            pairs.append({
+                'index': i,
+                'question': question,
+                'answer': answer,
+                'status': 'unchanged'  # Track edits in UI
+            })
+        except (json.JSONDecodeError, KeyError, IndexError) as e:
+            print(f"   ⚠️ Error parsing pair {i}: {e}")
+            pairs.append({
+                'index': i,
+                'question': '[PARSE ERROR]',
+                'answer': str(line)[:100],
+                'status': 'error'
+            })
     
     print(f"📋 Loaded {len(pairs)} pairs from {filename}")
     return pairs
@@ -3983,22 +4182,22 @@ def update_training_pair(filename: str, pair_index: int, new_question: str, new_
     Returns:
         True if successful, False otherwise
     """
-    filepath = TRAINING_PENDING_PATH / filename
+    file_path = f"pending_review/{filename}"
+    content = training_storage.read_file(file_path)
     
-    if not filepath.exists():
-        print(f"❌ File not found: {filepath}")
+    if not content:
+        print(f"❌ File not found: {file_path}")
         return False
     
     # Read all pairs
     pairs = []
-    with open(filepath) as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                try:
-                    pairs.append(json.loads(line))
-                except json.JSONDecodeError:
-                    pairs.append(None)  # Preserve position
+    for line in content.strip().split('\n'):
+        line = line.strip()
+        if line:
+            try:
+                pairs.append(json.loads(line))
+            except json.JSONDecodeError:
+                pairs.append(None)  # Preserve position
     
     # Validate index
     if pair_index < 0 or pair_index >= len(pairs):
@@ -4014,10 +4213,8 @@ def update_training_pair(filename: str, pair_index: int, new_question: str, new_
     }
     
     # Write back all pairs
-    with open(filepath, 'w') as f:
-        for pair in pairs:
-            if pair:
-                f.write(json.dumps(pair) + '\n')
+    new_content = '\n'.join(json.dumps(pair) for pair in pairs if pair) + '\n'
+    training_storage.write_file(file_path, new_content)
     
     print(f"✅ Updated pair {pair_index} in {filename}")
     return True
@@ -4034,33 +4231,33 @@ def delete_training_pair(filename: str, pair_index: int) -> bool:
     Returns:
         True if successful, False otherwise
     """
-    filepath = TRAINING_PENDING_PATH / filename
+    file_path = f"pending_review/{filename}"
+    content = training_storage.read_file(file_path)
     
-    if not filepath.exists():
-        print(f"❌ File not found: {filepath}")
+    if not content:
+        print(f"❌ File not found: {file_path}")
         return False
     
-    # Read all pairs
+    # Read all pairs, excluding the one to delete
     pairs = []
-    with open(filepath) as f:
-        for i, line in enumerate(f):
-            line = line.strip()
-            if line and i != pair_index:
-                try:
-                    pairs.append(json.loads(line))
-                except json.JSONDecodeError:
-                    pass  # Skip malformed lines
+    lines = content.strip().split('\n')
+    for i, line in enumerate(lines):
+        line = line.strip()
+        if line and i != pair_index:
+            try:
+                pairs.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass  # Skip malformed lines
     
     # Write back (without the deleted pair)
-    with open(filepath, 'w') as f:
-        for pair in pairs:
-            f.write(json.dumps(pair) + '\n')
+    new_content = '\n'.join(json.dumps(pair) for pair in pairs) + '\n'
+    training_storage.write_file(file_path, new_content)
     
     print(f"🗑️ Deleted pair {pair_index} from {filename}")
     return True
 
 
-def approve_training_file(filename: str) -> Path:
+def approve_training_file(filename: str) -> str:
     """
     Move a file from pending_review to approved.
     This marks it as quality-checked and ready for training.
@@ -4071,23 +4268,25 @@ def approve_training_file(filename: str) -> Path:
     Returns:
         Path to the approved file, or None if failed
     """
-    source = TRAINING_PENDING_PATH / filename
-    dest = TRAINING_APPROVED_PATH / filename
+    source_path = f"pending_review/{filename}"
+    dest_path = f"approved/{filename}"
     
-    if not source.exists():
-        print(f"❌ File not found: {source}")
+    content = training_storage.read_file(source_path)
+    if not content:
+        print(f"❌ File not found: {source_path}")
         return None
     
     # Move the file
-    shutil.move(str(source), str(dest))
+    training_storage.move_file(source_path, dest_path)
     
-    # Update index
-    index = load_training_index()
+    # Update storage index
+    training_storage.move_in_index(filename, "pending_review", "approved")
     
     # Count pairs in the approved file
-    pair_count = sum(1 for _ in open(dest))
+    pair_count = len([line for line in content.strip().split('\n') if line.strip()])
     
-    # Add to index
+    # Update master training index
+    index = load_training_index()
     index["files"].append({
         "filename": filename,
         "status": "approved",
@@ -4096,15 +4295,14 @@ def approve_training_file(filename: str) -> Path:
     })
     index["total_files"] = len([f for f in index["files"] if f.get("status") == "approved"])
     index["total_pairs"] = sum(f.get("pair_count", 0) for f in index["files"] if f.get("status") == "approved")
-    
     save_training_index(index)
     
     print(f"✅ Approved: {filename} ({pair_count} pairs)")
-    print(f"   Moved to: {dest}")
-    return dest
+    print(f"   Moved to: {dest_path}")
+    return dest_path
 
 
-def unapprove_training_file(filename: str) -> Path:
+def unapprove_training_file(filename: str) -> str:
     """
     Move a file back from approved to pending_review.
     Use this if you need to make more edits.
@@ -4115,27 +4313,29 @@ def unapprove_training_file(filename: str) -> Path:
     Returns:
         Path to the pending file, or None if failed
     """
-    source = TRAINING_APPROVED_PATH / filename
-    dest = TRAINING_PENDING_PATH / filename
+    source_path = f"approved/{filename}"
+    dest_path = f"pending_review/{filename}"
     
-    if not source.exists():
-        print(f"❌ File not found: {source}")
+    if not training_storage.exists(source_path):
+        print(f"❌ File not found: {source_path}")
         return None
     
     # Move the file
-    shutil.move(str(source), str(dest))
+    training_storage.move_file(source_path, dest_path)
     
-    # Update index - remove from approved
+    # Update storage index
+    training_storage.move_in_index(filename, "approved", "pending_review")
+    
+    # Update master training index - remove from approved
     index = load_training_index()
     index["files"] = [f for f in index["files"] if f.get("filename") != filename]
     index["total_files"] = len([f for f in index["files"] if f.get("status") == "approved"])
     index["total_pairs"] = sum(f.get("pair_count", 0) for f in index["files"] if f.get("status") == "approved")
-    
     save_training_index(index)
     
     print(f"↩️ Unapproved: {filename}")
-    print(f"   Moved back to: {dest}")
-    return dest
+    print(f"   Moved back to: {dest_path}")
+    return dest_path
 
 
 def combine_approved_training_files() -> dict:
@@ -4161,40 +4361,48 @@ def combine_approved_training_files() -> dict:
     print("📦 Combining approved training files...")
     
     # Read all approved .jsonl files
-    for filepath in TRAINING_APPROVED_PATH.glob("*.jsonl"):
+    file_list = training_storage.list_files("approved")
+    
+    for filename in file_list:
+        if not filename.endswith(".jsonl"):
+            continue
         files_processed += 1
         file_pairs = 0
         file_dupes = 0
         
         try:
-            with open(filepath) as f:
-                for line_num, line in enumerate(f, 1):
-                    line = line.strip()
-                    if not line:
+            content = training_storage.read_file(f"approved/{filename}")
+            if not content:
+                continue
+                
+            lines = content.strip().split('\n')
+            for line_num, line in enumerate(lines, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                try:
+                    pair = json.loads(line)
+                    question = pair['messages'][0]['content'].strip().lower()
+                    
+                    # Check for duplicate
+                    if question in seen_questions:
+                        file_dupes += 1
+                        duplicates_removed += 1
                         continue
                     
-                    try:
-                        pair = json.loads(line)
-                        question = pair['messages'][0]['content'].strip().lower()
-                        
-                        # Check for duplicate
-                        if question in seen_questions:
-                            file_dupes += 1
-                            duplicates_removed += 1
-                            continue
-                        
-                        seen_questions.add(question)
-                        all_pairs.append(pair)
-                        file_pairs += 1
-                        
-                    except (json.JSONDecodeError, KeyError, IndexError) as e:
-                        errors.append(f"{filepath.name} line {line_num}: {str(e)[:50]}")
+                    seen_questions.add(question)
+                    all_pairs.append(pair)
+                    file_pairs += 1
+                    
+                except (json.JSONDecodeError, KeyError, IndexError) as e:
+                    errors.append(f"{filename} line {line_num}: {str(e)[:50]}")
             
-            print(f"   ✅ {filepath.name}: {file_pairs} pairs ({file_dupes} duplicates)")
+            print(f"   ✅ {filename}: {file_pairs} pairs ({file_dupes} duplicates)")
             
         except Exception as e:
-            errors.append(f"{filepath.name}: {str(e)}")
-            print(f"   ❌ {filepath.name}: {str(e)}")
+            errors.append(f"{filename}: {str(e)}")
+            print(f"   ❌ {filename}: {str(e)}")
     
     if not all_pairs:
         print("⚠️ No pairs found in approved files!")
@@ -4211,14 +4419,12 @@ def combine_approved_training_files() -> dict:
     print(f"🔀 Shuffled {len(all_pairs)} pairs")
     
     # Write combined file
-    output_path = TRAINING_PAIRS_PATH / "training_data.jsonl"
-    with open(output_path, 'w') as f:
-        for pair in all_pairs:
-            f.write(json.dumps(pair) + '\n')
+    output_content = '\n'.join(json.dumps(pair) for pair in all_pairs) + '\n'
+    training_storage.write_file("training_data.jsonl", output_content)
     
     print(f"\n{'=' * 50}")
     print(f"✅ COMBINED TRAINING FILE CREATED")
-    print(f"   Path: {output_path}")
+    print(f"   Path: training_data.jsonl (Object Storage)")
     print(f"   Total pairs: {len(all_pairs)}")
     print(f"   Duplicates removed: {duplicates_removed}")
     print(f"   Files processed: {files_processed}")
@@ -4227,7 +4433,7 @@ def combine_approved_training_files() -> dict:
     print(f"{'=' * 50}")
     
     return {
-        "path": str(output_path),
+        "path": "training_data.jsonl",
         "total_pairs": len(all_pairs),
         "duplicates_removed": duplicates_removed,
         "files_processed": files_processed,
@@ -4278,10 +4484,12 @@ def delete_training_file(filename: str, status: str = "pending") -> bool:
         True if deleted, False otherwise
     """
     if status == "pending":
-        filepath = TRAINING_PENDING_PATH / filename
+        file_path = f"pending_review/{filename}"
+        folder = "pending_review"
     elif status == "approved":
-        filepath = TRAINING_APPROVED_PATH / filename
-        # Also remove from index
+        file_path = f"approved/{filename}"
+        folder = "approved"
+        # Also remove from master index
         index = load_training_index()
         index["files"] = [f for f in index["files"] if f.get("filename") != filename]
         index["total_files"] = len([f for f in index["files"] if f.get("status") == "approved"])
@@ -4291,38 +4499,39 @@ def delete_training_file(filename: str, status: str = "pending") -> bool:
         print(f"❌ Invalid status: {status}")
         return False
     
-    if not filepath.exists():
-        print(f"❌ File not found: {filepath}")
+    if not training_storage.exists(file_path):
+        print(f"❌ File not found: {file_path}")
         return False
     
-    filepath.unlink()
-    print(f"🗑️ Deleted: {filepath}")
+    training_storage.delete_file(file_path)
+    training_storage.remove_from_index(folder, filename)
+    print(f"🗑️ Deleted: {file_path}")
     return True
 
 
-def get_combined_training_file_path() -> Path:
+def get_combined_training_file_path() -> str:
     """Get the path to the combined training_data.jsonl file."""
-    return TRAINING_PAIRS_PATH / "training_data.jsonl"
+    return "training_data.jsonl"
 
 
 def get_combined_training_stats() -> dict:
     """Get statistics about the combined training file."""
-    filepath = get_combined_training_file_path()
+    content = training_storage.read_file("training_data.jsonl")
     
-    if not filepath.exists():
+    if not content:
         return {
             "exists": False,
-            "path": str(filepath),
+            "path": "training_data.jsonl",
             "pair_count": 0,
             "file_size_kb": 0
         }
     
-    pair_count = sum(1 for _ in open(filepath))
-    file_size = filepath.stat().st_size / 1024  # KB
+    pair_count = len([line for line in content.strip().split('\n') if line.strip()])
+    file_size = len(content.encode('utf-8')) / 1024  # KB
     
     return {
         "exists": True,
-        "path": str(filepath),
+        "path": "training_data.jsonl",
         "pair_count": pair_count,
         "file_size_kb": round(file_size, 2)
     }
@@ -10100,14 +10309,17 @@ async def combine_training_files_endpoint():
 async def download_training_file(filename: str, status: str = "pending"):
     """Download a specific training file"""
     try:
-        filepath = get_training_file_path(filename, status)
-        if not filepath.exists():
+        content = get_training_file_content(filename, status)
+        if not content:
             return JSONResponse(status_code=404, content={"error": "File not found"})
         
-        return FileResponse(
-            path=str(filepath),
-            filename=filename,
-            media_type="application/x-jsonlines"
+        # Return content directly as a Response
+        return Response(
+            content=content,
+            media_type="application/x-jsonlines",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
         )
     except Exception as e:
         print(f"❌ Download error: {e}")
@@ -10124,14 +10336,16 @@ async def download_combined_training_file():
         if not result.get("path"):
             return JSONResponse(status_code=404, content={"error": "No approved files to combine"})
         
-        filepath = Path(result["path"])
-        if not filepath.exists():
+        content = training_storage.read_file("training_data.jsonl")
+        if not content:
             return JSONResponse(status_code=404, content={"error": "Combined file not found"})
         
-        return FileResponse(
-            path=str(filepath),
-            filename="training_data.jsonl",
-            media_type="application/x-jsonlines"
+        return Response(
+            content=content,
+            media_type="application/x-jsonlines",
+            headers={
+                "Content-Disposition": 'attachment; filename="training_data.jsonl"'
+            }
         )
     except Exception as e:
         print(f"❌ Download all error: {e}")
