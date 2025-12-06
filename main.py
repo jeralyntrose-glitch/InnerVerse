@@ -3495,10 +3495,34 @@ Generate 15-20 Q&A pairs now. Output ONLY valid JSON lines:
 """
 
 
+def repair_json_string(json_str: str) -> str:
+    """
+    Repair common JSON formatting errors from Claude Haiku.
+    Fixes missing commas between key-value pairs.
+    """
+    import re
+    
+    # Fix missing comma after "role": "user" or "role": "assistant"
+    # Pattern: "user" "content" -> "user", "content"
+    json_str = re.sub(r'("user")\s*("content")', r'\1, \2', json_str)
+    json_str = re.sub(r'("assistant")\s*("content")', r'\1, \2', json_str)
+    
+    # Fix missing comma between "role" and "content" more generally
+    # "role": "..." "content" -> "role": "...", "content"
+    json_str = re.sub(r'("role":\s*"[^"]*")\s*("content")', r'\1, \2', json_str)
+    
+    # Fix missing comma after content value before closing brace of message
+    # "content": "..."} -> keep as is (this is valid)
+    # "content": "..." } { -> "content": "..."}, {
+    
+    return json_str
+
+
 def parse_qa_response(response_text: str) -> list[dict]:
     """
     Parse JSON objects from AI response using bracket-counting.
     Handles concatenated JSON without newlines.
+    Includes JSON repair for Claude Haiku's malformed output.
     Returns list of valid Q&A pairs.
     """
     pairs = []
@@ -3572,12 +3596,27 @@ def parse_qa_response(response_text: str) -> list[dict]:
         # Extract and parse the JSON object
         if end_pos > start_pos:
             json_str = text[start_pos:end_pos]
+            parsed = False
+            
+            # Try parsing as-is first
             try:
                 pair = json.loads(json_str)
                 if validate_qa_pair(pair):
                     pairs.append(pair)
-            except json.JSONDecodeError as e:
-                print(f"   ⚠️ JSON parse error at pos {start_pos}: {str(e)[:50]}")
+                    parsed = True
+            except json.JSONDecodeError:
+                pass
+            
+            # Try with JSON repair if initial parse failed (fixes missing commas from Haiku)
+            if not parsed:
+                try:
+                    repaired = repair_json_string(json_str)
+                    pair = json.loads(repaired)
+                    if validate_qa_pair(pair):
+                        pairs.append(pair)
+                        parsed = True
+                except json.JSONDecodeError as e:
+                    print(f"   ⚠️ JSON parse error at pos {start_pos}: {str(e)[:50]}")
         
         # Move search position forward
         search_start = end_pos if end_pos > start_pos else start_pos + 1
