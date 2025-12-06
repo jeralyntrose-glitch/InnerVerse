@@ -106,6 +106,175 @@
 
     <div id="status" class="status"></div>
 
+    <!-- 🎓 Training Pair Generator Section -->
+    <div class="training-pairs-section">
+      <button class="training-pairs-toggle" id="training-pairs-toggle">
+        <div class="training-pairs-toggle-content">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+          </svg>
+          <span>🎓 Training Pair Generator</span>
+        </div>
+        <svg class="training-pairs-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      
+      <div class="training-pairs-content" id="training-pairs-content">
+        <!-- Stats Overview -->
+        <div class="training-stats-overview" id="training-stats-overview">
+          <div class="training-stat-item">
+            <div class="training-stat-value" id="training-stat-pending">0</div>
+            <div class="training-stat-label">Pending Review</div>
+          </div>
+          <div class="training-stat-item">
+            <div class="training-stat-value" id="training-stat-approved">0</div>
+            <div class="training-stat-label">Approved</div>
+          </div>
+          <div class="training-stat-item">
+            <div class="training-stat-value" id="training-stat-pairs">0</div>
+            <div class="training-stat-label">Total Pairs</div>
+          </div>
+        </div>
+        
+        <!-- Resume Section (shows if interrupted files exist) -->
+        <div class="training-resume-section hidden" id="training-resume-section">
+          <div class="training-resume-header">
+            <span>⚠️ Interrupted Processing</span>
+          </div>
+          <div class="training-resume-list" id="training-resume-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        
+        <!-- Upload Section -->
+        <div class="training-upload-section">
+          <p class="training-description">
+            Upload a PDF to generate Q&A training pairs for fine-tuning. Works with transcripts and books of any length.
+          </p>
+          <div class="training-upload-row">
+            <label for="training-file-input" class="btn-training-upload">
+              📄 Choose PDF
+            </label>
+            <input type="file" id="training-file-input" accept="application/pdf" multiple style="display: none;" />
+            <span class="training-file-name" id="training-file-name">No file selected</span>
+            <button id="training-process-btn" class="btn-training-process" disabled>
+              🤖 Generate Pairs
+            </button>
+          </div>
+        </div>
+        
+        <!-- Processing Progress - All Files View -->
+        <div class="training-progress-section hidden" id="training-progress-section">
+          <div class="training-progress-header">
+            <h4>🔄 <span id="training-batch-progress">Processing Files</span></h4>
+            <button id="training-cancel-btn" class="btn-training-cancel">❌ Cancel</button>
+          </div>
+          
+          <!-- All Files List -->
+          <div class="training-batch-files-list" id="training-batch-files-list">
+            <!-- Files will be populated here by JS -->
+          </div>
+          
+          <!-- Overall Summary -->
+          <div class="training-batch-summary" id="training-batch-summary">
+            <span id="training-batch-summary-text">Preparing...</span>
+          </div>
+        </div>
+        
+        <!-- Pending Files List -->
+        <div class="training-files-section">
+          <div class="training-files-header">
+            <h4>📋 Pending Review</h4>
+            <button class="btn-refresh-training" id="btn-refresh-training" title="Refresh">🔄</button>
+          </div>
+          <div class="training-files-list" id="training-pending-list">
+            <div class="training-files-placeholder">No files pending review</div>
+          </div>
+        </div>
+        
+        <!-- Approved Files List -->
+        <div class="training-files-section">
+          <div class="training-files-header">
+            <h4>✅ Approved</h4>
+          </div>
+          <div class="training-files-list" id="training-approved-list">
+            <div class="training-files-placeholder">No approved files yet</div>
+          </div>
+        </div>
+        
+        <!-- Download Section -->
+        <div class="training-download-section">
+          <button id="training-combine-btn" class="btn-training-combine">
+            📦 Combine All & Download
+          </button>
+          <p class="training-download-note">
+            Combines all approved files into training_data.jsonl with duplicates removed and shuffled.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📝 Text to PDF Section (Collapsible) -->
+    <div class="text-to-pdf-section">
+      <button class="text-pdf-toggle" id="text-pdf-toggle">
+        <div class="text-pdf-toggle-content">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Text to PDF</span>
+        </div>
+        <svg class="text-pdf-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      <div class="text-pdf-content" id="text-pdf-content">
+        <p class="text-pdf-description">Paste text to create a formatted PDF with automatic punctuation fixes</p>
+        <div class="text-pdf-form">
+          <input type="text" id="pdf-title" placeholder="Document Title" class="pdf-title-input" />
+          <textarea id="pdf-text" placeholder="Paste your text here... (AI will fix punctuation and grammar automatically)" rows="8"></textarea>
+          <button id="create-pdf-btn" class="btn-create-pdf">✨ Create PDF</button>
+        </div>
+        <div id="text-pdf-progress" class="text-pdf-progress hidden">
+          <div class="text-pdf-status-text"></div>
+          <div class="text-pdf-progress-bar-container">
+            <div class="text-pdf-progress-bar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📚 Document Library Section -->
+    <div class="tag-library-section">
+      <button class="tag-library-toggle" id="tag-library-toggle">
+        <div class="tag-library-toggle-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <span>📚 Document Library</span>
+        </div>
+        <svg class="tag-library-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      
+      <div class="tag-library-content" id="tag-library-content">
+        <p class="tag-library-description">Browse and manage your uploaded documents</p>
+        
+        <!-- Document List -->
+        <div class="documents-section">
+          <div id="tagged-documents-list" class="documents-list">
+            <div class="documents-placeholder">No documents yet. Upload a PDF to get started!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 🎬 YouTube Transcription Section (Collapsible) -->
     <div class="youtube-section">
       <button class="youtube-toggle" id="youtube-toggle">
@@ -204,343 +373,6 @@
           <div id="pending-videos-list" class="pending-videos-list">
             <div class="pending-placeholder">Loading pending videos...</div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 📝 Text to PDF Section (Collapsible) -->
-    <div class="text-to-pdf-section">
-      <button class="text-pdf-toggle" id="text-pdf-toggle">
-        <div class="text-pdf-toggle-content">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-          <span>Text to PDF</span>
-        </div>
-        <svg class="text-pdf-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-        </svg>
-      </button>
-      <div class="text-pdf-content" id="text-pdf-content">
-        <p class="text-pdf-description">Paste text to create a formatted PDF with automatic punctuation fixes</p>
-        <div class="text-pdf-form">
-          <input type="text" id="pdf-title" placeholder="Document Title" class="pdf-title-input" />
-          <textarea id="pdf-text" placeholder="Paste your text here... (AI will fix punctuation and grammar automatically)" rows="8"></textarea>
-          <button id="create-pdf-btn" class="btn-create-pdf">✨ Create PDF</button>
-        </div>
-        <div id="text-pdf-progress" class="text-pdf-progress hidden">
-          <div class="text-pdf-status-text"></div>
-          <div class="text-pdf-progress-bar-container">
-            <div class="text-pdf-progress-bar"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 📚 Document Library Section -->
-    <div class="tag-library-section">
-      <button class="tag-library-toggle" id="tag-library-toggle">
-        <div class="tag-library-toggle-content">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-          </svg>
-          <span>📚 Document Library</span>
-        </div>
-        <svg class="tag-library-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-        </svg>
-      </button>
-      
-      <div class="tag-library-content" id="tag-library-content">
-        <p class="tag-library-description">Browse and manage your uploaded documents</p>
-        
-        <!-- Document List -->
-        <div class="documents-section">
-          <div id="tagged-documents-list" class="documents-list">
-            <div class="documents-placeholder">No documents yet. Upload a PDF to get started!</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 🚀 ULTIMATE OPTIMIZATION Section -->
-    <div class="ultimate-optimize-section">
-      <button class="ultimate-optimize-toggle" id="ultimate-optimize-toggle">
-        <div class="ultimate-optimize-toggle-content">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-          </svg>
-          <span>🚀 ULTIMATE OPTIMIZATION - Transform ALL Files</span>
-        </div>
-        <svg class="ultimate-optimize-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-        </svg>
-      </button>
-      
-      <div class="ultimate-optimize-content" id="ultimate-optimize-content">
-        <div class="ultimate-optimize-info">
-          <h3>🔥 The Best-in-Class RAG Backend</h3>
-          <p class="ultimate-optimize-description">
-            Full 3-stage pipeline + semantic chunking for ALL your Season 1-21 documents:
-          </p>
-          
-          <div class="optimization-features">
-            <div class="feature-item">
-              <span class="feature-icon">🔧</span>
-              <div class="feature-text">
-                <strong>Stage 1:</strong> Fix ALL typos (MBTI types, functions, UDSF/SDUF)
-              </div>
-            </div>
-            <div class="feature-item">
-              <span class="feature-icon">🤖</span>
-              <div class="feature-text">
-                <strong>Stage 2:</strong> GPT-4o-mini cleaning (60-70% size reduction, no quality loss)
-              </div>
-            </div>
-            <div class="feature-item">
-              <span class="feature-icon">🧠</span>
-              <div class="feature-text">
-                <strong>Semantic Chunking:</strong> Respect concept boundaries for perfect RAG
-              </div>
-            </div>
-            <div class="feature-item">
-              <span class="feature-icon">🔄</span>
-              <div class="feature-text">
-                <strong>Re-embedding:</strong> text-embedding-3-large with optimized chunks
-              </div>
-            </div>
-          </div>
-          
-          <div class="optimization-stats">
-            <div class="stat-box">
-              <div class="stat-label">Estimated Time</div>
-              <div class="stat-value">3-4 hours</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-label">Estimated Cost</div>
-              <div class="stat-value">~$6-9</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-label">Quality Boost</div>
-              <div class="stat-value">MAXIMUM 🔥</div>
-            </div>
-          </div>
-          
-          <div class="warning-box">
-            ⚠️ <strong>Important:</strong> This will replace ALL existing vectors with optimized ones. 
-            Make sure you have backups if needed. This process takes 3-4 hours and cannot be cancelled mid-way.
-          </div>
-          
-          <button id="ultimate-optimize-btn" class="btn-ultimate-optimize">
-            🚀 START ULTIMATE OPTIMIZATION
-          </button>
-        </div>
-        
-        <div id="ultimate-optimize-progress" class="ultimate-optimize-progress hidden">
-          <div class="progress-header">
-            <h3>🔥 Ultimate Optimization in Progress...</h3>
-            <p class="progress-subtitle">This will take 3-4 hours. You can close this page.</p>
-          </div>
-          
-          <div class="progress-stats-grid">
-            <div class="progress-stat">
-              <div class="progress-stat-label">Documents Processed</div>
-              <div class="progress-stat-value" id="ultimate-docs-processed">0 / 0</div>
-            </div>
-            <div class="progress-stat">
-              <div class="progress-stat-label">Vectors Optimized</div>
-              <div class="progress-stat-value" id="ultimate-vectors-optimized">0</div>
-            </div>
-            <div class="progress-stat">
-              <div class="progress-stat-label">Failed</div>
-              <div class="progress-stat-value error" id="ultimate-docs-failed">0</div>
-            </div>
-          </div>
-          
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="ultimate-progress-bar"></div>
-            <div class="progress-bar-text" id="ultimate-progress-text">0%</div>
-          </div>
-          
-          <div class="current-document-box">
-            <div class="current-doc-label">Current Document:</div>
-            <div class="current-doc-name" id="ultimate-current-doc">Initializing...</div>
-          </div>
-          
-          <div id="ultimate-optimize-result" class="ultimate-optimize-result"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 🔄 Batch Re-Tagging Section -->
-    <div class="batch-retag-section">
-      <button class="batch-retag-toggle" id="batch-retag-toggle">
-        <div class="batch-retag-toggle-content">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-          </svg>
-          <span>🚀 Batch Re-Tag All Documents</span>
-        </div>
-        <svg class="batch-retag-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-        </svg>
-      </button>
-      
-      <div class="batch-retag-content" id="batch-retag-content">
-        <p class="batch-retag-description">
-          Upgrade all existing documents in Pinecone with the new structured metadata system (GPT-4o-mini).
-          This adds 10 structured fields to every document: content_type, difficulty, primary_category, types_discussed, 
-          functions_covered, relationship_type, quadra, temple, topics, and use_case.
-        </p>
-        
-        <div class="batch-retag-warning">
-          ⚠️ <strong>Safe Operation:</strong> This only updates metadata - your embeddings and original text remain unchanged.
-        </div>
-        
-        <button id="batch-retag-btn" class="btn-batch-retag">
-          🔄 Start Batch Re-Tagging
-        </button>
-        
-        <div id="batch-retag-progress" class="batch-retag-progress hidden">
-          <div class="batch-retag-status-text">Processing documents...</div>
-          <div class="batch-retag-stats">
-            <div class="batch-stat">
-              <span class="batch-stat-label">Total Documents:</span>
-              <span id="batch-total" class="batch-stat-value">0</span>
-            </div>
-            <div class="batch-stat">
-              <span class="batch-stat-label">Processed:</span>
-              <span id="batch-processed" class="batch-stat-value">0</span>
-            </div>
-            <div class="batch-stat">
-              <span class="batch-stat-label">Vectors Updated:</span>
-              <span id="batch-vectors" class="batch-stat-value">0</span>
-            </div>
-          </div>
-          <div id="batch-retag-result" class="batch-retag-result"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 🎓 Training Pair Generator Section -->
-    <div class="training-pairs-section">
-      <button class="training-pairs-toggle" id="training-pairs-toggle">
-        <div class="training-pairs-toggle-content">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-          </svg>
-          <span>🎓 Training Pair Generator</span>
-        </div>
-        <svg class="training-pairs-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-        </svg>
-      </button>
-      
-      <div class="training-pairs-content" id="training-pairs-content">
-        <!-- Stats Overview -->
-        <div class="training-stats-overview" id="training-stats-overview">
-          <div class="training-stat-item">
-            <div class="training-stat-value" id="training-stat-pending">0</div>
-            <div class="training-stat-label">Pending Review</div>
-          </div>
-          <div class="training-stat-item">
-            <div class="training-stat-value" id="training-stat-approved">0</div>
-            <div class="training-stat-label">Approved</div>
-          </div>
-          <div class="training-stat-item">
-            <div class="training-stat-value" id="training-stat-pairs">0</div>
-            <div class="training-stat-label">Total Pairs</div>
-          </div>
-        </div>
-        
-        <!-- Resume Section (shows if interrupted files exist) -->
-        <div class="training-resume-section hidden" id="training-resume-section">
-          <div class="training-resume-header">
-            <span>⚠️ Interrupted Processing</span>
-          </div>
-          <div class="training-resume-list" id="training-resume-list">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-        
-        <!-- Upload Section -->
-        <div class="training-upload-section">
-          <p class="training-description">
-            Upload a PDF to generate Q&A training pairs for fine-tuning. Works with transcripts and books of any length.
-          </p>
-          <div class="training-upload-row">
-            <label for="training-file-input" class="btn-training-upload">
-              📄 Choose PDF
-            </label>
-            <input type="file" id="training-file-input" accept="application/pdf" multiple style="display: none;" />
-            <span class="training-file-name" id="training-file-name">No file selected</span>
-            <button id="training-process-btn" class="btn-training-process" disabled>
-              🤖 Generate Pairs
-            </button>
-          </div>
-        </div>
-        
-        <!-- Processing Progress -->
-        <div class="training-progress-section hidden" id="training-progress-section">
-          <div class="training-progress-header">
-            <h4>🔄 <span id="training-batch-progress">Processing</span>: <span id="training-progress-filename">file.pdf</span></h4>
-            <button id="training-cancel-btn" class="btn-training-cancel" style="display: none;">❌ Cancel</button>
-          </div>
-          <div class="training-progress-stats">
-            <div class="training-progress-stat">
-              <span class="training-progress-label">Chunks:</span>
-              <span class="training-progress-value" id="training-progress-chunks">0 / 0</span>
-            </div>
-            <div class="training-progress-stat">
-              <span class="training-progress-label">Pairs Generated:</span>
-              <span class="training-progress-value" id="training-progress-pairs">0</span>
-            </div>
-          </div>
-          <div class="training-progress-bar-container">
-            <div class="training-progress-bar" id="training-progress-bar"></div>
-          </div>
-          <div class="training-progress-status" id="training-progress-status">
-            Initializing...
-          </div>
-          <div class="training-batch-results hidden" id="training-batch-results">
-            <!-- Batch results will be appended here -->
-          </div>
-        </div>
-        
-        <!-- Pending Files List -->
-        <div class="training-files-section">
-          <div class="training-files-header">
-            <h4>📋 Pending Review</h4>
-            <button class="btn-refresh-training" id="btn-refresh-training" title="Refresh">🔄</button>
-          </div>
-          <div class="training-files-list" id="training-pending-list">
-            <div class="training-files-placeholder">No files pending review</div>
-          </div>
-        </div>
-        
-        <!-- Approved Files List -->
-        <div class="training-files-section">
-          <div class="training-files-header">
-            <h4>✅ Approved</h4>
-          </div>
-          <div class="training-files-list" id="training-approved-list">
-            <div class="training-files-placeholder">No approved files yet</div>
-          </div>
-        </div>
-        
-        <!-- Download Section -->
-        <div class="training-download-section">
-          <button id="training-combine-btn" class="btn-training-combine">
-            📦 Combine All & Download
-          </button>
-          <p class="training-download-note">
-            Combines all approved files into training_data.jsonl with duplicates removed and shuffled.
-          </p>
         </div>
       </div>
     </div>
@@ -1496,6 +1328,95 @@
       color: #f87171;
     }
     
+    /* Batch Files List - All Files View */
+    .training-batch-files-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    
+    .training-batch-file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #1e293b;
+      border-radius: 8px;
+      border-left: 3px solid #4b5563;
+    }
+    
+    .training-batch-file-item.pending {
+      border-left-color: #6b7280;
+      opacity: 0.7;
+    }
+    
+    .training-batch-file-item.processing {
+      border-left-color: #8b5cf6;
+      animation: pulse-processing 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-processing {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .training-batch-file-item.complete {
+      border-left-color: #34d399;
+    }
+    
+    .training-batch-file-item.error {
+      border-left-color: #f87171;
+    }
+    
+    .training-batch-file-status {
+      font-size: 18px;
+      width: 24px;
+      text-align: center;
+    }
+    
+    .training-batch-file-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .training-batch-file-name {
+      font-weight: 500;
+      font-size: 14px;
+      color: #e5e7eb;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .training-batch-file-progress {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+    
+    .training-batch-file-result {
+      font-size: 13px;
+      font-weight: 600;
+      color: #34d399;
+    }
+    
+    .training-batch-file-item.error .training-batch-file-result {
+      color: #f87171;
+    }
+    
+    .training-batch-summary {
+      padding: 12px 16px;
+      background: #111827;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 14px;
+      color: #9ca3af;
+    }
+    
     .training-progress-stats {
       display: flex;
       gap: 24px;
@@ -2205,7 +2126,7 @@
       });
     }
     
-    // Process button handler (batch support)
+    // Process button handler (batch support with all-files view)
     if (trainingProcessBtn) {
       trainingProcessBtn.addEventListener('click', async () => {
         if (selectedFiles.length === 0) return;
@@ -2216,43 +2137,64 @@
         trainingProgressSection.classList.remove('hidden');
         
         const cancelBtn = document.getElementById('training-cancel-btn');
-        const batchResults = document.getElementById('training-batch-results');
+        const batchFilesList = document.getElementById('training-batch-files-list');
         const batchProgress = document.getElementById('training-batch-progress');
+        const batchSummary = document.getElementById('training-batch-summary-text');
         
-        // Show cancel button for batch
-        if (selectedFiles.length > 1) {
-          cancelBtn.style.display = 'block';
-          batchResults.classList.remove('hidden');
-          batchResults.innerHTML = '';
-        }
+        // Build initial file list showing all files
+        batchFilesList.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+          const fileItem = document.createElement('div');
+          fileItem.className = 'training-batch-file-item pending';
+          fileItem.id = `batch-file-${index}`;
+          fileItem.innerHTML = `
+            <div class="training-batch-file-status">⏳</div>
+            <div class="training-batch-file-info">
+              <div class="training-batch-file-name">${file.name}</div>
+              <div class="training-batch-file-progress">Pending...</div>
+            </div>
+            <div class="training-batch-file-result"></div>
+          `;
+          batchFilesList.appendChild(fileItem);
+        });
+        
+        batchProgress.textContent = `Processing ${selectedFiles.length} File${selectedFiles.length > 1 ? 's' : ''}`;
+        batchSummary.textContent = `Starting batch processing...`;
         
         let totalPairs = 0;
         let processedCount = 0;
+        let errorCount = 0;
         
         for (let i = 0; i < selectedFiles.length; i++) {
           // Check for cancellation
           if (cancelBatch) {
-            document.getElementById('training-progress-status').textContent = '⚠️ Batch cancelled by user';
+            // Mark remaining files as cancelled
+            for (let j = i; j < selectedFiles.length; j++) {
+              const fileItem = document.getElementById(`batch-file-${j}`);
+              if (fileItem) {
+                fileItem.className = 'training-batch-file-item error';
+                fileItem.querySelector('.training-batch-file-status').textContent = '⛔';
+                fileItem.querySelector('.training-batch-file-progress').textContent = 'Cancelled';
+              }
+            }
             break;
           }
           
           const file = selectedFiles[i];
-          const fileNum = i + 1;
-          const totalFiles = selectedFiles.length;
+          const fileItem = document.getElementById(`batch-file-${i}`);
           
-          // Update batch progress display
-          batchProgress.textContent = totalFiles > 1 ? `File ${fileNum} of ${totalFiles}` : 'Processing';
-          document.getElementById('training-progress-filename').textContent = file.name;
-          document.getElementById('training-progress-status').textContent = 'Uploading PDF...';
-          document.getElementById('training-progress-bar').style.width = '10%';
-          document.getElementById('training-progress-bar').style.background = '#10b981';
+          // Update to processing state
+          if (fileItem) {
+            fileItem.className = 'training-batch-file-item processing';
+            fileItem.querySelector('.training-batch-file-status').textContent = '🔄';
+            fileItem.querySelector('.training-batch-file-progress').textContent = 'Extracting text and generating Q&A pairs...';
+          }
+          
+          batchSummary.textContent = `Processing file ${i + 1} of ${selectedFiles.length}...`;
           
           try {
             const formData = new FormData();
             formData.append('file', file);
-            
-            document.getElementById('training-progress-status').textContent = 'Extracting text and generating Q&A pairs...';
-            document.getElementById('training-progress-bar').style.width = '30%';
             
             const response = await fetch('/api/training-pairs/process', {
               method: 'POST',
@@ -2262,63 +2204,50 @@
             const result = await response.json();
             
             if (response.ok) {
-              document.getElementById('training-progress-bar').style.width = '100%';
-              document.getElementById('training-progress-chunks').textContent = 
-                `${result.chunks_processed} / ${result.chunks_processed}`;
-              document.getElementById('training-progress-pairs').textContent = result.pairs_generated;
-              
               totalPairs += result.pairs_generated;
               processedCount++;
               
-              // Add result to batch log
-              if (totalFiles > 1) {
-                const resultDiv = document.createElement('div');
-                resultDiv.className = 'training-batch-result success';
-                resultDiv.textContent = `✓ ${file.name}: ${result.pairs_generated} pairs`;
-                batchResults.appendChild(resultDiv);
-                batchResults.scrollTop = batchResults.scrollHeight;
+              // Update to complete state
+              if (fileItem) {
+                fileItem.className = 'training-batch-file-item complete';
+                fileItem.querySelector('.training-batch-file-status').textContent = '✅';
+                fileItem.querySelector('.training-batch-file-progress').textContent = `Chunks: ${result.chunks_processed}`;
+                fileItem.querySelector('.training-batch-file-result').textContent = `${result.pairs_generated} pairs`;
               }
-              
-              document.getElementById('training-progress-status').textContent = 
-                `✅ ${file.name}: ${result.pairs_generated} pairs generated`;
-              
             } else {
               throw new Error(result.error || 'Processing failed');
             }
           } catch (error) {
             console.error('Training pair error:', error);
+            errorCount++;
             
-            // Add error to batch log
-            if (totalFiles > 1) {
-              const resultDiv = document.createElement('div');
-              resultDiv.className = 'training-batch-result error';
-              resultDiv.textContent = `✗ ${file.name}: ${error.message}`;
-              batchResults.appendChild(resultDiv);
-              batchResults.scrollTop = batchResults.scrollHeight;
+            // Update to error state
+            if (fileItem) {
+              fileItem.className = 'training-batch-file-item error';
+              fileItem.querySelector('.training-batch-file-status').textContent = '❌';
+              fileItem.querySelector('.training-batch-file-progress').textContent = error.message;
+              fileItem.querySelector('.training-batch-file-result').textContent = 'Failed';
             }
-            
-            document.getElementById('training-progress-status').textContent = `❌ ${file.name}: ${error.message}`;
           }
+          
+          // Update running summary
+          batchSummary.textContent = `Processed: ${processedCount}/${selectedFiles.length} files | Total pairs: ${totalPairs}${errorCount > 0 ? ` | Errors: ${errorCount}` : ''}`;
           
           // Small delay between files
           if (i < selectedFiles.length - 1 && !cancelBatch) {
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 500));
           }
         }
         
         // Final summary
         cancelBtn.style.display = 'none';
-        document.getElementById('training-progress-bar').style.width = '100%';
         
         if (cancelBatch) {
-          document.getElementById('training-progress-status').textContent = 
-            `⚠️ Cancelled. Processed ${processedCount} of ${selectedFiles.length} files (${totalPairs} pairs total)`;
+          batchProgress.textContent = 'Cancelled';
+          batchSummary.textContent = `⚠️ Cancelled. Processed ${processedCount} of ${selectedFiles.length} files (${totalPairs} pairs total)`;
         } else {
-          batchProgress.textContent = 'Complete';
-          document.getElementById('training-progress-status').textContent = 
-            selectedFiles.length > 1
-              ? `✅ Batch complete! ${processedCount} files, ${totalPairs} pairs total`
-              : `✅ Complete! ${totalPairs} pairs generated`;
+          batchProgress.textContent = 'Complete ✅';
+          batchSummary.textContent = `✅ All done! ${processedCount} files processed, ${totalPairs} pairs generated${errorCount > 0 ? `, ${errorCount} errors` : ''}`;
         }
         
         // Refresh lists
@@ -2327,7 +2256,6 @@
         // Reset form after delay
         setTimeout(() => {
           trainingProgressSection.classList.add('hidden');
-          batchResults.classList.add('hidden');
           trainingFileName.textContent = 'No file selected';
           trainingFileInput.value = '';
           selectedFiles = [];
@@ -2347,6 +2275,7 @@
         cancelBatch = true;
         trainingCancelBtn.disabled = true;
         trainingCancelBtn.textContent = '⏳ Cancelling...';
+        document.getElementById('training-batch-summary-text').textContent = 'Cancelling after current file...';
       });
     }
     

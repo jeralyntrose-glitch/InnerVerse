@@ -1,0 +1,186 @@
+<!--
+  ARCHIVED FEATURES - uploader.html
+  ===================================
+  Date archived: 2025-12-06
+  Reason: UI cleanup and reorganization
+  
+  These sections were removed but preserved in case they need to be restored.
+  To restore: Copy the HTML section back into uploader.html at the appropriate location.
+  Note: CSS styles for these sections remain in uploader.html (search for class names).
+-->
+
+<!-- ============================================================ -->
+<!-- 🚀 ULTIMATE OPTIMIZATION Section                              -->
+<!-- Original location: After Document Library section             -->
+<!-- ============================================================ -->
+
+    <!-- 🚀 ULTIMATE OPTIMIZATION Section -->
+    <div class="ultimate-optimize-section">
+      <button class="ultimate-optimize-toggle" id="ultimate-optimize-toggle">
+        <div class="ultimate-optimize-toggle-content">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <span>🚀 ULTIMATE OPTIMIZATION - Transform ALL Files</span>
+        </div>
+        <svg class="ultimate-optimize-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      
+      <div class="ultimate-optimize-content" id="ultimate-optimize-content">
+        <div class="ultimate-optimize-info">
+          <h3>🔥 The Best-in-Class RAG Backend</h3>
+          <p class="ultimate-optimize-description">
+            Full 3-stage pipeline + semantic chunking for ALL your Season 1-21 documents:
+          </p>
+          
+          <div class="optimization-features">
+            <div class="feature-item">
+              <span class="feature-icon">🔧</span>
+              <div class="feature-text">
+                <strong>Stage 1:</strong> Fix ALL typos (MBTI types, functions, UDSF/SDUF)
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🤖</span>
+              <div class="feature-text">
+                <strong>Stage 2:</strong> GPT-4o-mini cleaning (60-70% size reduction, no quality loss)
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🧠</span>
+              <div class="feature-text">
+                <strong>Semantic Chunking:</strong> Respect concept boundaries for perfect RAG
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🔄</span>
+              <div class="feature-text">
+                <strong>Re-embedding:</strong> text-embedding-3-large with optimized chunks
+              </div>
+            </div>
+          </div>
+          
+          <div class="optimization-stats">
+            <div class="stat-box">
+              <div class="stat-label">Estimated Time</div>
+              <div class="stat-value">3-4 hours</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Estimated Cost</div>
+              <div class="stat-value">~$6-9</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Quality Boost</div>
+              <div class="stat-value">MAXIMUM 🔥</div>
+            </div>
+          </div>
+          
+          <div class="warning-box">
+            ⚠️ <strong>Important:</strong> This will replace ALL existing vectors with optimized ones. 
+            Make sure you have backups if needed. This process takes 3-4 hours and cannot be cancelled mid-way.
+          </div>
+          
+          <button id="ultimate-optimize-btn" class="btn-ultimate-optimize">
+            🚀 START ULTIMATE OPTIMIZATION
+          </button>
+        </div>
+        
+        <div id="ultimate-optimize-progress" class="ultimate-optimize-progress hidden">
+          <div class="progress-header">
+            <h3>🔥 Ultimate Optimization in Progress...</h3>
+            <p class="progress-subtitle">This will take 3-4 hours. You can close this page.</p>
+          </div>
+          
+          <div class="progress-stats-grid">
+            <div class="progress-stat">
+              <div class="progress-stat-label">Documents Processed</div>
+              <div class="progress-stat-value" id="ultimate-docs-processed">0 / 0</div>
+            </div>
+            <div class="progress-stat">
+              <div class="progress-stat-label">Vectors Optimized</div>
+              <div class="progress-stat-value" id="ultimate-vectors-optimized">0</div>
+            </div>
+            <div class="progress-stat">
+              <div class="progress-stat-label">Failed</div>
+              <div class="progress-stat-value error" id="ultimate-docs-failed">0</div>
+            </div>
+          </div>
+          
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="ultimate-progress-bar"></div>
+            <div class="progress-bar-text" id="ultimate-progress-text">0%</div>
+          </div>
+          
+          <div class="current-document-box">
+            <div class="current-doc-label">Current Document:</div>
+            <div class="current-doc-name" id="ultimate-current-doc">Initializing...</div>
+          </div>
+          
+          <div id="ultimate-optimize-result" class="ultimate-optimize-result"></div>
+        </div>
+      </div>
+    </div>
+
+
+<!-- ============================================================ -->
+<!-- 🔄 BATCH RE-TAGGING Section                                   -->
+<!-- Original location: After Ultimate Optimization section        -->
+<!-- ============================================================ -->
+
+    <!-- 🔄 Batch Re-Tagging Section -->
+    <div class="batch-retag-section">
+      <button class="batch-retag-toggle" id="batch-retag-toggle">
+        <div class="batch-retag-toggle-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          <span>🚀 Batch Re-Tag All Documents</span>
+        </div>
+        <svg class="batch-retag-chevron" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+      
+      <div class="batch-retag-content" id="batch-retag-content">
+        <p class="batch-retag-description">
+          Upgrade all existing documents in Pinecone with the new structured metadata system (GPT-4o-mini).
+          This adds 10 structured fields to every document: content_type, difficulty, primary_category, types_discussed, 
+          functions_covered, relationship_type, quadra, temple, topics, and use_case.
+        </p>
+        
+        <div class="batch-retag-warning">
+          ⚠️ <strong>Safe Operation:</strong> This only updates metadata - your embeddings and original text remain unchanged.
+        </div>
+        
+        <button id="batch-retag-btn" class="btn-batch-retag">
+          🔄 Start Batch Re-Tagging
+        </button>
+        
+        <div id="batch-retag-progress" class="batch-retag-progress hidden">
+          <div class="batch-retag-status-text">Processing documents...</div>
+          <div class="batch-retag-stats">
+            <div class="batch-stat">
+              <span class="batch-stat-label">Total Documents:</span>
+              <span id="batch-total" class="batch-stat-value">0</span>
+            </div>
+            <div class="batch-stat">
+              <span class="batch-stat-label">Processed:</span>
+              <span id="batch-processed" class="batch-stat-value">0</span>
+            </div>
+            <div class="batch-stat">
+              <span class="batch-stat-label">Vectors Updated:</span>
+              <span id="batch-vectors" class="batch-stat-value">0</span>
+            </div>
+          </div>
+          <div id="batch-retag-result" class="batch-retag-result"></div>
+        </div>
+      </div>
+    </div>
+
+
+<!-- ============================================================ -->
+<!-- END OF ARCHIVED FEATURES                                      -->
+<!-- ============================================================ -->
+
