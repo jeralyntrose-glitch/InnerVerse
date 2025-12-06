@@ -3654,7 +3654,7 @@ def generate_qa_pairs_sonnet(chunk: str) -> list[dict]:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         
         message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-3-5-sonnet-latest",
             max_tokens=4000,
             messages=[
                 {"role": "user", "content": prompt}
@@ -3672,7 +3672,7 @@ def generate_qa_pairs_sonnet(chunk: str) -> list[dict]:
         input_tokens = message.usage.input_tokens
         output_tokens = message.usage.output_tokens
         cost = (input_tokens * 3.0 / 1000000) + (output_tokens * 15.0 / 1000000)
-        log_api_usage("training_pair_generation", "claude-3.5-sonnet", input_tokens, output_tokens, cost)
+        log_api_usage("training_pair_generation", "claude-3-5-sonnet-latest", input_tokens, output_tokens, cost)
         print(f"   📊 Tokens: {input_tokens} in, {output_tokens} out (${cost:.6f})")
         
         # Parse the response
