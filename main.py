@@ -3447,8 +3447,17 @@ def get_training_stats() -> dict:
 # The prompt for generating Q&A training pairs
 QA_GENERATION_PROMPT = """Turn this content into 15-20 Q&A training pairs for fine-tuning an AI.
 
-FORMAT: Each pair must be valid JSON on its own line:
-{{"messages": [{{"role": "user", "content": "question"}}, {{"role": "assistant", "content": "answer"}}]}}
+CRITICAL JSON FORMATTING (MUST FOLLOW EXACTLY):
+- Each pair MUST be valid JSON on its own line
+- Use double quotes for ALL strings
+- Include comma between ALL key-value pairs
+- Exact format - NO DEVIATION:
+{{"messages": [{{"role": "user", "content": "question here"}}, {{"role": "assistant", "content": "answer here"}}]}}
+
+Example of CORRECT format:
+{{"messages": [{{"role": "user", "content": "What is Ni hero?"}}, {{"role": "assistant", "content": "Ni hero means laser focus on what you want."}}]}}
+
+Output ONLY valid JSON lines. No markdown, no explanations, no numbering, no extra text.
 
 QUESTIONS:
 - Ask what someone learning cognitive typology would actually ask
@@ -3466,41 +3475,23 @@ VOICE (Critical):
 - Light swearing when it adds weight (damn, hell, shit) - but don't force it
 - Warm but not soft. You care, but you're not coddling anyone.
 
-CONTENT REQUIREMENTS (Equally critical):
+CONTENT REQUIREMENTS:
 - EVERY answer must be CSJ-framework specific. No generic psychology.
-- Use the actual terminology: cognitive functions, hero, parent, child, inferior, demon, gateway functions, four sides, ego, subconscious, unconscious, superego, etc.
-- When possible, tie answers to SPECIFIC TYPES (ENFP, INTJ, etc.)
-- If the source material has a specific example or analogy, USE IT
-- Don't water down concepts into generic self-help ("embrace growth," "be self-aware")
+- Use actual terminology: cognitive functions, hero, parent, child, inferior, demon, gateway functions, four sides, ego, subconscious, unconscious, superego
+- Tie answers to SPECIFIC TYPES when possible (ENFP, INTJ, etc.)
 - Be CONCRETE. What function? What type? What actually happens?
 
 AVOID:
-- Generic advice that could come from any psychology source
+- Generic advice from any psychology source
 - Hedging (can, may, might, often, typically)
 - Academic tone
-- Vague answers without specific function/type references when the content has them
-- Filler phrases ("it's important," "keep in mind," "essentially")
-- Repeating the question
-- Reference sources: no "according to", "CS Joseph says", "in season X"
-
-BAD EXAMPLE:
-"Gateway functions are specific cognitive functions that help you transition between the four sides of your mind. Mastering these functions lets you access different mental resources."
-
-GOOD EXAMPLE:
-"Gateway functions are how you move between the four sides of your mind. For an ESTP, Se hero is the gateway into the ego. But to reach their INFJ subconscious, they go through their inferior function - Ni. That's where they access deep insight and long-term vision. The gateway is always through your weakest function - and yeah, it's uncomfortable as hell."
-
-BAD EXAMPLE:
-"Embracing failure is essential because it teaches you resilience and wisdom."
-
-GOOD EXAMPLE:
-"Failure develops your inferior function. That's the whole point. An ESTP with weak Ni needs to fail at predicting outcomes before Ni starts growing. You can't think your way into developing the inferior - you have to eat shit a few times first. That's how it works."
-
-The vibe: Someone who KNOWS this system deeply, explains it simply, gives you the real shit, and doesn't waste your time with fluff.
+- Filler phrases
+- Reference sources ("CS Joseph says", "in season X")
 
 CONTENT TO PROCESS:
 {content}
 
-Generate 15-20 Q&A pairs now. Output ONLY valid JSON lines, no other text:
+Generate 15-20 Q&A pairs now. Output ONLY valid JSON lines:
 """
 
 
