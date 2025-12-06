@@ -3507,14 +3507,17 @@ Generate 15-20 Q&A pairs now. Output ONLY valid JSON lines, no other text:
 def parse_qa_response(response_text: str) -> list[dict]:
     """
     Parse JSON lines from AI response.
-    Handles: trailing commas, markdown wrappers, JSON arrays, concatenated JSON objects.
     Returns list of valid Q&A pairs.
     """
     import re
     pairs = []
     
-    # Log raw response for debugging
+    # === DETAILED DEBUG OUTPUT ===
     print(f"   📝 Raw response length: {len(response_text)} chars")
+    newline_count = response_text.count('\n')
+    print(f"   📝 Newline count in response: {newline_count}")
+    print(f"   📝 First 300 chars:\n{response_text[:300]}")
+    print(f"   📝 Last 200 chars:\n{response_text[-200:]}")
     
     # Remove markdown code block wrappers if present
     text = response_text.strip()
@@ -3525,6 +3528,11 @@ def parse_qa_response(response_text: str) -> list[dict]:
         if text.endswith("```"):
             text = text[:-3]
         text = text.strip()
+        print(f"   📝 After markdown removal: {len(text)} chars")
+    
+    # Count occurrences of {"messages" to know expected pair count
+    expected_pairs = text.count('{"messages"')
+    print(f"   📝 Expected pairs (count of '{chr(123)}\"messages\"'): {expected_pairs}")
     
     # Try parsing as JSON array first
     if text.startswith('['):
@@ -3534,41 +3542,35 @@ def parse_qa_response(response_text: str) -> list[dict]:
                 for item in array:
                     if validate_qa_pair(item):
                         pairs.append(item)
-                print(f"   📝 Parsed as JSON array: {len(pairs)} pairs")
+                print(f"   ✅ Parsed as JSON array: {len(pairs)} pairs")
                 return pairs
-        except json.JSONDecodeError:
-            print(f"   ⚠️ JSON array parse failed, trying other methods")
+        except json.JSONDecodeError as e:
+            print(f"   ⚠️ JSON array parse failed: {str(e)[:100]}")
     
-    # Method 2: Split concatenated JSON objects (Claude often outputs without newlines)
-    # Each pair ends with ]} and next starts with {"messages"
-    # Split on ]}\s*{ to separate complete pairs
-    if '{"messages"' in text:
-        # Split on ]}{ pattern (end of messages array + start of new object)
-        parts = re.split(r'\]\}\s*\{', text)
-        if len(parts) > 1:
-            print(f"   📝 Found {len(parts)} concatenated JSON objects")
-            for i, part in enumerate(parts):
-                # Add back the brackets we split on
-                if i == 0:
-                    json_str = part + ']}'  # First part needs ]} at end
-                elif i == len(parts) - 1:
-                    json_str = '{' + part   # Last part needs { at start
-                else:
-                    json_str = '{' + part + ']}'  # Middle parts need both
-                
-                try:
-                    pair = json.loads(json_str)
-                    if validate_qa_pair(pair):
-                        pairs.append(pair)
-                except json.JSONDecodeError as e:
-                    print(f"   ⚠️ Could not parse part {i+1}: {str(e)[:50]}")
-            
-            if pairs:
-                print(f"   📝 Parsed {len(pairs)} pairs from concatenated JSON")
-                return pairs
+    # Method 2: Use regex to find all complete JSON objects
+    # Pattern: {"messages": followed by balanced content until ]}
+    json_pattern = r'\{"messages":\s*\[\{"role":\s*"user",\s*"content":\s*"(?:[^"\\]|\\.)*"\},\s*\{"role":\s*"assistant",\s*"content":\s*"(?:[^"\\]|\\.)*"\}\]\}'
+    matches = re.findall(json_pattern, text)
+    print(f"   📝 Regex found {len(matches)} matches")
     
-    # Method 3: Line-by-line parsing (fallback)
-    for line in text.split('\n'):
+    if matches:
+        for i, match in enumerate(matches):
+            try:
+                pair = json.loads(match)
+                if validate_qa_pair(pair):
+                    pairs.append(pair)
+            except json.JSONDecodeError as e:
+                print(f"   ⚠️ Could not parse match {i+1}: {str(e)[:50]}")
+        
+        if pairs:
+            print(f"   ✅ Parsed {len(pairs)} pairs via regex")
+            return pairs
+    
+    # Method 3: Line-by-line parsing (for proper JSONL format)
+    lines = text.split('\n')
+    print(f"   📝 Trying line-by-line: {len(lines)} lines")
+    
+    for i, line in enumerate(lines):
         line = line.strip()
         if not line or not line.startswith('{'):
             continue
@@ -3578,19 +3580,11 @@ def parse_qa_response(response_text: str) -> list[dict]:
             if validate_qa_pair(pair):
                 pairs.append(pair)
                 continue
-        except json.JSONDecodeError:
-            pass
-        
-        # Try fixing trailing comma
-        try:
-            fixed = line.rstrip(',')
-            pair = json.loads(fixed)
-            if validate_qa_pair(pair):
-                pairs.append(pair)
-        except json.JSONDecodeError:
-            print(f"   ⚠️ Could not parse line: {line[:80]}...")
+        except json.JSONDecodeError as e:
+            print(f"   ⚠️ Line {i+1} parse error: {str(e)[:50]}")
+            print(f"      Line preview: {line[:100]}...")
     
-    print(f"   📝 Parsed {len(pairs)} pairs from response")
+    print(f"   📝 Final parsed: {len(pairs)} pairs")
     return pairs
 
 
