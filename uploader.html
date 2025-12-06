@@ -1581,6 +1581,16 @@
       background: rgba(239, 68, 68, 0.1);
     }
     
+    .btn-training-action.success {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+    
+    .btn-training-action.success:hover {
+      background: #059669;
+    }
+    
     /* Download Section */
     .training-download-section {
       text-align: center;
@@ -2370,6 +2380,7 @@
               </div>
               <div class="training-file-actions">
                 <button class="btn-training-action primary" onclick="openReviewModal('${f.filename}')">👁️ Review</button>
+                <button class="btn-training-action success" onclick="approveFile('${f.filename}')">✅ Approve</button>
                 <button class="btn-training-action" onclick="copyForReview('${f.filename}')">📋 Copy</button>
                 <button class="btn-training-action danger" onclick="deleteTrainingFile('${f.filename}', 'pending')">🗑️</button>
               </div>
