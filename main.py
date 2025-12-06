@@ -3910,10 +3910,21 @@ def get_pairs_for_review(filename: str) -> list[dict]:
                 continue
             try:
                 pair = json.loads(line)
+                # Debug: print first pair structure
+                if i == 0:
+                    print(f"📋 First pair raw structure: {json.dumps(pair, indent=2)[:500]}")
+                
+                question = pair['messages'][0]['content'] if 'messages' in pair else ''
+                answer = pair['messages'][1]['content'] if 'messages' in pair and len(pair['messages']) > 1 else ''
+                
+                # Debug: print extracted values
+                if i == 0:
+                    print(f"📋 Extracted - Q: {question[:100]}... A: {answer[:100]}...")
+                
                 pairs.append({
                     'index': i,
-                    'question': pair['messages'][0]['content'],
-                    'answer': pair['messages'][1]['content'],
+                    'question': question,
+                    'answer': answer,
                     'status': 'unchanged'  # Track edits in UI
                 })
             except (json.JSONDecodeError, KeyError, IndexError) as e:

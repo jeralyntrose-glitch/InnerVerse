@@ -2480,6 +2480,7 @@
       }
       
       console.log('Rendering pairs:', currentReviewPairs);
+      console.log('First pair structure:', JSON.stringify(currentReviewPairs[0], null, 2));
       
       container.innerHTML = currentReviewPairs.map((pair, index) => {
         const isDeleted = deletedPairs.has(index);
@@ -2489,6 +2490,11 @@
         // Safety check for question and answer
         const question = pair.question || '[No question]';
         const answer = pair.answer || '[No answer]';
+        
+        // Debug first pair
+        if (index === 0) {
+          console.log('Pair 0 - question:', question, 'answer:', answer);
+        }
         
         return `
           <div class="training-pair-card ${cardClass}" data-index="${index}">
