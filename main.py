@@ -3540,21 +3540,21 @@ def parse_qa_response(response_text: str) -> list[dict]:
             print(f"   ⚠️ JSON array parse failed, trying other methods")
     
     # Method 2: Split concatenated JSON objects (Claude often outputs without newlines)
-    # Pattern: }{"messages" or }\n{"messages"
-    # Split on }{ but keep the braces
+    # Each pair ends with ]} and next starts with {"messages"
+    # Split on ]}\s*{ to separate complete pairs
     if '{"messages"' in text:
-        # Split on }{ pattern
-        parts = re.split(r'\}\s*\{', text)
+        # Split on ]}{ pattern (end of messages array + start of new object)
+        parts = re.split(r'\]\}\s*\{', text)
         if len(parts) > 1:
             print(f"   📝 Found {len(parts)} concatenated JSON objects")
             for i, part in enumerate(parts):
-                # Add back the braces we split on
+                # Add back the brackets we split on
                 if i == 0:
-                    json_str = part + '}'
+                    json_str = part + ']}'  # First part needs ]} at end
                 elif i == len(parts) - 1:
-                    json_str = '{' + part
+                    json_str = '{' + part   # Last part needs { at start
                 else:
-                    json_str = '{' + part + '}'
+                    json_str = '{' + part + ']}'  # Middle parts need both
                 
                 try:
                     pair = json.loads(json_str)
