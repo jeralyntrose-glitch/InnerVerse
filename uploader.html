@@ -1823,8 +1823,8 @@
       background: #111827;
       border: 1px solid #374151;
       border-radius: 12px;
-      overflow: hidden;
-      min-height: 120px;
+      overflow: visible;
+      min-height: auto;
     }
     
     .training-pair-header {
@@ -1875,16 +1875,19 @@
     .training-pair-content {
       padding: 24px;
       background: #0f172a;
+      overflow: visible;
     }
     
     .training-pair-question {
       margin-bottom: 24px;
       padding-bottom: 20px;
       border-bottom: 1px solid #374151;
+      min-height: 60px;
     }
     
     .training-pair-answer {
       margin-bottom: 0;
+      min-height: 80px;
     }
     
     .training-pair-label {
