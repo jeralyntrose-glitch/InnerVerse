@@ -2676,6 +2676,22 @@
       
       console.log('HTML for first card:', html.substring(0, 1000));
       container.innerHTML = html;
+      
+      // Set text content AFTER innerHTML (like Edit modal does)
+      currentReviewPairs.forEach((pair, index) => {
+        const card = container.querySelector(`[data-index="${index}"]`);
+        if (card) {
+          const qDiv = card.querySelector('.training-pair-question > div:last-child');
+          const aDiv = card.querySelector('.training-pair-answer > div:last-child');
+          if (qDiv) {
+            qDiv.textContent = pair.question || '[No question]';
+            console.log(`Set Q${index}:`, qDiv.textContent);
+          }
+          if (aDiv) {
+            aDiv.textContent = pair.answer || '[No answer]';
+          }
+        }
+      });
     }
     
     // Update stats display
