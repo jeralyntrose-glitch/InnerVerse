@@ -1820,47 +1820,61 @@
     }
     
     .training-pair-content {
-      padding: 20px;
+      padding: 24px;
       background: #0f172a;
     }
     
-    .training-pair-question, .training-pair-answer {
-      margin-bottom: 20px;
+    .training-pair-question {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #374151;
     }
     
-    .training-pair-question:last-child, .training-pair-answer:last-child {
+    .training-pair-answer {
       margin-bottom: 0;
     }
     
     .training-pair-label {
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
-      color: #9ca3af;
-      margin-bottom: 10px;
-      letter-spacing: 0.5px;
-      color: #6b7280;
-      margin-bottom: 6px;
-      letter-spacing: 0.5px;
+      color: #60a5fa;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+    
+    .training-pair-answer .training-pair-label {
+      color: #34d399;
     }
     
     .training-pair-text {
       font-size: 15px;
-      line-height: 1.7;
-      color: #e5e7eb;
+      line-height: 1.8;
+      color: #f3f4f6;
       white-space: pre-wrap;
       word-break: break-word;
+      min-height: 20px;
     }
     
     .training-pair-question .training-pair-text {
       font-weight: 600;
-      color: #f9fafb;
+      color: #ffffff;
       font-size: 16px;
     }
     
+    .training-pair-answer .training-pair-text {
+      color: #e5e7eb;
+      font-size: 14px;
+      line-height: 1.9;
+      background: #1e293b;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 3px solid #34d399;
+    }
+    
     .training-pair-text:empty::after {
-      content: "[No content]";
-      color: #6b7280;
+      content: "[No answer - needs editing]";
+      color: #ef4444;
       font-style: italic;
     }
     
