@@ -477,7 +477,7 @@
             <label for="training-file-input" class="btn-training-upload">
               📄 Choose PDF
             </label>
-            <input type="file" id="training-file-input" accept="application/pdf" style="display: none;" />
+            <input type="file" id="training-file-input" accept="application/pdf" multiple style="display: none;" />
             <span class="training-file-name" id="training-file-name">No file selected</span>
             <button id="training-process-btn" class="btn-training-process" disabled>
               🤖 Generate Pairs
@@ -488,7 +488,8 @@
         <!-- Processing Progress -->
         <div class="training-progress-section hidden" id="training-progress-section">
           <div class="training-progress-header">
-            <h4>🔄 Processing: <span id="training-progress-filename">file.pdf</span></h4>
+            <h4>🔄 <span id="training-batch-progress">Processing</span>: <span id="training-progress-filename">file.pdf</span></h4>
+            <button id="training-cancel-btn" class="btn-training-cancel" style="display: none;">❌ Cancel</button>
           </div>
           <div class="training-progress-stats">
             <div class="training-progress-stat">
@@ -505,6 +506,9 @@
           </div>
           <div class="training-progress-status" id="training-progress-status">
             Initializing...
+          </div>
+          <div class="training-batch-results hidden" id="training-batch-results">
+            <!-- Batch results will be appended here -->
           </div>
         </div>
         
@@ -1438,9 +1442,58 @@
       margin-bottom: 20px;
     }
     
+    .training-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
     .training-progress-header h4 {
       margin: 0 0 16px 0;
       font-size: 16px;
+    }
+    
+    .btn-training-cancel {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    
+    .btn-training-cancel:hover {
+      background: #b91c1c;
+    }
+    
+    .training-batch-results {
+      margin-top: 16px;
+      padding: 12px;
+      background: #1e293b;
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .training-batch-result {
+      padding: 8px 0;
+      border-bottom: 1px solid #374151;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    
+    .training-batch-result:last-child {
+      border-bottom: none;
+    }
+    
+    .training-batch-result.success {
+      color: #34d399;
+    }
+    
+    .training-batch-result.error {
+      color: #f87171;
     }
     
     .training-progress-stats {
@@ -2103,7 +2156,8 @@
     const trainingCombineBtn = document.getElementById('training-combine-btn');
     const refreshBtn = document.getElementById('btn-refresh-training');
     
-    let selectedFile = null;
+    let selectedFiles = [];
+    let cancelBatch = false;
     
     // Toggle collapse
     if (trainingToggle && trainingContent) {
@@ -2121,81 +2175,166 @@
       });
     }
     
-    // File input handler
+    // File input handler (supports multiple files)
     if (trainingFileInput) {
       trainingFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file && file.type === 'application/pdf') {
-          selectedFile = file;
-          trainingFileName.textContent = file.name;
+        const files = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
+        if (files.length > 0) {
+          selectedFiles = files;
+          trainingFileName.textContent = files.length === 1 
+            ? files[0].name 
+            : `${files.length} PDFs selected`;
           trainingProcessBtn.disabled = false;
         } else {
-          selectedFile = null;
-          trainingFileName.textContent = 'Please select a PDF file';
+          selectedFiles = [];
+          trainingFileName.textContent = 'Please select PDF file(s)';
           trainingProcessBtn.disabled = true;
         }
       });
     }
     
-    // Process button handler
+    // Process button handler (batch support)
     if (trainingProcessBtn) {
       trainingProcessBtn.addEventListener('click', async () => {
-        if (!selectedFile) return;
+        if (selectedFiles.length === 0) return;
         
+        cancelBatch = false;
         trainingProcessBtn.disabled = true;
         trainingProcessBtn.textContent = '⏳ Processing...';
         trainingProgressSection.classList.remove('hidden');
         
-        document.getElementById('training-progress-filename').textContent = selectedFile.name;
-        document.getElementById('training-progress-status').textContent = 'Uploading PDF...';
-        document.getElementById('training-progress-bar').style.width = '10%';
+        const cancelBtn = document.getElementById('training-cancel-btn');
+        const batchResults = document.getElementById('training-batch-results');
+        const batchProgress = document.getElementById('training-batch-progress');
         
-        try {
-          const formData = new FormData();
-          formData.append('file', selectedFile);
-          
-          document.getElementById('training-progress-status').textContent = 'Extracting text and generating Q&A pairs...';
-          document.getElementById('training-progress-bar').style.width = '30%';
-          
-          const response = await fetch('/api/training-pairs/process', {
-            method: 'POST',
-            body: formData
-          });
-          
-          const result = await response.json();
-          
-          if (response.ok) {
-            document.getElementById('training-progress-bar').style.width = '100%';
-            document.getElementById('training-progress-status').textContent = 
-              `✅ Complete! Generated ${result.pairs_generated} pairs from ${result.chunks_processed} chunks.`;
-            document.getElementById('training-progress-chunks').textContent = 
-              `${result.chunks_processed} / ${result.chunks_processed}`;
-            document.getElementById('training-progress-pairs').textContent = result.pairs_generated;
-            
-            // Refresh lists
-            loadTrainingData();
-            
-            // Reset form
-            setTimeout(() => {
-              trainingProgressSection.classList.add('hidden');
-              trainingFileName.textContent = 'No file selected';
-              trainingFileInput.value = '';
-              selectedFile = null;
-              trainingProcessBtn.textContent = '🤖 Generate Pairs';
-              trainingProcessBtn.disabled = true;
-            }, 3000);
-          } else {
-            throw new Error(result.error || 'Processing failed');
-          }
-        } catch (error) {
-          console.error('Training pair error:', error);
-          document.getElementById('training-progress-status').textContent = `❌ Error: ${error.message}`;
-          document.getElementById('training-progress-bar').style.width = '100%';
-          document.getElementById('training-progress-bar').style.background = '#ef4444';
-          
-          trainingProcessBtn.disabled = false;
-          trainingProcessBtn.textContent = '🤖 Generate Pairs';
+        // Show cancel button for batch
+        if (selectedFiles.length > 1) {
+          cancelBtn.style.display = 'block';
+          batchResults.classList.remove('hidden');
+          batchResults.innerHTML = '';
         }
+        
+        let totalPairs = 0;
+        let processedCount = 0;
+        
+        for (let i = 0; i < selectedFiles.length; i++) {
+          // Check for cancellation
+          if (cancelBatch) {
+            document.getElementById('training-progress-status').textContent = '⚠️ Batch cancelled by user';
+            break;
+          }
+          
+          const file = selectedFiles[i];
+          const fileNum = i + 1;
+          const totalFiles = selectedFiles.length;
+          
+          // Update batch progress display
+          batchProgress.textContent = totalFiles > 1 ? `File ${fileNum} of ${totalFiles}` : 'Processing';
+          document.getElementById('training-progress-filename').textContent = file.name;
+          document.getElementById('training-progress-status').textContent = 'Uploading PDF...';
+          document.getElementById('training-progress-bar').style.width = '10%';
+          document.getElementById('training-progress-bar').style.background = '#10b981';
+          
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            document.getElementById('training-progress-status').textContent = 'Extracting text and generating Q&A pairs...';
+            document.getElementById('training-progress-bar').style.width = '30%';
+            
+            const response = await fetch('/api/training-pairs/process', {
+              method: 'POST',
+              body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+              document.getElementById('training-progress-bar').style.width = '100%';
+              document.getElementById('training-progress-chunks').textContent = 
+                `${result.chunks_processed} / ${result.chunks_processed}`;
+              document.getElementById('training-progress-pairs').textContent = result.pairs_generated;
+              
+              totalPairs += result.pairs_generated;
+              processedCount++;
+              
+              // Add result to batch log
+              if (totalFiles > 1) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'training-batch-result success';
+                resultDiv.textContent = `✓ ${file.name}: ${result.pairs_generated} pairs`;
+                batchResults.appendChild(resultDiv);
+                batchResults.scrollTop = batchResults.scrollHeight;
+              }
+              
+              document.getElementById('training-progress-status').textContent = 
+                `✅ ${file.name}: ${result.pairs_generated} pairs generated`;
+              
+            } else {
+              throw new Error(result.error || 'Processing failed');
+            }
+          } catch (error) {
+            console.error('Training pair error:', error);
+            
+            // Add error to batch log
+            if (totalFiles > 1) {
+              const resultDiv = document.createElement('div');
+              resultDiv.className = 'training-batch-result error';
+              resultDiv.textContent = `✗ ${file.name}: ${error.message}`;
+              batchResults.appendChild(resultDiv);
+              batchResults.scrollTop = batchResults.scrollHeight;
+            }
+            
+            document.getElementById('training-progress-status').textContent = `❌ ${file.name}: ${error.message}`;
+          }
+          
+          // Small delay between files
+          if (i < selectedFiles.length - 1 && !cancelBatch) {
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+        
+        // Final summary
+        cancelBtn.style.display = 'none';
+        document.getElementById('training-progress-bar').style.width = '100%';
+        
+        if (cancelBatch) {
+          document.getElementById('training-progress-status').textContent = 
+            `⚠️ Cancelled. Processed ${processedCount} of ${selectedFiles.length} files (${totalPairs} pairs total)`;
+        } else {
+          batchProgress.textContent = 'Complete';
+          document.getElementById('training-progress-status').textContent = 
+            selectedFiles.length > 1
+              ? `✅ Batch complete! ${processedCount} files, ${totalPairs} pairs total`
+              : `✅ Complete! ${totalPairs} pairs generated`;
+        }
+        
+        // Refresh lists
+        loadTrainingData();
+        
+        // Reset form after delay
+        setTimeout(() => {
+          trainingProgressSection.classList.add('hidden');
+          batchResults.classList.add('hidden');
+          trainingFileName.textContent = 'No file selected';
+          trainingFileInput.value = '';
+          selectedFiles = [];
+          trainingProcessBtn.textContent = '🤖 Generate Pairs';
+          trainingProcessBtn.disabled = true;
+        }, 5000);
+        
+        trainingProcessBtn.disabled = false;
+        trainingProcessBtn.textContent = '🤖 Generate Pairs';
+      });
+    }
+    
+    // Cancel button handler
+    const trainingCancelBtn = document.getElementById('training-cancel-btn');
+    if (trainingCancelBtn) {
+      trainingCancelBtn.addEventListener('click', () => {
+        cancelBatch = true;
+        trainingCancelBtn.disabled = true;
+        trainingCancelBtn.textContent = '⏳ Cancelling...';
       });
     }
     
