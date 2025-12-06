@@ -3098,7 +3098,37 @@ def preprocess_transcript(text: str) -> str:
 # =============================================================================
 
 # Storage paths for training pair generator
-TRAINING_PAIRS_PATH = Path("./data/training_pairs")
+# Uses persistent storage on Replit to survive restarts/deploys
+
+def get_training_pairs_base_path() -> Path:
+    """
+    Get the base path for training pairs storage.
+    Uses persistent storage on Replit, local path for development.
+    
+    Priority:
+    1. TRAINING_DATA_PATH environment variable (custom override)
+    2. Replit persistent storage (/home/runner/innerverse_data/training_pairs)
+    3. Local development path (./data/training_pairs)
+    """
+    # Check for custom path override
+    custom_path = os.environ.get('TRAINING_DATA_PATH')
+    if custom_path:
+        print(f"[Training Pairs] Using custom path: {custom_path}")
+        return Path(custom_path)
+    
+    # Detect Replit environment (works for both dev and production)
+    if os.environ.get('REPL_ID') or os.environ.get('REPLIT') or os.environ.get('REPL_SLUG'):
+        persistent_path = Path("/home/runner/innerverse_data/training_pairs")
+        print(f"[Training Pairs] Replit detected - using persistent path: {persistent_path}")
+        return persistent_path
+    
+    # Local development - use relative path
+    local_path = Path("./data/training_pairs")
+    print(f"[Training Pairs] Local dev - using path: {local_path}")
+    return local_path
+
+# Initialize paths using the dynamic base path
+TRAINING_PAIRS_PATH = get_training_pairs_base_path()
 TRAINING_IN_PROGRESS_PATH = TRAINING_PAIRS_PATH / "in_progress"
 TRAINING_PENDING_PATH = TRAINING_PAIRS_PATH / "pending_review"
 TRAINING_APPROVED_PATH = TRAINING_PAIRS_PATH / "approved"
