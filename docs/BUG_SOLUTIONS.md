@@ -2,7 +2,7 @@
 
 **Purpose**: Centralized reference for bug fixes, solutions, and patterns to help solve future issues faster.
 
-**Last Updated**: 2025-12-01
+**Last Updated**: 2025-12-06
 
 ---
 
@@ -12,6 +12,7 @@
 - [CSS Scrolling Issues](#css-scrolling-issues)
 - [Season Search Problems](#season-search-problems)
 - [Dark Mode Icon Visibility](#dark-mode-icon-visibility)
+- [Overflow Hidden Cutting Off Content](#overflow-hidden-cutting-off-content)
 - [Patterns & Best Practices](#patterns--best-practices)
 
 ---
@@ -312,6 +313,63 @@ Icons (burger menu, plus button, scroll arrow) too dark in dark mode, hard to se
 
 ---
 
+## Overflow Hidden Cutting Off Content
+
+### Problem
+Content in modal cards (Q&A pairs in Review modal) appeared to be missing. Only the header was visible, text below it was invisible even though console logs showed the HTML was correctly generated with the text content.
+
+### Root Cause
+CSS `overflow: hidden` on the parent container (`.training-pair-card`) was physically cutting off content that extended beyond the container's set `min-height`. The text WAS in the DOM but the container wouldn't expand to show it.
+
+### Symptoms
+- Console shows HTML is correct with text content
+- Only card header visible
+- Faint gray rectangle visible below header (the clipped content)
+- Different approaches (template literals, DOM manipulation, inline styles) all "fail"
+
+### Solution Pattern
+
+❌ **Before (broken):**
+```css
+.training-pair-card {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  overflow: hidden;      /* ← CULPRIT! */
+  min-height: 120px;     /* ← Fixed height prevents growth */
+}
+```
+
+✅ **After (fixed):**
+```css
+.training-pair-card {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  overflow: visible;     /* ← Allow content to show */
+  min-height: auto;      /* ← Allow container to grow */
+}
+```
+
+### Key Learnings
+1. **`overflow: hidden` hides content** - It clips anything beyond the container boundaries
+2. **Fixed heights prevent growth** - Use `min-height: auto` to allow expansion
+3. **Console debugging is essential** - Verify HTML is correct before assuming JS bug
+4. **Check parent containers** - The issue might not be on the element itself
+5. **Gray rectangles = clipped content** - If you see partial elements, suspect overflow
+
+### How to Detect This Bug
+- Content "not showing" but console shows correct HTML
+- Partial elements visible (corners, edges of boxes)
+- Different rendering approaches all fail the same way
+- Edit modal (using `.value`) works but display divs don't
+
+### Related Files
+- `uploader.html` - `.training-pair-card` CSS styles
+- Any modal or card component with `overflow: hidden`
+
+---
+
 ## Patterns & Best Practices
 
 ### CSS Specificity Issues
@@ -408,6 +466,7 @@ When you fix a bug:
 - **Scrolling not working**: Check `overflow-y: auto`, `max-height`, parent containers
 - **Styles not applying**: Check specificity, inline styles, cache version
 - **Dark mode issues**: Always test both themes, use `[data-theme="dark"]` selector
+- **Content cut off/invisible**: Check for `overflow: hidden` on parent containers, change to `overflow: visible`
 
 ### Common JavaScript Issues
 - **Event listeners not firing**: Check element exists, event delegation, timing
