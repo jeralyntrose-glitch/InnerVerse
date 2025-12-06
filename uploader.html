@@ -2636,52 +2636,45 @@
       console.log('Rendering pairs:', currentReviewPairs);
       console.log('First pair structure:', JSON.stringify(currentReviewPairs[0], null, 2));
       
-      // Build HTML and set content using DOM manipulation for reliability
-      container.innerHTML = '';
+      // Build HTML with text directly embedded
+      let html = '';
       
       currentReviewPairs.forEach((pair, index) => {
         const isDeleted = deletedPairs.has(index);
         const isEdited = editedPairs.has(index);
         const cardClass = isDeleted ? 'deleted' : (isEdited ? 'edited' : '');
         
-        const question = pair.question || '[No question]';
-        const answer = pair.answer || '[No answer]';
+        const question = (pair.question || '[No question]').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const answer = (pair.answer || '[No answer]').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         
-        // Create card element
-        const card = document.createElement('div');
-        card.className = `training-pair-card ${cardClass}`;
-        card.dataset.index = index;
-        
-        card.innerHTML = `
-          <div class="training-pair-header">
-            <span class="training-pair-number">Pair ${index + 1}</span>
-            <div class="training-pair-actions">
-              ${!isDeleted ? `
-                <button class="btn-pair-edit" onclick="openEditModal(${index})">✏️ Edit</button>
-                <button class="btn-pair-delete" onclick="deletePairFromReview(${index})">🗑️ Delete</button>
-              ` : `
-                <button class="btn-pair-edit" onclick="undoDeletePair(${index})">↩️ Undo</button>
-              `}
+        html += `
+          <div class="training-pair-card ${cardClass}" data-index="${index}">
+            <div class="training-pair-header">
+              <span class="training-pair-number">Pair ${index + 1}</span>
+              <div class="training-pair-actions">
+                ${!isDeleted ? `
+                  <button class="btn-pair-edit" onclick="openEditModal(${index})">✏️ Edit</button>
+                  <button class="btn-pair-delete" onclick="deletePairFromReview(${index})">🗑️ Delete</button>
+                ` : `
+                  <button class="btn-pair-edit" onclick="undoDeletePair(${index})">↩️ Undo</button>
+                `}
+              </div>
             </div>
-          </div>
-          <div class="training-pair-content">
-            <div class="training-pair-question">
-              <div class="training-pair-label">QUESTION</div>
-              <p class="training-pair-text-q"></p>
-            </div>
-            <div class="training-pair-answer">
-              <div class="training-pair-label">ANSWER</div>
-              <p class="training-pair-text-a"></p>
+            <div class="training-pair-content">
+              <div class="training-pair-question">
+                <span class="training-pair-label">QUESTION</span>
+                <div class="training-pair-text-q">${question}</div>
+              </div>
+              <div class="training-pair-answer">
+                <span class="training-pair-label">ANSWER</span>
+                <div class="training-pair-text-a">${answer}</div>
+              </div>
             </div>
           </div>
         `;
-        
-        // Set text content separately (safer than template literals for special chars)
-        card.querySelector('.training-pair-text-q').textContent = question;
-        card.querySelector('.training-pair-text-a').textContent = answer;
-        
-        container.appendChild(card);
       });
+      
+      container.innerHTML = html;
     }
     
     // Update stats display
