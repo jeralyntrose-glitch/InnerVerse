@@ -1900,19 +1900,28 @@
       color: #34d399;
     }
     
-    .training-pair-text {
-      font-size: 15px !important;
-      line-height: 1.8 !important;
-      color: #ffffff !important;
-      white-space: pre-wrap !important;
-      word-break: break-word !important;
-      min-height: 20px !important;
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      overflow: visible !important;
-      height: auto !important;
-      max-height: none !important;
+    .training-pair-text-q, .training-pair-text-a {
+      margin: 0;
+      padding: 12px 16px;
+      font-size: 15px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 8px;
+    }
+    
+    .training-pair-text-q {
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 16px;
+      background: #1e293b;
+    }
+    
+    .training-pair-text-a {
+      color: #e5e7eb;
+      font-size: 14px;
+      background: #0f172a;
+      border-left: 3px solid #34d399;
     }
     
     .training-pair-question .training-pair-text {
@@ -2627,46 +2636,52 @@
       console.log('Rendering pairs:', currentReviewPairs);
       console.log('First pair structure:', JSON.stringify(currentReviewPairs[0], null, 2));
       
-      container.innerHTML = currentReviewPairs.map((pair, index) => {
+      // Build HTML and set content using DOM manipulation for reliability
+      container.innerHTML = '';
+      
+      currentReviewPairs.forEach((pair, index) => {
         const isDeleted = deletedPairs.has(index);
         const isEdited = editedPairs.has(index);
         const cardClass = isDeleted ? 'deleted' : (isEdited ? 'edited' : '');
         
-        // Safety check for question and answer
         const question = pair.question || '[No question]';
         const answer = pair.answer || '[No answer]';
         
-        // Debug first pair
-        if (index === 0) {
-          console.log('Pair 0 - question:', question, 'answer:', answer);
-        }
+        // Create card element
+        const card = document.createElement('div');
+        card.className = `training-pair-card ${cardClass}`;
+        card.dataset.index = index;
         
-        return `
-          <div class="training-pair-card ${cardClass}" data-index="${index}">
-            <div class="training-pair-header">
-              <span class="training-pair-number">Pair ${index + 1}</span>
-              <div class="training-pair-actions">
-                ${!isDeleted ? `
-                  <button class="btn-pair-edit" onclick="openEditModal(${index})">✏️ Edit</button>
-                  <button class="btn-pair-delete" onclick="deletePairFromReview(${index})">🗑️ Delete</button>
-                ` : `
-                  <button class="btn-pair-edit" onclick="undoDeletePair(${index})">↩️ Undo</button>
-                `}
-              </div>
+        card.innerHTML = `
+          <div class="training-pair-header">
+            <span class="training-pair-number">Pair ${index + 1}</span>
+            <div class="training-pair-actions">
+              ${!isDeleted ? `
+                <button class="btn-pair-edit" onclick="openEditModal(${index})">✏️ Edit</button>
+                <button class="btn-pair-delete" onclick="deletePairFromReview(${index})">🗑️ Delete</button>
+              ` : `
+                <button class="btn-pair-edit" onclick="undoDeletePair(${index})">↩️ Undo</button>
+              `}
             </div>
-            <div class="training-pair-content">
-              <div class="training-pair-question">
-                <div class="training-pair-label">QUESTION</div>
-                <div class="training-pair-text" style="color: #ffffff; font-size: 16px; padding: 10px; background: #1e293b;">${question}</div>
-              </div>
-              <div class="training-pair-answer">
-                <div class="training-pair-label">ANSWER</div>
-                <div class="training-pair-text" style="color: #e5e7eb; font-size: 14px; padding: 10px; background: #0f172a;">${answer}</div>
-              </div>
+          </div>
+          <div class="training-pair-content">
+            <div class="training-pair-question">
+              <div class="training-pair-label">QUESTION</div>
+              <p class="training-pair-text-q"></p>
+            </div>
+            <div class="training-pair-answer">
+              <div class="training-pair-label">ANSWER</div>
+              <p class="training-pair-text-a"></p>
             </div>
           </div>
         `;
-      }).join('');
+        
+        // Set text content separately (safer than template literals for special chars)
+        card.querySelector('.training-pair-text-q').textContent = question;
+        card.querySelector('.training-pair-text-a').textContent = answer;
+        
+        container.appendChild(card);
+      });
     }
     
     // Update stats display
