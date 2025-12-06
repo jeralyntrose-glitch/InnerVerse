@@ -26,9 +26,8 @@ dependencies = [
     "anthropic>=0.18.0",
     "langchain>=0.3.27",
     
-    # Vector Database
+    # Vector Database (pinecone replaces the old pinecone-client)
     "pinecone>=7.3.0",
-    "pinecone-client>=6.0.0",
     
     # Document Processing
     "PyPDF2>=3.0.1",
