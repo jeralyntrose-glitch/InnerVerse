@@ -3231,17 +3231,30 @@ class TrainingPairStorage:
             return None
     
     def write_file(self, relative_path: str, content: str):
-        """Write content to a file"""
+        """Write content to a file with retry logic for Object Storage"""
         if self.use_object_storage:
-            try:
-                storage_path = self._get_storage_path(relative_path)
-                self.object_storage_client.upload_from_text(storage_path, content)
-            except Exception as e:
-                # Check if storage error - if so, fall back to local and retry
-                if self._handle_storage_error(e, "write", relative_path):
-                    return self.write_file(relative_path, content)  # Retry with local storage
-                print(f"[Storage] Error writing {relative_path}: {e}")
-                raise
+            import time
+            storage_path = self._get_storage_path(relative_path)
+            max_retries = 3
+            
+            for attempt in range(max_retries):
+                try:
+                    self.object_storage_client.upload_from_text(storage_path, content)
+                    if attempt > 0:
+                        print(f"[Storage] ✅ Write succeeded on attempt {attempt + 1}")
+                    return  # Success!
+                except Exception as e:
+                    print(f"[Storage] ⚠️ Write attempt {attempt + 1}/{max_retries} failed: {type(e).__name__}")
+                    if attempt < max_retries - 1:
+                        wait_time = (attempt + 1) * 2  # 2, 4 seconds
+                        print(f"[Storage] 🔄 Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                    else:
+                        # All retries failed - now fall back
+                        print(f"[Storage] ❌ All {max_retries} attempts failed, falling back to local")
+                        if self._handle_storage_error(e, "write", relative_path):
+                            return self.write_file(relative_path, content)  # Retry with local
+                        raise
         else:
             local_path = self._get_local_path(relative_path)
             local_path.parent.mkdir(parents=True, exist_ok=True)
