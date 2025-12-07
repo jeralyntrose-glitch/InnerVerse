@@ -10211,13 +10211,17 @@ async def process_training_pairs(file: UploadFile = File(...)):
             resume_from=0
         )
         
-        # Count pairs in output
-        pair_count = sum(1 for _ in open(final_path))
+        # Count pairs in output using storage class
+        content = training_storage.read_file(final_path)
+        pair_count = len([line for line in content.strip().split('\n') if line.strip()]) if content else 0
+        
+        # Extract just the filename from the path
+        output_filename = final_path.split('/')[-1] if '/' in final_path else final_path
         
         return {
             "success": True,
             "filename": file.filename,
-            "output_file": final_path.name,
+            "output_file": output_filename,
             "chunks_processed": len(chunks),
             "pairs_generated": pair_count,
             "failed_chunks": failed_chunks,
