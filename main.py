@@ -3171,13 +3171,34 @@ class TrainingPairStorage:
             (self.local_base_path / "pending_review").mkdir(exist_ok=True)
             (self.local_base_path / "approved").mkdir(exist_ok=True)
     
-    def _handle_bucket_error(self, error: Exception, operation: str, path: str) -> bool:
-        """Check if error is a bucket config error and disable Object Storage if so. Returns True if was bucket error."""
+    def _handle_storage_error(self, error: Exception, operation: str, path: str) -> bool:
+        """
+        Check if error is a storage error and disable Object Storage if so.
+        Returns True if should retry with local storage.
+        Catches: bucket config errors, connection errors, protocol errors, timeouts
+        """
         error_msg = str(error).lower()
-        if "no default bucket" in error_msg or "defaultbucketerror" in error_msg:
+        error_type = type(error).__name__.lower()
+        
+        # List of errors that indicate Object Storage isn't working
+        fallback_indicators = [
+            "no default bucket",
+            "defaultbucketerror", 
+            "connection aborted",
+            "remotedisconnected",
+            "protocolerror",
+            "connectionerror",
+            "timeout",
+            "remote end closed",
+            "urlopen error"
+        ]
+        
+        should_fallback = any(indicator in error_msg or indicator in error_type for indicator in fallback_indicators)
+        
+        if should_fallback:
             if self.use_object_storage:  # Only print once
-                print(f"[Storage] ⚠️ Object Storage bucket not configured, switching to local storage")
-                print(f"[Storage] 💡 To enable: Create a bucket in Replit's App Storage tool")
+                print(f"[Storage] ⚠️ Object Storage error during {operation}: {type(error).__name__}")
+                print(f"[Storage] 🔄 Switching to local storage for reliability")
                 self.use_object_storage = False
                 # Ensure local directories exist
                 self.local_base_path.mkdir(parents=True, exist_ok=True)
@@ -3195,8 +3216,8 @@ class TrainingPairStorage:
                 content = self.object_storage_client.download_as_text(storage_path)
                 return content
             except Exception as e:
-                # Check if bucket error - if so, fall back to local and retry
-                if self._handle_bucket_error(e, "read", relative_path):
+                # Check if storage error - if so, fall back to local and retry
+                if self._handle_storage_error(e, "read", relative_path):
                     return self.read_file(relative_path)  # Retry with local storage
                 if "not found" in str(e).lower() or "404" in str(e):
                     return None
@@ -3216,8 +3237,8 @@ class TrainingPairStorage:
                 storage_path = self._get_storage_path(relative_path)
                 self.object_storage_client.upload_from_text(storage_path, content)
             except Exception as e:
-                # Check if bucket error - if so, fall back to local and retry
-                if self._handle_bucket_error(e, "write", relative_path):
+                # Check if storage error - if so, fall back to local and retry
+                if self._handle_storage_error(e, "write", relative_path):
                     return self.write_file(relative_path, content)  # Retry with local storage
                 print(f"[Storage] Error writing {relative_path}: {e}")
                 raise
@@ -3240,8 +3261,8 @@ class TrainingPairStorage:
                 self.object_storage_client.delete(storage_path)
                 return True
             except Exception as e:
-                # Check if bucket error - if so, fall back to local and retry
-                if self._handle_bucket_error(e, "delete", relative_path):
+                # Check if storage error - if so, fall back to local and retry
+                if self._handle_storage_error(e, "delete", relative_path):
                     return self.delete_file(relative_path)  # Retry with local storage
                 print(f"[Storage] Error deleting {relative_path}: {e}")
                 return False
