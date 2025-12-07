@@ -3150,7 +3150,7 @@ class TrainingPairStorage:
                     if "no default bucket" in error_msg or "defaultbucketerror" in error_type.lower():
                         print("[TrainingPairStorage] ❌ No bucket configured!")
                         self.use_object_storage = False
-                    elif "not found" in error_msg or "404" in str(test_error):
+                    elif "not found" in error_msg or "could not be found" in error_msg or "404" in str(test_error) or "objectnotfounderror" in error_type.lower():
                         # This is GOOD - bucket exists, file just doesn't exist
                         print("[TrainingPairStorage] ✅ Bucket accessible (file not found = expected)")
                         
