@@ -3128,6 +3128,10 @@ class TrainingPairStorage:
                 self.object_storage_client = Client()
                 
                 # Test if the bucket is configured AND accessible
+                # Add small delay to let network initialize
+                import time
+                time.sleep(2)  # Give network 2 seconds to be ready
+                
                 try:
                     # Test 1: Try to read (tests bucket config)
                     print("[TrainingPairStorage] 🔍 Testing bucket access (read test)...")
@@ -3135,7 +3139,13 @@ class TrainingPairStorage:
                 except Exception as test_error:
                     error_msg = str(test_error).lower()
                     error_type = type(test_error).__name__
+                    
+                    # FULL ERROR DETAILS
+                    import traceback
                     print(f"[TrainingPairStorage] 🔍 Read test result: {error_type}")
+                    print(f"[TrainingPairStorage] 🔍 Full error: {test_error}")
+                    print(f"[TrainingPairStorage] 🔍 Traceback:")
+                    traceback.print_exc()
                     
                     if "no default bucket" in error_msg or "defaultbucketerror" in error_type.lower():
                         print("[TrainingPairStorage] ❌ No bucket configured!")
@@ -3144,29 +3154,91 @@ class TrainingPairStorage:
                         # This is GOOD - bucket exists, file just doesn't exist
                         print("[TrainingPairStorage] ✅ Bucket accessible (file not found = expected)")
                         
-                        # Test 2: Try a small write to confirm write access
-                        try:
-                            print("[TrainingPairStorage] 🔍 Testing write access...")
-                            test_content = f"connectivity_test_{__import__('time').time()}"
-                            self.object_storage_client.upload_from_text("_write_test", test_content)
-                            print("[TrainingPairStorage] ✅ Write test PASSED!")
-                            
-                            # Clean up test file
+                        # Test 2: Try a small write to confirm write access (WITH RETRIES)
+                        max_write_retries = 3
+                        write_success = False
+                        
+                        for write_attempt in range(max_write_retries):
                             try:
-                                self.object_storage_client.delete("_write_test")
-                            except:
-                                pass  # Don't care if cleanup fails
-                            
+                                print(f"[TrainingPairStorage] 🔍 Testing write access (attempt {write_attempt + 1}/{max_write_retries})...")
+                                test_content = f"connectivity_test_{time.time()}"
+                                self.object_storage_client.upload_from_text("_write_test", test_content)
+                                print("[TrainingPairStorage] ✅ Write test PASSED!")
+                                write_success = True
+                                
+                                # Clean up test file
+                                try:
+                                    self.object_storage_client.delete("_write_test")
+                                except:
+                                    pass  # Don't care if cleanup fails
+                                
+                                break  # Success!
+                            except Exception as write_error:
+                                write_error_type = type(write_error).__name__
+                                print(f"[TrainingPairStorage] ⚠️ Write attempt {write_attempt + 1} failed: {write_error_type}: {write_error}")
+                                
+                                if write_attempt < max_write_retries - 1:
+                                    wait = (write_attempt + 1) * 3  # 3, 6 seconds
+                                    print(f"[TrainingPairStorage] 🔄 Retrying write in {wait}s...")
+                                    time.sleep(wait)
+                                else:
+                                    # All retries failed - log full details
+                                    print(f"[TrainingPairStorage] ❌ Write test FAILED after {max_write_retries} attempts")
+                                    print(f"[TrainingPairStorage] ❌ Final error: {write_error_type}: {write_error}")
+                                    traceback.print_exc()
+                        
+                        if write_success:
                             self.use_object_storage = True
                             print("[TrainingPairStorage] ✅ Object Storage FULLY OPERATIONAL")
-                        except Exception as write_error:
-                            print(f"[TrainingPairStorage] ❌ Write test FAILED: {type(write_error).__name__}: {write_error}")
-                            print("[TrainingPairStorage] ⚠️ Object Storage is READ-ONLY or has connection issues")
-                            self.use_object_storage = False
+                        else:
+                            print("[TrainingPairStorage] ⚠️ Object Storage has connection issues - will retry on each write")
+                            # STILL ENABLE IT - we'll retry on actual writes
+                            self.use_object_storage = True
+                    elif "connection" in error_type.lower() or "connection" in error_msg:
+                        # ConnectionError - might be transient, try retries
+                        print(f"[TrainingPairStorage] ⚠️ ConnectionError detected - trying retries...")
+                        max_retries = 3
+                        connection_ok = False
+                        
+                        for retry in range(max_retries):
+                            try:
+                                wait = (retry + 1) * 3  # 3, 6, 9 seconds
+                                if retry > 0:
+                                    print(f"[TrainingPairStorage] 🔄 Retry {retry}/{max_retries} after {wait}s...")
+                                    time.sleep(wait)
+                                
+                                # Try write test directly (skip read test)
+                                test_content = f"connectivity_test_{time.time()}"
+                                self.object_storage_client.upload_from_text("_write_test", test_content)
+                                print("[TrainingPairStorage] ✅ Connection recovered! Write test passed!")
+                                connection_ok = True
+                                
+                                # Clean up
+                                try:
+                                    self.object_storage_client.delete("_write_test")
+                                except:
+                                    pass
+                                
+                                break
+                            except Exception as retry_error:
+                                if retry == max_retries - 1:
+                                    print(f"[TrainingPairStorage] ❌ All connection retries failed")
+                                    traceback.print_exc()
+                        
+                        if connection_ok:
+                            self.use_object_storage = True
+                            print("[TrainingPairStorage] ✅ Object Storage OPERATIONAL (after retry)")
+                        else:
+                            # Still enable it - we'll retry on actual operations
+                            self.use_object_storage = True
+                            print("[TrainingPairStorage] ⚠️ Enabling Object Storage with retry-on-write strategy")
                     else:
-                        # Some other error - might be connection issue
+                        # Some other error
                         print(f"[TrainingPairStorage] ⚠️ Unexpected error: {error_type}: {test_error}")
-                        self.use_object_storage = False
+                        traceback.print_exc()
+                        # Still try to use it - might work on actual operations
+                        self.use_object_storage = True
+                        print("[TrainingPairStorage] ⚠️ Enabling Object Storage (will retry on errors)")
                         
             except ImportError:
                 print("[TrainingPairStorage] ❌ replit package not installed")
