@@ -3171,6 +3171,22 @@ class TrainingPairStorage:
             (self.local_base_path / "pending_review").mkdir(exist_ok=True)
             (self.local_base_path / "approved").mkdir(exist_ok=True)
     
+    def _handle_bucket_error(self, error: Exception, operation: str, path: str) -> bool:
+        """Check if error is a bucket config error and disable Object Storage if so. Returns True if was bucket error."""
+        error_msg = str(error).lower()
+        if "no default bucket" in error_msg or "defaultbucketerror" in error_msg:
+            if self.use_object_storage:  # Only print once
+                print(f"[Storage] ⚠️ Object Storage bucket not configured, switching to local storage")
+                print(f"[Storage] 💡 To enable: Create a bucket in Replit's App Storage tool")
+                self.use_object_storage = False
+                # Ensure local directories exist
+                self.local_base_path.mkdir(parents=True, exist_ok=True)
+                (self.local_base_path / "in_progress").mkdir(exist_ok=True)
+                (self.local_base_path / "pending_review").mkdir(exist_ok=True)
+                (self.local_base_path / "approved").mkdir(exist_ok=True)
+            return True
+        return False
+    
     def read_file(self, relative_path: str) -> str | None:
         """Read a file and return its content, or None if not found"""
         if self.use_object_storage:
@@ -3179,6 +3195,9 @@ class TrainingPairStorage:
                 content = self.object_storage_client.download_as_text(storage_path)
                 return content
             except Exception as e:
+                # Check if bucket error - if so, fall back to local and retry
+                if self._handle_bucket_error(e, "read", relative_path):
+                    return self.read_file(relative_path)  # Retry with local storage
                 if "not found" in str(e).lower() or "404" in str(e):
                     return None
                 print(f"[Storage] Error reading {relative_path}: {e}")
@@ -3197,6 +3216,9 @@ class TrainingPairStorage:
                 storage_path = self._get_storage_path(relative_path)
                 self.object_storage_client.upload_from_text(storage_path, content)
             except Exception as e:
+                # Check if bucket error - if so, fall back to local and retry
+                if self._handle_bucket_error(e, "write", relative_path):
+                    return self.write_file(relative_path, content)  # Retry with local storage
                 print(f"[Storage] Error writing {relative_path}: {e}")
                 raise
         else:
@@ -3218,6 +3240,9 @@ class TrainingPairStorage:
                 self.object_storage_client.delete(storage_path)
                 return True
             except Exception as e:
+                # Check if bucket error - if so, fall back to local and retry
+                if self._handle_bucket_error(e, "delete", relative_path):
+                    return self.delete_file(relative_path)  # Retry with local storage
                 print(f"[Storage] Error deleting {relative_path}: {e}")
                 return False
         else:
