@@ -3473,7 +3473,118 @@ class TrainingPairStorage:
 
 
 # Initialize the global storage instance
-training_storage = TrainingPairStorage()
+# Wrap in try/except to prevent module import failures
+try:
+    training_storage = TrainingPairStorage()
+except Exception as e:
+    # Critical: If initialization fails, create a fallback that won't break the server
+    import traceback
+    print(f"⚠️ ═════════════════════════════════════════════════════════════")
+    print(f"⚠️ [CRITICAL] TrainingPairStorage initialization failed!")
+    print(f"⚠️ Error: {type(e).__name__}: {e}")
+    print(f"⚠️ Traceback:")
+    traceback.print_exc()
+    print(f"⚠️ Training pairs feature will use local storage fallback")
+    print(f"⚠️ ═════════════════════════════════════════════════════════════")
+    
+    # Create a minimal fallback instance that uses local storage only
+    # This ensures the server can still start even if Object Storage fails
+    class FallbackTrainingStorage:
+        """Fallback storage class that uses local filesystem only"""
+        def __init__(self):
+            self.use_object_storage = False
+            self.local_base_path = Path("./data/training_pairs")
+            self.local_base_path.mkdir(parents=True, exist_ok=True)
+            (self.local_base_path / "in_progress").mkdir(exist_ok=True)
+            (self.local_base_path / "pending_review").mkdir(exist_ok=True)
+            (self.local_base_path / "approved").mkdir(exist_ok=True)
+        
+        def _get_local_path(self, relative_path: str) -> Path:
+            return self.local_base_path / relative_path
+        
+        def ensure_directories(self):
+            self.local_base_path.mkdir(parents=True, exist_ok=True)
+            (self.local_base_path / "in_progress").mkdir(exist_ok=True)
+            (self.local_base_path / "pending_review").mkdir(exist_ok=True)
+            (self.local_base_path / "approved").mkdir(exist_ok=True)
+        
+        def exists(self, relative_path: str) -> bool:
+            return self._get_local_path(relative_path).exists()
+        
+        def read_file(self, relative_path: str) -> str | None:
+            local_path = self._get_local_path(relative_path)
+            if local_path.exists():
+                return local_path.read_text()
+            return None
+        
+        def write_file(self, relative_path: str, content: str):
+            local_path = self._get_local_path(relative_path)
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            local_path.write_text(content)
+        
+        def append_file(self, relative_path: str, content: str):
+            existing = self.read_file(relative_path) or ""
+            self.write_file(relative_path, existing + content)
+        
+        def delete_file(self, relative_path: str) -> bool:
+            local_path = self._get_local_path(relative_path)
+            if local_path.exists():
+                local_path.unlink()
+                return True
+            return False
+        
+        def move_file(self, from_path: str, to_path: str) -> bool:
+            source = self._get_local_path(from_path)
+            dest = self._get_local_path(to_path)
+            if source.exists():
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                source.rename(dest)
+                return True
+            return False
+        
+        def list_files(self, folder: str) -> list[str]:
+            folder_path = self._get_local_path(folder)
+            if folder_path.exists():
+                return [f.name for f in folder_path.glob("*") if f.is_file()]
+            return []
+        
+        def _load_file_index(self) -> dict:
+            idx_path = self.local_base_path / "_file_index.json"
+            if idx_path.exists():
+                try:
+                    return json.loads(idx_path.read_text())
+                except:
+                    pass
+            return {"in_progress": [], "pending_review": [], "approved": []}
+        
+        def _save_file_index(self, index: dict):
+            (self.local_base_path / "_file_index.json").write_text(json.dumps(index, indent=2))
+        
+        def add_to_index(self, folder: str, filename: str):
+            index = self._load_file_index()
+            if folder not in index:
+                index[folder] = []
+            if filename not in index[folder]:
+                index[folder].append(filename)
+            self._save_file_index(index)
+        
+        def remove_from_index(self, folder: str, filename: str):
+            index = self._load_file_index()
+            if folder in index and filename in index[folder]:
+                index[folder].remove(filename)
+                self._save_file_index(index)
+        
+        def move_in_index(self, filename: str, from_folder: str, to_folder: str):
+            index = self._load_file_index()
+            if from_folder in index and filename in index[from_folder]:
+                index[from_folder].remove(filename)
+            if to_folder not in index:
+                index[to_folder] = []
+            if filename not in index[to_folder]:
+                index[to_folder].append(filename)
+            self._save_file_index(index)
+    
+    training_storage = FallbackTrainingStorage()
 
 # Legacy path constants (for backwards compatibility, but functions should use storage class)
 TRAINING_PAIRS_PATH = Path("./data/training_pairs")
@@ -5200,10 +5311,18 @@ OUTPUT FORMAT:
             })
         
     except Exception as e:
-        print(f"❌ Text to PDF error: {str(e)}")
-        return JSONResponse(status_code=500, content={
-            "error": "Something went wrong. Please try again."
-        })
+        # CRITICAL: Catch ALL exceptions including Pydantic validation errors
+        # Ensure we ALWAYS return JSON, never let FastAPI's default HTML error handler kick in
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"❌ Text to PDF error: {error_trace}")
+        
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": f"Failed to process request: {str(e)}"
+            }
+        )
 
 
 # === Reprocess PDF (Extract text, enhance with GPT, return improved PDF) ===
