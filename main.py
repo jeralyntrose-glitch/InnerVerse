@@ -3124,27 +3124,55 @@ class TrainingPairStorage:
         if self.is_replit:
             try:
                 from replit.object_storage import Client
+                print("[TrainingPairStorage] 🔍 Initializing Object Storage Client...")
                 self.object_storage_client = Client()
-                # Test if the bucket is configured by trying a simple operation
+                
+                # Test if the bucket is configured AND accessible
                 try:
-                    # Try to read a non-existent file - if bucket is configured, we get "not found"
-                    # If bucket is NOT configured, we get "no default bucket" error
-                    self.object_storage_client.download_as_text("_test_bucket_check")
+                    # Test 1: Try to read (tests bucket config)
+                    print("[TrainingPairStorage] 🔍 Testing bucket access (read test)...")
+                    self.object_storage_client.download_as_text("_connectivity_test")
                 except Exception as test_error:
                     error_msg = str(test_error).lower()
-                    if "no default bucket" in error_msg or "bucket" in error_msg and "configured" in error_msg:
-                        print("[TrainingPairStorage] ⚠️ Object Storage bucket not configured, falling back to local storage")
-                        print("[TrainingPairStorage] 💡 To enable: Create a bucket in Replit's App Storage tool")
+                    error_type = type(test_error).__name__
+                    print(f"[TrainingPairStorage] 🔍 Read test result: {error_type}")
+                    
+                    if "no default bucket" in error_msg or "defaultbucketerror" in error_type.lower():
+                        print("[TrainingPairStorage] ❌ No bucket configured!")
                         self.use_object_storage = False
+                    elif "not found" in error_msg or "404" in str(test_error):
+                        # This is GOOD - bucket exists, file just doesn't exist
+                        print("[TrainingPairStorage] ✅ Bucket accessible (file not found = expected)")
+                        
+                        # Test 2: Try a small write to confirm write access
+                        try:
+                            print("[TrainingPairStorage] 🔍 Testing write access...")
+                            test_content = f"connectivity_test_{__import__('time').time()}"
+                            self.object_storage_client.upload_from_text("_write_test", test_content)
+                            print("[TrainingPairStorage] ✅ Write test PASSED!")
+                            
+                            # Clean up test file
+                            try:
+                                self.object_storage_client.delete("_write_test")
+                            except:
+                                pass  # Don't care if cleanup fails
+                            
+                            self.use_object_storage = True
+                            print("[TrainingPairStorage] ✅ Object Storage FULLY OPERATIONAL")
+                        except Exception as write_error:
+                            print(f"[TrainingPairStorage] ❌ Write test FAILED: {type(write_error).__name__}: {write_error}")
+                            print("[TrainingPairStorage] ⚠️ Object Storage is READ-ONLY or has connection issues")
+                            self.use_object_storage = False
                     else:
-                        # Bucket is configured (we got a "not found" error which is expected)
-                        self.use_object_storage = True
-                        print("[TrainingPairStorage] ✅ Replit Object Storage initialized and bucket configured")
+                        # Some other error - might be connection issue
+                        print(f"[TrainingPairStorage] ⚠️ Unexpected error: {error_type}: {test_error}")
+                        self.use_object_storage = False
+                        
             except ImportError:
-                print("[TrainingPairStorage] ⚠️ replit package not found, falling back to local storage")
+                print("[TrainingPairStorage] ❌ replit package not installed")
                 self.use_object_storage = False
             except Exception as e:
-                print(f"[TrainingPairStorage] ⚠️ Object Storage init failed: {e}, falling back to local")
+                print(f"[TrainingPairStorage] ❌ Object Storage init failed: {type(e).__name__}: {e}")
                 self.use_object_storage = False
         
         if not self.use_object_storage:
@@ -3231,35 +3259,44 @@ class TrainingPairStorage:
             return None
     
     def write_file(self, relative_path: str, content: str):
-        """Write content to a file with retry logic for Object Storage"""
+        """Write content to a file - NO SILENT FALLBACK, errors are shown to user"""
         if self.use_object_storage:
             import time
             storage_path = self._get_storage_path(relative_path)
             max_retries = 3
+            last_error = None
             
             for attempt in range(max_retries):
                 try:
+                    print(f"[Storage] 📤 Writing to Object Storage: {storage_path} (attempt {attempt + 1}/{max_retries})")
                     self.object_storage_client.upload_from_text(storage_path, content)
-                    if attempt > 0:
-                        print(f"[Storage] ✅ Write succeeded on attempt {attempt + 1}")
+                    print(f"[Storage] ✅ Successfully saved to Object Storage: {storage_path}")
                     return  # Success!
                 except Exception as e:
-                    print(f"[Storage] ⚠️ Write attempt {attempt + 1}/{max_retries} failed: {type(e).__name__}")
+                    last_error = e
+                    error_details = f"{type(e).__name__}: {str(e)[:200]}"
+                    print(f"[Storage] ❌ OBJECT STORAGE WRITE FAILED (attempt {attempt + 1}/{max_retries})")
+                    print(f"[Storage] ❌ Error: {error_details}")
                     if attempt < max_retries - 1:
                         wait_time = (attempt + 1) * 2  # 2, 4 seconds
                         print(f"[Storage] 🔄 Retrying in {wait_time}s...")
                         time.sleep(wait_time)
-                    else:
-                        # All retries failed - now fall back
-                        print(f"[Storage] ❌ All {max_retries} attempts failed, falling back to local")
-                        if self._handle_storage_error(e, "write", relative_path):
-                            return self.write_file(relative_path, content)  # Retry with local
-                        raise
+            
+            # ALL RETRIES FAILED - RAISE THE ERROR, DON'T HIDE IT
+            print(f"\n{'='*60}")
+            print(f"🚨 CRITICAL: OBJECT STORAGE FAILED AFTER {max_retries} ATTEMPTS 🚨")
+            print(f"File: {relative_path}")
+            print(f"Error: {type(last_error).__name__}: {str(last_error)}")
+            print(f"Content size: {len(content)} bytes")
+            print(f"{'='*60}\n")
+            raise Exception(f"Object Storage write failed after {max_retries} attempts: {last_error}")
         else:
+            # Local storage mode
             local_path = self._get_local_path(relative_path)
             local_path.parent.mkdir(parents=True, exist_ok=True)
             with open(local_path, 'w') as f:
                 f.write(content)
+            print(f"[Storage] 📁 Saved to LOCAL storage: {local_path} (will NOT persist across deploys!)")
     
     def append_file(self, relative_path: str, content: str):
         """Append content to a file (read + write for Object Storage)"""
