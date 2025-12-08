@@ -1246,8 +1246,18 @@ createPdfBtn.addEventListener('click', async () => {
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'PDF creation failed');
+      let errorMessage = 'PDF creation failed';
+      try {
+        const errorText = await response.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+      } catch {
+      }
+      throw new Error(errorMessage);
     }
     
     updateTextPdfProgress('📄 Generating PDF...', 80);
