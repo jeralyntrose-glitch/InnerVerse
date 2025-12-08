@@ -5181,16 +5181,28 @@ OUTPUT FORMAT:
                                 }
                             ],
                             temperature=0.3,
-                            max_tokens=4096
+                            max_tokens=4096,
+                            timeout=60  # Prevent Gunicorn timeout in production
                         )
                         
-                        content = completion.choices[0].message.content
-                        if content:
-                            cleaned_chunks.append(content.strip())
+                        # Safe response access - check structure before accessing
+                        if completion and hasattr(completion, 'choices') and len(completion.choices) > 0:
+                            message = completion.choices[0].message
+                            if message and hasattr(message, 'content') and message.content:
+                                cleaned_chunks.append(message.content.strip())
+                            else:
+                                cleaned_chunks.append(chunk)
                         else:
+                            print(f"  ⚠️ Chunk {i+1}: Invalid response structure, using original")
                             cleaned_chunks.append(chunk)
+                    except openai.RateLimitError as e:
+                        print(f"  ⚠️ Chunk {i+1} rate limited: {str(e)}, using original")
+                        cleaned_chunks.append(chunk)
+                    except (openai.APIConnectionError, openai.APITimeoutError, TimeoutError) as e:
+                        print(f"  ⚠️ Chunk {i+1} connection/timeout error: {str(e)}, using original")
+                        cleaned_chunks.append(chunk)
                     except Exception as chunk_error:
-                        print(f"  ⚠️ Chunk {i+1} failed: {str(chunk_error)}, using original")
+                        print(f"  ⚠️ Chunk {i+1} failed: {type(chunk_error).__name__}: {str(chunk_error)}, using original")
                         cleaned_chunks.append(chunk)
                 
                 cleaned_text = '\n\n'.join(cleaned_chunks)
@@ -5199,12 +5211,13 @@ OUTPUT FORMAT:
                 
             else:
                 # Normal processing for shorter texts
-                completion = openai_client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": """You are a transcript optimization expert for RAG/vector search systems. Your goal: maximize semantic density while preserving teaching value.
+                try:
+                    completion = openai_client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": """You are a transcript optimization expert for RAG/vector search systems. Your goal: maximize semantic density while preserving teaching value.
 
 CRITICAL: MBTI terminology has been pre-corrected and is AUTHORITATIVE. DO NOT alter type codes or function abbreviations.
 
@@ -5230,20 +5243,40 @@ OUTPUT FORMAT:
 • Make it DENSE but not robotic - keep the personality
 • Aim for 60-70% of original length without losing substance
 • Return ONLY cleaned text, NO meta-commentary"""
-                        },
-                        {
-                            "role": "user",
-                            "content": preprocessed_text
-                        }
-                    ],
-                    temperature=0.3,
-                    max_tokens=4096
-                )
-                
-                content = completion.choices[0].message.content
-                cleaned_text = content.strip() if content else preprocessed_text
-                stage2_reduction = (1 - len(cleaned_text)/len(preprocessed_text)) * 100
-                print(f"   ✅ After Stage 2: {len(cleaned_text):,} characters ({stage2_reduction:.1f}% reduction)")
+                            },
+                            {
+                                "role": "user",
+                                "content": preprocessed_text
+                            }
+                        ],
+                        temperature=0.3,
+                        max_tokens=4096,
+                        timeout=60  # Prevent Gunicorn timeout in production
+                    )
+                    
+                    # Safe response access - check structure before accessing
+                    if completion and hasattr(completion, 'choices') and len(completion.choices) > 0:
+                        message = completion.choices[0].message
+                        if message and hasattr(message, 'content') and message.content:
+                            cleaned_text = message.content.strip()
+                        else:
+                            print("  ⚠️ Invalid response structure, using preprocessed text")
+                            cleaned_text = preprocessed_text
+                    else:
+                        print("  ⚠️ Empty or invalid response, using preprocessed text")
+                        cleaned_text = preprocessed_text
+                    
+                    stage2_reduction = (1 - len(cleaned_text)/len(preprocessed_text)) * 100
+                    print(f"   ✅ After Stage 2: {len(cleaned_text):,} characters ({stage2_reduction:.1f}% reduction)")
+                except openai.RateLimitError as e:
+                    print(f"  ⚠️ Rate limit error: {str(e)}, using Stage 1 output")
+                    cleaned_text = preprocessed_text
+                except (openai.APIConnectionError, openai.APITimeoutError, TimeoutError) as e:
+                    print(f"  ⚠️ Connection/timeout error: {str(e)}, using Stage 1 output")
+                    cleaned_text = preprocessed_text
+                except Exception as e:
+                    print(f"  ⚠️ OpenAI API error ({type(e).__name__}): {str(e)}, using Stage 1 output")
+                    cleaned_text = preprocessed_text
             
             # === STAGE 3: Vector Search Optimization (OPTIONAL - COMMENTED OUT) ===
             # Uncomment to enable Stage 3 for maximum RAG performance
