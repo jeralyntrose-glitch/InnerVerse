@@ -5205,8 +5205,8 @@ OUTPUT FORMAT:
                         print(f"  ⚠️ Chunk {i+1} failed: {type(chunk_error).__name__}: {str(chunk_error)}, using original")
                         cleaned_chunks.append(chunk)
                 
-                cleaned_text = '\n\n'.join(cleaned_chunks)
-                stage2_reduction = (1 - len(cleaned_text)/len(preprocessed_text)) * 100
+                cleaned_text = '\n\n'.join(cleaned_chunks) if cleaned_chunks else preprocessed_text
+                stage2_reduction = (1 - len(cleaned_text)/len(preprocessed_text)) * 100 if len(preprocessed_text) > 0 else 0.0
                 print(f"   ✅ After Stage 2: {len(cleaned_text):,} characters ({stage2_reduction:.1f}% reduction)")
                 
             else:
@@ -5266,7 +5266,7 @@ OUTPUT FORMAT:
                         print("  ⚠️ Empty or invalid response, using preprocessed text")
                         cleaned_text = preprocessed_text
                     
-                    stage2_reduction = (1 - len(cleaned_text)/len(preprocessed_text)) * 100
+                    stage2_reduction = (1 - len(cleaned_text)/len(preprocessed_text)) * 100 if len(preprocessed_text) > 0 else 0.0
                     print(f"   ✅ After Stage 2: {len(cleaned_text):,} characters ({stage2_reduction:.1f}% reduction)")
                 except openai.RateLimitError as e:
                     print(f"  ⚠️ Rate limit error: {str(e)}, using Stage 1 output")
@@ -5286,7 +5286,7 @@ OUTPUT FORMAT:
             # cleaned_text = final_text
             
             final_text = cleaned_text
-            total_reduction = (1 - len(final_text)/input_length) * 100
+            total_reduction = (1 - len(final_text)/input_length) * 100 if input_length > 0 else 0.0
             print(f"🎉 Total optimization: {input_length:,} → {len(final_text):,} chars ({total_reduction:.1f}% reduction)")
             
         except Exception as e:
