@@ -12,7 +12,7 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["gunicorn", "--bind=0.0.0.0:5000", "--reuse-port", "--workers=2", "--timeout=120", "main:app", "-k", "uvicorn.workers.UvicornWorker"]
+run = ["gunicorn", "--bind=0.0.0.0:5000", "--reuse-port", "--workers=2", "--timeout=300", "main:app", "-k", "uvicorn.workers.UvicornWorker"]
 deploymentTarget = "autoscale"
 
 [agent]
@@ -46,6 +46,10 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 44737
+externalPort = 3000
 
 [objectStorage]
 defaultBucketID = "replit-objstore-fcb316aa-5cfe-4b68-930a-3299b3859df5"
