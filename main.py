@@ -87,6 +87,20 @@ print("🚀 Starting InnerVerse...")
 print(f"✅ OPENAI_API_KEY: {'SET' if OPENAI_API_KEY else 'MISSING'}")
 print(f"✅ ANTHROPIC_API_KEY: {'SET' if ANTHROPIC_API_KEY else 'MISSING'}")
 print(f"✅ PINECONE_API_KEY: {'SET' if PINECONE_API_KEY else 'MISSING'}")
+
+# === Load Reference Data for Q&A Generation ===
+TRAINING_REFERENCE_DATA = {}
+try:
+    ref_path = Path("src/data/reference_data.json")
+    if ref_path.exists():
+        with open(ref_path, 'r') as f:
+            TRAINING_REFERENCE_DATA = json.load(f)
+        print(f"✅ [TRAINING] Loaded reference_data.json ({len(TRAINING_REFERENCE_DATA.get('types', []))} types)")
+    else:
+        print("⚠️ [TRAINING] reference_data.json not found - Q&A generation will proceed without reference")
+except Exception as e:
+    print(f"⚠️ [TRAINING] Error loading reference_data.json: {e}")
+    TRAINING_REFERENCE_DATA = {}
 print(f"✅ PINECONE_INDEX: {'SET' if PINECONE_INDEX else 'MISSING'}")
 print(f"✅ DATABASE_URL: {'SET' if DATABASE_URL else 'MISSING'}")
 
@@ -3864,7 +3878,123 @@ def get_training_stats() -> dict:
 # =============================================================================
 
 # The prompt for generating Q&A training pairs
+def format_reference_data_for_prompt(ref_data: dict) -> str:
+    """
+    Format reference_data.json into readable text for prompt inclusion.
+    Includes ALL fields for ALL 16 types - nothing skipped.
+    """
+    if not ref_data or 'types' not in ref_data:
+        return "Reference data not available."
+    
+    output = []
+    
+    for type_data in ref_data['types']:
+        type_code = type_data.get('code', 'UNKNOWN')
+        output.append(f"\n{'='*60}")
+        output.append(f"TYPE: {type_code}")
+        output.append(f"{'='*60}")
+        
+        # Descriptors
+        descriptors = type_data.get('descriptors', {})
+        if descriptors:
+            output.append("\nDESCRIPTORS:")
+            output.append(f"  Attitude: {descriptors.get('attitude', 'N/A')}")
+            output.append(f"  Perception: {descriptors.get('perception', 'N/A')}")
+            output.append(f"  Judgment: {descriptors.get('judgment', 'N/A')}")
+            output.append(f"  Lifestyle: {descriptors.get('lifestyle', 'N/A')}")
+        
+        # Categories
+        categories = type_data.get('categories', {})
+        if categories:
+            output.append("\nCATEGORIES:")
+            output.append(f"  Temperament: {categories.get('temperament', 'N/A')}")
+            output.append(f"  Temperament Code: {categories.get('temperament_code', 'N/A')}")
+            output.append(f"  Temple: {categories.get('temple', 'N/A')}")
+            output.append(f"  Quadra: {categories.get('quadra', 'N/A')}")
+            output.append(f"  House: {categories.get('house', 'N/A')}")
+            output.append(f"  Archetype: {categories.get('archetype', 'N/A')}")
+            output.append(f"  Interaction Style: {categories.get('interaction_style', 'N/A')}")
+        
+        # Expression
+        expression = type_data.get('expression', {})
+        if expression:
+            output.append("\nEXPRESSION:")
+            output.append(f"  Communication: {expression.get('communication', 'N/A')}")
+            output.append(f"  Social: {expression.get('social', 'N/A')}")
+            output.append(f"  Planning: {expression.get('planning', 'N/A')}")
+        
+        # Worldview
+        worldview = type_data.get('worldview', {})
+        if worldview:
+            output.append("\nWORLDVIEW:")
+            output.append(f"  Perspective: {worldview.get('perspective', 'N/A')}")
+            output.append(f"  Orientation: {worldview.get('orientation', 'N/A')}")
+            output.append(f"  Problem Solving: {worldview.get('problem_solving', 'N/A')}")
+        
+        # Four Sides
+        four_sides = type_data.get('four_sides', {})
+        if four_sides:
+            output.append("\nFOUR SIDES:")
+            
+            # Ego
+            ego = four_sides.get('ego', {})
+            if ego:
+                output.append(f"\n  EGO ({ego.get('type', 'N/A')}):")
+                for func in ego.get('functions', []):
+                    pos = func.get('position', 'N/A')
+                    func_code = func.get('function', 'N/A')
+                    keywords = ', '.join(func.get('keywords', []))
+                    output.append(f"    {pos}: {func_code} - Keywords: {keywords}")
+            
+            # Shadow
+            shadow = four_sides.get('shadow', {})
+            if shadow:
+                output.append(f"\n  SHADOW ({shadow.get('type', 'N/A')}):")
+                for func in shadow.get('functions', []):
+                    pos = func.get('position', 'N/A')
+                    func_code = func.get('function', 'N/A')
+                    keywords = ', '.join(func.get('keywords', []))
+                    output.append(f"    {pos}: {func_code} - Keywords: {keywords}")
+            
+            # Subconscious
+            subconscious = four_sides.get('subconscious', {})
+            if subconscious:
+                output.append(f"\n  SUBCONSCIOUS ({subconscious.get('type', 'N/A')}):")
+                for func in subconscious.get('functions', []):
+                    func_code = func.get('function', 'N/A')
+                    keywords = ', '.join(func.get('keywords', []))
+                    output.append(f"    {func_code} - Keywords: {keywords}")
+            
+            # Superego
+            superego = four_sides.get('superego', {})
+            if superego:
+                output.append(f"\n  SUPEREGO ({superego.get('type', 'N/A')}):")
+                for func in superego.get('functions', []):
+                    func_code = func.get('function', 'N/A')
+                    keywords = ', '.join(func.get('keywords', []))
+                    output.append(f"    {func_code} - Keywords: {keywords}")
+        
+        output.append("")  # Blank line between types
+    
+    return '\n'.join(output)
+
+
 QA_GENERATION_PROMPT = """Turn this content into 15-20 Q&A training pairs for fine-tuning an AI.
+
+AUTHORITATIVE TYPE REFERENCE (CS Joseph Framework)
+══════════════════════════════════════════════════
+USAGE: Before outputting ANY claim about a type, VERIFY it against this data.
+
+If the transcript contradicts this reference, USE THE REFERENCE.
+
+If unsure, USE THE REFERENCE.
+
+NEVER guess. ALWAYS verify.
+══════════════════════════════════════════════════
+
+{reference_data}
+
+══════════════════════════════════════════════════
 
 CRITICAL JSON FORMATTING (MUST FOLLOW EXACTLY):
 - Each pair MUST be valid JSON on its own line
@@ -3899,6 +4029,7 @@ CONTENT REQUIREMENTS:
 - Use actual terminology: cognitive functions, hero, parent, child, inferior, demon, gateway functions, four sides, ego, subconscious, unconscious, superego
 - Tie answers to SPECIFIC TYPES when possible (ENFP, INTJ, etc.)
 - Be CONCRETE. What function? What type? What actually happens?
+- VERIFY all type claims against the reference data above before answering
 
 AVOID:
 - Generic advice from any psychology source
@@ -3906,6 +4037,7 @@ AVOID:
 - Academic tone
 - Filler phrases
 - Reference sources ("CS Joseph says", "in season X")
+- Making up type information - if not in reference data, don't claim it
 
 CONTENT TO PROCESS:
 {content}
@@ -4063,7 +4195,14 @@ def generate_qa_pairs_sonnet(chunk: str) -> list[dict]:
     Generate Q&A pairs from a text chunk using Claude 3.5 Sonnet.
     Returns list of parsed Q&A pairs, or empty list on failure.
     """
-    prompt = QA_GENERATION_PROMPT.format(content=chunk)
+    # Format reference data for prompt
+    ref_text = format_reference_data_for_prompt(TRAINING_REFERENCE_DATA)
+    
+    # Build prompt with reference data and content
+    prompt = QA_GENERATION_PROMPT.format(
+        reference_data=ref_text,
+        content=chunk
+    )
     
     if not ANTHROPIC_API_KEY:
         print("   ❌ ANTHROPIC_API_KEY not set")
