@@ -2886,20 +2886,62 @@
       updateReviewStats();
     };
     
+    // Fallback copy function for iOS Safari (execCommand works when clipboard API fails)
+    function fallbackCopyText(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '0';
+      textArea.setAttribute('readonly', '');
+      document.body.appendChild(textArea);
+      
+      // iOS specific: need to select with setSelectionRange
+      textArea.focus();
+      textArea.setSelectionRange(0, text.length);
+      
+      let success = false;
+      try {
+        success = document.execCommand('copy');
+      } catch (err) {
+        console.error('execCommand copy failed:', err);
+      }
+      
+      document.body.removeChild(textArea);
+      return success;
+    }
+    
     // Copy all pairs for Claude review
     async function copyAllForReview() {
+      const btn = document.getElementById('training-copy-all-btn');
+      const originalText = btn.textContent;
+      
       try {
+        btn.textContent = '⏳ Loading...';
+        
         const response = await fetch(`/api/training-pairs/clipboard/${encodeURIComponent(currentReviewFilename)}`);
         const data = await response.json();
         
-        await navigator.clipboard.writeText(data.text);
+        // Try modern Clipboard API first, fallback to execCommand
+        let copied = false;
+        try {
+          await navigator.clipboard.writeText(data.text);
+          copied = true;
+        } catch (clipboardError) {
+          console.log('Clipboard API failed, trying fallback:', clipboardError);
+          copied = fallbackCopyText(data.text);
+        }
         
-        const btn = document.getElementById('training-copy-all-btn');
-        const originalText = btn.textContent;
-        btn.textContent = '✅ Copied!';
+        if (copied) {
+          btn.textContent = '✅ Copied!';
+        } else {
+          throw new Error('Unable to copy. Try selecting and copying manually.');
+        }
+        
         setTimeout(() => btn.textContent = originalText, 2000);
         
       } catch (error) {
+        btn.textContent = originalText;
         alert('Error copying: ' + error.message);
       }
     }
