@@ -10754,6 +10754,46 @@ async def get_training_pairs_for_review(filename: str):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+@app.post("/api/training-pairs/validate/{filename}")
+async def validate_training_pairs_endpoint(filename: str):
+    """
+    Validate training pairs against reference_data.json.
+    Catches function slot errors, shadow type mistakes, and temperament mismatches.
+    """
+    try:
+        from scripts.validate_training_pairs import validate_pairs_in_memory
+        
+        if not TRAINING_REFERENCE_DATA:
+            return JSONResponse(
+                status_code=500, 
+                content={"error": "Reference data not loaded. Cannot validate."}
+            )
+        
+        pairs = get_pairs_for_review(filename)
+        if not pairs:
+            return JSONResponse(
+                status_code=404, 
+                content={"error": f"No pairs found in {filename}"}
+            )
+        
+        print(f"🔍 Validating {len(pairs)} pairs from {filename}...")
+        
+        validation_results = validate_pairs_in_memory(pairs, TRAINING_REFERENCE_DATA)
+        
+        print(f"✅ Validation complete: {validation_results['clean']} clean, {validation_results['flagged']} flagged")
+        
+        return {
+            "filename": filename,
+            "validation": validation_results
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"❌ Validation error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 @app.patch("/api/training-pairs/pair/{filename}")
 async def update_training_pair_endpoint(filename: str, pair_index: int, question: str, answer: str):
     """Update a specific Q&A pair"""

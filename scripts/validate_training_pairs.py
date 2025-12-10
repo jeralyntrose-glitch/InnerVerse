@@ -684,6 +684,175 @@ def write_outputs(input_path: str, results: list[ValidationResult]):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# API-COMPATIBLE FUNCTIONS (for web integration)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def validate_pairs_in_memory(pairs: list[dict], reference_data: dict) -> dict:
+    """
+    Validate Q&A pairs directly from memory (no file I/O).
+    Used by the web API for seamless /uploader integration.
+    
+    Args:
+        pairs: List of Q&A pair dicts with 'question' and 'answer' keys
+        reference_data: The reference_data.json content as a dict
+    
+    Returns:
+        Dict with validation results:
+        {
+            "total": int,
+            "clean": int,
+            "flagged": int,
+            "error_rate": float,
+            "results": [
+                {
+                    "index": int,
+                    "is_valid": bool,
+                    "question": str,
+                    "errors": [{"type": str, "error": str, "context": str}]
+                }
+            ],
+            "error_summary": {"error_type": count}
+        }
+    """
+    # Build reference from the provided data
+    ref = TypeReference()
+    
+    # Initialize structures
+    functions = ['Se', 'Si', 'Ne', 'Ni', 'Te', 'Ti', 'Fe', 'Fi']
+    positions = ['Hero', 'Parent', 'Child', 'Inferior', 'Nemesis', 'Critic', 'Trickster', 'Demon']
+    
+    for func in functions:
+        ref.function_positions[func] = {pos: [] for pos in positions}
+    
+    ref.temperament_types = {
+        'Guardian': [],
+        'Artisan': [],
+        'Intellectual': [],
+        'Idealist': []
+    }
+    
+    # Process reference data (same as load_reference but from dict)
+    for type_data in reference_data.get('types', []):
+        type_code = type_data.get('code', '')
+        if not type_code:
+            continue
+        
+        categories = type_data.get('categories', {})
+        temperament = categories.get('temperament', '')
+        if temperament:
+            ref.type_temperaments[type_code] = temperament
+            if temperament in ref.temperament_types:
+                ref.temperament_types[temperament].append(type_code)
+        
+        quadra = categories.get('quadra', '')
+        if quadra:
+            ref.type_quadras[type_code] = quadra
+        
+        four_sides = type_data.get('four_sides', {})
+        
+        shadow = four_sides.get('shadow', {})
+        shadow_type = shadow.get('type', '')
+        if shadow_type:
+            ref.shadow_types[type_code] = shadow_type
+        
+        subconscious = four_sides.get('subconscious', {})
+        sub_type = subconscious.get('type', '')
+        if sub_type:
+            ref.subconscious_types[type_code] = sub_type
+        
+        superego = four_sides.get('superego', {})
+        super_type = superego.get('type', '')
+        if super_type:
+            ref.superego_types[type_code] = super_type
+        
+        ego = four_sides.get('ego', {})
+        ego_functions = ego.get('functions', [])
+        
+        ref.type_stacks[type_code] = {}
+        
+        for func_data in ego_functions:
+            position = func_data.get('position', '')
+            function = func_data.get('function', '')
+            
+            if position and function:
+                ref.type_stacks[type_code][position] = function
+                
+                if function in ref.function_positions:
+                    if position in ref.function_positions[function]:
+                        if type_code not in ref.function_positions[function][position]:
+                            ref.function_positions[function][position].append(type_code)
+        
+        shadow_functions = shadow.get('functions', [])
+        for func_data in shadow_functions:
+            position = func_data.get('position', '')
+            function = func_data.get('function', '')
+            
+            if position and function:
+                ref.type_stacks[type_code][position] = function
+                
+                if function in ref.function_positions:
+                    if position in ref.function_positions[function]:
+                        if type_code not in ref.function_positions[function][position]:
+                            ref.function_positions[function][position].append(type_code)
+    
+    # Validate each pair
+    results = []
+    error_summary = {}
+    clean_count = 0
+    flagged_count = 0
+    
+    for i, pair in enumerate(pairs):
+        question = pair.get('question', '')
+        answer = pair.get('answer', '')
+        
+        # Create a messages-format pair for validation
+        messages_pair = {
+            'messages': [
+                {'role': 'user', 'content': question},
+                {'role': 'assistant', 'content': answer}
+            ]
+        }
+        
+        validation_result = validate_pair(messages_pair, i + 1, ref)
+        
+        result_entry = {
+            'index': i,
+            'is_valid': validation_result.is_valid,
+            'question': question[:100] + '...' if len(question) > 100 else question,
+            'errors': []
+        }
+        
+        if validation_result.is_valid:
+            clean_count += 1
+        else:
+            flagged_count += 1
+            
+            for error in validation_result.errors:
+                error_type = error.get('type', 'unknown')
+                error_summary[error_type] = error_summary.get(error_type, 0) + 1
+                
+                result_entry['errors'].append({
+                    'type': error_type,
+                    'error': error.get('error', 'Unknown error'),
+                    'context': error.get('claim', {}).get('context', '')
+                })
+        
+        results.append(result_entry)
+    
+    total = len(pairs)
+    error_rate = (flagged_count / total * 100) if total > 0 else 0
+    
+    return {
+        'total': total,
+        'clean': clean_count,
+        'flagged': flagged_count,
+        'error_rate': round(error_rate, 1),
+        'results': results,
+        'error_summary': error_summary
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ═══════════════════════════════════════════════════════════════════════════════
 
