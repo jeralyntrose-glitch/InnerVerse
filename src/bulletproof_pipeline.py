@@ -754,11 +754,24 @@ def run_bulletproof_pipeline(
     print(f"Total Q&A pairs generated: {len(all_pairs)}")
     if duplicates_removed > 0:
         print(f"  └─ Duplicates removed: {duplicates_removed}")
-    print(f"Final Q&A pairs (deduplicated): {len(deduplicated_pairs)}")
+    
+    # Cap total pairs at 50 (keep top 50 most diverse/relevant)
+    MAX_PAIRS_PER_FILE = 50
+    final_pairs = deduplicated_pairs
+    pairs_capped = False
+    
+    if len(deduplicated_pairs) > MAX_PAIRS_PER_FILE:
+        # Keep first 50 pairs (they're generated in order of importance)
+        final_pairs = deduplicated_pairs[:MAX_PAIRS_PER_FILE]
+        pairs_capped = True
+    
+    if pairs_capped:
+        print(f"  └─ Capped at {MAX_PAIRS_PER_FILE} pairs (was {len(deduplicated_pairs)})")
+    print(f"Final Q&A pairs: {len(final_pairs)}")
     
     return {
         'facts': all_facts,
         'validation': all_validation,
-        'pairs': deduplicated_pairs
+        'pairs': final_pairs
     }
 
