@@ -194,6 +194,19 @@ YOUR TASK: VALIDATE FACTS AGAINST REFERENCE
 Check each extracted fact against the authoritative reference.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+POSITION DEFINITIONS (Use these to verify facts):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Hero (1st): Optimistic, always on, highest strength, "saves the world"
+- Parent (2nd): Pessimistic, responsible, protective, "cleans up Hero's mess"
+- Child (3rd): Optimistic, innocent, playful, "divine child"
+- Inferior (4th): Pessimistic, fears, insecurities, gateway to subconscious
+- Nemesis (5th): Worry about others, shadow of Hero
+- Critic (6th): Self-criticism AND wisdom, pessimistic
+- Trickster (7th): Blind spot, unaware, deceptive
+- Demon (8th): Lowest awareness, sinful nature, gateway to superego
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 VALIDATION RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -204,6 +217,18 @@ VALIDATION RULES
 IMPORTANT: UNVERIFIED facts are okay! The reference doesn't cover 
 everything CSJ teaches. If the fact has a valid quote and doesn't 
 contradict the reference, mark it UNVERIFIED and keep it.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERIFICATION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. If fact says "X child = fears/insecurity" → ❌ INVALID (that's inferior, not child)
+
+2. If fact says "[TYPE] excels at [FUNCTION]" → Check if that function is Hero or Parent for that type
+
+3. If fact mentions a position → Verify the attribute matches the definitions above
+
+4. Cross-reference ALL type claims against the function stacks in the reference JSON
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 AUTHORITATIVE REFERENCE
@@ -266,6 +291,21 @@ as operating in an optimistic manner, which could potentially mean..."
 - No citations (CS Joseph says, according to, the material states)
 - No source references (in this video, in season 4)
 - Natural conversational tone
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANSWER LENGTH & DEPTH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Minimum 2-3 sentences per answer
+- Include the "so what" - why does this matter?
+- Add practical implications when relevant
+- Connect concepts when facts are related
+
+Example of TOO SHORT:
+"The Hero function is optimistic."
+
+Example of GOOD LENGTH:
+"The Hero function is optimistic - it's always on, running at full speed with no off switch. Your Hero is out there trying to save the world, but it causes collateral damage in the process. That's why the Parent function exists: to clean up the mess and protect others from the Hero's chaos."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EXAMPLE OF GOOD Q&A (based on sample facts)
@@ -672,6 +712,23 @@ def run_bulletproof_pipeline(
         print(f"     → Generated {len(pairs)} Q&A pairs")
         all_pairs.extend(pairs)
     
+    # Deduplicate pairs by question (case-insensitive, normalized)
+    seen_questions = set()
+    deduplicated_pairs = []
+    duplicates_removed = 0
+    
+    for pair in all_pairs:
+        if 'messages' in pair and len(pair['messages']) >= 2:
+            question = pair['messages'][0].get('content', '').strip().lower()
+            # Normalize: remove extra whitespace, punctuation differences
+            question_normalized = ' '.join(question.split())
+            
+            if question_normalized and question_normalized not in seen_questions:
+                seen_questions.add(question_normalized)
+                deduplicated_pairs.append(pair)
+            else:
+                duplicates_removed += 1
+    
     # Summary
     print(f"\n{'═'*50}")
     print(f"✅ PIPELINE COMPLETE")
@@ -680,11 +737,14 @@ def run_bulletproof_pipeline(
     print(f"  ├─ Valid: {len(all_validation['valid'])}")
     print(f"  ├─ Invalid: {len(all_validation['invalid'])}")
     print(f"  └─ Unverified: {len(all_validation['unverified'])}")
-    print(f"Total Q&A pairs: {len(all_pairs)}")
+    print(f"Total Q&A pairs generated: {len(all_pairs)}")
+    if duplicates_removed > 0:
+        print(f"  └─ Duplicates removed: {duplicates_removed}")
+    print(f"Final Q&A pairs (deduplicated): {len(deduplicated_pairs)}")
     
     return {
         'facts': all_facts,
         'validation': all_validation,
-        'pairs': all_pairs
+        'pairs': deduplicated_pairs
     }
 
