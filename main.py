@@ -3979,70 +3979,125 @@ def format_reference_data_for_prompt(ref_data: dict) -> str:
     return '\n'.join(output)
 
 
-QA_GENERATION_PROMPT = """Turn this content into 15-20 Q&A training pairs for fine-tuning an AI.
+QA_GENERATION_PROMPT = """You are generating Q&A training pairs for a CS Joseph typology AI. Your ONE job: ACCURACY.
 
-AUTHORITATIVE TYPE REFERENCE (CS Joseph Framework)
-══════════════════════════════════════════════════
-USAGE: Before outputting ANY claim about a type, VERIFY it against this data.
+═══════════════════════════════════════════════════════════════════
+CRITICAL: EVERY TYPE CLAIM MUST MATCH THE REFERENCE BELOW - NO EXCEPTIONS
+═══════════════════════════════════════════════════════════════════
 
-If the transcript contradicts this reference, USE THE REFERENCE.
+COMMON MISTAKES YOU MUST NOT MAKE:
 
-If unsure, USE THE REFERENCE.
+❌ "ESTP has Ti Hero" - WRONG. ESTP Hero = Se, Parent = Ti
 
-NEVER guess. ALWAYS verify.
-══════════════════════════════════════════════════
+❌ "ISTP has Se Hero" - WRONG. ISTP Hero = Ti, Parent = Se  
+
+❌ "INTJ shadow is ENFP" - WRONG. INTJ shadow = ENTP
+
+❌ "ENTJ has Se inferior" - WRONG. ENTJ has Se CHILD, Fi inferior
+
+❌ "Se inferior types include ENTJ" - WRONG. Se inferior = INTJ, INFJ only
+
+QUICK VERIFICATION TABLES (use these constantly):
+
+Se POSITIONS:
+  Hero: ESTP, ESFP
+  Parent: ISTP, ISFP
+  Child: ENTJ, ENFJ
+  Inferior: INTJ, INFJ
+
+Ti POSITIONS:
+  Hero: ISTP, INTP
+  Parent: ESTP, ENTP
+  Child: ISFJ, INFJ
+  Inferior: ESFJ, ENFJ
+
+Ni POSITIONS:
+  Hero: INTJ, INFJ
+  Parent: ENTJ, ENFJ
+  Child: ISTP, ISFP
+  Inferior: ESTP, ESFP
+
+Ne POSITIONS:
+  Hero: ENTP, ENFP
+  Parent: INTP, INFP
+  Child: ESTJ, ESFJ
+  Inferior: ISTJ, ISFJ
+
+Fi POSITIONS:
+  Hero: ISFP, INFP
+  Parent: ESFP, ENFP
+  Child: ISTJ, INTJ
+  Inferior: ESTJ, ENTJ
+
+Fe POSITIONS:
+  Hero: ESFJ, ENFJ
+  Parent: ISFJ, INFJ
+  Child: ESTP, ENTP
+  Inferior: ISTP, INTP
+
+Te POSITIONS:
+  Hero: ESTJ, ENTJ
+  Parent: ISTJ, INTJ
+  Child: ESFP, ENFP
+  Inferior: ISFP, INFP
+
+Si POSITIONS:
+  Hero: ISTJ, ISFJ
+  Parent: ESTJ, ESFJ
+  Child: INTP, INFP
+  Inferior: ENTP, ENFP
+
+TEMPERAMENTS:
+  Guardian (SJ): ESTJ, ESFJ, ISTJ, ISFJ
+  Artisan (SP): ESTP, ESFP, ISTP, ISFP
+  Intellectual (NT): ENTJ, ENTP, INTJ, INTP
+  Idealist (NF): ENFJ, ENFP, INFJ, INFP
+
+═══════════════════════════════════════════════════════════════════
+FULL AUTHORITATIVE REFERENCE (verify against this for EVERYTHING):
+═══════════════════════════════════════════════════════════════════
 
 {reference_data}
 
-══════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════
+CONTENT TO EXTRACT Q&A FROM:
+═══════════════════════════════════════════════════════════════════
 
-CRITICAL JSON FORMATTING (MUST FOLLOW EXACTLY):
-- Each pair MUST be valid JSON on its own line
-- Use double quotes for ALL strings
-- Include comma between ALL key-value pairs
-- Exact format - NO DEVIATION:
-{{"messages": [{{"role": "user", "content": "question here"}}, {{"role": "assistant", "content": "answer here"}}]}}
-
-Example of CORRECT format:
-{{"messages": [{{"role": "user", "content": "What is Ni hero?"}}, {{"role": "assistant", "content": "Ni hero means laser focus on what you want."}}]}}
-
-Output ONLY valid JSON lines. No markdown, no explanations, no numbering, no extra text.
-
-QUESTIONS:
-- Ask what someone learning cognitive typology would actually ask
-- Mix "what is", "how does", "why", "what's the difference", practical questions
-- Cover types, functions, interactions, real behaviors
-- Both basic and advanced
-
-VOICE (Critical):
-- You're a brilliant friend who deeply knows this material - not a teacher, not a coach, not a therapist
-- Direct. Confident. No bullshit.
-- Short sentences hit hard. Then sometimes you expand when the concept needs room to breathe.
-- Use dashes for emphasis - they create punch
-- Talk TO the person. "You" and "your" constantly.
-- Analogies that actually land. Not cliché. Real.
-- Light swearing when it adds weight (damn, hell, shit) - but don't force it
-- Warm but not soft. You care, but you're not coddling anyone.
-
-CONTENT REQUIREMENTS:
-- EVERY answer must be CSJ-framework specific. No generic psychology.
-- Use actual terminology: cognitive functions, hero, parent, child, inferior, demon, gateway functions, four sides, ego, subconscious, unconscious, superego
-- Tie answers to SPECIFIC TYPES when possible (ENFP, INTJ, etc.)
-- Be CONCRETE. What function? What type? What actually happens?
-- VERIFY all type claims against the reference data above before answering
-
-AVOID:
-- Generic advice from any psychology source
-- Hedging (can, may, might, often, typically)
-- Academic tone
-- Filler phrases
-- Reference sources ("CS Joseph says", "in season X")
-- Making up type information - if not in reference data, don't claim it
-
-CONTENT TO PROCESS:
 {content}
 
-Generate 15-20 Q&A pairs now. Output ONLY valid JSON lines:
+═══════════════════════════════════════════════════════════════════
+GENERATION INSTRUCTIONS:
+═══════════════════════════════════════════════════════════════════
+
+BEFORE writing each answer:
+1. Does this answer mention a TYPE? → Look up that type above
+2. Does this answer mention a FUNCTION + POSITION? → Verify in quick tables
+3. Does this answer mention shadow/subconscious/superego? → Check four_sides data
+4. ONLY write the pair if you've verified the facts
+
+EXTRACT FROM THE CONTENT:
+- Pull concepts, explanations, and teachings from the transcript above
+- Frame as natural questions someone learning would ask
+- Keep the answer faithful to what's in the content
+- BUT if the content has a type error, USE THE REFERENCE instead
+
+VOICE:
+- Direct, confident, no bullshit
+- Short punchy sentences. Dashes for emphasis - like this.
+- "You" and "your" constantly - talk TO the person
+- Light swearing when it lands (damn, hell, shit) - don't force it
+- Brilliant friend explaining, not professor lecturing
+
+AVOID:
+- Hedging words (may, might, often, typically, can)
+- Generic MBTI knowledge - ONLY CSJ framework
+- Making claims not supported by reference data
+- Mentioning sources ("CS Joseph says", "in this video")
+
+FORMAT (exact - no deviation):
+{{"messages": [{{"role": "user", "content": "question here"}}, {{"role": "assistant", "content": "answer here"}}]}}
+
+Generate 15-20 Q&A pairs. Output ONLY valid JSON lines, nothing else:
 """
 
 
