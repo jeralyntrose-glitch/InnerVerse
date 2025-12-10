@@ -293,19 +293,33 @@ as operating in an optimistic manner, which could potentially mean..."
 - Natural conversational tone
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ANSWER LENGTH & DEPTH
+ANSWER LENGTH & DEPTH (CRITICAL - NOT OPTIONAL)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- Minimum 2-3 sentences per answer
-- Include the "so what" - why does this matter?
-- Add practical implications when relevant
-- Connect concepts when facts are related
+⚠️ SINGLE-SENTENCE ANSWERS ARE REJECTED ⚠️
 
-Example of TOO SHORT:
+MANDATORY REQUIREMENTS:
+- EVERY answer MUST be minimum 2-3 sentences (3+ sentences preferred)
+- EVERY answer MUST include the "so what" - why does this matter?
+- EVERY answer MUST add practical implications or real-world application
+- Connect concepts when facts are related - show relationships between ideas
+
+If a fact doesn't have enough depth to create 2-3 sentences, either:
+1. Combine related facts to create richer answers
+2. Add the practical "so what" - what does this mean for someone's life?
+3. Show the relationship to other concepts mentioned in the facts
+
+❌ REJECTED - TOO SHORT:
 "The Hero function is optimistic."
 
-Example of GOOD LENGTH:
-"The Hero function is optimistic - it's always on, running at full speed with no off switch. Your Hero is out there trying to save the world, but it causes collateral damage in the process. That's why the Parent function exists: to clean up the mess and protect others from the Hero's chaos."
+"The Hero function is always on, running at full speed - there's no off switch for your Hero."
+
+"Se Heroes react immediately to their environment."
+
+✅ REQUIRED - GOOD LENGTH:
+"The Hero function is optimistic - it's always on, running at full speed with no off switch. Your Hero is out there trying to save the world, but it causes collateral damage in the process. That's why the Parent function exists: to clean up the mess and protect others from the Hero's chaos. This dynamic explains why people can feel unstoppable when their Hero is engaged, but also why they might leave destruction in their wake."
+
+"Se Heroes react immediately to their environment - they're tuned into the physical world like a radio picking up signals. That instant reactivity is the Se Hero in action, responding in real-time to what's happening around them. This means ESTPs and ESFPs are always in the moment, which gives them incredible adaptability but can also make them impulsive. Understanding this helps explain why they seem to 'just know' what to do in chaotic situations - their Hero is processing the environment faster than conscious thought."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EXAMPLE OF GOOD Q&A (based on sample facts)
@@ -361,7 +375,7 @@ VALIDATED FACTS (YOUR ONLY SOURCE)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Generate 10-15 Q&A pairs. Output ONLY valid JSON lines:
+Generate 8-12 Q&A pairs. Output ONLY valid JSON lines:
 """
 
 # ═══════════════════════════════════════════════════════════════════════════════
