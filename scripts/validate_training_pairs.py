@@ -297,6 +297,117 @@ def find_shadow_claims(text: str) -> list[dict]:
     return claims
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# TEMPERAMENT CODE PATTERNS (NFP, NFJ, NTP, NTJ, SFP, SFJ, STP, STJ)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+TEMPERAMENT_CODES = ['NFP', 'NFJ', 'NTP', 'NTJ', 'SFP', 'SFJ', 'STP', 'STJ']
+
+# Correct shadow relationships for temperament codes
+TEMPERAMENT_CODE_SHADOWS = {
+    'NFP': 'NFJ',  # ENFP→INFJ, INFP→ENFJ
+    'NFJ': 'NFP',  # ENFJ→INFP, INFJ→ENFP
+    'NTP': 'NTJ',  # ENTP→INTJ, INTP→ENTJ
+    'NTJ': 'NTP',  # ENTJ→INTP, INTJ→ENTP
+    'SFP': 'SFJ',  # ESFP→ISFJ, ISFP→ESFJ
+    'SFJ': 'SFP',  # ESFJ→ISFP, ISFJ→ESFP
+    'STP': 'STJ',  # ESTP→ISTJ, ISTP→ESTJ
+    'STJ': 'STP',  # ESTJ→ISTP, ISTJ→ESTP
+}
+
+
+def find_temperament_code_shadow_claims(text: str) -> list[dict]:
+    """
+    Find claims about temperament code shadows.
+    e.g., "NFPs have an NFJ shadow" or "NFJ shadow is NFP"
+    """
+    claims = []
+    
+    # Pattern 1: "TEMPs have a TEMP shadow"
+    # e.g., "NFPs have an NFJ shadow"
+    pattern1 = re.compile(
+        r'\b(' + '|'.join(TEMPERAMENT_CODES) + r')s?\b[^.]*?\b(?:have|has)\s+(?:an?\s+)?(' + 
+        '|'.join(TEMPERAMENT_CODES) + r')\s+shadow\b',
+        re.IGNORECASE
+    )
+    
+    for match in pattern1.finditer(text):
+        claims.append({
+            'ego_temp': match.group(1).upper(),
+            'shadow_temp': match.group(2).upper(),
+            'context': match.group(0),
+            'pattern': 'TEMPs have TEMP shadow'
+        })
+    
+    # Pattern 2: "TEMP shadow is TEMP"
+    # e.g., "NFP shadow is NFJ"
+    pattern2 = re.compile(
+        r'\b(' + '|'.join(TEMPERAMENT_CODES) + r")(?:'s|s')?\s+shadow\s+(?:is|=)\s+(" + 
+        '|'.join(TEMPERAMENT_CODES) + r')\b',
+        re.IGNORECASE
+    )
+    
+    for match in pattern2.finditer(text):
+        claims.append({
+            'ego_temp': match.group(1).upper(),
+            'shadow_temp': match.group(2).upper(),
+            'context': match.group(0),
+            'pattern': 'TEMP shadow is TEMP'
+        })
+    
+    # Pattern 3: "TEMPs/TEMPs are shadows"
+    # e.g., "NFPs and NFJs are each other's shadows"
+    pattern3 = re.compile(
+        r'\b(' + '|'.join(TEMPERAMENT_CODES) + r')s?\s+(?:and|&)\s+(' + 
+        '|'.join(TEMPERAMENT_CODES) + r')s?\b[^.]*?shadow',
+        re.IGNORECASE
+    )
+    
+    for match in pattern3.finditer(text):
+        # This is a mutual claim - NFP/NFJ are each other's shadows
+        temp1 = match.group(1).upper()
+        temp2 = match.group(2).upper()
+        claims.append({
+            'ego_temp': temp1,
+            'shadow_temp': temp2,
+            'context': match.group(0),
+            'pattern': 'mutual shadow claim'
+        })
+        claims.append({
+            'ego_temp': temp2,
+            'shadow_temp': temp1,
+            'context': match.group(0),
+            'pattern': 'mutual shadow claim'
+        })
+    
+    # Deduplicate
+    seen = set()
+    unique_claims = []
+    for claim in claims:
+        key = (claim['ego_temp'], claim['shadow_temp'])
+        if key not in seen:
+            seen.add(key)
+            unique_claims.append(claim)
+    
+    return unique_claims
+
+
+def validate_temperament_code_shadow_claim(claim: dict) -> str | None:
+    """
+    Validate a temperament code shadow claim.
+    Returns error message if invalid, None if valid.
+    """
+    ego_temp = claim['ego_temp']
+    claimed_shadow = claim['shadow_temp']
+    
+    correct_shadow = TEMPERAMENT_CODE_SHADOWS.get(ego_temp)
+    
+    if correct_shadow and claimed_shadow != correct_shadow:
+        return f"ERROR: {ego_temp} shadow is {correct_shadow}, NOT {claimed_shadow}"
+    
+    return None
+
+
 def find_subconscious_claims(text: str) -> list[dict]:
     """Find claims about subconscious types."""
     claims = []
@@ -561,6 +672,18 @@ def validate_pair(pair: dict, line_number: int, ref: TypeReference) -> Validatio
             result.is_valid = False
             result.errors.append({
                 'type': 'temperament',
+                'claim': claim,
+                'error': error
+            })
+    
+    # Find and validate temperament code shadow claims (NFP/NFJ, etc.)
+    temp_code_claims = find_temperament_code_shadow_claims(answer)
+    for claim in temp_code_claims:
+        error = validate_temperament_code_shadow_claim(claim)
+        if error:
+            result.is_valid = False
+            result.errors.append({
+                'type': 'temperament_code_shadow',
                 'claim': claim,
                 'error': error
             })

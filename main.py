@@ -10754,11 +10754,59 @@ async def get_training_pairs_for_review(filename: str):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+def load_pairs_from_attached_assets(filename: str) -> list[dict]:
+    """
+    Load Q&A pairs from a JSONL file in attached_assets/.
+    Fallback for files not in the training pair system.
+    """
+    import os
+    filepath = os.path.join("attached_assets", filename)
+    
+    if not os.path.exists(filepath):
+        print(f"❌ File not found in attached_assets: {filename}")
+        return []
+    
+    pairs = []
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for i, line in enumerate(f):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    messages = data.get('messages', [])
+                    question = ''
+                    answer = ''
+                    for msg in messages:
+                        if msg.get('role') == 'user':
+                            question = msg.get('content', '')
+                        elif msg.get('role') == 'assistant':
+                            answer = msg.get('content', '')
+                    
+                    if question or answer:
+                        pairs.append({
+                            'index': i,
+                            'question': question,
+                            'answer': answer,
+                            'status': 'unchanged'
+                        })
+                except json.JSONDecodeError as e:
+                    print(f"   ⚠️ Error parsing pair {i}: {e}")
+                    
+        print(f"📋 Loaded {len(pairs)} pairs from attached_assets/{filename}")
+    except Exception as e:
+        print(f"❌ Error reading {filepath}: {e}")
+    
+    return pairs
+
+
 @app.post("/api/training-pairs/validate/{filename}")
 async def validate_training_pairs_endpoint(filename: str):
     """
     Validate training pairs against reference_data.json.
     Catches function slot errors, shadow type mistakes, and temperament mismatches.
+    Checks training pair system first, then falls back to attached_assets/.
     """
     try:
         from scripts.validate_training_pairs import validate_pairs_in_memory
@@ -10769,14 +10817,22 @@ async def validate_training_pairs_endpoint(filename: str):
                 content={"error": "Reference data not loaded. Cannot validate."}
             )
         
+        # Try training system first, then fallback to attached_assets
         pairs = get_pairs_for_review(filename)
+        source = "training_system"
+        
+        if not pairs:
+            # Fallback: check attached_assets
+            pairs = load_pairs_from_attached_assets(filename)
+            source = "attached_assets"
+        
         if not pairs:
             return JSONResponse(
                 status_code=404, 
                 content={"error": f"No pairs found in {filename}"}
             )
         
-        print(f"🔍 Validating {len(pairs)} pairs from {filename}...")
+        print(f"🔍 Validating {len(pairs)} pairs from {filename} (source: {source})...")
         
         validation_results = validate_pairs_in_memory(pairs, TRAINING_REFERENCE_DATA)
         
@@ -10784,6 +10840,7 @@ async def validate_training_pairs_endpoint(filename: str):
         
         return {
             "filename": filename,
+            "source": source,
             "validation": validation_results
         }
         
