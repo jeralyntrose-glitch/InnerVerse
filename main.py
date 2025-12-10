@@ -104,6 +104,9 @@ except Exception as e:
 print(f"✅ PINECONE_INDEX: {'SET' if PINECONE_INDEX else 'MISSING'}")
 print(f"✅ DATABASE_URL: {'SET' if DATABASE_URL else 'MISSING'}")
 
+# === Training Pair Generator Feature Flag ===
+USE_BULLETPROOF_PIPELINE = True  # Feature flag for rollback to old single-step generation
+
 # === YouTube Cookies Helper ===
 def get_youtube_session_with_cookies():
     """Create a requests session with YouTube cookies loaded"""
@@ -4421,7 +4424,7 @@ def process_chunks_for_training_sync(
 ) -> tuple[Path, list[int]]:
     """
     Synchronous version of process_all_chunks_for_training.
-    Uses Claude Sonnet for Q&A generation.
+    Uses Claude Sonnet for Q&A generation (or bulletproof pipeline if enabled).
     """
     import time
     
@@ -4430,7 +4433,8 @@ def process_chunks_for_training_sync(
     
     if resume_from == 0:
         start_training_processing(source_filename, chunks)
-        print(f"📝 Starting Q&A generation (Claude Sonnet): {source_filename}")
+        pipeline_type = "Bulletproof Pipeline" if USE_BULLETPROOF_PIPELINE else "Claude Sonnet"
+        print(f"📝 Starting Q&A generation ({pipeline_type}): {source_filename}")
         print(f"   Total chunks: {len(chunks)}")
     else:
         print(f"📝 Resuming Q&A generation: {source_filename}")
@@ -4442,30 +4446,97 @@ def process_chunks_for_training_sync(
         print(f"\n🔄 Processing chunk {i + 1}/{len(chunks)} ({chunk_word_count} words)...")
         
         pairs = []
-        for attempt in range(3):
-            pairs = generate_qa_pairs_sonnet(chunk)  # Using Claude Sonnet
-            
-            if pairs:
-                progress = save_training_chunk_progress(source_filename, i, pairs)
-                total_pairs += len(pairs)
-                print(f"   ✅ Generated {len(pairs)} pairs (total: {total_pairs})")
-                break
-            else:
-                if attempt < 2:
-                    print(f"   ⚠️ Retry {attempt + 2}/3 in 5 seconds...")
-                    time.sleep(5)
-                else:
-                    print(f"   ❌ Failed after 3 attempts")
-                    failed_chunks.append(i + 1)
-                    save_training_chunk_progress(source_filename, i, [])
         
+        if USE_BULLETPROOF_PIPELINE:
+            # New 3-step bulletproof pipeline
+            try:
+                from src.bulletproof_pipeline import run_bulletproof_pipeline
+                
+                for attempt in range(3):
+                    try:
+                        result = run_bulletproof_pipeline(
+                            content=chunk,
+                            reference_data=TRAINING_REFERENCE_DATA,
+                            api_key=ANTHROPIC_API_KEY,
+                            parse_qa_response_fn=parse_qa_response,
+                            log_api_usage_fn=log_api_usage
+                        )
+                        
+                        pairs = result.get('pairs', [])
+                        
+                        if pairs:
+                            # Save progress immediately (crash recovery)
+                            progress = save_training_chunk_progress(source_filename, i, pairs)
+                            total_pairs += len(pairs)
+                            print(f"   ✅ Generated {len(pairs)} pairs (total: {total_pairs})")
+                            break
+                        else:
+                            if attempt < 2:
+                                print(f"   ⚠️ No pairs generated, retry {attempt + 2}/3 in 5 seconds...")
+                                time.sleep(5)
+                            else:
+                                print(f"   ❌ Failed after 3 attempts (no pairs generated)")
+                                failed_chunks.append(i + 1)
+                                save_training_chunk_progress(source_filename, i, [])
+                    except Exception as e:
+                        print(f"   ❌ Pipeline error on attempt {attempt + 1}: {str(e)}")
+                        if attempt < 2:
+                            print(f"   ⚠️ Retry {attempt + 2}/3 in 5 seconds...")
+                            time.sleep(5)
+                        else:
+                            print(f"   ❌ Failed after 3 attempts")
+                            failed_chunks.append(i + 1)
+                            save_training_chunk_progress(source_filename, i, [])
+                            import traceback
+                            traceback.print_exc()
+                            
+            except ImportError as e:
+                print(f"   ❌ Failed to import bulletproof_pipeline: {e}")
+                print(f"   ⚠️ Falling back to old single-step generation")
+                # Fallback to old method
+                for attempt in range(3):
+                    pairs = generate_qa_pairs_sonnet(chunk)
+                    if pairs:
+                        progress = save_training_chunk_progress(source_filename, i, pairs)
+                        total_pairs += len(pairs)
+                        print(f"   ✅ Generated {len(pairs)} pairs (total: {total_pairs})")
+                        break
+                    else:
+                        if attempt < 2:
+                            print(f"   ⚠️ Retry {attempt + 2}/3 in 5 seconds...")
+                            time.sleep(5)
+                        else:
+                            print(f"   ❌ Failed after 3 attempts")
+                            failed_chunks.append(i + 1)
+                            save_training_chunk_progress(source_filename, i, [])
+        else:
+            # Old single-step generation
+            for attempt in range(3):
+                pairs = generate_qa_pairs_sonnet(chunk)  # Using Claude Sonnet
+                
+                if pairs:
+                    progress = save_training_chunk_progress(source_filename, i, pairs)
+                    total_pairs += len(pairs)
+                    print(f"   ✅ Generated {len(pairs)} pairs (total: {total_pairs})")
+                    break
+                else:
+                    if attempt < 2:
+                        print(f"   ⚠️ Retry {attempt + 2}/3 in 5 seconds...")
+                        time.sleep(5)
+                    else:
+                        print(f"   ❌ Failed after 3 attempts")
+                        failed_chunks.append(i + 1)
+                        save_training_chunk_progress(source_filename, i, [])
+        
+        # Rate limiting between chunks (except after last chunk)
         if i < len(chunks) - 1:
             time.sleep(1.5)
     
     final_path = finalize_training_processing(source_filename)
     
+    pipeline_type = "Bulletproof Pipeline" if USE_BULLETPROOF_PIPELINE else "Claude Sonnet"
     print(f"\n{'=' * 50}")
-    print(f"✅ Q&A GENERATION COMPLETE (Claude Sonnet): {source_filename}")
+    print(f"✅ Q&A GENERATION COMPLETE ({pipeline_type}): {source_filename}")
     print(f"   Total pairs generated: {total_pairs}")
     print(f"   Output: {final_path}")
     if failed_chunks:
