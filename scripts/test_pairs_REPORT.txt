@@ -1,0 +1,36 @@
+======================================================================
+TRAINING PAIR VALIDATION REPORT
+======================================================================
+
+Input file: scripts/test_pairs.jsonl
+Total pairs: 8
+Clean pairs: 5
+Flagged pairs: 3
+Error rate: 37.5%
+
+----------------------------------------------------------------------
+ERRORS FOUND
+----------------------------------------------------------------------
+
+Line 2:
+  Q: Tell me about ESTP's Ti...
+  ❌ ERROR: ESTP has Se Hero, NOT Ti Hero
+     Context: "ESTP has Ti Hero"
+
+Line 4:
+  Q: What is INTJ's shadow?...
+  ❌ ERROR: INTJ's shadow is ENTP, NOT ENFP
+     Context: "INTJ's shadow is ENFP"
+
+Line 5:
+  Q: What temperament is ESTP?...
+  ❌ ERROR: ESTP is Artisan, NOT Guardian
+     Context: "ESTP is a Guardian"
+
+----------------------------------------------------------------------
+ERROR SUMMARY
+----------------------------------------------------------------------
+
+  function_slot: 1
+  shadow: 1
+  temperament: 1

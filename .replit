@@ -12,7 +12,7 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["gunicorn", "--bind=0.0.0.0:5000", "--reuse-port", "--workers=2", "--timeout=300", "main:app", "-k", "uvicorn.workers.UvicornWorker"]
+run = ["gunicorn", "--bind=0.0.0.0:5000", "--reuse-port", "--workers=2", "--timeout=900", "main:app", "-k", "uvicorn.workers.UvicornWorker"]
 deploymentTarget = "autoscale"
 
 [agent]
@@ -46,6 +46,14 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 38581
+externalPort = 3001
+
+[[ports]]
+localPort = 43505
+externalPort = 3002
 
 [[ports]]
 localPort = 44737

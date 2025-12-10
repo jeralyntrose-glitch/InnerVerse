@@ -186,7 +186,11 @@
         <div class="training-files-section">
           <div class="training-files-header">
             <h4>📋 Pending Review</h4>
-            <button class="btn-refresh-training" id="btn-refresh-training" title="Refresh">🔄</button>
+            <div style="display: flex; gap: 8px;">
+              <label for="training-upload-jsonl" class="btn-refresh-training" style="cursor: pointer;" title="Upload JSONL">📤</label>
+              <input type="file" id="training-upload-jsonl" accept=".jsonl" style="display: none;" />
+              <button class="btn-refresh-training" id="btn-refresh-training" title="Refresh">🔄</button>
+            </div>
           </div>
           <div class="training-files-list" id="training-pending-list">
             <div class="training-files-placeholder">No files pending review</div>
@@ -487,9 +491,19 @@
           <span class="stat-label">Deleted:</span>
           <span id="training-review-deleted" class="stat-value">0</span>
         </div>
+        <div class="training-review-stat validation-stat hidden" id="validation-stats-container">
+          <span class="stat-divider">|</span>
+          <span class="stat-label">✅ Clean:</span>
+          <span id="validation-clean-count" class="stat-value validation-clean">0</span>
+          <span class="stat-label">❌ Flagged:</span>
+          <span id="validation-flagged-count" class="stat-value validation-flagged">0</span>
+        </div>
       </div>
       
       <div class="training-review-actions-top">
+        <button id="training-validate-btn" class="btn-training-validate">
+          🔍 Validate Against Reference
+        </button>
         <button id="training-copy-all-btn" class="btn-training-copy">
           📋 Copy All for Claude Review
         </button>
@@ -1737,6 +1751,119 @@
       background: #4b5563;
     }
     
+    .btn-training-validate {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+      color: #ffffff;
+      font-weight: 500;
+      margin-right: 12px;
+    }
+    
+    .btn-training-validate:hover {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      transform: translateY(-1px);
+    }
+    
+    .btn-training-validate:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .validation-stat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .stat-divider {
+      color: #4b5563;
+      margin: 0 8px;
+    }
+    
+    .validation-clean {
+      color: #10b981 !important;
+    }
+    
+    .validation-flagged {
+      color: #ef4444 !important;
+    }
+    
+    .training-pair-card.validated-clean {
+      border-left: 4px solid #10b981;
+    }
+    
+    .training-pair-card.validated-flagged {
+      border-left: 4px solid #ef4444;
+      background: rgba(239, 68, 68, 0.05);
+    }
+    
+    .validation-errors {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .validation-error-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    
+    .validation-error-item:last-child {
+      border-bottom: none;
+    }
+    
+    .validation-error-type {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #f87171;
+      font-weight: 600;
+    }
+    
+    .validation-error-msg {
+      color: #fca5a5;
+      font-size: 13px;
+    }
+    
+    .validation-error-context {
+      font-size: 12px;
+      color: #9ca3af;
+      font-style: italic;
+      padding-left: 12px;
+      border-left: 2px solid #4b5563;
+    }
+    
+    .validation-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    
+    .validation-badge.clean {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+    
+    .validation-badge.flagged {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+    
     .training-review-pairs {
       flex: 1;
       overflow-y: auto;
@@ -2297,6 +2424,45 @@
       refreshBtn.addEventListener('click', loadTrainingData);
     }
     
+    // Upload JSONL button handler
+    const uploadJsonlInput = document.getElementById('training-upload-jsonl');
+    if (uploadJsonlInput) {
+      uploadJsonlInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (!file.name.endsWith('.jsonl')) {
+          alert('Please select a .jsonl file');
+          uploadJsonlInput.value = '';
+          return;
+        }
+        
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const response = await fetch('/api/training-pairs/upload-jsonl', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            alert(`✅ Uploaded ${result.pair_count} pairs from ${result.filename}`);
+            loadTrainingData();
+          } else {
+            alert(`❌ Upload failed: ${result.error}`);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          alert('Upload failed: ' + error.message);
+        }
+        
+        uploadJsonlInput.value = '';
+      });
+    }
+    
     // Combine button
     if (trainingCombineBtn) {
       trainingCombineBtn.addEventListener('click', async () => {
@@ -2529,6 +2695,7 @@
     let editedPairs = new Set();
     let deletedPairs = new Set();
     let currentEditIndex = null;
+    let validationResults = null;
     
     // Get modal elements
     const reviewModal = document.getElementById('training-review-modal');
@@ -2549,17 +2716,34 @@
       await loadPairsForReview(filename);
     };
     
+    // Pre-fetched clipboard text (loaded when modal opens, used synchronously on copy)
+    let prefetchedClipboardText = null;
+    
     // Load pairs for review
     async function loadPairsForReview(filename) {
       try {
-        const response = await fetch(`/api/training-pairs/review/${encodeURIComponent(filename)}`);
-        const data = await response.json();
+        // Parallel fetch: pairs + clipboard text (pre-fetch for iOS Safari)
+        const [pairsResponse, clipboardResponse] = await Promise.all([
+          fetch(`/api/training-pairs/review/${encodeURIComponent(filename)}`),
+          fetch(`/api/training-pairs/clipboard/${encodeURIComponent(filename)}`)
+        ]);
         
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to load pairs');
+        const pairsData = await pairsResponse.json();
+        
+        if (!pairsResponse.ok) {
+          throw new Error(pairsData.error || 'Failed to load pairs');
         }
         
-        currentReviewPairs = data.pairs;
+        currentReviewPairs = pairsData.pairs;
+        
+        // Pre-fetch clipboard text for synchronous copy on iOS Safari
+        if (clipboardResponse.ok) {
+          const clipboardData = await clipboardResponse.json();
+          prefetchedClipboardText = clipboardData.text;
+        } else {
+          prefetchedClipboardText = null;
+        }
+        
         renderReviewPairs();
         updateReviewStats();
         
@@ -2588,15 +2772,50 @@
       currentReviewPairs.forEach((pair, index) => {
         const isDeleted = deletedPairs.has(index);
         const isEdited = editedPairs.has(index);
-        const cardClass = isDeleted ? 'deleted' : (isEdited ? 'edited' : '');
+        const validationStatus = getValidationStatus(index);
+        
+        let cardClass = isDeleted ? 'deleted' : (isEdited ? 'edited' : '');
+        
+        // Add validation classes
+        if (validationStatus) {
+          cardClass += validationStatus.is_valid ? ' validated-clean' : ' validated-flagged';
+        }
         
         const question = (pair.question || '[No question]').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const answer = (pair.answer || '[No answer]').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         
+        // Build validation badge
+        let validationBadge = '';
+        if (validationStatus) {
+          if (isEdited) {
+            validationBadge = '<span class="validation-badge" style="background: rgba(251, 191, 36, 0.2); color: #fbbf24;">⚠️ Re-validate</span>';
+          } else if (validationStatus.is_valid) {
+            validationBadge = '<span class="validation-badge clean">✅ Valid</span>';
+          } else {
+            validationBadge = '<span class="validation-badge flagged">❌ Issue Found</span>';
+          }
+        }
+        
+        // Build validation errors section
+        let validationErrorsHtml = '';
+        if (validationStatus && !validationStatus.is_valid && validationStatus.errors.length > 0) {
+          validationErrorsHtml = '<div class="validation-errors">';
+          validationStatus.errors.forEach(err => {
+            validationErrorsHtml += `
+              <div class="validation-error-item">
+                <span class="validation-error-type">${err.type}</span>
+                <span class="validation-error-msg">${err.error}</span>
+                ${err.context ? `<span class="validation-error-context">"${err.context}"</span>` : ''}
+              </div>
+            `;
+          });
+          validationErrorsHtml += '</div>';
+        }
+        
         html += `
           <div class="training-pair-card ${cardClass}" data-index="${index}">
             <div class="training-pair-header">
-              <span class="training-pair-number">Pair ${index + 1}</span>
+              <span class="training-pair-number">Pair ${index + 1}${validationBadge}</span>
               <div class="training-pair-actions">
                 ${!isDeleted ? `
                   <button class="btn-pair-edit" onclick="openEditModal(${index})">✏️ Edit</button>
@@ -2615,6 +2834,7 @@
                 <span class="training-pair-label">ANSWER</span>
                 <div style="color: #e5e7eb !important; font-size: 14px !important; padding: 12px 16px !important; background: #0f172a !important; border-radius: 8px !important; border-left: 3px solid #34d399 !important; white-space: pre-wrap !important; visibility: visible !important; opacity: 1 !important;">${answer}</div>
               </div>
+              ${validationErrorsHtml}
             </div>
           </div>
         `;
@@ -2726,22 +2946,116 @@
       updateReviewStats();
     };
     
-    // Copy all pairs for Claude review
-    async function copyAllForReview() {
+    // Fallback copy function for iOS Safari (execCommand works when clipboard API fails)
+    function fallbackCopyText(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '0';
+      textArea.setAttribute('readonly', '');
+      document.body.appendChild(textArea);
+      
+      // iOS specific: need to select with setSelectionRange
+      textArea.focus();
+      textArea.setSelectionRange(0, text.length);
+      
+      let success = false;
       try {
-        const response = await fetch(`/api/training-pairs/clipboard/${encodeURIComponent(currentReviewFilename)}`);
-        const data = await response.json();
-        
-        await navigator.clipboard.writeText(data.text);
-        
-        const btn = document.getElementById('training-copy-all-btn');
-        const originalText = btn.textContent;
+        success = document.execCommand('copy');
+      } catch (err) {
+        console.error('execCommand copy failed:', err);
+      }
+      
+      document.body.removeChild(textArea);
+      return success;
+    }
+    
+    // Copy all pairs for Claude review - SYNCHRONOUS using pre-fetched data (iOS Safari compatible)
+    function copyAllForReview() {
+      const btn = document.getElementById('training-copy-all-btn');
+      const originalText = btn.textContent;
+      
+      // Use pre-fetched clipboard text (no async, preserves user gesture chain for iOS Safari)
+      if (!prefetchedClipboardText) {
+        alert('Clipboard data not ready. Please close and reopen the review modal.');
+        return;
+      }
+      
+      // Try execCommand first (most reliable within user gesture)
+      let copied = fallbackCopyText(prefetchedClipboardText);
+      
+      // If execCommand failed, try Clipboard API (may work on some browsers)
+      if (!copied) {
+        try {
+          // Note: This is technically async but some browsers allow it within gesture
+          navigator.clipboard.writeText(prefetchedClipboardText);
+          copied = true;
+        } catch (e) {
+          console.log('Clipboard API also failed:', e);
+        }
+      }
+      
+      if (copied) {
         btn.textContent = '✅ Copied!';
         setTimeout(() => btn.textContent = originalText, 2000);
+      } else {
+        btn.textContent = '❌ Copy Failed';
+        setTimeout(() => btn.textContent = originalText, 2000);
+        alert('Copy failed. Please select the text manually from the pairs above.');
+      }
+    }
+    
+    // Validate training pairs against reference data
+    async function validateTrainingPairs() {
+      const btn = document.getElementById('training-validate-btn');
+      const originalText = btn.textContent;
+      
+      try {
+        btn.disabled = true;
+        btn.textContent = '🔄 Validating...';
+        
+        const response = await fetch(`/api/training-pairs/validate/${encodeURIComponent(currentReviewFilename)}`, {
+          method: 'POST'
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Validation failed');
+        }
+        
+        const data = await response.json();
+        validationResults = data.validation;
+        
+        // Update stats display
+        document.getElementById('validation-stats-container').classList.remove('hidden');
+        document.getElementById('validation-clean-count').textContent = validationResults.clean;
+        document.getElementById('validation-flagged-count').textContent = validationResults.flagged;
+        
+        // Re-render pairs with validation status
+        renderReviewPairs();
+        
+        // Update button
+        btn.textContent = validationResults.flagged > 0 
+          ? `⚠️ ${validationResults.flagged} Issues Found`
+          : '✅ All Valid!';
+        
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }, 3000);
         
       } catch (error) {
-        alert('Error copying: ' + error.message);
+        alert('Validation error: ' + error.message);
+        btn.textContent = originalText;
+        btn.disabled = false;
       }
+    }
+    
+    // Get validation status for a pair
+    function getValidationStatus(index) {
+      if (!validationResults || !validationResults.results) return null;
+      return validationResults.results.find(r => r.index === index);
     }
     
     // Approve file and close modal
@@ -2772,6 +3086,8 @@
       currentReviewPairs = [];
       editedPairs.clear();
       deletedPairs.clear();
+      validationResults = null;
+      document.getElementById('validation-stats-container').classList.add('hidden');
     }
     
     // Close edit modal
@@ -2793,6 +3109,7 @@
       document.getElementById('training-review-cancel').addEventListener('click', closeReviewModal);
       document.getElementById('training-review-approve').addEventListener('click', approveAndClose);
       document.getElementById('training-copy-all-btn').addEventListener('click', copyAllForReview);
+      document.getElementById('training-validate-btn').addEventListener('click', validateTrainingPairs);
       
       // Close on background click
       reviewModal.addEventListener('click', (e) => {
