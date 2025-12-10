@@ -375,7 +375,7 @@ VALIDATED FACTS (YOUR ONLY SOURCE)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Generate 8-12 Q&A pairs. Output ONLY valid JSON lines:
+Generate EXACTLY 8-12 Q&A pairs (no more, no less). Output ONLY valid JSON lines:
 """
 
 # ═══════════════════════════════════════════════════════════════════════════════
