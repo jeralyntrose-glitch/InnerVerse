@@ -10611,6 +10611,69 @@ async def get_training_pending():
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+@app.post("/api/training-pairs/upload-jsonl")
+async def upload_jsonl_file(file: UploadFile = File(...)):
+    """
+    Upload a JSONL file directly to pending_review/.
+    This is the proper way to add externally-created JSONL files to the training system.
+    """
+    try:
+        if not file.filename.endswith('.jsonl'):
+            return JSONResponse(
+                status_code=400,
+                content={"error": "File must have .jsonl extension"}
+            )
+        
+        contents = await file.read()
+        text_content = contents.decode('utf-8')
+        
+        # Validate JSONL format
+        lines = text_content.strip().split('\n')
+        pair_count = 0
+        for i, line in enumerate(lines):
+            if not line.strip():
+                continue
+            try:
+                data = json.loads(line)
+                if 'messages' not in data:
+                    return JSONResponse(
+                        status_code=400,
+                        content={"error": f"Line {i+1} missing 'messages' field. Expected OpenAI fine-tuning format."}
+                    )
+                pair_count += 1
+            except json.JSONDecodeError as e:
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": f"Invalid JSON on line {i+1}: {str(e)}"}
+                )
+        
+        if pair_count == 0:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "No valid Q&A pairs found in file"}
+            )
+        
+        # Save to pending_review
+        safe_filename = file.filename.replace(' ', '_')
+        dest_path = f"pending_review/{safe_filename}"
+        
+        training_storage.write_file(dest_path, text_content)
+        training_storage.add_to_index("pending_review", safe_filename)
+        
+        print(f"✅ Uploaded JSONL: {safe_filename} ({pair_count} pairs) → pending_review/")
+        
+        return {
+            "success": True,
+            "filename": safe_filename,
+            "pair_count": pair_count,
+            "message": f"Uploaded {pair_count} pairs to pending_review/"
+        }
+        
+    except Exception as e:
+        print(f"❌ Upload JSONL error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 @app.get("/api/training-pairs/approved")
 async def get_training_approved():
     """Get list of approved files"""
@@ -10754,59 +10817,12 @@ async def get_training_pairs_for_review(filename: str):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
-def load_pairs_from_attached_assets(filename: str) -> list[dict]:
-    """
-    Load Q&A pairs from a JSONL file in attached_assets/.
-    Fallback for files not in the training pair system.
-    """
-    import os
-    filepath = os.path.join("attached_assets", filename)
-    
-    if not os.path.exists(filepath):
-        print(f"❌ File not found in attached_assets: {filename}")
-        return []
-    
-    pairs = []
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            for i, line in enumerate(f):
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    data = json.loads(line)
-                    messages = data.get('messages', [])
-                    question = ''
-                    answer = ''
-                    for msg in messages:
-                        if msg.get('role') == 'user':
-                            question = msg.get('content', '')
-                        elif msg.get('role') == 'assistant':
-                            answer = msg.get('content', '')
-                    
-                    if question or answer:
-                        pairs.append({
-                            'index': i,
-                            'question': question,
-                            'answer': answer,
-                            'status': 'unchanged'
-                        })
-                except json.JSONDecodeError as e:
-                    print(f"   ⚠️ Error parsing pair {i}: {e}")
-                    
-        print(f"📋 Loaded {len(pairs)} pairs from attached_assets/{filename}")
-    except Exception as e:
-        print(f"❌ Error reading {filepath}: {e}")
-    
-    return pairs
-
-
 @app.post("/api/training-pairs/validate/{filename}")
 async def validate_training_pairs_endpoint(filename: str):
     """
     Validate training pairs against reference_data.json.
     Catches function slot errors, shadow type mistakes, and temperament mismatches.
-    Checks training pair system first, then falls back to attached_assets/.
+    Files must be uploaded via /api/training-pairs/upload-jsonl to be in the system.
     """
     try:
         from scripts.validate_training_pairs import validate_pairs_in_memory
@@ -10817,22 +10833,15 @@ async def validate_training_pairs_endpoint(filename: str):
                 content={"error": "Reference data not loaded. Cannot validate."}
             )
         
-        # Try training system first, then fallback to attached_assets
         pairs = get_pairs_for_review(filename)
-        source = "training_system"
-        
-        if not pairs:
-            # Fallback: check attached_assets
-            pairs = load_pairs_from_attached_assets(filename)
-            source = "attached_assets"
         
         if not pairs:
             return JSONResponse(
                 status_code=404, 
-                content={"error": f"No pairs found in {filename}"}
+                content={"error": f"File '{filename}' not found. Use the 📤 upload button to add JSONL files to the training system."}
             )
         
-        print(f"🔍 Validating {len(pairs)} pairs from {filename} (source: {source})...")
+        print(f"🔍 Validating {len(pairs)} pairs from {filename}...")
         
         validation_results = validate_pairs_in_memory(pairs, TRAINING_REFERENCE_DATA)
         
@@ -10840,7 +10849,6 @@ async def validate_training_pairs_endpoint(filename: str):
         
         return {
             "filename": filename,
-            "source": source,
             "validation": validation_results
         }
         

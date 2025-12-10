@@ -186,7 +186,11 @@
         <div class="training-files-section">
           <div class="training-files-header">
             <h4>📋 Pending Review</h4>
-            <button class="btn-refresh-training" id="btn-refresh-training" title="Refresh">🔄</button>
+            <div style="display: flex; gap: 8px;">
+              <label for="training-upload-jsonl" class="btn-refresh-training" style="cursor: pointer;" title="Upload JSONL">📤</label>
+              <input type="file" id="training-upload-jsonl" accept=".jsonl" style="display: none;" />
+              <button class="btn-refresh-training" id="btn-refresh-training" title="Refresh">🔄</button>
+            </div>
           </div>
           <div class="training-files-list" id="training-pending-list">
             <div class="training-files-placeholder">No files pending review</div>
@@ -2420,6 +2424,45 @@
       refreshBtn.addEventListener('click', loadTrainingData);
     }
     
+    // Upload JSONL button handler
+    const uploadJsonlInput = document.getElementById('training-upload-jsonl');
+    if (uploadJsonlInput) {
+      uploadJsonlInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (!file.name.endsWith('.jsonl')) {
+          alert('Please select a .jsonl file');
+          uploadJsonlInput.value = '';
+          return;
+        }
+        
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const response = await fetch('/api/training-pairs/upload-jsonl', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            alert(`✅ Uploaded ${result.pair_count} pairs from ${result.filename}`);
+            loadTrainingData();
+          } else {
+            alert(`❌ Upload failed: ${result.error}`);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          alert('Upload failed: ' + error.message);
+        }
+        
+        uploadJsonlInput.value = '';
+      });
+    }
+    
     // Combine button
     if (trainingCombineBtn) {
       trainingCombineBtn.addEventListener('click', async () => {
@@ -2673,17 +2716,34 @@
       await loadPairsForReview(filename);
     };
     
+    // Pre-fetched clipboard text (loaded when modal opens, used synchronously on copy)
+    let prefetchedClipboardText = null;
+    
     // Load pairs for review
     async function loadPairsForReview(filename) {
       try {
-        const response = await fetch(`/api/training-pairs/review/${encodeURIComponent(filename)}`);
-        const data = await response.json();
+        // Parallel fetch: pairs + clipboard text (pre-fetch for iOS Safari)
+        const [pairsResponse, clipboardResponse] = await Promise.all([
+          fetch(`/api/training-pairs/review/${encodeURIComponent(filename)}`),
+          fetch(`/api/training-pairs/clipboard/${encodeURIComponent(filename)}`)
+        ]);
         
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to load pairs');
+        const pairsData = await pairsResponse.json();
+        
+        if (!pairsResponse.ok) {
+          throw new Error(pairsData.error || 'Failed to load pairs');
         }
         
-        currentReviewPairs = data.pairs;
+        currentReviewPairs = pairsData.pairs;
+        
+        // Pre-fetch clipboard text for synchronous copy on iOS Safari
+        if (clipboardResponse.ok) {
+          const clipboardData = await clipboardResponse.json();
+          prefetchedClipboardText = clipboardData.text;
+        } else {
+          prefetchedClipboardText = null;
+        }
+        
         renderReviewPairs();
         updateReviewStats();
         
@@ -2911,103 +2971,38 @@
       return success;
     }
     
-    // Show manual copy modal for iOS Safari when automatic copy fails
-    let manualCopyModalShown = false;
-    function showManualCopyModal(text) {
-      // Create modal if it doesn't exist
-      let modal = document.getElementById('manual-copy-modal');
-      if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'manual-copy-modal';
-        modal.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 10001;
-          padding: 20px;
-        `;
-        modal.innerHTML = `
-          <div style="background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 100%; max-height: 80vh; display: flex; flex-direction: column;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h3 style="margin: 0; font-size: 18px;">📋 Manual Copy</h3>
-              <button id="manual-copy-close" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; line-height: 1;">×</button>
-            </div>
-            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px;">Automatic copy not available. Select all text below and copy manually (Cmd+C or long-press):</p>
-            <textarea id="manual-copy-textarea" readonly style="flex: 1; min-height: 300px; width: 100%; padding: 12px; border: 2px solid #0d9488; border-radius: 8px; font-family: monospace; font-size: 12px; resize: none; box-sizing: border-box;"></textarea>
-            <div style="display: flex; gap: 8px; margin-top: 16px;">
-              <button id="manual-copy-select-btn" style="flex: 1; padding: 12px; background: #0d9488; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Select All</button>
-              <button id="manual-copy-done-btn" style="flex: 1; padding: 12px; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Done</button>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(modal);
-        
-        // Event listeners
-        document.getElementById('manual-copy-close').onclick = () => modal.style.display = 'none';
-        document.getElementById('manual-copy-done-btn').onclick = () => modal.style.display = 'none';
-        document.getElementById('manual-copy-select-btn').onclick = () => {
-          const textarea = document.getElementById('manual-copy-textarea');
-          textarea.focus();
-          textarea.select();
-          textarea.setSelectionRange(0, textarea.value.length);
-        };
-        modal.onclick = (e) => {
-          if (e.target === modal) modal.style.display = 'none';
-        };
-      }
-      
-      // Set text and show
-      document.getElementById('manual-copy-textarea').value = text;
-      modal.style.display = 'flex';
-      
-      // Auto-select text
-      setTimeout(() => {
-        const textarea = document.getElementById('manual-copy-textarea');
-        textarea.focus();
-        textarea.select();
-        textarea.setSelectionRange(0, textarea.value.length);
-      }, 100);
-    }
-    
-    // Copy all pairs for Claude review
-    async function copyAllForReview() {
+    // Copy all pairs for Claude review - SYNCHRONOUS using pre-fetched data (iOS Safari compatible)
+    function copyAllForReview() {
       const btn = document.getElementById('training-copy-all-btn');
       const originalText = btn.textContent;
       
-      try {
-        btn.textContent = '⏳ Loading...';
-        
-        const response = await fetch(`/api/training-pairs/clipboard/${encodeURIComponent(currentReviewFilename)}`);
-        const data = await response.json();
-        
-        // Try modern Clipboard API first, fallback to execCommand
-        let copied = false;
+      // Use pre-fetched clipboard text (no async, preserves user gesture chain for iOS Safari)
+      if (!prefetchedClipboardText) {
+        alert('Clipboard data not ready. Please close and reopen the review modal.');
+        return;
+      }
+      
+      // Try execCommand first (most reliable within user gesture)
+      let copied = fallbackCopyText(prefetchedClipboardText);
+      
+      // If execCommand failed, try Clipboard API (may work on some browsers)
+      if (!copied) {
         try {
-          await navigator.clipboard.writeText(data.text);
+          // Note: This is technically async but some browsers allow it within gesture
+          navigator.clipboard.writeText(prefetchedClipboardText);
           copied = true;
-        } catch (clipboardError) {
-          console.log('Clipboard API failed, trying fallback:', clipboardError);
-          copied = fallbackCopyText(data.text);
+        } catch (e) {
+          console.log('Clipboard API also failed:', e);
         }
-        
-        if (copied) {
-          btn.textContent = '✅ Copied!';
-          setTimeout(() => btn.textContent = originalText, 2000);
-        } else {
-          // Show manual copy modal for iOS Safari
-          btn.textContent = originalText;
-          showManualCopyModal(data.text);
-        }
-        
-      } catch (error) {
-        btn.textContent = originalText;
-        alert('Error copying: ' + error.message);
+      }
+      
+      if (copied) {
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = originalText, 2000);
+      } else {
+        btn.textContent = '❌ Copy Failed';
+        setTimeout(() => btn.textContent = originalText, 2000);
+        alert('Copy failed. Please select the text manually from the pairs above.');
       }
     }
     
