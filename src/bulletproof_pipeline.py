@@ -13,7 +13,7 @@ This prevents Claude from inventing content by separating extraction, validation
 import anthropic
 import json
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURATION
