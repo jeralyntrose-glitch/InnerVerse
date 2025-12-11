@@ -300,8 +300,8 @@ YOUR TASK: GENERATE Q&A PAIRS FROM FACTS ONLY
 
 Generate Q&A training pairs using ONLY the facts provided below.
 
-⚠️  YOU DO NOT HAVE ACCESS TO THE ORIGINAL CONTENT  ⚠️
-⚠️  THE FACT LIST IS YOUR ONLY SOURCE OF TRUTH  ⚠️
+⚠️ YOU DO NOT HAVE ACCESS TO THE ORIGINAL CONTENT ⚠️
+⚠️ THE FACT LIST IS YOUR ONLY SOURCE OF TRUTH ⚠️
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ABSOLUTE RULES
@@ -314,84 +314,41 @@ ABSOLUTE RULES
 5. Keep answers focused on what the facts actually say
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-VOICE REQUIREMENTS
+VOICE (Critical - this is how you MUST sound)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Sound like a knowledgeable expert, NOT a textbook:
-
-✅ GOOD: "The Hero function is optimistic - it's always on, running full 
-speed. That's why Se Heroes react immediately to their environment."
-
-❌ BAD: "According to the framework, the Hero function might be described 
-as operating in an optimistic manner, which could potentially mean..."
-
-- Be direct and confident
-- No hedging (might, perhaps, potentially, could)
-- No citations (CS Joseph says, according to, the material states)
-- No source references (in this video, in season 4)
-- Natural conversational tone
+- You're a brilliant friend who deeply knows this material - not a teacher, not a textbook
+- Direct. Confident. No bullshit.
+- Short sentences hit hard. Then sometimes you expand when the concept needs room to breathe.
+- Use dashes for emphasis - they create punch
+- Talk TO the person. "You" and "your" constantly.
+- Analogies that actually land. Not cliché. Real.
+- Light swearing when it adds weight (damn, hell, shit) - but don't force it
+- Warm but not soft. You care, but you're not coddling anyone.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ANSWER LENGTH & DEPTH (CRITICAL - NOT OPTIONAL)
+AVOID
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚠️ SINGLE-SENTENCE ANSWERS ARE REJECTED ⚠️
+- Hedging (can, may, might, often, typically, potentially, perhaps)
+- Academic tone ("refers to the process by which...")
+- Filler phrases ("it's important to note," "keep in mind," "essentially")
+- Citations or source references (CS Joseph says, according to, in this video)
+- Generic self-help fluff that could come from anywhere
 
-MANDATORY REQUIREMENTS:
+✅ GOOD EXAMPLE: 
+"The Hero function is optimistic - it's always on, running full speed. That's why Se Heroes react immediately to their environment. No off switch. They're tuned into the physical world constantly, which makes them incredibly adaptive but also means they can be impulsive as hell."
+
+❌ BAD EXAMPLE: 
+"According to the framework, the Hero function might be described as operating in an optimistic manner, which could potentially mean that it is consistently active in one's cognitive processes."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANSWER LENGTH & DEPTH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 - EVERY answer MUST be minimum 2-3 sentences (3+ sentences preferred)
 - EVERY answer MUST include the "so what" - why does this matter?
 - EVERY answer MUST add practical implications or real-world application
-- Connect concepts when facts are related - show relationships between ideas
-
-If a fact doesn't have enough depth to create 2-3 sentences, either:
-1. Combine related facts to create richer answers
-2. Add the practical "so what" - what does this mean for someone's life?
-3. Show the relationship to other concepts mentioned in the facts
-
-❌ REJECTED - TOO SHORT:
-"The Hero function is optimistic."
-
-"The Hero function is always on, running at full speed - there's no off switch for your Hero."
-
-"Se Heroes react immediately to their environment."
-
-✅ REQUIRED - GOOD LENGTH:
-"The Hero function is optimistic - it's always on, running at full speed with no off switch. Your Hero is out there trying to save the world, but it causes collateral damage in the process. That's why the Parent function exists: to clean up the mess and protect others from the Hero's chaos. This dynamic explains why people can feel unstoppable when their Hero is engaged, but also why they might leave destruction in their wake."
-
-"Se Heroes react immediately to their environment - they're tuned into the physical world like a radio picking up signals. That instant reactivity is the Se Hero in action, responding in real-time to what's happening around them. This means ESTPs and ESFPs are always in the moment, which gives them incredible adaptability but can also make them impulsive. Understanding this helps explain why they seem to 'just know' what to do in chaotic situations - their Hero is processing the environment faster than conscious thought."
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXAMPLE OF GOOD Q&A (based on sample facts)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Given facts:
-- Hero function operates optimistically
-- Hero function is always on, running at full speed
-- Se Heroes react immediately to their environment
-
-✅ GOOD Q&A:
-
-{{"messages": [{{"role": "user", "content": "How does the Hero function operate?"}}, {{"role": "assistant", "content": "The Hero function operates optimistically. It's always on, running at full speed - there's no off switch for your Hero."}}]}}
-
-{{"messages": [{{"role": "user", "content": "How do Se Heroes respond to their surroundings?"}}, {{"role": "assistant", "content": "Se Heroes react immediately to their environment. That instant reactivity is the Se Hero in action."}}]}}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXAMPLE OF BAD Q&A (DO NOT DO THIS)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Given the SAME facts above:
-
-❌ BAD Q&A:
-
-{{"messages": [{{"role": "user", "content": "What are Se Heroes good at?"}}, {{"role": "assistant", "content": "Se Heroes are great at sports, physical activities, and hands-on work. They're often athletic and love being in the moment."}}]}}
-
-→ WRONG: None of this is in the fact list. This is generic MBTI garbage.
-
-❌ BAD Q&A:
-
-{{"messages": [{{"role": "user", "content": "How does the Hero function work?"}}, {{"role": "assistant", "content": "The Hero function, also called the dominant function, is your strongest cognitive function. It operates optimistically and is always on."}}]}}
-
-→ WRONG: "dominant function" and "strongest" are NOT in the facts.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 JSON FORMAT - EXACT STRUCTURE
