@@ -14,6 +14,7 @@ import anthropic
 import json
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
+from fuzzywuzzy import fuzz
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURATION
@@ -451,6 +452,7 @@ def extract_facts(client: anthropic.Anthropic, content: str, log_api_usage_fn=No
     Extract facts with quotes from content using Haiku (dumber = more literal).
     
     Returns list of dicts with 'fact' and 'quote' keys.
+    Includes quote verification to prevent prompt example leakage.
     """
     prompt = FACT_EXTRACTION_PROMPT.format(content=content)
     
@@ -472,7 +474,14 @@ def extract_facts(client: anthropic.Anthropic, content: str, log_api_usage_fn=No
             cost = (input_tokens * 0.25 / 1000000) + (output_tokens * 1.25 / 1000000)
             log_api_usage_fn("training_fact_extraction", EXTRACTION_MODEL, input_tokens, output_tokens, cost)
         
-        return parse_extracted_facts(response_text)
+        parsed_facts = parse_extracted_facts(response_text)
+        
+        # CRITICAL: Verify quotes actually exist in source content
+        # This prevents prompt example leakage where Claude extracts 
+        # facts from the example section instead of actual content
+        verified_facts = verify_quotes_in_source(parsed_facts, content)
+        
+        return verified_facts
         
     except Exception as e:
         print(f"   ❌ Fact extraction error: {str(e)}")
@@ -528,6 +537,50 @@ def parse_extracted_facts(response: str) -> List[Dict[str, str]]:
         })
     
     return facts
+
+
+def verify_quotes_in_source(facts: List[Dict[str, str]], source_content: str, threshold: int = 70) -> List[Dict[str, str]]:
+    """
+    Filter facts by verifying their quotes actually exist in source content.
+    
+    Uses fuzzy matching to handle minor transcription differences.
+    This prevents prompt example leakage - if a quote doesn't exist in the 
+    actual source content, the fact is rejected.
+    
+    Args:
+        facts: List of dicts with 'fact' and 'quote' keys
+        source_content: Original content that was sent for extraction
+        threshold: Minimum fuzzy match score (0-100) to accept quote
+        
+    Returns:
+        Filtered list of facts where quotes were verified in source
+    """
+    if not facts:
+        return []
+    
+    verified_facts = []
+    source_lower = source_content.lower()
+    
+    for fact_item in facts:
+        quote = fact_item.get('quote', '')
+        if not quote:
+            continue
+            
+        quote_lower = quote.lower()
+        
+        if quote_lower in source_lower:
+            verified_facts.append(fact_item)
+        else:
+            score = fuzz.partial_ratio(quote_lower, source_lower)
+            if score >= threshold:
+                verified_facts.append(fact_item)
+            else:
+                print(f"   ⚠️ Quote not found in source (score={score}): \"{quote[:60]}...\"")
+    
+    if len(verified_facts) < len(facts):
+        print(f"   🔍 Quote verification: {len(verified_facts)}/{len(facts)} facts verified in source")
+    
+    return verified_facts
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
