@@ -219,16 +219,54 @@ everything CSJ teaches. If the fact has a valid quote and doesn't
 contradict the reference, mark it UNVERIFIED and keep it.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-VERIFICATION RULES
+CRITICAL VERIFICATION RULES (CHECK THESE FIRST - ZERO TOLERANCE)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. If fact says "X child = fears/insecurity" → ❌ INVALID (that's inferior, not child)
+IMMEDIATELY REJECT (❌ INVALID) ANY FACT THAT SAYS:
+
+❌ "child" + ("fears" OR "insecurities" OR "insecure" OR "pessimistic")
+   → WRONG: Child = optimistic/innocent. Fears = inferior position.
+
+❌ "inferior" + ("innocent" OR "innocence" OR "optimistic" OR "divine")
+   → WRONG: Inferior = pessimistic/fears. Innocent = child position.
+
+❌ "hero" + ("pessimistic" OR "fears" OR "insecure")
+   → WRONG: Hero = optimistic. Pessimistic = parent or inferior.
+
+❌ "child represents fears" OR "child = fears" OR "child is fears"
+   → WRONG: This is ALWAYS false. Child NEVER represents fears.
+
+❌ "[FUNCTION] child = fears/insecurities"
+   → WRONG: Regardless of function (Ni, Se, etc.), child position = innocent, not fears.
+
+PATTERN MATCHING (Be strict):
+- If you see ANY mention of "child" AND ("fear" OR "insecure") in the same sentence → ❌ INVALID
+- If you see ANY mention of "inferior" AND ("innocent" OR "optimistic") in the same sentence → ❌ INVALID
+- Don't be lenient - if it contradicts position definitions, it's wrong.
+
+POSITION/ATTITUDE MATRIX (Use this to verify):
+┌──────────┬─────────────┬─────────────────────────────┐
+│ Position │   Attitude  │      Attributes             │
+├──────────┼─────────────┼─────────────────────────────┤
+│ Hero     │ Optimistic  │ Strength, comfort, always on│
+│ Parent   │ Pessimistic │ Responsibility, criticism   │
+│ Child    │ Optimistic  │ Innocence, divine, playful  │
+│ Inferior │ Pessimistic │ Fears, insecurities, gateway│
+└──────────┴─────────────┴─────────────────────────────┘
+
+If a fact violates this matrix → ❌ INVALID (explain which position should have that attribute)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADDITIONAL VERIFICATION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 2. If fact says "[TYPE] excels at [FUNCTION]" → Check if that function is Hero or Parent for that type
 
 3. If fact mentions a position → Verify the attribute matches the definitions above
 
 4. Cross-reference ALL type claims against the function stacks in the reference JSON
+
+5. Even if the source transcript says something wrong, REJECT IT if it contradicts the reference
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 AUTHORITATIVE REFERENCE
@@ -652,6 +690,64 @@ def generate_qa_from_facts(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# AUTOMATIC CONTRADICTION FILTER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def filter_contradictions(pairs: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
+    """
+    Automatically filter out Q&A pairs with position/attitude contradictions.
+    
+    Returns:
+        Tuple of (filtered_pairs, rejected_pairs_with_reasons)
+    """
+    import re
+    
+    # Contradiction patterns (same as scan_contradictions.py)
+    contradiction_patterns = [
+        (r'(child|3rd).*(fear|fears|insecurity|insecurities|pessimistic|worr)', 
+         'Child position should be optimistic/innocent, not fears/insecurities'),
+        (r'(inferior|4th).*(innocent|innocence|optimistic|divine|playful)', 
+         'Inferior position should be pessimistic/fears, not innocent/optimistic'),
+        (r'(hero|1st|dominant).*(pessimistic|fear|fears|insecurity|worr)', 
+         'Hero position should be optimistic, not pessimistic/fears'),
+        (r'child.*represents.*(fear|fears|insecurity)', 
+         'Child never represents fears - that is the inferior'),
+        (r'inferior.*represents.*(innocent|innocence|divine)', 
+         'Inferior never represents innocence - that is the child'),
+    ]
+    
+    filtered_pairs = []
+    rejected_pairs = []
+    
+    for pair in pairs:
+        if 'messages' not in pair or len(pair['messages']) < 2:
+            continue
+        
+        question = pair['messages'][0].get('content', '')
+        answer = pair['messages'][1].get('content', '')
+        text_to_scan = f"{question} {answer}".lower()
+        
+        # Check for contradictions
+        has_contradiction = False
+        rejection_reason = None
+        
+        for pattern, explanation in contradiction_patterns:
+            if re.search(pattern, text_to_scan, re.IGNORECASE):
+                has_contradiction = True
+                rejection_reason = explanation
+                break
+        
+        if has_contradiction:
+            rejected_pairs.append({
+                'pair': pair,
+                'reason': rejection_reason
+            })
+        else:
+            filtered_pairs.append(pair)
+    
+    return filtered_pairs, rejected_pairs
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # MAIN PIPELINE
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -726,12 +822,27 @@ def run_bulletproof_pipeline(
         print(f"     → Generated {len(pairs)} Q&A pairs")
         all_pairs.extend(pairs)
     
+    # Step 4: Automatic contradiction filtering
+    print(f"\n  🔍 Step 4: Filtering contradictions...")
+    filtered_pairs, rejected_pairs = filter_contradictions(all_pairs)
+    contradictions_removed = len(rejected_pairs)
+    
+    if contradictions_removed > 0:
+        print(f"     → ❌ Removed {contradictions_removed} pairs with contradictions")
+        for rejected in rejected_pairs[:3]:  # Show first 3
+            question_preview = rejected['pair']['messages'][0]['content'][:60]
+            print(f"        - Rejected: {question_preview}... ({rejected['reason']})")
+        if contradictions_removed > 3:
+            print(f"        ... and {contradictions_removed - 3} more")
+    else:
+        print(f"     → ✅ No contradictions found")
+    
     # Deduplicate pairs by question (case-insensitive, normalized)
     seen_questions = set()
     deduplicated_pairs = []
     duplicates_removed = 0
     
-    for pair in all_pairs:
+    for pair in filtered_pairs:
         if 'messages' in pair and len(pair['messages']) >= 2:
             question = pair['messages'][0].get('content', '').strip().lower()
             # Normalize: remove extra whitespace, punctuation differences
@@ -752,6 +863,8 @@ def run_bulletproof_pipeline(
     print(f"  ├─ Invalid: {len(all_validation['invalid'])}")
     print(f"  └─ Unverified: {len(all_validation['unverified'])}")
     print(f"Total Q&A pairs generated: {len(all_pairs)}")
+    if contradictions_removed > 0:
+        print(f"  ├─ Contradictions removed: {contradictions_removed}")
     if duplicates_removed > 0:
         print(f"  └─ Duplicates removed: {duplicates_removed}")
     
@@ -772,6 +885,7 @@ def run_bulletproof_pipeline(
     return {
         'facts': all_facts,
         'validation': all_validation,
-        'pairs': final_pairs
+        'pairs': final_pairs,
+        'rejected_contradictions': rejected_pairs
     }
 

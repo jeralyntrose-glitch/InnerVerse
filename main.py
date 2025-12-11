@@ -10998,6 +10998,55 @@ async def delete_training_file_endpoint(filename: str, status: str = "pending"):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+@app.get("/api/training-pairs/scan-contradictions")
+async def scan_contradictions_endpoint():
+    """Scan all training pair files for position/attitude contradictions"""
+    try:
+        # Import scan functions
+        import sys
+        from pathlib import Path
+        
+        # Add project root to path if needed
+        project_root = Path(__file__).parent
+        if str(project_root) not in sys.path:
+            sys.path.insert(0, str(project_root))
+        
+        # Import scan functions from scan_contradictions.py
+        from scan_contradictions import scan_all_files
+        
+        # Determine base path
+        base_path = Path("./data/training_pairs")
+        
+        if not base_path.exists():
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Training pairs directory not found"}
+            )
+        
+        # Run scan
+        results = scan_all_files(base_path)
+        
+        # Format response
+        response = {
+            "success": True,
+            "total_files": results["total_files"],
+            "total_pairs_scanned": results["total_pairs_scanned"],
+            "total_issues": results["total_issues"],
+            "pending_files_with_issues": len(results["pending"]),
+            "approved_files_with_issues": len(results["approved"]),
+            "pending": results["pending"],
+            "approved": results["approved"]
+        }
+        
+        return response
+        
+    except Exception as e:
+        print(f"❌ Scan contradictions error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 # =============================================================================
 # END: Training Pair Generator API Endpoints
 # =============================================================================
