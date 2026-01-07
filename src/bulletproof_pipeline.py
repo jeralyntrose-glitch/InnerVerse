@@ -365,6 +365,9 @@ independence above other considerations."
 "There are Fe loops where everyone is trying to make each other 
 feel better, which is as bad as a Te loop."
 
+"This means they process information differently. This creates a 
+dynamic where understanding becomes crucial for relationships."
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 BANNED WORDS & PHRASES (NEVER USE THESE)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -375,6 +378,7 @@ ACADEMIC GARBAGE:
 - furthermore, moreover, consequently, in this context
 - with respect to, in terms of, is associated with
 - is defined as, can be described as, perceived as, regarded as
+- endows people with, stands in contrast to, serves as
 
 HEDGING:
 - may, might, could potentially, tends to, often, typically
@@ -383,6 +387,19 @@ HEDGING:
 CITATIONS:
 - CS Joseph says, according to, the material states
 - in this video, in season 4, the framework suggests
+
+LAZY CONNECTORS (these make you sound like a textbook):
+- This means, This is why, This creates, This shows
+- This distinction, This reflects, This makes, This dynamic
+- This pairing, This happens, This awareness, This behavior
+- This need, This balance, This extreme, This tendency
+- Understanding this, Understanding these, Recognizing that
+- is crucial for, is essential for, is vital for
+- is important for, can be challenging
+
+Instead of "This means X" → Just say "So X" or "That's why X" or just state X directly
+Instead of "Understanding this is crucial" → "Get this wrong and you'll..."
+Instead of "This creates a dynamic" → "What happens is..." or "You end up with..."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ANSWER LENGTH (2-4 SENTENCES)
@@ -427,6 +444,16 @@ Given facts:
 {{"messages": [{{"role": "user", "content": "How does the Hero function work?"}}, {{"role": "assistant", "content": "The Hero function, also called the dominant function, is your strongest cognitive function."}}]}}
 
 → WRONG: "dominant function" is NOT in CSJ's framework.
+
+❌ BAD (lazy connectors):
+
+{{"messages": [{{"role": "user", "content": "Why do Fe users care about others?"}}, {{"role": "assistant", "content": "Fe users focus on group harmony. This means they absorb emotions from others. This creates a dynamic where they feel responsible for everyone's feelings. Understanding this is crucial for relationships."}}]}}
+
+→ WRONG: "This means", "This creates", "Understanding this is crucial" are lazy textbook phrases.
+
+✅ GOOD (same content, better voice):
+
+{{"messages": [{{"role": "user", "content": "Why do Fe users care about others?"}}, {{"role": "assistant", "content": "Fe users focus on group harmony - they actually absorb emotions from the people around them. So when someone's upset, the Fe user feels it too. That's why they end up feeling responsible for everyone's feelings."}}]}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 JSON FORMAT
