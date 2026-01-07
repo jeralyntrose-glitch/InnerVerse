@@ -3796,5 +3796,725 @@
     "cost": 0.024981,
     "success": true,
     "error": null
+  },
+  {
+    "document_id": "2eff5a81-e22e-47e0-974a-a064440a27d9",
+    "timestamp": "2026-01-06T20:57:36.098694",
+    "input_tokens": 1273,
+    "output_tokens": 1125,
+    "cost": 0.020694,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "b7ff41b3-6e17-4bce-8b17-336c85239396",
+    "timestamp": "2026-01-06T20:57:43.538090",
+    "input_tokens": 1677,
+    "output_tokens": 1399,
+    "cost": 0.026016,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "895e6895-0154-455e-9b69-e2fb662db6bd",
+    "timestamp": "2026-01-06T20:58:33.988013",
+    "input_tokens": 2133,
+    "output_tokens": 1213,
+    "cost": 0.024594,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "19a29b55-d022-4495-bf7f-4d00faffd957",
+    "timestamp": "2026-01-06T20:58:55.054033",
+    "input_tokens": 2786,
+    "output_tokens": 1201,
+    "cost": 0.026373,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "8d07dc84-e06f-4758-9cc5-e32d6330d8d9",
+    "timestamp": "2026-01-06T20:59:56.425779",
+    "input_tokens": 2359,
+    "output_tokens": 1314,
+    "cost": 0.026787,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "2ecb122f-c3ff-48b0-afa1-f8d3b797219d",
+    "timestamp": "2026-01-06T21:00:10.099635",
+    "input_tokens": 3974,
+    "output_tokens": 1108,
+    "cost": 0.028542,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "f8c215dd-6f1a-4c62-9c4f-71caa56a1f71",
+    "timestamp": "2026-01-06T21:01:01.215632",
+    "input_tokens": 1644,
+    "output_tokens": 1363,
+    "cost": 0.025377,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "523f150c-173c-4181-bd80-99b903b68a1a",
+    "timestamp": "2026-01-06T21:01:13.056493",
+    "input_tokens": 3179,
+    "output_tokens": 1300,
+    "cost": 0.029037,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "12129588-9f47-46ed-87dc-96870649be14",
+    "timestamp": "2026-01-06T21:02:24.495911",
+    "input_tokens": 2567,
+    "output_tokens": 1229,
+    "cost": 0.026136,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "76777d74-da04-4f30-ada9-fff4ccbf05c6",
+    "timestamp": "2026-01-06T21:02:45.748767",
+    "input_tokens": 4048,
+    "output_tokens": 1259,
+    "cost": 0.031029,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "fd13dfcd-74ac-4a30-8278-77af56437026",
+    "timestamp": "2026-01-06T21:09:09.493883",
+    "input_tokens": 1611,
+    "output_tokens": 1220,
+    "cost": 0.023133,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "276eac74-3c12-4f9b-a391-a02b55ec6a40",
+    "timestamp": "2026-01-06T21:09:37.685659",
+    "input_tokens": 3026,
+    "output_tokens": 1336,
+    "cost": 0.029118,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "ffa13481-b4ff-48cd-98a9-feb27a411522",
+    "timestamp": "2026-01-06T21:10:26.626362",
+    "input_tokens": 3275,
+    "output_tokens": 1322,
+    "cost": 0.029655,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "e619ec10-e52d-4da2-b415-d8e2c8be6d56",
+    "timestamp": "2026-01-06T21:11:05.090724",
+    "input_tokens": 3132,
+    "output_tokens": 1449,
+    "cost": 0.031131,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "c20c1ebf-36f0-470e-98f8-7dd66d46e70e",
+    "timestamp": "2026-01-06T21:11:23.391020",
+    "input_tokens": 1804,
+    "output_tokens": 1434,
+    "cost": 0.026922,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "3b39fc64-5cc8-4796-b97f-e79a8168f7ee",
+    "timestamp": "2026-01-06T21:12:09.045927",
+    "input_tokens": 2222,
+    "output_tokens": 1192,
+    "cost": 0.024546,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "f1897e31-bae5-4db6-895a-a24cd08ada11",
+    "timestamp": "2026-01-06T21:12:44.702967",
+    "input_tokens": 2904,
+    "output_tokens": 1185,
+    "cost": 0.026487,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "d2f07835-99a2-4ed8-9746-bdf0a2a86e07",
+    "timestamp": "2026-01-06T21:13:23.559513",
+    "input_tokens": 3420,
+    "output_tokens": 1301,
+    "cost": 0.029775,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "c92bb8b4-983d-4ee6-8b08-8da87c578989",
+    "timestamp": "2026-01-06T21:13:33.301247",
+    "input_tokens": 2156,
+    "output_tokens": 1081,
+    "cost": 0.022683,
+    "success": false,
+    "error": "Extraction failed: Extraction validation failed"
+  },
+  {
+    "document_id": "cc41dc6b-3fea-4361-9cf0-0803a998b8aa",
+    "timestamp": "2026-01-06T21:14:20.951093",
+    "input_tokens": 1617,
+    "output_tokens": 1253,
+    "cost": 0.023646,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "46cb5181-531d-4e69-a112-d9217b1f70a2",
+    "timestamp": "2026-01-06T21:14:27.480509",
+    "input_tokens": 2185,
+    "output_tokens": 1178,
+    "cost": 0.024225,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "f6e8636a-47a8-4863-b320-1fe9d58f4af8",
+    "timestamp": "2026-01-06T21:15:58.204721",
+    "input_tokens": 3696,
+    "output_tokens": 1262,
+    "cost": 0.030018,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "a5b3e943-572d-4872-8edb-bddf61148d99",
+    "timestamp": "2026-01-06T21:16:53.367573",
+    "input_tokens": 1856,
+    "output_tokens": 1395,
+    "cost": 0.026493,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "27b8971b-e55f-4c75-98a0-76a9a0714e77",
+    "timestamp": "2026-01-06T21:17:57.845048",
+    "input_tokens": 2515,
+    "output_tokens": 1268,
+    "cost": 0.026565,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "443949ab-7243-4da0-8965-c0f6faec6eb8",
+    "timestamp": "2026-01-06T21:18:56.777404",
+    "input_tokens": 2048,
+    "output_tokens": 1215,
+    "cost": 0.024369,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "01d9fa24-533e-43fd-9a21-5c84c57206e8",
+    "timestamp": "2026-01-06T21:19:54.722852",
+    "input_tokens": 2191,
+    "output_tokens": 1317,
+    "cost": 0.026328,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "76307e1e-222c-4f9f-b99d-3692ad6a4e6a",
+    "timestamp": "2026-01-06T21:22:33.152000",
+    "input_tokens": 3012,
+    "output_tokens": 1232,
+    "cost": 0.027516,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "229fc23d-d916-44b9-9a74-63aa217c648f",
+    "timestamp": "2026-01-06T21:22:39.355647",
+    "input_tokens": 2991,
+    "output_tokens": 1317,
+    "cost": 0.028728,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "c03ee899-24d2-4fe1-a63b-21879f6c7beb",
+    "timestamp": "2026-01-06T21:23:43.244748",
+    "input_tokens": 2723,
+    "output_tokens": 1284,
+    "cost": 0.027429,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "1d68c600-268a-410f-988e-931c0315c170",
+    "timestamp": "2026-01-06T21:23:51.034544",
+    "input_tokens": 3483,
+    "output_tokens": 1286,
+    "cost": 0.029739,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "976b7975-09c7-4801-86ce-79170bb0ca08",
+    "timestamp": "2026-01-06T21:25:10.832964",
+    "input_tokens": 3864,
+    "output_tokens": 1251,
+    "cost": 0.030357,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "4d0957f3-4e2f-4736-84de-3df38577fcaf",
+    "timestamp": "2026-01-06T21:25:31.630585",
+    "input_tokens": 4821,
+    "output_tokens": 1225,
+    "cost": 0.032838,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "4ca78cd8-3060-468d-8581-0a2f4ee000b4",
+    "timestamp": "2026-01-06T21:25:59.025832",
+    "input_tokens": 1602,
+    "output_tokens": 1231,
+    "cost": 0.023271,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "1736d365-feab-4e1d-8b12-aa67cc797ebb",
+    "timestamp": "2026-01-06T21:27:01.937382",
+    "input_tokens": 3766,
+    "output_tokens": 1210,
+    "cost": 0.029448,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "d4048d31-65dc-4b3e-8d7d-ded0b62dced4",
+    "timestamp": "2026-01-06T21:27:16.176827",
+    "input_tokens": 3542,
+    "output_tokens": 1272,
+    "cost": 0.029706,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "81213d46-2473-4827-a5b5-0f8e19a8d9ea",
+    "timestamp": "2026-01-06T21:28:32.745282",
+    "input_tokens": 3124,
+    "output_tokens": 1220,
+    "cost": 0.027672,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "82677872-e12d-49ce-b12d-8a8d0bb15e38",
+    "timestamp": "2026-01-06T21:28:39.493752",
+    "input_tokens": 3700,
+    "output_tokens": 1313,
+    "cost": 0.030795,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "c4578974-152c-42e7-bf12-18cbb103d3e0",
+    "timestamp": "2026-01-06T21:29:15.008347",
+    "input_tokens": 1442,
+    "output_tokens": 1237,
+    "cost": 0.022881,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "f3beb8f1-0401-4ad9-bfd9-2f0d52dd7704",
+    "timestamp": "2026-01-06T21:29:27.646871",
+    "input_tokens": 1972,
+    "output_tokens": 1213,
+    "cost": 0.024111,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "89b7d3c6-da54-4b2c-b740-3e075d0999d8",
+    "timestamp": "2026-01-06T21:30:03.800323",
+    "input_tokens": 1673,
+    "output_tokens": 1222,
+    "cost": 0.023349,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "ff5af617-67be-4ed7-a57f-4cc6a8053926",
+    "timestamp": "2026-01-06T21:30:27.794490",
+    "input_tokens": 2512,
+    "output_tokens": 1271,
+    "cost": 0.026601,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "99323826-c5e8-40a3-b3cb-1069c50067f3",
+    "timestamp": "2026-01-06T21:31:26.612154",
+    "input_tokens": 1900,
+    "output_tokens": 1235,
+    "cost": 0.024225,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "f53591fe-2a6d-48d0-855a-b4a5a7f4b224",
+    "timestamp": "2026-01-06T21:33:07.552928",
+    "input_tokens": 4446,
+    "output_tokens": 1244,
+    "cost": 0.031998,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "d26394c6-5623-4f40-b599-78da104c14ae",
+    "timestamp": "2026-01-06T21:35:02.037499",
+    "input_tokens": 2379,
+    "output_tokens": 1527,
+    "cost": 0.030042,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "649e9de9-52ff-4451-88d9-e2667f3d39e4",
+    "timestamp": "2026-01-06T21:35:08.131895",
+    "input_tokens": 2738,
+    "output_tokens": 1327,
+    "cost": 0.028119,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "53f04069-139e-4477-b944-c0291a179671",
+    "timestamp": "2026-01-06T21:36:17.091544",
+    "input_tokens": 1624,
+    "output_tokens": 1136,
+    "cost": 0.021912,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "154e0419-7e4e-4da5-bea4-600dbd5e930e",
+    "timestamp": "2026-01-06T21:36:21.610355",
+    "input_tokens": 1770,
+    "output_tokens": 1139,
+    "cost": 0.022395,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "12b76434-62d4-4bbc-8f1c-a80d64dee06e",
+    "timestamp": "2026-01-06T21:37:02.665888",
+    "input_tokens": 1599,
+    "output_tokens": 1138,
+    "cost": 0.021867,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "55c8f0a4-3ad8-4715-a1b0-974c0e5c73d0",
+    "timestamp": "2026-01-06T21:37:19.765089",
+    "input_tokens": 2218,
+    "output_tokens": 1305,
+    "cost": 0.026229,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "73a7c66f-5478-40de-8033-f9458065ba44",
+    "timestamp": "2026-01-06T21:37:46.075117",
+    "input_tokens": 1584,
+    "output_tokens": 1186,
+    "cost": 0.022542,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "b5207f6a-21ba-45ba-922f-c4084618a52d",
+    "timestamp": "2026-01-06T21:59:46.490758",
+    "input_tokens": 2019,
+    "output_tokens": 1099,
+    "cost": 0.022542,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "885ae424-19bc-4853-8527-720a4e7498c8",
+    "timestamp": "2026-01-06T21:59:57.588814",
+    "input_tokens": 2730,
+    "output_tokens": 1148,
+    "cost": 0.02541,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "9db35c14-6c9a-4efb-be8f-fcce9c504e77",
+    "timestamp": "2026-01-06T22:00:52.417261",
+    "input_tokens": 2529,
+    "output_tokens": 1285,
+    "cost": 0.026862,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "92467a89-0b06-418e-9785-d0a7289639da",
+    "timestamp": "2026-01-06T22:01:16.542225",
+    "input_tokens": 2875,
+    "output_tokens": 1248,
+    "cost": 0.027345,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "e5617f04-20b8-450e-9e49-51b9c75820e1",
+    "timestamp": "2026-01-06T22:02:01.201412",
+    "input_tokens": 2458,
+    "output_tokens": 1265,
+    "cost": 0.026349,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "7643e1a1-474b-4e51-8090-d96bbcebf0c6",
+    "timestamp": "2026-01-06T22:02:48.943156",
+    "input_tokens": 2959,
+    "output_tokens": 1095,
+    "cost": 0.025302,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "db1105fc-0685-422f-9871-01b1fbfe81a8",
+    "timestamp": "2026-01-06T22:03:33.648616",
+    "input_tokens": 2853,
+    "output_tokens": 1227,
+    "cost": 0.026964,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "9dbea4e9-543a-4029-8d0c-7615fc2eb0e2",
+    "timestamp": "2026-01-06T22:04:09.815814",
+    "input_tokens": 3186,
+    "output_tokens": 1295,
+    "cost": 0.028983,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "cfd7c13e-c35c-4238-bcc1-7835347b6d01",
+    "timestamp": "2026-01-06T22:04:20.804674",
+    "input_tokens": 1620,
+    "output_tokens": 1199,
+    "cost": 0.022845,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "1b0727d8-9055-42db-93e5-1b1f5a55f0b2",
+    "timestamp": "2026-01-06T22:05:06.647648",
+    "input_tokens": 1333,
+    "output_tokens": 1154,
+    "cost": 0.021309,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "f05cd123-760f-4c34-a8d4-f9d65e90b06e",
+    "timestamp": "2026-01-06T22:05:18.865943",
+    "input_tokens": 2693,
+    "output_tokens": 1086,
+    "cost": 0.024369,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "44e043e2-d355-4f8b-b285-fb9f5f05ba96",
+    "timestamp": "2026-01-06T22:06:11.317542",
+    "input_tokens": 2483,
+    "output_tokens": 1218,
+    "cost": 0.025719,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "4bdffeca-cd85-429d-978d-ad088d1bdb48",
+    "timestamp": "2026-01-06T22:07:34.553935",
+    "input_tokens": 3227,
+    "output_tokens": 1221,
+    "cost": 0.027996,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "cad4c9d0-dd0f-4489-a1a0-2a3a80c8e6ac",
+    "timestamp": "2026-01-06T22:08:58.361929",
+    "input_tokens": 3210,
+    "output_tokens": 1579,
+    "cost": 0.033315,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "de30e1fa-30fe-4fa5-95ac-260dab53e101",
+    "timestamp": "2026-01-06T22:10:06.426150",
+    "input_tokens": 2008,
+    "output_tokens": 1068,
+    "cost": 0.022044,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "00548c03-101a-4854-aa4c-e7c5d1a3123e",
+    "timestamp": "2026-01-06T22:11:08.109260",
+    "input_tokens": 2096,
+    "output_tokens": 1188,
+    "cost": 0.024108,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "42ec1632-0f8e-44ae-b5b1-6210f69da8c2",
+    "timestamp": "2026-01-07T01:53:50.072264",
+    "input_tokens": 1477,
+    "output_tokens": 955,
+    "cost": 0.018756,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "e590c73c-4007-444d-a693-ea5dae0d1877",
+    "timestamp": "2026-01-07T01:53:53.475397",
+    "input_tokens": 1567,
+    "output_tokens": 1342,
+    "cost": 0.024831,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "f0ddcf9a-cbcd-4e6b-a762-71bbb060c250",
+    "timestamp": "2026-01-07T01:54:41.442274",
+    "input_tokens": 2040,
+    "output_tokens": 1209,
+    "cost": 0.024255,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "72467482-6003-448b-be53-47450f2585df",
+    "timestamp": "2026-01-07T01:54:44.482410",
+    "input_tokens": 2129,
+    "output_tokens": 1224,
+    "cost": 0.024747,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "1053f61c-e3b9-4a56-b250-e409d2db940d",
+    "timestamp": "2026-01-07T01:55:52.486163",
+    "input_tokens": 2751,
+    "output_tokens": 1244,
+    "cost": 0.026913,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "b7ac582a-c069-49ed-a133-f19b5621508e",
+    "timestamp": "2026-01-07T01:56:36.294522",
+    "input_tokens": 1679,
+    "output_tokens": 1233,
+    "cost": 0.023532,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "8bc88998-653e-4e6d-8a7a-aef8d9fa66ad",
+    "timestamp": "2026-01-07T01:59:24.049919",
+    "input_tokens": 2988,
+    "output_tokens": 1261,
+    "cost": 0.027879,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "bfe10550-ba69-4fc3-90da-274f43d3483e",
+    "timestamp": "2026-01-07T01:59:30.616259",
+    "input_tokens": 3516,
+    "output_tokens": 1219,
+    "cost": 0.028833,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "1b300ba7-b236-4427-8f21-24de335ea66d",
+    "timestamp": "2026-01-07T02:00:24.022274",
+    "input_tokens": 2628,
+    "output_tokens": 1217,
+    "cost": 0.026139,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "715052ee-1e2d-4549-b0c3-6f596837fbaf",
+    "timestamp": "2026-01-07T02:00:31.879738",
+    "input_tokens": 3149,
+    "output_tokens": 1213,
+    "cost": 0.027642,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "ffa81343-45f7-4a1b-8991-b3be6df09d38",
+    "timestamp": "2026-01-07T02:01:33.991717",
+    "input_tokens": 2883,
+    "output_tokens": 1210,
+    "cost": 0.026799,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "67a49349-38a5-44f1-a64a-7be646b4017b",
+    "timestamp": "2026-01-07T02:01:52.513321",
+    "input_tokens": 3910,
+    "output_tokens": 1119,
+    "cost": 0.028515,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "d83fa69f-6e18-4d5c-918a-1cecf551d328",
+    "timestamp": "2026-01-07T02:03:14.040293",
+    "input_tokens": 3461,
+    "output_tokens": 1123,
+    "cost": 0.027228,
+    "success": true,
+    "error": null
+  },
+  {
+    "document_id": "d656a157-9237-46df-ab1a-48d6be1646f2",
+    "timestamp": "2026-01-07T02:04:37.465882",
+    "input_tokens": 3447,
+    "output_tokens": 1372,
+    "cost": 0.030921,
+    "success": true,
+    "error": null
   }
 ]
