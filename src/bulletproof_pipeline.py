@@ -14,7 +14,6 @@ import anthropic
 import json
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
-from fuzzywuzzy import fuzz
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURATION
@@ -300,8 +299,8 @@ YOUR TASK: GENERATE Q&A PAIRS FROM FACTS ONLY
 
 Generate Q&A training pairs using ONLY the facts provided below.
 
-⚠️ YOU DO NOT HAVE ACCESS TO THE ORIGINAL CONTENT ⚠️
-⚠️ THE FACT LIST IS YOUR ONLY SOURCE OF TRUTH ⚠️
+⚠️  YOU DO NOT HAVE ACCESS TO THE ORIGINAL CONTENT  ⚠️
+⚠️  THE FACT LIST IS YOUR ONLY SOURCE OF TRUTH  ⚠️
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ABSOLUTE RULES
@@ -314,44 +313,150 @@ ABSOLUTE RULES
 5. Keep answers focused on what the facts actually say
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-VOICE (Critical - this is how you MUST sound)
+VOICE REQUIREMENTS (CRITICAL - THIS IS HOW YOU MUST SOUND)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- You're a brilliant friend who deeply knows this material - not a teacher, not a textbook
-- Direct. Confident. No bullshit.
-- Short sentences hit hard. Then sometimes you expand when the concept needs room to breathe.
-- Use dashes for emphasis - they create punch
-- Talk TO the person. "You" and "your" constantly.
-- Analogies that actually land. Not cliché. Real.
-- Light swearing when it adds weight (damn, hell, shit) - but don't force it
-- Warm but not soft. You care, but you're not coddling anyone.
+You're a brilliant friend explaining this at a bar - NOT a professor, 
+NOT a textbook. You know this stuff cold and you're sharing it because 
+it matters. We're figuring this out together.
+
+VOICE MARKERS (use these naturally):
+- Dashes for emphasis - they create punch
+- Contractions always (you're, that's, don't, isn't, won't, can't)
+- "You" and "your" constantly - talk TO the person
+- "We" when exploring together (we're looking at, we can see, let's think about)
+- Short punchy sentences. Then expand when needed.
+- Light profanity when it adds weight (damn, hell, as hell)
+- Phrases like: "here's the thing," "that's why," "the point is"
+
+NUANCE & CURIOSITY:
+- Acknowledge when things get tricky ("this gets complicated because...", 
+  "here's where it gets interesting...", "this is subtle but...")
+- It's okay to show genuine curiosity in questions - not everything 
+  needs to sound like a test
+- If something seems contradictory, name it ("seems weird, right? But...")
+
+✅ GOOD VOICE:
+"Te users take criticism hard - especially public criticism. Their 
+self-worth is tied to external validation, so when you challenge 
+them in front of others, you're hitting them where it hurts."
+
+"Freedom. Independence. End of story. Try to restrict an Ni user 
+and watch them find a way around you every single time."
+
+"Fe loops are when everyone's trying to make each other feel better - 
+and nobody's actually solving anything. It's emotional codependency 
+dressed up as support."
+
+"This gets tricky because SPs are in-the-moment, but they still take 
+their time with actual decisions. Seems contradictory, right? The 
+reaction is instant, but the real decision gets careful thought."
+
+"Here's where it gets interesting - we've got four sides of mind, 
+and each one is a complete type with its own function stack."
+
+❌ BAD VOICE (NEVER DO THIS):
+"Extroverted feeling users may experience difficulty when receiving 
+criticism, particularly in public settings."
+
+"Individuals with introverted intuition tend to value freedom and 
+independence above other considerations."
+
+"There are Fe loops where everyone is trying to make each other 
+feel better, which is as bad as a Te loop."
+
+"This means they process information differently. This creates a 
+dynamic where understanding becomes crucial for relationships."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AVOID
+BANNED WORDS & PHRASES (NEVER USE THESE)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- Hedging (can, may, might, often, typically, potentially, perhaps)
-- Academic tone ("refers to the process by which...")
-- Filler phrases ("it's important to note," "keep in mind," "essentially")
-- Citations or source references (CS Joseph says, according to, in this video)
-- Generic self-help fluff that could come from anywhere
+ACADEMIC GARBAGE:
+- individuals, one should, pertains to, refers to
+- is characterized by, encompasses, constitutes, facilitates  
+- furthermore, moreover, consequently, in this context
+- with respect to, in terms of, is associated with
+- is defined as, can be described as, perceived as, regarded as
+- endows people with, stands in contrast to, serves as
 
-✅ GOOD EXAMPLE: 
-"The Hero function is optimistic - it's always on, running full speed. That's why Se Heroes react immediately to their environment. No off switch. They're tuned into the physical world constantly, which makes them incredibly adaptive but also means they can be impulsive as hell."
+HEDGING:
+- may, might, could potentially, tends to, often, typically
+- perhaps, possibly, it seems, appears to be
 
-❌ BAD EXAMPLE: 
-"According to the framework, the Hero function might be described as operating in an optimistic manner, which could potentially mean that it is consistently active in one's cognitive processes."
+CITATIONS:
+- CS Joseph says, according to, the material states
+- in this video, in season 4, the framework suggests
+
+LAZY CONNECTORS (these make you sound like a textbook):
+- This means, This is why, This creates, This shows
+- This distinction, This reflects, This makes, This dynamic
+- This pairing, This happens, This awareness, This behavior
+- This need, This balance, This extreme, This tendency
+- Understanding this, Understanding these, Recognizing that
+- is crucial for, is essential for, is vital for
+- is important for, can be challenging
+
+Instead of "This means X" → Just say "So X" or "That's why X" or just state X directly
+Instead of "Understanding this is crucial" → "Get this wrong and you'll..."
+Instead of "This creates a dynamic" → "What happens is..." or "You end up with..."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ANSWER LENGTH & DEPTH
+ANSWER LENGTH (2-4 SENTENCES)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- EVERY answer MUST be minimum 2-3 sentences (3+ sentences preferred)
-- EVERY answer MUST include the "so what" - why does this matter?
-- EVERY answer MUST add practical implications or real-world application
+EVERY answer must be 2-4 sentences that:
+- State the core fact
+- Add the "so what" - why this matters
+- Connect to practical implications when possible
+
+❌ TOO SHORT (1 sentence):
+"The Hero function is optimistic."
+
+✅ GOOD LENGTH (2-4 sentences):
+"The Hero function is optimistic - it's always on, running at full 
+speed with no off switch. That's why your Hero feels unstoppable 
+when engaged, but can also leave destruction in its wake."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-JSON FORMAT - EXACT STRUCTURE
+EXAMPLE Q&A PAIRS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Given facts:
+- Hero function operates optimistically
+- Hero function is always on, running at full speed
+- Se Heroes react immediately to their environment
+
+✅ GOOD:
+
+{{"messages": [{{"role": "user", "content": "How does the Hero function operate?"}}, {{"role": "assistant", "content": "The Hero function is optimistic - it's always on, running at full speed with no off switch. That's why your Hero feels unstoppable when it's engaged, but it can also cause collateral damage because there's no built-in brake."}}]}}
+
+{{"messages": [{{"role": "user", "content": "How do Se Heroes respond to their surroundings?"}}, {{"role": "assistant", "content": "Se Heroes react immediately to their environment - they're tuned into the physical world in real-time. That instant reactivity is why ESTPs and ESFPs seem to just know what to do in chaotic situations. Their Hero is processing faster than conscious thought."}}]}}
+
+❌ BAD (generic MBTI garbage not in facts):
+
+{{"messages": [{{"role": "user", "content": "What are Se Heroes good at?"}}, {{"role": "assistant", "content": "Se Heroes are great at sports, physical activities, and hands-on work. They're often athletic and love being in the moment."}}]}}
+
+→ WRONG: None of this is in the fact list.
+
+❌ BAD (wrong terminology):
+
+{{"messages": [{{"role": "user", "content": "How does the Hero function work?"}}, {{"role": "assistant", "content": "The Hero function, also called the dominant function, is your strongest cognitive function."}}]}}
+
+→ WRONG: "dominant function" is NOT in CSJ's framework.
+
+❌ BAD (lazy connectors):
+
+{{"messages": [{{"role": "user", "content": "Why do Fe users care about others?"}}, {{"role": "assistant", "content": "Fe users focus on group harmony. This means they absorb emotions from others. This creates a dynamic where they feel responsible for everyone's feelings. Understanding this is crucial for relationships."}}]}}
+
+→ WRONG: "This means", "This creates", "Understanding this is crucial" are lazy textbook phrases.
+
+✅ GOOD (same content, better voice):
+
+{{"messages": [{{"role": "user", "content": "Why do Fe users care about others?"}}, {{"role": "assistant", "content": "Fe users focus on group harmony - they actually absorb emotions from the people around them. So when someone's upset, the Fe user feels it too. That's why they end up feeling responsible for everyone's feelings."}}]}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+JSON FORMAT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Each pair on its own line, valid JSON:
@@ -371,7 +476,7 @@ VALIDATED FACTS (YOUR ONLY SOURCE)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Generate EXACTLY 8-12 Q&A pairs (no more, no less). Output ONLY valid JSON lines:
+Generate EXACTLY 8-12 Q&A pairs. Output ONLY valid JSON lines:
 """
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -409,7 +514,6 @@ def extract_facts(client: anthropic.Anthropic, content: str, log_api_usage_fn=No
     Extract facts with quotes from content using Haiku (dumber = more literal).
     
     Returns list of dicts with 'fact' and 'quote' keys.
-    Includes quote verification to prevent prompt example leakage.
     """
     prompt = FACT_EXTRACTION_PROMPT.format(content=content)
     
@@ -431,14 +535,7 @@ def extract_facts(client: anthropic.Anthropic, content: str, log_api_usage_fn=No
             cost = (input_tokens * 0.25 / 1000000) + (output_tokens * 1.25 / 1000000)
             log_api_usage_fn("training_fact_extraction", EXTRACTION_MODEL, input_tokens, output_tokens, cost)
         
-        parsed_facts = parse_extracted_facts(response_text)
-        
-        # CRITICAL: Verify quotes actually exist in source content
-        # This prevents prompt example leakage where Claude extracts 
-        # facts from the example section instead of actual content
-        verified_facts = verify_quotes_in_source(parsed_facts, content)
-        
-        return verified_facts
+        return parse_extracted_facts(response_text)
         
     except Exception as e:
         print(f"   ❌ Fact extraction error: {str(e)}")
@@ -494,50 +591,6 @@ def parse_extracted_facts(response: str) -> List[Dict[str, str]]:
         })
     
     return facts
-
-
-def verify_quotes_in_source(facts: List[Dict[str, str]], source_content: str, threshold: int = 70) -> List[Dict[str, str]]:
-    """
-    Filter facts by verifying their quotes actually exist in source content.
-    
-    Uses fuzzy matching to handle minor transcription differences.
-    This prevents prompt example leakage - if a quote doesn't exist in the 
-    actual source content, the fact is rejected.
-    
-    Args:
-        facts: List of dicts with 'fact' and 'quote' keys
-        source_content: Original content that was sent for extraction
-        threshold: Minimum fuzzy match score (0-100) to accept quote
-        
-    Returns:
-        Filtered list of facts where quotes were verified in source
-    """
-    if not facts:
-        return []
-    
-    verified_facts = []
-    source_lower = source_content.lower()
-    
-    for fact_item in facts:
-        quote = fact_item.get('quote', '')
-        if not quote:
-            continue
-            
-        quote_lower = quote.lower()
-        
-        if quote_lower in source_lower:
-            verified_facts.append(fact_item)
-        else:
-            score = fuzz.partial_ratio(quote_lower, source_lower)
-            if score >= threshold:
-                verified_facts.append(fact_item)
-            else:
-                print(f"   ⚠️ Quote not found in source (score={score}): \"{quote[:60]}...\"")
-    
-    if len(verified_facts) < len(facts):
-        print(f"   🔍 Quote verification: {len(verified_facts)}/{len(facts)} facts verified in source")
-    
-    return verified_facts
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -16,3 +16,10 @@ WHERE citations IS NOT NULL;
 COMMENT ON COLUMN messages.citations IS 'RAG citations data (sources, confidence) saved for last 6 messages only';
 COMMENT ON COLUMN messages.follow_up_question IS 'Suggested follow-up question for user, saved for last 6 messages only';
 
+
+
+
+
+
+
+
