@@ -179,17 +179,18 @@ class QueryConfig:
 
 **Technical Implementation:**
 - Multi-stage pipeline:
-  1. **Fact Extraction:** Claude Haiku extracts facts with source quotes
-  2. **Quote Verification:** Fuzzy matching (threshold ≥70) validates quotes exist in source
-  3. **Fact Validation:** Separate validation pass for accuracy
-  4. **Q&A Generation:** Claude Sonnet 4 generates training pairs
-  5. **Contradiction Filtering:** Removes conflicting information
+  1. **Fact Extraction:** Claude Haiku extracts facts with mandatory source quotes (prompt requires "NO QUOTE = FACT DOESN'T EXIST")
+  2. **Fact Validation:** Validation against authoritative MBTI reference data
+  3. **Q&A Generation:** Claude Sonnet 4 generates training pairs from validated facts only
+  4. **Contradiction Filtering:** Regex-based pattern matching removes contradictory claims
 
 **Quality Controls:**
-- Source quote verification blocks hallucinated content
+- Prompt-enforced quote requirement blocks hallucinated content
+- Reference data validation for MBTI accuracy
 - Human review workflow (pending → approved → combined)
 - JSONL output format for OpenAI fine-tuning
 - Progress tracking with partial save/resume
+- Deduplication and 50-pair cap per document
 
 ---
 
@@ -209,19 +210,17 @@ class QueryConfig:
 
 ### Problem 1: Content Leakage in Training Pairs
 
-**The Issue:** Generated Q&A pairs contained quotes that weren't actually in the source document - the AI was hallucinating plausible-sounding content.
+**The Issue:** Generated Q&A pairs contained information that wasn't actually in the source document - Claude was adding mainstream MBTI knowledge that contradicted CS Joseph's framework.
 
-**Root Cause Analysis:** Claude was generating convincing quotes that seemed like they could be in the source, but weren't actually there.
+**Root Cause Analysis:** Claude's training data contains mainstream MBTI information that differs from CS Joseph's unique framework, causing it to generate plausible-sounding but incorrect content.
 
 **Solution Implemented:**
-```python
-def verify_quotes_in_source(quote: str, source_text: str) -> Tuple[bool, int]:
-    """Fuzzy match quotes against actual source content"""
-    ratio = fuzz.partial_ratio(quote.lower(), source_text.lower())
-    return ratio >= 70, ratio  # Threshold blocks hallucinations
-```
+1. **Prompt-Enforced Quote Requirement:** Extraction prompt explicitly states "NO QUOTE = FACT DOESN'T EXIST" - facts without source quotes are rejected
+2. **CSJ Context Injection:** Every prompt includes extensive context about CSJ's unique terminology vs mainstream MBTI
+3. **Reference Data Validation:** Facts validated against authoritative `reference_data.json` for MBTI accuracy
+4. **Contradiction Filtering:** Regex patterns detect and reject claims containing known invalid assertions
 
-**Result:** Quotes with similarity score < 70% are rejected, blocking hallucinated content while allowing legitimate quotes with minor transcription variations.
+**Result:** Pipeline now produces training data that accurately reflects CS Joseph's framework without mainstream MBTI contamination.
 
 ---
 
@@ -418,8 +417,8 @@ def db_operation():
 ### Quality
 | Metric | Value |
 |--------|-------|
-| Quote Verification Threshold | ≥70% fuzzy match |
-| Validation Stages | Multi-stage (extract → validate → generate → filter) |
+| Training Pipeline Stages | 4-stage (extract → validate → generate → filter) |
+| Validation Method | Reference data + contradiction detection |
 | XSS Protection | 100% coverage with DOMPurify |
 
 ### Reliability
