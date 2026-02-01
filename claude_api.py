@@ -837,7 +837,7 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
         try:
             response = make_together_api_call_with_retry(
                 client,
-                model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
+                model="zai-org/GLM-4.6",
                 max_tokens=4096,
                 messages=openai_messages,
                 tools=tools,
@@ -857,13 +857,13 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
         if hasattr(response, 'usage'):
             input_tokens = getattr(response.usage, 'prompt_tokens', 0)
             output_tokens = getattr(response.usage, 'completion_tokens', 0)
-            # Together.ai Llama 3.3 70B pricing: ~$0.88/M input, $0.88/M output
-            cost = (input_tokens / 1000000 * 0.88) + (output_tokens / 1000000 * 0.88)
+            # Together.ai GLM-4.6 pricing: $0.60/M input, $2.20/M output
+            cost = (input_tokens / 1000000 * 0.60) + (output_tokens / 1000000 * 2.20)
             
             # Import log function from main.py
             try:
                 from main import log_api_usage
-                log_api_usage("together_chat", "llama-3.3-70b", input_tokens, output_tokens, cost)
+                log_api_usage("together_chat", "glm-4.6", input_tokens, output_tokens, cost)
             except Exception as e:
                 print(f"⚠️ Could not log Together usage: {e}")
         
@@ -1166,7 +1166,7 @@ Priority: For cognitive function stacks and four sides mappings, ALWAYS use the 
             
             # OpenAI streaming format
             stream = client.chat.completions.create(
-                model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
+                model="zai-org/GLM-4.6",
                 max_tokens=4096,
                 messages=openai_messages,
                 tools=tools,
