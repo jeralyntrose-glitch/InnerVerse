@@ -1,5 +1,5 @@
 import os
-import anthropic
+from openai import OpenAI
 from typing import List, Dict, Any
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -13,6 +13,7 @@ from src.services.prompt_builder import build_system_prompt, PromptAssemblyError
 from src.services.type_injection import get_type_stack
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 API_KEY = os.getenv("API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -706,9 +707,9 @@ def search_web_brave(query: str) -> str:
         print(f"❌ Web search error: {str(e)}")
         return "Unable to perform web search at this time."
 
-def make_claude_api_call_with_retry(client, **kwargs):
+def make_together_api_call_with_retry(client, **kwargs):
     """
-    Make Claude API call with exponential backoff retry logic for overloaded errors.
+    Make Together.ai API call with exponential backoff retry logic for errors.
     Retries: 2s wait, then 4s wait. Max 3 attempts total.
     """
     max_retries = 2
@@ -716,84 +717,92 @@ def make_claude_api_call_with_retry(client, **kwargs):
     
     for attempt in range(max_retries + 1):
         try:
-            response = client.messages.create(**kwargs)
+            response = client.chat.completions.create(**kwargs)
             return response
         
-        except anthropic.InternalServerError as e:
-            # Check if it's an overloaded error
+        except Exception as e:
             error_message = str(e).lower()
-            is_overloaded = 'overloaded' in error_message
+            is_retriable = 'overloaded' in error_message or 'rate' in error_message or '503' in error_message or '529' in error_message
             
-            if is_overloaded and attempt < max_retries:
+            if is_retriable and attempt < max_retries:
                 wait_time = retry_delays[attempt]
-                print(f"⚠️ Claude API overloaded (attempt {attempt + 1}/{max_retries + 1}). Retrying in {wait_time}s...")
+                print(f"⚠️ Together API error (attempt {attempt + 1}/{max_retries + 1}). Retrying in {wait_time}s...")
                 time.sleep(wait_time)
                 continue
             
-            # If not overloaded or max retries reached, re-raise
-            if is_overloaded:
-                raise Exception("Claude API is temporarily busy. Please try again in a moment.")
+            # If not retriable or max retries reached, re-raise
+            if is_retriable:
+                raise Exception("Together API is temporarily busy. Please try again in a moment.")
             else:
                 raise
-        
-        except Exception as e:
-            # For other errors, don't retry - just raise immediately
-            raise
     
     # This shouldn't be reached, but just in case
-    raise Exception("Claude API is temporarily busy. Please try again in a moment.")
+    raise Exception("Together API is temporarily busy. Please try again in a moment.")
 
 def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tuple[str, List[Dict]]:
     """
     Send messages to Claude and get response with automatic InnerVerse backend queries
     Returns: (response_text, tool_use_details)
     """
-    if not ANTHROPIC_API_KEY:
-        raise Exception("ANTHROPIC_API_KEY not set")
+    if not TOGETHER_API_KEY:
+        raise Exception("TOGETHER_API_KEY not set")
     
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = OpenAI(
+        api_key=TOGETHER_API_KEY,
+        base_url="https://api.together.xyz/v1"
+    )
     
+    # OpenAI function calling format
     tools = [
         {
-            "name": "query_reference_data",
-            "description": "Get exact MBTI type structures like four sides mappings, cognitive function stacks, temperaments, and quadra assignments. Use this FIRST for factual lookup questions about type structures (e.g., 'What are INFJ's four sides?', 'ENFP function stack', 'INTJ temperament'). Returns verified reference data.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "type_code": {
-                        "type": "string",
-                        "description": "The MBTI type code in uppercase (e.g., INFJ, ENFP, ISTJ, ENTP)"
-                    }
-                },
-                "required": ["type_code"]
+            "type": "function",
+            "function": {
+                "name": "query_reference_data",
+                "description": "Get exact MBTI type structures like four sides mappings, cognitive function stacks, temperaments, and quadra assignments. Use this FIRST for factual lookup questions about type structures (e.g., 'What are INFJ's four sides?', 'ENFP function stack', 'INTJ temperament'). Returns verified reference data.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "type_code": {
+                            "type": "string",
+                            "description": "The MBTI type code in uppercase (e.g., INFJ, ENFP, ISTJ, ENTP)"
+                        }
+                    },
+                    "required": ["type_code"]
+                }
             }
         },
         {
-            "name": "query_innerverse_backend",
-            "description": "Search the InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts on MBTI, Jungian psychology, cognitive functions, and type theory. Use this when the user asks MBTI/psychology questions that need examples, context, or detailed explanations beyond basic type structures.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "question": {
-                        "type": "string",
-                        "description": "The question to search for in the MBTI knowledge base."
-                    }
-                },
-                "required": ["question"]
+            "type": "function",
+            "function": {
+                "name": "query_innerverse_backend",
+                "description": "Search the InnerVerse knowledge base containing 183+ CS Joseph YouTube transcripts on MBTI, Jungian psychology, cognitive functions, and type theory. Use this when the user asks MBTI/psychology questions that need examples, context, or detailed explanations beyond basic type structures.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "question": {
+                            "type": "string",
+                            "description": "The question to search for in the MBTI knowledge base."
+                        }
+                    },
+                    "required": ["question"]
+                }
             }
         },
         {
-            "name": "search_web",
-            "description": "Search the web for current information, facts, news, or general knowledge not in the MBTI knowledge base. Use this for restaurants, locations, current events, general facts, etc.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query for public information"
-                    }
-                },
-                "required": ["query"]
+            "type": "function",
+            "function": {
+                "name": "search_web",
+                "description": "Search the web for current information, facts, news, or general knowledge not in the MBTI knowledge base. Use this for restaurants, locations, current events, general facts, etc.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query for public information"
+                        }
+                    },
+                    "required": ["query"]
+                }
             }
         }
     ]
@@ -819,16 +828,20 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
     tool_use_details = []
     max_iterations = 3
     
+    # Convert messages to OpenAI format with system message
+    openai_messages = [{"role": "system", "content": system_message}]
+    for msg in messages:
+        openai_messages.append({"role": msg.get("role"), "content": msg.get("content")})
+    
     for iteration in range(max_iterations):
         try:
-            response = make_claude_api_call_with_retry(
+            response = make_together_api_call_with_retry(
                 client,
-                model="claude-sonnet-4-20250514",
+                model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
                 max_tokens=4096,
-                system=system_message,
+                messages=openai_messages,
                 tools=tools,
-                messages=messages,
-                timeout=60.0  # 60-second timeout to prevent hanging
+                timeout=60.0
             )
         except Exception as e:
             # Catch user-friendly error messages from retry logic
@@ -840,65 +853,68 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
                 # Re-raise other unexpected errors
                 raise
         
-        # Log Claude API usage
+        # Log API usage
         if hasattr(response, 'usage'):
-            input_tokens = getattr(response.usage, 'input_tokens', 0)
-            output_tokens = getattr(response.usage, 'output_tokens', 0)
-            cost = (input_tokens / 1000 * 0.003) + (output_tokens / 1000 * 0.015)
+            input_tokens = getattr(response.usage, 'prompt_tokens', 0)
+            output_tokens = getattr(response.usage, 'completion_tokens', 0)
+            # Together.ai Llama 3.3 70B pricing: ~$0.88/M input, $0.88/M output
+            cost = (input_tokens / 1000000 * 0.88) + (output_tokens / 1000000 * 0.88)
             
             # Import log function from main.py
             try:
                 from main import log_api_usage
-                log_api_usage("claude_chat", "claude-sonnet-4", input_tokens, output_tokens, cost)
+                log_api_usage("together_chat", "llama-3.3-70b", input_tokens, output_tokens, cost)
             except Exception as e:
-                print(f"⚠️ Could not log Claude usage: {e}")
+                print(f"⚠️ Could not log Together usage: {e}")
         
-        if response.stop_reason == "end_turn":
-            for block in response.content:
-                if hasattr(block, 'text'):
-                    # Extract follow-up question if present
-                    full_text = block.text
-                    follow_up_question = extract_follow_up_question(full_text)
-                    
-                    # Remove the [FOLLOW-UP: ...] from the main text
-                    main_text = full_text
-                    if follow_up_question:
-                        import re
-                        follow_up_match = re.search(r'\[FOLLOW-UP:\s*(.+?)\]', full_text, re.IGNORECASE)
-                        if follow_up_match:
-                            main_text = full_text[:follow_up_match.start()].strip()
-                    
-                    return (main_text, tool_use_details, follow_up_question)
+        choice = response.choices[0]
+        finish_reason = choice.finish_reason
         
-        elif response.stop_reason == "tool_use":
-            for block in response.content:
-                if block.type == "tool_use":
-                    tool_name = block.name
-                    tool_input = block.input
+        if finish_reason == "stop":
+            # Normal completion
+            full_text = choice.message.content or ""
+            follow_up_question = extract_follow_up_question(full_text)
+            
+            # Remove the [FOLLOW-UP: ...] from the main text
+            main_text = full_text
+            if follow_up_question:
+                import re
+                follow_up_match = re.search(r'\[FOLLOW-UP:\s*(.+?)\]', full_text, re.IGNORECASE)
+                if follow_up_match:
+                    main_text = full_text[:follow_up_match.start()].strip()
+            
+            return (main_text, tool_use_details, follow_up_question)
+        
+        elif finish_reason == "tool_calls":
+            # Handle tool calls
+            tool_calls = choice.message.tool_calls or []
+            for tool_call in tool_calls:
+                tool_name = tool_call.function.name
+                tool_input = json.loads(tool_call.function.arguments)
                     
-                    if tool_name == "query_reference_data":
-                        type_code = tool_input.get("type_code", "").upper()
-                        print(f"📖 [REFERENCE DATA] Looking up type: {type_code}")
+                if tool_name == "query_reference_data":
+                    type_code = tool_input.get("type_code", "").upper()
+                    print(f"📖 [REFERENCE DATA] Looking up type: {type_code}")
+                    
+                    # Lookup in reference data using same loader as type_injection
+                    type_data = get_type_stack(type_code)
+                    
+                    if type_data:
+                        # Extract four sides data properly
+                        four_sides = type_data.get("four_sides", {})
                         
-                        # Lookup in reference data using same loader as type_injection
-                        type_data = get_type_stack(type_code)
+                        # Extract type codes from each side
+                        ego_type = four_sides.get('ego', {}).get('type', 'Unknown')
+                        shadow_type = four_sides.get('shadow', {}).get('type', 'Unknown')
+                        subconscious_type = four_sides.get('subconscious', {}).get('type', 'Unknown')
+                        superego_type = four_sides.get('superego', {}).get('type', 'Unknown')
                         
-                        if type_data:
-                            # Extract four sides data properly
-                            four_sides = type_data.get("four_sides", {})
-                            
-                            # Extract type codes from each side
-                            ego_type = four_sides.get('ego', {}).get('type', 'Unknown')
-                            shadow_type = four_sides.get('shadow', {}).get('type', 'Unknown')
-                            subconscious_type = four_sides.get('subconscious', {}).get('type', 'Unknown')
-                            superego_type = four_sides.get('superego', {}).get('type', 'Unknown')
-                            
-                            # Format functions for each side
-                            def format_functions(funcs):
-                                return '\n'.join([f"  • {f.get('position', 'Unknown')}: {f.get('function', 'Unknown')}" for f in funcs])
-                            
-                            # Build formatted response
-                            result_text = f"""**{type_code} Complete Type Information:**
+                        # Format functions for each side
+                        def format_functions(funcs):
+                            return '\n'.join([f"  • {f.get('position', 'Unknown')}: {f.get('function', 'Unknown')}" for f in funcs])
+                        
+                        # Build formatted response
+                        result_text = f"""**{type_code} Complete Type Information:**
 
 🎭 **Ego ({ego_type}):**
 {format_functions(four_sides.get('ego', {}).get('functions', []))}
@@ -917,94 +933,82 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
 • Quadra: {type_data.get('categories', {}).get('quadra', 'Unknown')}
 • Interaction Style: {type_data.get('categories', {}).get('interaction_style', 'Unknown')}
 • Temple: {type_data.get('categories', {}).get('temple', 'Unknown')}"""
-                            
-                            print(f"✅ [REFERENCE DATA] Found and formatted data for {type_code}")
-                        else:
-                            result_text = f"No reference data found for type: {type_code}"
-                            print(f"❌ [REFERENCE DATA] No data for {type_code}")
                         
-                        tool_use_details.append({
-                            "tool": "query_reference_data",
-                            "type_code": type_code,
-                            "found": bool(type_data)
-                        })
-                        
-                        messages.append({
-                            "role": "assistant",
-                            "content": response.content
-                        })
-                        
-                        messages.append({
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "tool_result",
-                                    "tool_use_id": block.id,
-                                    "content": result_text
-                                }
-                            ]
-                        })
+                        print(f"✅ [REFERENCE DATA] Found and formatted data for {type_code}")
+                    else:
+                        result_text = f"No reference data found for type: {type_code}"
+                        print(f"❌ [REFERENCE DATA] No data for {type_code}")
                     
-                    elif tool_name == "query_innerverse_backend":
-                        question = tool_input.get("question", "")
-                        print(f"🔍 Querying InnerVerse Pinecone (local) for: {question}")
-                        
-                        result = query_innerverse_local(question)
-                        # Handle tuple return (context, citations_data) or string (backwards compat)
-                        if isinstance(result, tuple):
-                            backend_result, _ = result  # Citations not used in non-streaming mode
-                        else:
-                            backend_result = result
-                        
-                        tool_use_details.append({
-                            "tool": "query_innerverse_backend",
-                            "question": question,
-                            "result_length": len(backend_result)
-                        })
-                        
-                        messages.append({
-                            "role": "assistant",
-                            "content": response.content
-                        })
-                        
-                        messages.append({
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "tool_result",
-                                    "tool_use_id": block.id,
-                                    "content": backend_result if backend_result else "No relevant content found in knowledge base."
-                                }
-                            ]
-                        })
+                    tool_use_details.append({
+                        "tool": "query_reference_data",
+                        "type_code": type_code,
+                        "found": bool(type_data)
+                    })
                     
-                    elif tool_name == "search_web":
-                        query = tool_input.get("query", "")
-                        print(f"🌐 Searching web for: {query}")
-                        
-                        web_result = search_web_brave(query)
-                        
-                        tool_use_details.append({
-                            "tool": "search_web",
-                            "query": query,
-                            "result_length": len(web_result)
-                        })
-                        
-                        messages.append({
-                            "role": "assistant",
-                            "content": response.content
-                        })
-                        
-                        messages.append({
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "tool_result",
-                                    "tool_use_id": block.id,
-                                    "content": web_result
-                                }
-                            ]
-                        })
+                    # OpenAI format: add assistant message with tool_calls, then tool result
+                    openai_messages.append({
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [{"id": tool_call.id, "type": "function", "function": {"name": tool_name, "arguments": tool_call.function.arguments}}]
+                    })
+                    openai_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": result_text
+                    })
+                
+                elif tool_name == "query_innerverse_backend":
+                    question = tool_input.get("question", "")
+                    print(f"🔍 Querying InnerVerse Pinecone (local) for: {question}")
+                    
+                    result = query_innerverse_local(question)
+                    # Handle tuple return (context, citations_data) or string (backwards compat)
+                    if isinstance(result, tuple):
+                        backend_result, _ = result  # Citations not used in non-streaming mode
+                    else:
+                        backend_result = result
+                    
+                    tool_use_details.append({
+                        "tool": "query_innerverse_backend",
+                        "question": question,
+                        "result_length": len(backend_result)
+                    })
+                    
+                    # OpenAI format: add assistant message with tool_calls, then tool result
+                    openai_messages.append({
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [{"id": tool_call.id, "type": "function", "function": {"name": tool_name, "arguments": tool_call.function.arguments}}]
+                    })
+                    openai_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": backend_result if backend_result else "No relevant content found in knowledge base."
+                    })
+                
+                elif tool_name == "search_web":
+                    query = tool_input.get("query", "")
+                    print(f"🌐 Searching web for: {query}")
+                    
+                    web_result = search_web_brave(query)
+                    
+                    tool_use_details.append({
+                        "tool": "search_web",
+                        "query": query,
+                        "result_length": len(web_result)
+                    })
+                    
+                    # OpenAI format: add assistant message with tool_calls, then tool result
+                    openai_messages.append({
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [{"id": tool_call.id, "type": "function", "function": {"name": tool_name, "arguments": tool_call.function.arguments}}]
+                    })
+                    openai_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": web_result
+                    })
             continue
         
         else:
@@ -1032,11 +1036,14 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     import time
     start_time = time.time()
     
-    if not ANTHROPIC_API_KEY:
-        yield "data: " + '{"error": "ANTHROPIC_API_KEY not set"}\n\n'
+    if not TOGETHER_API_KEY:
+        yield "data: " + '{"error": "TOGETHER_API_KEY not set"}\n\n'
         return
     
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = OpenAI(
+        api_key=TOGETHER_API_KEY,
+        base_url="https://api.together.xyz/v1"
+    )
     full_response_text = []  # Accumulate response for follow-up extraction
     citations_data = None  # Store citations from RAG query
     
@@ -1045,7 +1052,7 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     for msg in reversed(messages):
         if msg.get('role') == 'user':
             last_user_message_content = msg.get('content')
-            # Handle Anthropic block arrays
+            # Handle content that might be a list
             if isinstance(last_user_message_content, list):
                 for block in last_user_message_content:
                     if isinstance(block, dict) and block.get('type') == 'text':
@@ -1082,34 +1089,40 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     # Send status update after RAG completes
     yield "data: " + '{"status": "generating"}\n\n'
     
-    # Tools kept as FALLBACK only (web search, explicit reference lookups)
+    # Tools kept as FALLBACK only (web search, explicit reference lookups) - OpenAI function format
     tools = [
         {
-            "name": "query_reference_data",
-            "description": "Get exact MBTI type structures like four sides mappings, cognitive function stacks, temperaments, and quadra assignments. Use this ONLY if you need to verify specific type data not already provided in context.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "type_code": {
-                        "type": "string",
-                        "description": "The MBTI type code in uppercase (e.g., INFJ, ENFP, ISTJ, ENTP)"
-                    }
-                },
-                "required": ["type_code"]
+            "type": "function",
+            "function": {
+                "name": "query_reference_data",
+                "description": "Get exact MBTI type structures like four sides mappings, cognitive function stacks, temperaments, and quadra assignments. Use this ONLY if you need to verify specific type data not already provided in context.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "type_code": {
+                            "type": "string",
+                            "description": "The MBTI type code in uppercase (e.g., INFJ, ENFP, ISTJ, ENTP)"
+                        }
+                    },
+                    "required": ["type_code"]
+                }
             }
         },
         {
-            "name": "search_web",
-            "description": "Search the web for current information, facts, news, or general knowledge not in the MBTI knowledge base. Use this for restaurants, locations, current events, general facts, etc.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query for public information"
-                    }
-                },
-                "required": ["query"]
+            "type": "function",
+            "function": {
+                "name": "search_web",
+                "description": "Search the web for current information, facts, news, or general knowledge not in the MBTI knowledge base. Use this for restaurants, locations, current events, general facts, etc.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query for public information"
+                        }
+                    },
+                    "required": ["query"]
+                }
             }
         }
     ]
@@ -1140,129 +1153,127 @@ Priority: For cognitive function stacks and four sides mappings, ALWAYS use the 
     
     max_iterations = 3
     
+    # Convert messages to OpenAI format with system message
+    openai_messages = [{"role": "system", "content": system_message}]
+    for msg in messages:
+        openai_messages.append({"role": msg.get("role"), "content": msg.get("content")})
+    
     try:
         for iteration in range(max_iterations):
             # Send search status to frontend (only for tool use iterations)
             if iteration > 0:
                 yield "data: " + '{"status": "searching"}\n\n'
             
-            with client.messages.stream(
-                model="claude-sonnet-4-20250514",  # Back to Sonnet 4 (3.5 deprecated)
+            # OpenAI streaming format
+            stream = client.chat.completions.create(
+                model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
                 max_tokens=4096,
-                system=system_message,
+                messages=openai_messages,
                 tools=tools,
-                messages=messages,
-                timeout=60.0  # 60-second timeout to prevent hanging
-            ) as stream:
-                for event in stream:
-                    if event.type == "content_block_start":
-                        continue
+                stream=True,
+                timeout=60.0
+            )
+            
+            collected_tool_calls = []
+            current_tool_call = None
+            
+            for chunk in stream:
+                if not chunk.choices:
+                    continue
+                    
+                delta = chunk.choices[0].delta
+                finish_reason = chunk.choices[0].finish_reason
+                
+                # Handle text content streaming
+                if delta.content:
+                    text_chunk = delta.content
+                    full_response_text.append(text_chunk)
+                    yield "data: " + json.dumps({"chunk": text_chunk}) + "\n\n"
+                
+                # Handle tool calls (accumulate them)
+                if delta.tool_calls:
+                    for tool_call_delta in delta.tool_calls:
+                        if tool_call_delta.index is not None:
+                            # New tool call or continuing existing one
+                            while len(collected_tool_calls) <= tool_call_delta.index:
+                                collected_tool_calls.append({"id": "", "function": {"name": "", "arguments": ""}})
+                            
+                            tc = collected_tool_calls[tool_call_delta.index]
+                            if tool_call_delta.id:
+                                tc["id"] = tool_call_delta.id
+                            if tool_call_delta.function:
+                                if tool_call_delta.function.name:
+                                    tc["function"]["name"] = tool_call_delta.function.name
+                                if tool_call_delta.function.arguments:
+                                    tc["function"]["arguments"] += tool_call_delta.function.arguments
+                
+                # Handle finish
+                if finish_reason == "tool_calls":
+                    # Process tool calls
+                    for tc in collected_tool_calls:
+                        tool_name = tc["function"]["name"]
+                        try:
+                            tool_input = json.loads(tc["function"]["arguments"])
+                        except json.JSONDecodeError:
+                            tool_input = {}
                         
-                    elif event.type == "content_block_delta":
-                        if hasattr(event.delta, "text"):
-                            # Stream text chunks to frontend immediately (no batching for max speed)
-                            text_chunk = event.delta.text
-                            full_response_text.append(text_chunk)  # Accumulate for follow-up extraction
-                            yield "data: " + json.dumps({"chunk": text_chunk}) + "\n\n"
+                        if tool_name == "query_reference_data":
+                            type_code = tool_input.get("type_code", "").upper()
+                            yield "data: " + '{"status": "looking_up_reference"}\n\n'
+                            type_data = get_type_stack(type_code)
                             
-                    elif event.type == "message_stop":
-                        # Check if we hit a tool use
-                        final_message = stream.get_final_message()
+                            if type_data:
+                                result_text = json.dumps(type_data, indent=2)
+                                print(f"✅ [REFERENCE DATA STREAMING] Found data for {type_code}")
+                            else:
+                                result_text = f"No reference data found for type: {type_code}"
+                                print(f"❌ [REFERENCE DATA STREAMING] No data for {type_code}")
+                            
+                            # OpenAI format: add assistant message with tool_calls, then tool result
+                            openai_messages.append({
+                                "role": "assistant",
+                                "content": None,
+                                "tool_calls": [{"id": tc["id"], "type": "function", "function": {"name": tool_name, "arguments": tc["function"]["arguments"]}}]
+                            })
+                            openai_messages.append({
+                                "role": "tool",
+                                "tool_call_id": tc["id"],
+                                "content": result_text
+                            })
                         
-                        if final_message.stop_reason == "tool_use":
-                            # Handle tool use (Reference data, Pinecone search, or web search)
-                            for block in final_message.content:
-                                if block.type == "tool_use":
-                                    if block.name == "query_reference_data":
-                                        type_code = block.input.get("type_code", "").upper()
-                                        
-                                        # Lookup reference data using same loader as type_injection
-                                        yield "data: " + '{"status": "looking_up_reference"}\n\n'
-                                        type_data = get_type_stack(type_code)
-                                        
-                                        if type_data:
-                                            result_text = json.dumps(type_data, indent=2)
-                                            print(f"✅ [REFERENCE DATA STREAMING] Found data for {type_code} via type_injection.get_type_stack()")
-                                        else:
-                                            result_text = f"No reference data found for type: {type_code}"
-                                            print(f"❌ [REFERENCE DATA STREAMING] No data for {type_code} in reference_data.json")
-                                        
-                                        # Add tool result to messages and continue streaming
-                                        messages.append({
-                                            "role": "assistant",
-                                            "content": final_message.content
-                                        })
-                                        
-                                        messages.append({
-                                            "role": "user",
-                                            "content": [
-                                                {
-                                                    "type": "tool_result",
-                                                    "tool_use_id": block.id,
-                                                    "content": result_text
-                                                }
-                                            ]
-                                        })
-                                        break
-                                    
-                                    # NOTE: query_innerverse_backend tool REMOVED
-                                    # RAG context is now pre-fetched BEFORE Claude call (see top of function)
-                                    # This eliminates the tool use round-trip, saving ~10-15s
-                                        
-                                    elif block.name == "search_web":
-                                        query = block.input.get("query", "")
-                                        
-                                        # Search web with Brave API
-                                        yield "data: " + '{"status": "searching_web"}\n\n'
-                                        web_result = search_web_brave(query)
-                                        
-                                        # Add tool result to messages and continue streaming
-                                        messages.append({
-                                            "role": "assistant",
-                                            "content": final_message.content
-                                        })
-                                        
-                                        messages.append({
-                                            "role": "user",
-                                            "content": [
-                                                {
-                                                    "type": "tool_result",
-                                                    "tool_use_id": block.id,
-                                                    "content": web_result
-                                                }
-                                            ]
-                                        })
-                                        break
-                            # Continue to next iteration to get final response with context
-                            continue
-                        else:
-                            # Done! Log usage and extract follow-up question
-                            # json is imported at module level (line 9)
+                        elif tool_name == "search_web":
+                            query = tool_input.get("query", "")
+                            yield "data: " + '{"status": "searching_web"}\n\n'
+                            web_result = search_web_brave(query)
                             
-                            # Log Claude API usage
-                            if hasattr(final_message, 'usage'):
-                                input_tokens = getattr(final_message.usage, 'input_tokens', 0)
-                                output_tokens = getattr(final_message.usage, 'output_tokens', 0)
-                                cost = (input_tokens / 1000 * 0.003) + (output_tokens / 1000 * 0.015)
-                                
-                                try:
-                                    from main import log_api_usage
-                                    log_api_usage("claude_chat_stream", "claude-sonnet-4", input_tokens, output_tokens, cost)
-                                    print(f"💰 Logged streaming Claude usage: ${cost:.6f}")
-                                except Exception as e:
-                                    print(f"⚠️ Could not log streaming Claude usage: {e}")
-                            
-                            follow_up = extract_follow_up_question("".join(full_response_text))
-                            done_payload = {"done": True, "follow_up": follow_up}
-                            if citations_data:
-                                done_payload["citations"] = citations_data
-                            
-                            # Log total time
-                            total_time = time.time() - start_time
-                            print(f"⏱️ [TOTAL TIME] Response completed in {total_time:.1f}s")
-                            
-                            yield "data: " + json.dumps(done_payload) + "\n\n"
-                            return
+                            # OpenAI format: add assistant message with tool_calls, then tool result
+                            openai_messages.append({
+                                "role": "assistant",
+                                "content": None,
+                                "tool_calls": [{"id": tc["id"], "type": "function", "function": {"name": tool_name, "arguments": tc["function"]["arguments"]}}]
+                            })
+                            openai_messages.append({
+                                "role": "tool",
+                                "tool_call_id": tc["id"],
+                                "content": web_result
+                            })
+                    
+                    # Continue to next iteration
+                    break
+                
+                elif finish_reason == "stop":
+                    # Done! Extract follow-up and send done payload
+                    follow_up = extract_follow_up_question("".join(full_response_text))
+                    done_payload = {"done": True, "follow_up": follow_up}
+                    if citations_data:
+                        done_payload["citations"] = citations_data
+                    
+                    # Log total time
+                    total_time = time.time() - start_time
+                    print(f"⏱️ [TOTAL TIME] Response completed in {total_time:.1f}s")
+                    
+                    yield "data: " + json.dumps(done_payload) + "\n\n"
+                    return
     
         # Max iterations reached - send done with follow-up
         follow_up = extract_follow_up_question("".join(full_response_text))
@@ -1279,5 +1290,5 @@ Priority: For cognitive function stacks and four sides mappings, ALWAYS use the 
     except Exception as e:
         error_msg = str(e)
         total_time = time.time() - start_time
-        print(f"❌ Claude streaming error after {total_time:.1f}s: {error_msg}")
+        print(f"❌ Together streaming error after {total_time:.1f}s: {error_msg}")
         yield "data: " + json.dumps({"error": f"Sorry, I encountered an error: {error_msg}. Please try again."}) + "\n\n"
