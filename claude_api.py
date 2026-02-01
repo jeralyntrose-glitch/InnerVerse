@@ -778,11 +778,13 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
     Send messages to Claude and get response with automatic InnerVerse backend queries
     Returns: (response_text, tool_use_details)
     """
-    if not OPENROUTER_API_KEY:
+    # Get API key at runtime (not cached at import) to pick up newly added secrets
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
         raise Exception("OPENROUTER_API_KEY not set")
     
     client = OpenAI(
-        api_key=OPENROUTER_API_KEY,
+        api_key=api_key,
         base_url="https://openrouter.ai/api/v1"
     )
     
@@ -1075,12 +1077,14 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     import time
     start_time = time.time()
     
-    if not OPENROUTER_API_KEY:
+    # Get API key at runtime (not cached at import) to pick up newly added secrets
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
         yield "data: " + '{"error": "OPENROUTER_API_KEY not set"}\n\n'
         return
     
     client = OpenAI(
-        api_key=OPENROUTER_API_KEY,
+        api_key=api_key,
         base_url="https://openrouter.ai/api/v1"
     )
     full_response_text = []  # Accumulate response for follow-up extraction
