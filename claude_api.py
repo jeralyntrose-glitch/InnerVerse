@@ -13,7 +13,7 @@ from src.services.prompt_builder import build_system_prompt, PromptAssemblyError
 from src.services.type_injection import get_type_stack
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 API_KEY = os.getenv("API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -707,9 +707,9 @@ def search_web_brave(query: str) -> str:
         print(f"❌ Web search error: {str(e)}")
         return "Unable to perform web search at this time."
 
-def make_zhipu_api_call_with_retry(client, **kwargs):
+def make_openrouter_api_call_with_retry(client, **kwargs):
     """
-    Make Zhipu AI API call with exponential backoff retry logic for errors.
+    Make OpenRouter API call with exponential backoff retry logic for errors.
     Retries: 2s wait, then 4s wait. Max 3 attempts total.
     """
     max_retries = 2
@@ -744,12 +744,12 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
     Send messages to Claude and get response with automatic InnerVerse backend queries
     Returns: (response_text, tool_use_details)
     """
-    if not ZHIPU_API_KEY:
-        raise Exception("ZHIPU_API_KEY not set")
+    if not OPENROUTER_API_KEY:
+        raise Exception("OPENROUTER_API_KEY not set")
     
     client = OpenAI(
-        api_key=ZHIPU_API_KEY,
-        base_url="https://open.bigmodel.cn/api/paas/v4/"
+        api_key=OPENROUTER_API_KEY,
+        base_url="https://openrouter.ai/api/v1"
     )
     
     # OpenAI function calling format
@@ -835,9 +835,9 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
     
     for iteration in range(max_iterations):
         try:
-            response = make_zhipu_api_call_with_retry(
+            response = make_openrouter_api_call_with_retry(
                 client,
-                model="glm-4v",
+                model="z-ai/glm-4.6v",
                 max_tokens=4096,
                 messages=openai_messages,
                 tools=tools,
@@ -857,15 +857,15 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
         if hasattr(response, 'usage'):
             input_tokens = getattr(response.usage, 'prompt_tokens', 0)
             output_tokens = getattr(response.usage, 'completion_tokens', 0)
-            # Zhipu AI GLM-4V pricing: $0.14/M input, $0.42/M output
-            cost = (input_tokens / 1000000 * 0.14) + (output_tokens / 1000000 * 0.42)
+            # OpenRouter GLM-4.6V pricing: $0.30/M input, $0.90/M output
+            cost = (input_tokens / 1000000 * 0.30) + (output_tokens / 1000000 * 0.90)
             
             # Import log function from main.py
             try:
                 from main import log_api_usage
-                log_api_usage("zhipu_chat", "glm-4v", input_tokens, output_tokens, cost)
+                log_api_usage("openrouter_chat", "glm-4.6v", input_tokens, output_tokens, cost)
             except Exception as e:
-                print(f"⚠️ Could not log Zhipu usage: {e}")
+                print(f"⚠️ Could not log OpenRouter usage: {e}")
         
         choice = response.choices[0]
         finish_reason = choice.finish_reason
@@ -1036,13 +1036,13 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     import time
     start_time = time.time()
     
-    if not ZHIPU_API_KEY:
-        yield "data: " + '{"error": "ZHIPU_API_KEY not set"}\n\n'
+    if not OPENROUTER_API_KEY:
+        yield "data: " + '{"error": "OPENROUTER_API_KEY not set"}\n\n'
         return
     
     client = OpenAI(
-        api_key=ZHIPU_API_KEY,
-        base_url="https://open.bigmodel.cn/api/paas/v4/"
+        api_key=OPENROUTER_API_KEY,
+        base_url="https://openrouter.ai/api/v1"
     )
     full_response_text = []  # Accumulate response for follow-up extraction
     citations_data = None  # Store citations from RAG query
@@ -1166,7 +1166,7 @@ Priority: For cognitive function stacks and four sides mappings, ALWAYS use the 
             
             # OpenAI streaming format
             stream = client.chat.completions.create(
-                model="glm-4v",
+                model="z-ai/glm-4.6v",
                 max_tokens=4096,
                 messages=openai_messages,
                 tools=tools,
