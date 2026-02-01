@@ -707,6 +707,40 @@ def search_web_brave(query: str) -> str:
         print(f"❌ Web search error: {str(e)}")
         return "Unable to perform web search at this time."
 
+def has_image_content(messages):
+    """
+    Check if any message contains image content (for hybrid model routing).
+    Returns True if images are present, False for text-only.
+    
+    Image content can appear as:
+    - content array with {"type": "image", ...} blocks
+    - content array with {"type": "image_url", ...} blocks
+    """
+    for msg in messages:
+        content = msg.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    block_type = block.get("type", "")
+                    if block_type in ("image", "image_url"):
+                        return True
+    return False
+
+def get_model_for_request(messages):
+    """
+    Hybrid router: Select optimal model based on content type.
+    - GLM-4.6V for vision (images) - $0.30/$0.90 per M tokens
+    - GLM-4.7 for text-only - $0.40/$1.50 per M tokens
+    
+    Returns: (model_name, input_price_per_m, output_price_per_m)
+    """
+    if has_image_content(messages):
+        print("🖼️ [ROUTER] Image detected → using GLM-4.6V (vision model)")
+        return ("z-ai/glm-4.6v", 0.30, 0.90)
+    else:
+        print("📝 [ROUTER] Text-only → using GLM-4.7")
+        return ("z-ai/glm-4.7", 0.40, 1.50)
+
 def make_openrouter_api_call_with_retry(client, **kwargs):
     """
     Make OpenRouter API call with exponential backoff retry logic for errors.
@@ -833,11 +867,14 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
     for msg in messages:
         openai_messages.append({"role": msg.get("role"), "content": msg.get("content")})
     
+    # Hybrid router: Select model based on content type
+    selected_model, input_price, output_price = get_model_for_request(openai_messages)
+    
     for iteration in range(max_iterations):
         try:
             response = make_openrouter_api_call_with_retry(
                 client,
-                model="z-ai/glm-4.7",
+                model=selected_model,
                 max_tokens=4096,
                 messages=openai_messages,
                 tools=tools,
@@ -857,13 +894,15 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
         if hasattr(response, 'usage'):
             input_tokens = getattr(response.usage, 'prompt_tokens', 0)
             output_tokens = getattr(response.usage, 'completion_tokens', 0)
-            # OpenRouter GLM-4.7 pricing: $0.40/M input, $1.50/M output
-            cost = (input_tokens / 1000000 * 0.40) + (output_tokens / 1000000 * 1.50)
+            # Dynamic pricing based on selected model
+            cost = (input_tokens / 1000000 * input_price) + (output_tokens / 1000000 * output_price)
             
             # Import log function from main.py
             try:
                 from main import log_api_usage
-                log_api_usage("openrouter_chat", "glm-4.7", input_tokens, output_tokens, cost)
+                # Extract short model name for logging (e.g., "z-ai/glm-4.6v" -> "glm-4.6v")
+                model_short = selected_model.split("/")[-1] if "/" in selected_model else selected_model
+                log_api_usage("openrouter_chat", model_short, input_tokens, output_tokens, cost)
             except Exception as e:
                 print(f"⚠️ Could not log OpenRouter usage: {e}")
         
@@ -1158,6 +1197,9 @@ Priority: For cognitive function stacks and four sides mappings, ALWAYS use the 
     for msg in messages:
         openai_messages.append({"role": msg.get("role"), "content": msg.get("content")})
     
+    # Hybrid router: Select model based on content type
+    selected_model, input_price, output_price = get_model_for_request(openai_messages)
+    
     try:
         for iteration in range(max_iterations):
             # Send search status to frontend (only for tool use iterations)
@@ -1166,7 +1208,7 @@ Priority: For cognitive function stacks and four sides mappings, ALWAYS use the 
             
             # OpenAI streaming format
             stream = client.chat.completions.create(
-                model="z-ai/glm-4.7",
+                model=selected_model,
                 max_tokens=4096,
                 messages=openai_messages,
                 tools=tools,
