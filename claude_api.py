@@ -1083,15 +1083,13 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
         yield "data: " + '{"error": "OPENROUTER_API_KEY not set"}\n\n'
         return
     
-    # Debug: Check API key format
+    # Debug: Check API key
     key_prefix = api_key[:10] if len(api_key) > 10 else api_key[:4]
-    print(f"🔑 [DEBUG] OpenRouter API key prefix: {key_prefix}...")
-    if not api_key.startswith("sk-or-"):
-        print(f"⚠️ [WARNING] OpenRouter keys should start with 'sk-or-' but got: {key_prefix}")
+    print(f"🔑 [DEBUG] Z.ai API key prefix: {key_prefix}...")
     
     client = OpenAI(
         api_key=api_key,
-        base_url="https://openrouter.ai/api/v1"
+        base_url="https://api.z.ai/v1"
     )
     full_response_text = []  # Accumulate response for follow-up extraction
     citations_data = None  # Store citations from RAG query
