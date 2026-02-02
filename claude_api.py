@@ -785,7 +785,7 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
     
     client = OpenAI(
         api_key=api_key,
-        base_url="https://api.z.ai/v1"
+        base_url="https://api.z.ai/api/paas/v4/"
     )
     
     # OpenAI function calling format
@@ -1089,7 +1089,7 @@ def chat_with_claude_streaming(messages: List[Dict[str, str]], conversation_id: 
     
     client = OpenAI(
         api_key=api_key,
-        base_url="https://api.z.ai/v1"
+        base_url="https://api.z.ai/api/paas/v4/"
     )
     full_response_text = []  # Accumulate response for follow-up extraction
     citations_data = None  # Store citations from RAG query
