@@ -729,17 +729,17 @@ def has_image_content(messages):
 def get_model_for_request(messages):
     """
     Hybrid router: Select optimal model based on content type.
-    - GLM-4.6V for vision (images) - $0.30/$0.90 per M tokens
-    - GLM-4.7 for text-only - $0.40/$1.50 per M tokens
+    - GLM-4.6V for vision (images) - Z.ai pricing
+    - GLM-4.7 for text-only - Z.ai pricing
     
     Returns: (model_name, input_price_per_m, output_price_per_m)
     """
     if has_image_content(messages):
-        print("🖼️ [ROUTER] Image detected → using GLM-4.6V (vision model)")
-        return ("z-ai/glm-4.6v", 0.30, 0.90)
+        print("🖼️ [ROUTER] Image detected → using glm-4.6v (vision model)")
+        return ("glm-4.6v", 0.10, 0.10)  # Z.ai direct pricing
     else:
-        print("📝 [ROUTER] Text-only → using GLM-4.7")
-        return ("z-ai/glm-4.7", 0.40, 1.50)
+        print("📝 [ROUTER] Text-only → using glm-4.7")
+        return ("glm-4.7", 0.10, 0.10)  # Z.ai direct pricing
 
 def make_openrouter_api_call_with_retry(client, **kwargs):
     """
@@ -785,7 +785,7 @@ def chat_with_claude(messages: List[Dict[str, str]], conversation_id: int) -> tu
     
     client = OpenAI(
         api_key=api_key,
-        base_url="https://openrouter.ai/api/v1"
+        base_url="https://api.z.ai/v1"
     )
     
     # OpenAI function calling format
